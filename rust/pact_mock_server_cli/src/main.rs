@@ -32,7 +32,7 @@ use std::str::FromStr;
 use std::fs::{self, File};
 use std::io;
 use log::{LogLevelFilter};
-use simplelog::{CombinedLogger, TermLogger, WriteLogger, Config};
+use simplelog::{CombinedLogger, TermLogger, WriteLogger, SimpleLogger, Config};
 use std::path::PathBuf;
 use std::fs::OpenOptions;
 use uuid::Uuid;
@@ -74,37 +74,38 @@ fn setup_log_file(output: Option<&str>) -> Result<File, io::Error> {
     .open(log_file)
 }
 
-fn setup_loggers(level: &str, command: &str, output: Option<&str>, no_file_log: bool, no_console_log: bool) -> Result<(), io::Error> {
+fn setup_loggers(level: &str, command: &str, output: Option<&str>, no_file_log: bool, no_term_log: bool) -> Result<(), String> {
     let log_level = match level {
         "none" => LogLevelFilter::Off,
         _ => LogLevelFilter::from_str(level).unwrap()
     };
 
     if command == "start" {
-      match (no_file_log, no_console_log) {
+      match (no_file_log, no_term_log) {
         (true, true) => {
-          TermLogger::init(LogLevelFilter::Off, Config::default()).unwrap();
+          SimpleLogger::init(log_level, Config::default()).map_err(|e| format!("{:?}", e))
         },
         (true, false) => {
-          TermLogger::init(log_level, Config::default()).unwrap();
+          TermLogger::init(log_level, Config::default()).map_err(|e| format!("{:?}", e))
         },
         (false, true) => {
-          let log_file = setup_log_file(output)?;
-          WriteLogger::init(log_level, Config::default(), log_file).unwrap();
+          let log_file = setup_log_file(output).map_err(|e| format!("{:?}", e))?;
+          WriteLogger::init(log_level, Config::default(), log_file).map_err(|e| format!("{:?}", e))
         },
         _ => {
-          let log_file = setup_log_file(output)?;
+          let log_file = setup_log_file(output).map_err(|e| format!("{:?}", e))?;
           match TermLogger::new(log_level, Config::default()) {
             Some(logger) => CombinedLogger::init(vec![logger, WriteLogger::new(log_level,
-                               Config::default(), log_file)]).unwrap(),
-            None => WriteLogger::init(log_level, Config::default(), log_file).unwrap()
-          };
+                                                                               Config::default(), log_file)]).map_err(|e| format!("{:?}", e)),
+            None => WriteLogger::init(log_level, Config::default(), log_file).map_err(|e| format!("{:?}", e))
+          }
         }
       }
+    } else if no_term_log {
+      SimpleLogger::init(log_level, Config::default()).map_err(|e| format!("{:?}", e))
     } else {
-        TermLogger::init(log_level, Config::default()).unwrap();
+      TermLogger::init(log_level, Config::default()).map_err(|e| format!("{:?}", e))
     }
-    Ok(())
 }
 
 fn lookup_global_option<'a>(option: &str, matches: &'a ArgMatches<'a>) -> Option<&'a str> {
@@ -177,10 +178,10 @@ fn handle_command_args() -> Result<(), i32> {
             .global(true)
             .possible_values(&["error", "warn", "info", "debug", "trace", "none"])
             .help("Log level for mock servers to write to the log file (defaults to info)"))
-        .arg(Arg::with_name("no-console-log")
-          .long("no-console-log")
+        .arg(Arg::with_name("no-term-log")
+          .long("no-term-log")
           .global(true)
-          .help("Do not log to the console via standout out"))
+          .help("Use a simple logger instead of the term based one"))
         .arg(Arg::with_name("no-file-log")
           .long("no-file-log")
           .global(true)
@@ -256,8 +257,9 @@ fn handle_command_args() -> Result<(), i32> {
                 matches.subcommand_name().unwrap(),
                 matches.subcommand().1.unwrap().value_of("output"),
                 global_option_present("no-file-log", matches),
-                global_option_present("no-console-log", matches)) {
-                display_error(format!("Could not setup loggers: {}", err), matches);
+                global_option_present("no-term-log", matches)) {
+                println!("WARN: Could not setup loggers: {}", err);
+                println!();
             }
             let port = lookup_global_option("port", matches).unwrap_or("8080");
             let host = lookup_global_option("host", matches).unwrap_or("localhost");
