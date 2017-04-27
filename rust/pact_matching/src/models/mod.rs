@@ -792,7 +792,9 @@ fn parse_interactions(pact_json: &Json, spec_version: PactSpecification) -> Vec<
 }
 
 fn determin_spec_version(file: &String, metadata: &BTreeMap<String, BTreeMap<String, String>>) -> PactSpecification {
-    match metadata.get("pact-specification") {
+    let specification = if metadata.get("pact-specification").is_none()
+        { metadata.get("pactSpecification") } else { metadata.get("pact-specification") };
+    match specification {
         Some(spec) => {
             match spec.get("version") {
                 Some(ver) => match Version::parse(ver) {

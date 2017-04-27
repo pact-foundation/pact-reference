@@ -224,6 +224,19 @@ fn test_load_test_pact_no_spec_version() {
 }
 
 #[test]
+fn test_load_test_pact_with_camel_case_spec_version() {
+    let pact_file = Path::new(file!()).parent().unwrap().join("test_pact_camel_case_spec_version.json");
+    let pact_result = Pact::read_pact(&pact_file);
+
+    match pact_result {
+        Ok(ref pact) => {
+            expect(pact.clone().specification_version).to(be_equal_to(PactSpecification::V1_1));
+        },
+        Err(err) => panic!("Failed to load pact from '{:?}' - {}", pact_file, err)
+    }
+}
+
+#[test]
 fn test_load_test_pact_no_version() {
     let pact_file = Path::new(file!()).parent().unwrap().join("test_pact_no_version.json");
     let pact_result = Pact::read_pact(&pact_file);
