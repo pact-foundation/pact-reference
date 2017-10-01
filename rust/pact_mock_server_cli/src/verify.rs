@@ -72,7 +72,8 @@ fn validate_port(id: u16) -> Result<MockServer, String> {
             server: ms.server,
             matches: ms.matches.clone(),
             resources: vec![],
-            pact: ms.pact.clone()
+            pact: ms.pact.clone(),
+            status: ms.status.clone()
         }
     }).ok_or(format!("No mock server running with port '{}'", id))
 }
@@ -85,7 +86,8 @@ fn validate_uuid(id: &String) -> Result<MockServer, String> {
             server: ms.server,
             matches: ms.matches.clone(),
             resources: vec![],
-            pact: ms.pact.clone()
+            pact: ms.pact.clone(),
+            status: ms.status.clone()
         }
     }).ok_or(format!("No mock server running with id '{}'", id))
 }
