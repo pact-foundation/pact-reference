@@ -1,39 +1,19 @@
-all: pact_matching pact_mock_server pact_mock_server_cli pact_verifier pact_verifier_cli pact_consumer
+# This Makefile exists to wrap `cargo`'s `--all` command for backwards
+# compatibility.
 
-pact_matching:
-	cd pact_matching && cargo build && cargo test
+all:
+	# We don't `clean` before building, because cargo is _extremely_ good at
+	# tracking dependencies, and it will correctly handle even edge cases like a
+	# compiler version upgrade without a manual `clean`. So it doesn't make
+	# sense to recompile the entire world unless somebody specifically requests
+	# it, especially given long Rust compile times.
+	#
+	# We call `build` and `test` separately, because they compile slightly
+	# different things.
+	cargo build --all
+	cargo test --all
 
-pact_mock_server_cli:
-	cd pact_mock_server_cli && cargo build && cargo test
-
-pact_mock_server:
-	cd pact_mock_server && cargo build && cargo test
-
-pact_verifier:
-	cd pact_verifier && cargo build && cargo test
-
-pact_verifier_cli:
-	cd pact_verifier_cli && cargo build && cargo test
-
-pact_consumer:
-	cd pact_consumer && cargo build && cargo test
-
-pact_matching_clean:
-	cd pact_matching && cargo clean
-
-pact_mock_server_cli_clean:
-	cd pact_mock_server_cli && cargo clean
-
-pact_mock_server_clean:
-	cd pact_mock_server && cargo clean
-
-pact_verifier_clean:
-	cd pact_verifier && cargo clean
-
-pact_verifier_cli_clean:
-	cd pact_verifier_cli && cargo clean
-
-pact_consumer_clean:
-	cd pact_consumer && cargo clean
-
-clean: pact_matching_clean pact_mock_server_cli_clean pact_mock_server_clean pact_verifier_clean pact_verifier_cli_clean pact_consumer_clean
+clean:
+	# This doesn't require `--all`, perhaps because there's only one shared
+	# artifacts directory.
+	cargo clean
