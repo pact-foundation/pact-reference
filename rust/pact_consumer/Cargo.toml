@@ -28,9 +28,7 @@ uuid = { version = "0.2.2", features = ["v4"] }
 version = "0.9.7"
 default-features = false
 
-[lib]
-crate-type = ["cdylib", "rlib"]
-
 [dev-dependencies]
 quickcheck = "0.2"
 expectest = "0.5.1"
+reqwest = "0.7"
