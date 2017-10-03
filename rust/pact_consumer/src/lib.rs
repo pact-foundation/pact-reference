@@ -28,6 +28,7 @@ extern crate pact_mock_server;
 extern crate uuid;
 
 use pact_matching::models::*;
+pub use pact_matching::models::OptionalBody;
 use pact_mock_server::*;
 use std::collections::HashMap;
 use uuid::Uuid;

@@ -8,7 +8,6 @@ extern crate pact_matching;
 extern crate reqwest;
 
 use pact_consumer::*;
-use pact_matching::models::OptionalBody;
 use std::io::prelude::*;
 
 /// This is supposed to be a doctest in lib.rs, but it's breaking there. This
