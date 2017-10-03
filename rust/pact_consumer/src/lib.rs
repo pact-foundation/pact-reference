@@ -147,28 +147,28 @@ pub struct ConsumerPactBuilder {
 impl ConsumerPactBuilder {
 
     /// Defines the consumer involved in the Pact
-    pub fn consumer(consumer_name: String) -> Self {
+    pub fn consumer<S: Into<String>>(consumer_name: S) -> Self {
         ConsumerPactBuilder {
-            pact: Pact { consumer: Consumer { name: consumer_name.clone() }, .. Pact::default() },
+            pact: Pact { consumer: Consumer { name: consumer_name.into() }, .. Pact::default() },
             interaction: Interaction::default(),
             state: BuilderState::None
         }
     }
 
     /// Defines the provider involved in the Pact
-    pub fn has_pact_with(&mut self, provider_name: String) -> &mut Self {
-        self.pact.provider.name = provider_name.clone();
+    pub fn has_pact_with<S: Into<String>>(&mut self, provider_name: S) -> &mut Self {
+        self.pact.provider.name = provider_name.into();
         self
     }
 
     /// Describe the state the provider needs to be in for the pact test to be verified. (Optional)
-    pub fn given(&mut self, provider_state: String) -> &mut Self {
+    pub fn given<S: Into<String>>(&mut self, provider_state: S) -> &mut Self {
         match self.state {
             BuilderState::None => (),
             _ => self.pact.interactions.push(self.interaction.clone())
         }
         self.interaction = Interaction {
-            provider_state: Some(provider_state.clone()),
+            provider_state: Some(provider_state.into()),
             .. Interaction::default()
         };
         self.state = BuilderState::BuildingRequest;
@@ -176,23 +176,23 @@ impl ConsumerPactBuilder {
     }
 
     /// Description of the request that is expected to be received
-    pub fn upon_receiving(&mut self, description: String) -> &mut Self {
+    pub fn upon_receiving<S: Into<String>>(&mut self, description: S) -> &mut Self {
         self.push_interaction();
-        self.interaction.description = description.clone();
+        self.interaction.description = description.into();
         self
     }
 
     /// The path of the request
-    pub fn path(&mut self, path: String) -> &mut Self {
+    pub fn path<S: Into<String>>(&mut self, path: S) -> &mut Self {
         self.push_interaction();
-        self.interaction.request.path = path.clone();
+        self.interaction.request.path = path.into();
         self
     }
 
     /// The HTTP method for the request
-    pub fn method(&mut self, method: String) -> &mut Self {
+    pub fn method<S: Into<String>>(&mut self, method: S) -> &mut Self {
         self.push_interaction();
-        self.interaction.request.method = method.clone();
+        self.interaction.request.method = method.into();
         self
     }
 

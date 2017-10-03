@@ -3,8 +3,6 @@
 #[macro_use]
 extern crate maplit;
 extern crate pact_consumer;
-#[macro_use]
-extern crate pact_matching;
 extern crate reqwest;
 
 use pact_consumer::*;
@@ -17,20 +15,22 @@ use std::io::prelude::*;
 fn relocated_doctest() {
     // Define the Pact for the test (you can setup multiple interactions by chaining the given or upon_receiving calls)
     // Define the service consumer by name
-    let pact_runner = ConsumerPactBuilder::consumer(s!("Consumer"))
+    let pact_runner = ConsumerPactBuilder::consumer("Consumer")
         // Define the service provider that it has a pact with
-        .has_pact_with(s!("Alice Service"))
+        .has_pact_with("Alice Service")
         // defines a provider state. It is optional.
-        .given("there is some good mallory".to_string())
+        .given("there is some good mallory")
         // upon_receiving starts a new interaction
-        .upon_receiving("a retrieve Mallory request".to_string())
+        .upon_receiving("a retrieve Mallory request")
             // define the request, a GET (default) request to '/mallory'
-            .path(s!("/mallory"))
+            .path("/mallory")
         // define the response we want returned
         .will_respond_with()
             .status(200)
-            .headers(hashmap!{ s!("Content-Type") => s!("text/html") })
-            .body(OptionalBody::Present(s!("That is some good Mallory.")))
+            .headers(hashmap! {
+                "Content-Type".to_string() => "text/html".to_string()
+            })
+            .body(OptionalBody::Present("That is some good Mallory.".to_string()))
         .build();
 
     // Execute the run method to have the mock server run (the URL to the mock server will be passed in).
@@ -38,10 +38,10 @@ fn relocated_doctest() {
     let result = pact_runner.run(&|url| {
         // You would use your actual client code here
         let mut response = reqwest::get(&format!("{}/mallory", url))
-          .expect("could not fetch URL");
+            .expect("could not fetch URL");
         let mut body = String::new();
         response.read_to_string(&mut body)
-          .expect("could not read response body");
+            .expect("could not read response body");
         assert_eq!(body, "That is some good Mallory.");
         Ok(())
     });
