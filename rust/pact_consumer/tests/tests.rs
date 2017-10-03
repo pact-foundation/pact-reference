@@ -27,7 +27,7 @@ fn relocated_doctest() {
         .will_respond_with()
             .status(200)
             .header("Content-Type", "text/html")
-            .body(OptionalBody::Present("That is some good Mallory.".to_string()))
+            .body_present("That is some good Mallory.")
         .build();
 
     // Execute the run method to have the mock server run (the URL to the mock server will be passed in).

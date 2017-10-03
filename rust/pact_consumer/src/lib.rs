@@ -260,16 +260,35 @@ impl ConsumerPactBuilder {
         self
     }
 
-    /// The body of the request
-    pub fn body(&mut self, body: OptionalBody) -> &mut Self {
+    /// Internal function which returns a mutable version of our current body.
+    fn body_mut(&mut self) -> &mut OptionalBody {
         match self.state {
-            BuilderState::BuildingRequest => self.interaction.request.body = body,
-            BuilderState::BuildingResponse => self.interaction.response.body = body,
+            BuilderState::BuildingRequest => &mut self.interaction.request.body,
+            BuilderState::BuildingResponse => &mut self.interaction.response.body,
             BuilderState::None => {
-                self.interaction.request.body = body;
                 self.state = BuilderState::BuildingRequest;
+                &mut self.interaction.request.body
             }
-        };
+        }
+    }
+
+    /// The body of the request.
+    ///
+    /// TODO: See discussion about `body` naming on
+    /// https://github.com/pact-foundation/pact-reference/pull/18
+    pub fn body(&mut self, body: OptionalBody) -> &mut Self {
+        *self.body_mut() = body;
+        self
+    }
+
+    /// The body of the request, which will be wrapped in
+    /// `OptionalBody::Present` (the common default case).
+    ///
+    /// TODO: We may want to change this to `B: Into<Vec<u8>>` depending on what
+    /// happens with https://github.com/pact-foundation/pact-reference/issues/19
+    /// That will still do the right thing with `&str`.
+    pub fn body_present<B: Into<String>>(&mut self, body: B) -> &mut Self {
+        *self.body_mut() = OptionalBody::Present(body.into());
         self
     }
 
