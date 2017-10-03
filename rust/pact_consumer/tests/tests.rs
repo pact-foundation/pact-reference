@@ -1,7 +1,5 @@
 // Put these in your crate root. You can add `#[cfg(test)]` before any
 // crate that you only use in test mode.
-#[macro_use]
-extern crate maplit;
 extern crate pact_consumer;
 extern crate reqwest;
 
@@ -24,12 +22,11 @@ fn relocated_doctest() {
         .upon_receiving("a retrieve Mallory request")
             // define the request, a GET (default) request to '/mallory'
             .path("/mallory")
+            .query(vec![("quality", vec!["good"])])
         // define the response we want returned
         .will_respond_with()
             .status(200)
-            .headers(hashmap! {
-                "Content-Type".to_string() => "text/html".to_string()
-            })
+            .header("Content-Type", "text/html")
             .body(OptionalBody::Present("That is some good Mallory.".to_string()))
         .build();
 
@@ -37,7 +34,8 @@ fn relocated_doctest() {
     // It takes a closure to execute your requests and returns a Pact VerificationResult.
     let result = pact_runner.run(&|url| {
         // You would use your actual client code here
-        let mut response = reqwest::get(&format!("{}/mallory", url))
+        let query_url = format!("{}/mallory?quality=good", url);
+        let mut response = reqwest::get(&query_url)
             .expect("could not fetch URL");
         let mut body = String::new();
         response.read_to_string(&mut body)

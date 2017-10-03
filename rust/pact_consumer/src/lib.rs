@@ -196,23 +196,67 @@ impl ConsumerPactBuilder {
         self
     }
 
-    /// Headers to be included in the request
-    pub fn headers(&mut self, headers: HashMap<String, String>) -> &mut Self {
-        match self.state {
-            BuilderState::BuildingRequest => self.interaction.request.headers = Some(headers.clone()),
-            BuilderState::BuildingResponse => self.interaction.response.headers = Some(headers.clone()),
+    /// Internal API for fetching a mutable version of our current `headers`.
+    pub fn headers_mut(&mut self) -> &mut HashMap<String, String> {
+        let opt_headers_mut: &mut Option<_> = match self.state {
+            BuilderState::BuildingRequest => &mut self.interaction.request.headers,
+            BuilderState::BuildingResponse => &mut self.interaction.response.headers,
             BuilderState::None => {
-                self.interaction.request.headers = Some(headers.clone());
                 self.state = BuilderState::BuildingRequest;
+                &mut self.interaction.request.headers
             }
         };
+        opt_headers_mut.get_or_insert_with(|| HashMap::new())
+    }
+
+    /// A header to be included in the request. Will overwrite previous headers
+    /// of the same name.
+    pub fn header<S1, S2>(&mut self, key: S1, value: S2) -> &mut Self
+    where
+        S1: Into<String>,
+        S2: Into<String>,
+    {
+        self.headers_mut().insert(key.into(), value.into());
         self
     }
 
-    /// The query string for the request
-    pub fn query(&mut self, query: HashMap<String, Vec<String>>) -> &mut Self {
+    /// Headers to be included in the request. If called multiple times, this
+    /// will merge the new headers with the old, overriding any duplicates.
+    pub fn headers<M, S1, S2>(&mut self, headers: M) -> &mut Self
+    where
+        // This is a bit of Rust magic: We take some type that can be turned
+        // into an iterator, and that iterator returns a pair of values that
+        // can be turned into strings. This allows mixing `&str`, `String`,
+        // `Vec<_>`, `&[_]` and actual iterators fairly freely. Generally,
+        // this kind of type is overkill for anything except builder APIs.
+        M: IntoIterator<Item = (S1, S2)>,
+        S1: Into<String>,
+        S2: Into<String>,
+    {
+        self.headers_mut()
+            .extend(headers.into_iter().map(|(k, v)| (k.into(), v.into())));
+        self
+    }
+
+    /// Internal function which returns a mutable version of our query.
+    fn query_mut(&mut self) -> &mut HashMap<String, Vec<String>> {
         self.push_interaction();
-        self.interaction.request.query = Some(query.clone());
+        self.interaction.request.query.get_or_insert_with(|| HashMap::new())
+    }
+
+    /// The query string for the request. If called multiple times, this will
+    /// merge the new query parameters with the old, overriding any duplicates.
+    pub fn query<M, S1, V, S2>(&mut self, query: M) -> &mut Self
+    where
+        // See `headers` for an explanation of these type constraints.
+        M: IntoIterator<Item = (S1, V)>,
+        S1: Into<String>,
+        V: IntoIterator<Item = S2>,
+        S2: Into<String>,
+    {
+        self.query_mut().extend(query.into_iter().map(|(k, v)| {
+            (k.into(), v.into_iter().map(|s| s.into()).collect())
+        }));
         self
     }
 
