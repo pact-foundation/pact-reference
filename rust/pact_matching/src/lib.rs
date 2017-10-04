@@ -363,6 +363,7 @@ mod xml;
 
 use models::Matchers;
 use matchers::*;
+pub use matchers::Matcher;
 
 fn strip_whitespace<'a, T: FromIterator<&'a str>>(val: &'a String, split_by: &'a str) -> T {
     val.split(split_by).map(|v| v.trim().clone() ).collect()

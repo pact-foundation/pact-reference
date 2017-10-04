@@ -25,6 +25,7 @@
 #[macro_use] extern crate maplit;
 #[macro_use] extern crate pact_matching;
 extern crate pact_mock_server;
+extern crate serde_json;
 extern crate uuid;
 
 use pact_matching::models::*;
@@ -34,6 +35,9 @@ use std::collections::HashMap;
 use uuid::Uuid;
 use std::panic::{self, AssertUnwindSafe};
 use std::error::Error;
+
+mod json_pattern;
+pub use json_pattern::*;
 
 /// Result of running the pact test
 #[derive(Debug, Clone, PartialEq)]
