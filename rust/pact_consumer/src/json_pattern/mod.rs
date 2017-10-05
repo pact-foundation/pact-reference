@@ -2,6 +2,7 @@
 //! match them.
 
 use pact_matching::Matcher;
+use regex::Regex;
 use serde_json;
 use std::borrow::Cow;
 pub use std::collections::HashMap as Map;
@@ -9,6 +10,67 @@ use std::iter::FromIterator;
 
 #[macro_use]
 mod macros;
+
+/// A term with a specialized matching rule. These rules are all defined by the
+/// [Pact matching specification][spec]. In each case, a `value` must be
+/// supplied, which is used as the value when _generating_ JSON. The matching
+/// rule is applied when _matching_ JSON.
+///
+/// [spec]: https://docs.rs/pact_matching/0.2.2/pact_matching/
+pub struct Term<T> {
+    generate: T,
+    matcher: Matcher
+}
+
+impl<T> Term<T> {
+    /// The default matching rule. Matches JSON which is equal to `value`,
+    /// allowing for extra keys in objects and a few other special cases.
+    /// Corresponds to `"match": "equality"`.
+    pub fn default(value: T) -> Term<T> {
+        Term {
+            generate: value,
+            matcher: Matcher::EqualityMatcher,
+        }
+    }
+
+    /// Match JSON which has the same data types and structure as `value`.
+    /// Corresponds to `"match": "type"`.
+    pub fn like(value: T) -> Term<T> {
+        Term {
+            generate: value,
+            matcher: Matcher::TypeMatcher,
+        }
+    }
+
+    /// Match JSON which matches the specified regular expression. Corresponds
+    /// to `"match": "regex"`.
+    pub fn regex(regex: Regex, value: T) -> Term<T> {
+        Term {
+            generate: value,
+            matcher: Matcher::RegexMatcher(regex),
+        }
+    }
+
+    /// Match JSON with the corresponding type. If the value to be matched is a
+    /// collection, it must also have at least the specified length. Corresponds
+    /// to `"match": "type"` with `"min"`.
+    pub fn min_length(len: usize, value: T) -> Term<T> {
+        Term {
+            generate: value,
+            matcher: Matcher::MinTypeMatcher(len)
+        }
+    }
+
+    /// Match JSON with the corresponding type. If the value to be matched is a
+    /// collection, it must also have at most the specified length. Corresponds
+    /// to `"match": "type"` with `"max"`.
+    pub fn max_length(len: usize, value: T) -> Term<T> {
+        Term {
+            generate: value,
+            matcher: Matcher::MaxTypeMatcher(len)
+        }
+    }
+}
 
 /// A pattern which can be used to either:
 ///
@@ -38,7 +100,7 @@ pub enum JsonPattern {
     Object(Map<String, JsonPattern>),
     /// A term which contains both a custom matching rule, and a JSON literal
     /// to use when generating actual JSON values.
-    Term(Matcher, Box<JsonPattern>),
+    Term(Box<Term<JsonPattern>>),
 }
 
 impl JsonPattern {
@@ -61,8 +123,8 @@ impl JsonPattern {
                     .map(|(k, v)| (k.to_owned(), v.to_json()));
                 serde_json::Value::Object(serde_json::Map::from_iter(fields))
             }
-            JsonPattern::Term(ref _matcher, ref v) => {
-                v.as_ref().to_json()
+            JsonPattern::Term(ref term) => {
+                term.generate.to_json()
             }
         }
     }
@@ -121,6 +183,12 @@ impl<T: Into<JsonPattern>> FromIterator<T> for JsonPattern {
 impl From<Map<String, JsonPattern>> for JsonPattern {
     fn from(m: Map<String, JsonPattern>) -> Self {
         JsonPattern::Object(m)
+    }
+}
+
+impl From<Term<JsonPattern>> for JsonPattern {
+    fn from(t: Term<JsonPattern>) -> Self {
+        JsonPattern::Term(Box::new(t))
     }
 }
 

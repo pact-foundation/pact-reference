@@ -25,6 +25,7 @@
 #[macro_use] extern crate maplit;
 #[macro_use] extern crate pact_matching;
 extern crate pact_mock_server;
+extern crate regex;
 extern crate serde_json;
 extern crate uuid;
 
