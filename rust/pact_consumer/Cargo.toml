@@ -17,7 +17,6 @@ exclude = [
 libc = "0.2.9"
 pact_matching = { version = "0.2.2", path = "../pact_matching" }
 pact_mock_server = { version = "0.2.2", path = "../pact_mock_server" }
-p-macro = "0.2.0"
 log = "0.3.5"
 maplit = "0.1.3"
 lazy_static = "0.1.15"

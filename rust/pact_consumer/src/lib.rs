@@ -23,7 +23,6 @@
 #[cfg(test)] extern crate env_logger;
 #[macro_use] extern crate lazy_static;
 #[macro_use] extern crate log;
-#[macro_use] extern crate p_macro;
 #[macro_use] extern crate maplit;
 #[macro_use] extern crate pact_matching;
 extern crate pact_mock_server;

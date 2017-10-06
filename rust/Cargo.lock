@@ -600,7 +600,6 @@ dependencies = [
  "libc 0.2.31 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "maplit 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "p-macro 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pact_matching 0.2.3",
  "pact_mock_server 0.2.3",
  "quickcheck 0.2.27 (registry+https://github.com/rust-lang/crates.io-index)",
