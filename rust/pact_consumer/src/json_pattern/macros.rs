@@ -38,7 +38,7 @@
 /// #[macro_use]
 /// extern crate serde_json;
 ///
-/// use pact_consumer::{JsonPattern, Term};
+/// use pact_consumer::ArrayLike;
 ///
 /// #[derive(Serialize)]
 /// struct Point {
@@ -56,9 +56,9 @@
 ///     // support `Serialize`.
 ///     "location": json!(Point { x: 1.0, y: 2.0 }),
 ///
-///     // You can use the various `Term` functions to match values by
+///     // You can use the various `Matchable` types to match values by
 ///     // by type, length or regular expression.
-///     "tags": Term::like(json_pattern!(["tag"])),
+///     "tags": ArrayLike::new(json_pattern!("tag")),
 /// });
 /// # }
 /// ```

@@ -20,13 +20,15 @@
 
 #![warn(missing_docs)]
 
+#[cfg(test)] extern crate env_logger;
+#[macro_use] extern crate lazy_static;
 #[macro_use] extern crate log;
 #[macro_use] extern crate p_macro;
 #[macro_use] extern crate maplit;
 #[macro_use] extern crate pact_matching;
 extern crate pact_mock_server;
 extern crate regex;
-extern crate serde_json;
+#[macro_use] extern crate serde_json;
 extern crate uuid;
 
 use pact_matching::models::*;
