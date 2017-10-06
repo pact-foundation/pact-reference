@@ -225,12 +225,12 @@ macro_rules! json_pattern_internal {
     };
 
     ({}) => {
-        $crate::JsonPattern::Object($crate::Map::new())
+        $crate::JsonPattern::Object(::std::collections::HashMap::new())
     };
 
     ({ $($tt:tt)+ }) => {
         $crate::JsonPattern::Object({
-            let mut object = $crate::Map::new();
+            let mut object = ::std::collections::HashMap::new();
             json_pattern_internal!(@object object () ($($tt)+) ($($tt)+));
             object
         })

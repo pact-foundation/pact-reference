@@ -1,16 +1,13 @@
-//! JSON "patterns", which can be used to either generate JSON documents or
-//! match them.
+//! Our `JsonPattern` type and supporting code.
 
 use pact_matching::models::Matchers;
 use regex::{Captures, Regex};
 use serde_json;
 use std::borrow::Cow;
-pub use std::collections::HashMap as Map;
-use std::fmt::Debug;
-use std::iter::{FromIterator, repeat};
+use std::collections::HashMap as Map;
+use std::iter::FromIterator;
 
-#[macro_use]
-mod macros;
+use super::Matchable;
 
 /// Format a JSON object key for use in a JSON path expression. If we were
 /// more concerned about performance, we might try to come up with a scheme
@@ -48,203 +45,6 @@ fn obj_key_for_path_quotes_keys_when_necessary() {
     assert_eq!(obj_key_for_path(r#"a'"#), r#"['a\'']"#);
     assert_eq!(obj_key_for_path(r#"\"#), r#"['\\']"#);
 }
-
-/// Abstract interface to types which can:
-///
-/// 1. Generate example data.
-/// 2. Match data returned by tests in various flexible ways, for example,
-///    accepting all strings which match a regular expression.
-///
-/// For an overview of how the matching rules work, and what kinds of special
-/// matching rules exist, see the [`pact_matching` documentation][spec].
-///
-/// The current version of this API will only work for `JsonPattern` and
-/// `serde_json::Value`. Extending this scheme to work for XML would require
-/// parameterizing the input and output types, and possibly other changes.
-///
-/// [spec]: https://docs.rs/pact_matching/0.2.2/pact_matching/
-pub trait Matchable: Debug {
-    /// Convert this `Matchable` into an example data value, stripping out
-    /// any special match rules.
-    fn to_example(&self) -> serde_json::Value;
-
-    /// Extract the matching rules from this `Matchable`, and insert them into
-    /// `rules_out`, using `path` as the base path.
-    ///
-    /// This API corresponds to the [`Extract` code in Ruby][ruby].
-    ///
-    /// (The `path` parameter is represented as a `&str` here, which forces each
-    /// recursive call to allocate strings. We could optimize this by using a
-    /// custom `path` representation which worked like a stack-based linked list
-    /// stored in reverse order, but that would add significant complexity.)
-    ///
-    /// [ruby]:
-    /// https://github.com/pact-foundation/pact-support/blob/master/lib/pact/matching_rules/extract.rb
-    fn extract_matching_rules(
-        &self,
-        path: &str,
-        rules_out: &mut Matchers,
-    );
-}
-
-/// Match values based on their data types.
-#[derive(Debug)]
-struct SomethingLike {
-    example: JsonPattern,
-}
-
-impl SomethingLike {
-    /// Match all values which have the same type as `example`.
-    pub fn new(example: JsonPattern) -> SomethingLike {
-        SomethingLike { example: example }
-    }
-}
-
-impl Matchable for SomethingLike {
-    fn to_example(&self) -> serde_json::Value {
-        self.example.to_example()
-    }
-
-    fn extract_matching_rules(
-        &self,
-        path: &str,
-        rules_out: &mut Matchers,
-    ) {
-        rules_out.insert(path.to_owned(), hashmap!(s!("match") => s!("type")));
-        self.example.extract_matching_rules(path, rules_out);
-    }
-}
-
-#[test]
-fn something_like_is_matchable() {
-    let matchable = SomethingLike::new(json_pattern!("hello"));
-    assert_eq!(matchable.to_example(), json!("hello"));
-    let mut rules = Map::new();
-    matchable.extract_matching_rules("$", &mut rules);
-    assert_eq!(json!(rules), json!({"$": {"match": "type"}}));
-}
-
-/// Match an array with the specified "shape".
-#[derive(Debug)]
-pub struct ArrayLike {
-    example_element: JsonPattern,
-    min_length: usize,
-}
-
-impl ArrayLike {
-    /// Match arrays containing elements like `example_element`.
-    pub fn new(example_element: JsonPattern) -> ArrayLike {
-        ArrayLike {
-            example_element: example_element,
-            min_length: 1,
-        }
-    }
-
-    /// Use this after `new` to set a minimum length for the matching array.
-    pub fn with_min_length(mut self, min_length: usize) -> ArrayLike {
-        self.min_length = min_length;
-        self
-    }
-}
-
-impl Matchable for ArrayLike {
-    fn to_example(&self) -> serde_json::Value {
-        let element = self.example_element.to_example();
-        serde_json::Value::Array(repeat(element).take(self.min_length).collect())
-    }
-
-    fn extract_matching_rules(
-        &self,
-        path: &str,
-        rules_out: &mut Matchers,
-    ) {
-        rules_out.insert(path.to_owned(), hashmap!(
-            s!("match") => s!("type"),
-            s!("min") => format!("{}", self.min_length),
-        ));
-        rules_out.insert(format!("{}[*].*", path), hashmap!(
-            s!("match") => s!("type"),
-        ));
-        let new_path = format!("{}[*]", path);
-        self.example_element.extract_matching_rules(&new_path, rules_out);
-    }
-}
-
-#[test]
-fn array_like_is_matchable() {
-    let elem = SomethingLike::new(json_pattern!("hello"));
-    let matchable = ArrayLike::new(json_pattern!(elem))
-        .with_min_length(2);
-    assert_eq!(matchable.to_example(), json!(["hello", "hello"]));
-
-    let mut rules = Map::new();
-    matchable.extract_matching_rules("$", &mut rules);
-    let expected_rules = json!({
-        // Ruby omits the `type` here, but the Rust `pact_matching` library
-        // claims to want `"type"` when `"min"` is used.
-        "$": {"match": "type", "min": "2"},
-        // TODO: Ruby always generates this; I'm not sure what it's intended to
-        // do. It looks like it makes child objects in the array match their
-        // fields by type automatically?
-        "$[*].*": {"match": "type"},
-        // This is inserted by our nested `SomethingLike` rule.
-        "$[*]": {"match": "type"},
-    });
-    assert_eq!(json!(rules), expected_rules);
-}
-
-/// Match strings that match a regular expression.
-#[derive(Debug)]
-pub struct Term {
-    example: String,
-    regex: Regex,
-}
-
-impl Term {
-    /// Construct a new `Term`, given a regex and the example string to
-    /// generate.
-    pub fn new<S: Into<String>>(regex: Regex, example: S) -> Term {
-        Term {
-            example: example.into(),
-            regex: regex,
-        }
-    }
-}
-
-impl Matchable for Term {
-    fn to_example(&self) -> serde_json::Value {
-        json!(&self.example)
-    }
-
-    fn extract_matching_rules(
-        &self,
-        path: &str,
-        rules_out: &mut Matchers,
-    ) {
-        rules_out.insert(path.to_owned(), hashmap!(
-            s!("match") => s!("regex"),
-            s!("regex") => s!(self.regex.as_str()),
-        ));
-    }
-}
-
-#[test]
-fn term_is_matchable() {
-    let matchable = Term::new(Regex::new("[Hh]ello").unwrap(), "hello");
-    assert_eq!(matchable.to_example(), json!("hello"));
-
-    let mut rules = Map::new();
-    matchable.extract_matching_rules("$", &mut rules);
-    let expected_rules = json!({
-        "$": { "match": "regex", "regex": "[Hh]ello" },
-    });
-    assert_eq!(json!(rules), expected_rules);
-}
-
-// These were also provided by the Ruby library, but I'm not sure we need them:
-//
-// - QueryString
-// - QueryHash
 
 /// A pattern which can be used to either:
 ///
@@ -341,6 +141,8 @@ fn json_pattern_is_matchable() {
     use env_logger;
     env_logger::init().expect("could not initialize logger");
 
+    use super::special_rules::SomethingLike;
+
     // This is our pattern, combinging both example data and matching rules.
     let matchable = json_pattern!({
         "json": 1,
@@ -427,17 +229,3 @@ impl From<serde_json::Value> for JsonPattern {
         JsonPattern::Json(j)
     }
 }
-
-macro_rules! impl_from_for_matchable {
-    ( $($t:ty),* ) => {
-        $(
-            impl From<$t> for JsonPattern {
-                fn from(matchable: $t) -> Self {
-                    JsonPattern::matchable(matchable)
-                }
-            }
-        )*
-    }
-}
-
-impl_from_for_matchable!(SomethingLike, ArrayLike, Term);

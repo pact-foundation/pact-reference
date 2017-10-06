@@ -39,8 +39,8 @@ use uuid::Uuid;
 use std::panic::{self, AssertUnwindSafe};
 use std::error::Error;
 
-mod json_pattern;
-pub use json_pattern::*;
+mod matchable;
+pub use self::matchable::*;
 
 /// Result of running the pact test
 #[derive(Debug, Clone, PartialEq)]
