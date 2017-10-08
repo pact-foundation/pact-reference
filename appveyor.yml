@@ -10,8 +10,12 @@ environment:
   - TARGET: i686-pc-windows-gnu
 
 install:
-  - ps: Start-FileDownload "https://static.rust-lang.org/rustup/dist/i686-pc-windows-gnu/rustup-init.exe"
-  - rustup-init.exe
+  - appveyor-retry appveyor DownloadFile "https://static.rust-lang.org/rustup/dist/i686-pc-windows-gnu/rustup-init.exe" -FileName rustup-init.exe
+  - rustup-init.exe -y --default-host=x86_64-pc-windows-msvc
+  - set PATH=%PATH%;C:\Users\appveyor\.cargo\bin
+
+  # Install the target we're compiling for
+  - if NOT "%TARGET%" == "x86_64-pc-windows-msvc" rustup target add %TARGET%
 
 build: false
 
