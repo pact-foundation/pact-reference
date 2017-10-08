@@ -11,7 +11,7 @@
 //! or http://opensource.org/licenses/MIT>, at your option. This file may not be
 //! copied, modified, or distributed except according to those terms.
 
-/// Construct a `pact_consumer::JsonPattern` object using a convenient syntax.
+/// Construct a `JsonPattern` object using a convenient syntax.
 ///
 /// ```rust
 /// // Place this declaration in your top-level `main.rs` or `lib.rs` file.
@@ -38,7 +38,7 @@
 /// #[macro_use]
 /// extern crate serde_json;
 ///
-/// use pact_consumer::ArrayLike;
+/// use pact_consumer::prelude::*;
 ///
 /// #[derive(Serialize)]
 /// struct Point {
@@ -49,7 +49,7 @@
 /// # fn main() {
 /// json_pattern!({
 ///     // You can use Rust expressions, as long as they support
-///     // `Into<PatternJson>`.
+///     // `Into<JsonPattern>`.
 ///     "message": format!("Hello, {}!", "world"),
 ///
 ///     // You can also nest the `json!` macro to embed types which
@@ -213,23 +213,25 @@ macro_rules! json_pattern_internal {
     //////////////////////////////////////////////////////////////////////////
 
     (null) => {
-        $crate::JsonPattern::null()
+        $crate::matchable::JsonPattern::null()
     };
 
     ([]) => {
-        $crate::JsonPattern::Array(vec![])
+        $crate::matchable::JsonPattern::Array(vec![])
     };
 
     ([ $($tt:tt)+ ]) => {
-        $crate::JsonPattern::Array(json_pattern_internal!(@array [] $($tt)+))
+        $crate::matchable::JsonPattern::Array(
+            json_pattern_internal!(@array [] $($tt)+)
+        )
     };
 
     ({}) => {
-        $crate::JsonPattern::Object(::std::collections::HashMap::new())
+        $crate::matchable::JsonPattern::Object(::std::collections::HashMap::new())
     };
 
     ({ $($tt:tt)+ }) => {
-        $crate::JsonPattern::Object({
+        $crate::matchable::JsonPattern::Object({
             let mut object = ::std::collections::HashMap::new();
             json_pattern_internal!(@object object () ($($tt)+) ($($tt)+));
             object
@@ -240,7 +242,7 @@ macro_rules! json_pattern_internal {
     // Must be below every other rule.
     ($other:expr) => {
         {
-            let v: $crate::JsonPattern = $other.into();
+            let v: $crate::matchable::JsonPattern = $other.into();
             v
         }
     };

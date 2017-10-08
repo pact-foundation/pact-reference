@@ -287,9 +287,9 @@ mod tests {
     use expectest::prelude::*;
     use super::*;
     use super::{content_type, json_content_type};
-    use pact_consumer::*;
+    use pact_consumer::prelude::*;
     use env_logger::*;
-    use pact_matching::models::{Pact, OptionalBody, Consumer, Provider, Interaction};
+    use pact_matching::models::{Pact, Consumer, Provider, Interaction};
     use hyper::Url;
     use hyper::client::response::Response;
     use std::io::{self, Write, Read};
@@ -314,45 +314,35 @@ mod tests {
 
     #[test]
     fn fetch_returns_an_error_if_it_does_not_get_a_success_response() {
-        let pact_runner = ConsumerPactBuilder::consumer(s!("RustPactVerifier"))
-            .has_pact_with(s!("PactBroker"))
-            .given(s!("the pact broker has a valid pact"))
-            .upon_receiving(s!("a request to a non-existant path"))
-                .path(s!("/hello"))
-            .will_respond_with()
-                .status(404)
-            .build();
+        let pact_broker = PactBuilder::new("RustPactVerifier", "PactBroker")
+            .interaction("a request to a non-existant path", |i| {
+                i.given("the pact broker has a valid pact");
+                i.request.path("/hello");
+                i.response.status(404);
+            })
+            .start_mock_server();
 
-        let result = pact_runner.run(&|broker_url| {
-            let client = HALClient{ url: broker_url.clone(), .. HALClient::default() };
-            let result = client.fetch(&s!("/hello"));
-            expect!(result).to(be_err().value(format!("Request to pact broker path \'/hello\' failed: 404 Not Found. URL: '{}'",
-                broker_url)));
-            Ok(())
-        });
-        expect!(result).to(be_equal_to(VerificationResult::PactVerified));
+        let client = HALClient{ url: pact_broker.url().to_string(), .. HALClient::default() };
+        let result = client.fetch(&s!("/hello"));
+        expect!(result).to(be_err().value(format!("Request to pact broker path \'/hello\' failed: 404 Not Found. URL: '{}'",
+            pact_broker.url())));
     }
 
     #[test]
     fn fetch_returns_an_error_if_it_does_not_get_a_hal_response() {
-        let pact_runner = ConsumerPactBuilder::consumer(s!("RustPactVerifier"))
-            .has_pact_with(s!("PactBrokerStub"))
-            .upon_receiving(s!("a request to a non-json resource"))
-                .path(s!("/nonjson"))
-            .will_respond_with()
-                .status(200)
-                .headers(hashmap!{ s!("Content-Type") => s!("text/html") })
-                .body(OptionalBody::Present(s!("<html></html>")))
-            .build();
+        let pact_broker = PactBuilder::new("RustPactVerifier", "PactBrokerStub")
+            .interaction("a request to a non-json resource", |i| {
+                i.request.path("/nonjson");
+                i.response
+                    .header("Content-Type", "text/html")
+                    .body("<html></html>");
+            })
+            .start_mock_server();
 
-        let result = pact_runner.run(&|broker_url| {
-            let client = HALClient{ url: broker_url.clone(), .. HALClient::default() };
-            let result = client.fetch(&s!("/nonjson"));
-            expect!(result).to(be_err().value(format!("Did not get a HAL response from pact broker path \'/nonjson\', content type is 'text/html'. URL: '{}'",
-                broker_url)));
-            Ok(())
-        });
-        expect!(result).to(be_equal_to(VerificationResult::PactVerified));
+        let client = HALClient{ url: pact_broker.url().to_string(), .. HALClient::default() };
+        let result = client.fetch(&s!("/nonjson"));
+        expect!(result).to(be_err().value(format!("Did not get a HAL response from pact broker path \'/nonjson\', content type is 'text/html'. URL: '{}'",
+            pact_broker.url())));
     }
 
     #[derive(Debug, Clone)]
@@ -458,32 +448,26 @@ mod tests {
 
     #[test]
     fn fetch_returns_an_error_if_it_does_not_get_a_valid_hal_response() {
-        let pact_runner = ConsumerPactBuilder::consumer(s!("RustPactVerifier"))
-            .has_pact_with(s!("PactBrokerStub"))
-            .upon_receiving(s!("a request to a non-hal resource"))
-                .path(s!("/nonhal"))
-            .will_respond_with()
-                .status(200)
-                .headers(hashmap!{ s!("Content-Type") => s!("application/hal+json") })
-            .upon_receiving(s!("a request to a non-hal resource 2"))
-                .path(s!("/nonhal2"))
-            .will_respond_with()
-                .status(200)
-                .headers(hashmap!{ s!("Content-Type") => s!("application/hal+json") })
-                .body(OptionalBody::Present(s!("<html>This is not JSON</html>")))
-            .build();
+        let pact_broker = PactBuilder::new("RustPactVerifier", "PactBrokerStub")
+            .interaction("a request to a non-hal resource", |i| {
+                i.request.path("/nonhal");
+                i.response.header("Content-Type", "application/hal+json");
+            })
+            .interaction("a request to a non-hal resource 2", |i| {
+                i.request.path("/nonhal2");
+                i.response
+                    .header("Content-Type", "application/hal+json")
+                    .body("<html>This is not JSON</html>");
+            })
+            .start_mock_server();
 
-        let result = pact_runner.run(&|broker_url| {
-            let client = HALClient{ url: broker_url.clone(), .. HALClient::default() };
-            let result = client.fetch(&s!("/nonhal"));
-            expect!(result).to(be_err().value(format!("Did not get a valid HAL response body from pact broker path \'/nonhal\'. URL: '{}'",
-                broker_url)));
-            let result = client.fetch(&s!("/nonhal2"));
-            expect!(result).to(be_err().value(format!("Did not get a valid HAL response body from pact broker path \'/nonhal2\' - JSON error: expected value at line 1 column 1. URL: '{}'",
-                broker_url)));
-            Ok(())
-        });
-        expect!(result).to(be_equal_to(VerificationResult::PactVerified));
+        let client = HALClient{ url: pact_broker.url().to_string(), .. HALClient::default() };
+        let result = client.fetch(&s!("/nonhal"));
+        expect!(result).to(be_err().value(format!("Did not get a valid HAL response body from pact broker path \'/nonhal\'. URL: '{}'",
+            pact_broker.url())));
+        let result = client.fetch(&s!("/nonhal2"));
+        expect!(result).to(be_err().value(format!("Did not get a valid HAL response body from pact broker path \'/nonhal2\' - JSON error: expected value at line 1 column 1. URL: '{}'",
+            pact_broker.url())));
     }
 
     #[test]
@@ -519,206 +503,175 @@ mod tests {
     #[test]
     fn fetch_link_returns_an_error_if_the_previous_resource_was_not_hal() {
         init().unwrap_or(());
-        let pact_runner = ConsumerPactBuilder::consumer(s!("RustPactVerifier"))
-            .has_pact_with(s!("PactBrokerStub"))
-                .upon_receiving(s!("a request to a non-hal json resource"))
-                .path(s!("/"))
-            .will_respond_with()
-                .status(200)
-                .headers(hashmap!{ s!("Content-Type") => s!("application/hal+json") })
-                .body(OptionalBody::Present(s!("{}")))
-            .build();
+        let pact_broker = PactBuilder::new("RustPactVerifier", "PactBrokerStub")
+            .interaction("a request to a non-hal json resource", |i| {
+                i.request.path("/");
+                i.response
+                    .header("Content-Type", "application/hal+json")
+                    .body("{}");
+            })
+            .start_mock_server();
 
-        let result = pact_runner.run(&|broker_url| {
-            let mut client = HALClient{ url: broker_url.clone(), .. HALClient::default() };
-            let result = client.fetch(&s!("/"));
-            expect!(result.clone()).to(be_ok());
-            client.path_info = result.ok();
-            let result = client.fetch_link(&s!("hal2"), &hashmap!{});
-            expect!(result).to(be_err().value(format!("Expected a HAL+JSON response from the pact broker, but got a response with no '_links'. URL: '{}', LINK: 'hal2'",
-                broker_url)));
-            Ok(())
-        });
-        expect!(result).to(be_equal_to(VerificationResult::PactVerified));
+        let mut client = HALClient{ url: pact_broker.url().to_string(), .. HALClient::default() };
+        let result = client.fetch(&s!("/"));
+        expect!(result.clone()).to(be_ok());
+        client.path_info = result.ok();
+        let result = client.fetch_link(&s!("hal2"), &hashmap!{});
+        expect!(result).to(be_err().value(format!("Expected a HAL+JSON response from the pact broker, but got a response with no '_links'. URL: '{}', LINK: 'hal2'",
+            pact_broker.url())));
     }
 
     #[test]
     fn fetch_link_returns_an_error_if_the_previous_resource_links_are_not_correctly_formed() {
         init().unwrap_or(());
-        let pact_runner = ConsumerPactBuilder::consumer(s!("RustPactVerifier"))
-            .has_pact_with(s!("PactBrokerStub"))
-                .upon_receiving(s!("a request to a hal resource with invalid links"))
-                .path(s!("/"))
-            .will_respond_with()
-                .status(200)
-                .headers(hashmap!{ s!("Content-Type") => s!("application/hal+json") })
-                .body(OptionalBody::Present(s!("{\"_links\":[{\"next\":{\"href\":\"abc\"}},{\"prev\":{\"href\":\"def\"}}]}")))
-            .build();
+        let pact_broker = PactBuilder::new("RustPactVerifier", "PactBrokerStub")
+            .interaction("a request to a hal resource with invalid links", |i| {
+                i.request.path("/");
+                i.response
+                    .header("Content-Type", "application/hal+json")
+                    .body("{\"_links\":[{\"next\":{\"href\":\"abc\"}},{\"prev\":{\"href\":\"def\"}}]}");
+            })
+            .start_mock_server();
 
-        let result = pact_runner.run(&|broker_url| {
-            let mut client = HALClient{ url: broker_url.clone(), .. HALClient::default() };
-            let result = client.fetch(&s!("/"));
-            expect!(result.clone()).to(be_ok());
-            client.path_info = result.ok();
-            let result = client.fetch_link(&s!("any"), &hashmap!{});
-            expect!(result).to(be_err().value(format!("Link 'any' was not found in the response, only the following links where found: \"\". URL: '{}', LINK: 'any'",
-                broker_url)));
-            Ok(())
-        });
-        expect!(result).to(be_equal_to(VerificationResult::PactVerified));
+        let mut client = HALClient{ url: pact_broker.url().to_string(), .. HALClient::default() };
+        let result = client.fetch(&s!("/"));
+        expect!(result.clone()).to(be_ok());
+        client.path_info = result.ok();
+        let result = client.fetch_link(&s!("any"), &hashmap!{});
+        expect!(result).to(be_err().value(format!("Link 'any' was not found in the response, only the following links where found: \"\". URL: '{}', LINK: 'any'",
+            pact_broker.url())));
     }
 
     #[test]
     fn fetch_link_returns_an_error_if_the_previous_resource_does_not_have_the_link() {
-        let pact_runner = ConsumerPactBuilder::consumer(s!("RustPactVerifier"))
-            .has_pact_with(s!("PactBrokerStub"))
-                .upon_receiving(s!("a request to a hal resource"))
-                .path(s!("/"))
-            .will_respond_with()
-                .status(200)
-                .headers(hashmap!{ s!("Content-Type") => s!("application/hal+json") })
-                .body(OptionalBody::Present(s!("{\"_links\":{\"next\":{\"href\":\"/abc\"},\"prev\":{\"href\":\"/def\"}}}")))
-            .build();
+        let pact_broker = PactBuilder::new("RustPactVerifier", "PactBrokerStub")
+            .interaction("a request to a hal resource", |i| {
+                i.request.path("/");
+                i.response
+                    .header("Content-Type", "application/hal+json")
+                    .body("{\"_links\":{\"next\":{\"href\":\"/abc\"},\"prev\":{\"href\":\"/def\"}}}");
+            })
+            .start_mock_server();
 
-        let result = pact_runner.run(&|broker_url| {
-            let mut client = HALClient{ url: broker_url.clone(), .. HALClient::default() };
-            let result = client.fetch(&s!("/"));
-            expect!(result.clone()).to(be_ok());
-            client.path_info = result.ok();
-            let result = client.fetch_link(&s!("any"), &hashmap!{});
-            expect!(result).to(be_err().value(format!("Link 'any' was not found in the response, only the following links where found: \"next, prev\". URL: '{}', LINK: 'any'",
-                broker_url)));
-            Ok(())
-        });
-        expect!(result).to(be_equal_to(VerificationResult::PactVerified));
+        let mut client = HALClient{ url: pact_broker.url().to_string(), .. HALClient::default() };
+        let result = client.fetch(&s!("/"));
+        expect!(result.clone()).to(be_ok());
+        client.path_info = result.ok();
+        let result = client.fetch_link(&s!("any"), &hashmap!{});
+        expect!(result).to(be_err().value(format!("Link 'any' was not found in the response, only the following links where found: \"next, prev\". URL: '{}', LINK: 'any'",
+            pact_broker.url())));
     }
 
     #[test]
     fn fetch_link_returns_the_resource_for_the_link() {
-        let pact_runner = ConsumerPactBuilder::consumer(s!("RustPactVerifier"))
-            .has_pact_with(s!("PactBrokerStub"))
-            .upon_receiving(s!("a request to a hal resource"))
-                .path(s!("/"))
-            .will_respond_with()
-                .status(200)
-                .headers(hashmap!{ s!("Content-Type") => s!("application/hal+json") })
-                .body(OptionalBody::Present(s!("{\"_links\":{\"next\":{\"href\":\"/abc\"},\"prev\":{\"href\":\"/def\"}}}")))
-            .upon_receiving(s!("a request to next"))
-                .path(s!("/abc"))
-            .will_respond_with()
-                .status(200)
-                .headers(hashmap!{ s!("Content-Type") => s!("application/json") })
-                .body(OptionalBody::Present(s!("\"Yay! You found your way here\"")))
-            .build();
+        let pact_broker = PactBuilder::new("RustPactVerifier", "PactBrokerStub")
+            .interaction("a request to a hal resource", |i| {
+                i.request.path("/");
+                i.response
+                    .header("Content-Type", "application/hal+json")
+                    .body("{\"_links\":{\"next\":{\"href\":\"/abc\"},\"prev\":{\"href\":\"/def\"}}}");
+            })
+            .interaction("a request to next", |i| {
+                i.request.path("/abc");
+                i.response
+                    .header("Content-Type", "application/json")
+                    .json_body(json_pattern!("Yay! You found your way here"));
+            })
+            .start_mock_server();
 
-        let result = pact_runner.run(&|broker_url| {
-            let mut client = HALClient{ url: broker_url.clone(), .. HALClient::default() };
-            let result = client.fetch(&s!("/"));
-            expect!(result.clone()).to(be_ok());
-            client.path_info = result.ok();
-            let result = client.fetch_link(&s!("next"), &hashmap!{});
-            expect!(result).to(be_ok().value(serde_json::Value::String(s!("Yay! You found your way here"))));
-            Ok(())
-        });
-        expect!(result).to(be_equal_to(VerificationResult::PactVerified));
+        let mut client = HALClient{ url: pact_broker.url().to_string(), .. HALClient::default() };
+        let result = client.fetch(&s!("/"));
+        expect!(result.clone()).to(be_ok());
+        client.path_info = result.ok();
+        let result = client.fetch_link(&s!("next"), &hashmap!{});
+        expect!(result).to(be_ok().value(serde_json::Value::String(s!("Yay! You found your way here"))));
     }
 
     #[test]
     fn fetch_link_returns_handles_absolute_resource_links() {
         init().unwrap_or(());
-        let pact_runner = ConsumerPactBuilder::consumer(s!("RustPactVerifier"))
-            .has_pact_with(s!("PactBrokerStub"))
-            .upon_receiving(s!("a request to a hal resource with absolute paths"))
-                .path(s!("/"))
-            .will_respond_with()
-                .status(200)
-                .headers(hashmap!{ s!("Content-Type") => s!("application/hal+json") })
-                .body(OptionalBody::Present(s!("{\"_links\":{\"next\":{\"href\":\"http://localhost/abc\"},\"prev\":{\"href\":\"http://localhost/def\"}}}")))
-            .upon_receiving(s!("a request to next"))
-                .path(s!("/abc"))
-            .will_respond_with()
-                .status(200)
-                .headers(hashmap!{ s!("Content-Type") => s!("application/json") })
-                .body(OptionalBody::Present(s!("\"Yay! You found your way here\"")))
-            .build();
+        let pact_broker = PactBuilder::new("RustPactVerifier", "PactBrokerStub")
+            .interaction("a request to a hal resource with absolute paths", |i| {
+                i.request.path("/");
+                i.response
+                    .header("Content-Type", "application/hal+json")
+                    .body("{\"_links\":{\"next\":{\"href\":\"http://localhost/abc\"},\"prev\":{\"href\":\"http://localhost/def\"}}}");
+            })
+            .interaction("a request to next", |i| {
+                i.request.path("/abc");
+                i.response
+                    .header("Content-Type", "application/json")
+                    .json_body(json_pattern!("Yay! You found your way here"));
+            })
+            .start_mock_server();
 
-        let result = pact_runner.run(&|broker_url| {
-            let mut client = HALClient{ url: broker_url.clone(), .. HALClient::default() };
-            let result = client.fetch(&s!("/"));
-            expect!(result.clone()).to(be_ok());
-            client.path_info = result.ok();
-            let result = client.fetch_link(&s!("next"), &hashmap!{});
-            expect!(result).to(be_ok().value(serde_json::Value::String(s!("Yay! You found your way here"))));
-            Ok(())
-        });
-        expect!(result).to(be_equal_to(VerificationResult::PactVerified));
+        let mut client = HALClient{ url: pact_broker.url().to_string(), .. HALClient::default() };
+        let result = client.fetch(&s!("/"));
+        expect!(result.clone()).to(be_ok());
+        client.path_info = result.ok();
+        let result = client.fetch_link(&s!("next"), &hashmap!{});
+        expect!(result).to(be_ok().value(serde_json::Value::String(s!("Yay! You found your way here"))));
     }
 
     #[test]
     fn fetch_link_returns_the_resource_for_the_templated_link() {
         init().unwrap_or(());
-        let pact_runner = ConsumerPactBuilder::consumer(s!("RustPactVerifier"))
-            .has_pact_with(s!("PactBrokerStub"))
-            .upon_receiving(s!("a request to a templated hal resource"))
-                .path(s!("/"))
-            .will_respond_with()
-                .status(200)
-                .headers(hashmap!{ s!("Content-Type") => s!("application/hal+json") })
-                .body(OptionalBody::Present(s!("{\"_links\":{\"document\":{\"href\":\"/doc/{id}\",\"templated\":true}}}")))
-            .upon_receiving(s!("a request for a document"))
-                .path(s!("/doc/abc"))
-            .will_respond_with()
-                .status(200)
-                .headers(hashmap!{ s!("Content-Type") => s!("application/json") })
-                .body(OptionalBody::Present(s!("\"Yay! You found your way here\"")))
-            .build();
+        let pact_broker = PactBuilder::new("RustPactVerifier", "PactBrokerStub")
+            .interaction("a request to a templated hal resource", |i| {
+                i.request.path("/");
+                i.response
+                    .header("Content-Type", "application/hal+json")
+                    .body("{\"_links\":{\"document\":{\"href\":\"/doc/{id}\",\"templated\":true}}}");
 
-        let result = pact_runner.run(&|broker_url| {
-            let mut client = HALClient{ url: broker_url.clone(), .. HALClient::default() };
-            let result = client.fetch(&s!("/"));
-            expect!(result.clone()).to(be_ok());
-            client.path_info = result.ok();
-            let result = client.fetch_link(&s!("document"), &hashmap!{ s!("id") => s!("abc") });
-            expect!(result).to(be_ok().value(serde_json::Value::String(s!("Yay! You found your way here"))));
-            Ok(())
-        });
-        expect!(result).to(be_equal_to(VerificationResult::PactVerified));
+            })
+            .interaction("a request for a document", |i| {
+                i.request.path("/doc/abc");
+                i.response
+                    .header("Content-Type", "application/json")
+                    .json_body(json_pattern!("Yay! You found your way here"));
+            })
+            .start_mock_server();
+
+        let mut client = HALClient{ url: pact_broker.url().to_string(), .. HALClient::default() };
+        let result = client.fetch(&s!("/"));
+        expect!(result.clone()).to(be_ok());
+        client.path_info = result.ok();
+        let result = client.fetch_link(&s!("document"), &hashmap!{ s!("id") => s!("abc") });
+        expect!(result).to(be_ok().value(serde_json::Value::String(s!("Yay! You found your way here"))));
     }
 
     #[test]
     fn fetch_pacts_from_broker_returns_empty_list_if_there_are_no_pacts() {
         init().unwrap_or(());
 
-        let pact_runner = ConsumerPactBuilder::consumer(s!("RustPactVerifier"))
-            .has_pact_with(s!("PactBroker"))
-            .upon_receiving(s!("a request to the pact broker root"))
-                .path(s!("/"))
-                .headers(hashmap!{ s!("Accept") => s!("application/hal+json, application/json") })
-            .will_respond_with()
-                .status(200)
-                .headers(hashmap!{ s!("Content-Type") => s!("application/hal+json") })
-                .body(OptionalBody::Present(s!(r#"
-                    {
-                        "_links":{
-                            "pb:latest-provider-pacts":{"href":"http://localhost/pacts/provider/{provider}/latest","templated":true}
+        let pact_broker = PactBuilder::new("RustPactVerifier", "PactBroker")
+            .interaction("a request to the pact broker root", |i| {
+                i.request
+                    .path("/")
+                    .header("Accept", "application/hal+json, application/json");
+                i.response
+                    .header("Content-Type", "application/hal+json")
+                    .json_body(json_pattern!({
+                        "_links": {
+                            "pb:latest-provider-pacts": {
+                                "href": "http://localhost/pacts/provider/{provider}/latest",
+                                "templated": true,
+                            }
                         }
-                    }
-                "#)))
-            .given(s!("There are no pacts in the pact broker"))
-            .upon_receiving(s!("a request for a providers pacts"))
-                .path(s!("/pacts/provider/sad_provider/latest"))
-                .headers(hashmap!{ s!("Accept") => s!("application/hal+json, application/json") })
-            .will_respond_with()
-                .status(404)
-            .build();
+                    }));
+            })
+            .interaction("a request for a providers pacts", |i| {
+                i.given("There are no pacts in the pact broker");
+                i.request
+                    .path("/pacts/provider/sad_provider/latest")
+                    .header("Accept", "application/hal+json, application/json");
+                i.response.status(404);
+            })
+            .start_mock_server();
 
-        let result = pact_runner.run(&|broker_url| {
-            let result = fetch_pacts_from_broker(&broker_url, &s!("sad_provider"));
-            expect!(result).to(be_err().value(format!("No pacts for provider 'sad_provider' where found in the pact broker. URL: '{}'",
-                broker_url)));
-            Ok(())
-        });
-        expect!(result).to(be_equal_to(VerificationResult::PactVerified));
+        let result = fetch_pacts_from_broker(&pact_broker.url().to_string(), &s!("sad_provider"));
+        expect!(result).to(be_err().value(format!("No pacts for provider 'sad_provider' where found in the pact broker. URL: '{}'",
+            pact_broker.url())));
     }
 
     #[test]
@@ -734,66 +687,64 @@ mod tests {
             interactions: vec![ Interaction { description: s!("a request friends"), .. Interaction::default() } ],
             .. Pact::default() }
             .to_json().to_string();
-        let pact_runner = ConsumerPactBuilder::consumer(s!("RustPactVerifier"))
-            .has_pact_with(s!("PactBroker"))
-            .upon_receiving(s!("a request to the pact broker root"))
-                .path(s!("/"))
-                .headers(hashmap!{ s!("Accept") => s!("application/hal+json, application/json") })
-            .will_respond_with()
-                .status(200)
-                .headers(hashmap!{ s!("Content-Type") => s!("application/hal+json") })
-                .body(OptionalBody::Present(s!(r#"
-                    {
-                        "_links":{
-                            "pb:latest-provider-pacts":{"href":"http://localhost/pacts/provider/{provider}/latest","templated":true}
+        let pact_broker = PactBuilder::new("RustPactVerifier", "PactBroker")
+            .interaction("a request to the pact broker root", |i| {
+                i.request
+                    .path("/")
+                    .header("Accept", "application/hal+json, application/json");
+                i.response
+                    .header("Content-Type", "application/hal+json")
+                    .json_body(json_pattern!({
+                        "_links": {
+                            "pb:latest-provider-pacts": {
+                                "href": "http://localhost/pacts/provider/{provider}/latest",
+                                "templated": true,
+                            }
                         }
-                    }
-                "#)))
-            .given(s!("There are two pacts in the pact broker"))
-            .upon_receiving(s!("a request for a providers pacts"))
-                .path(s!("/pacts/provider/happy_provider/latest"))
-                .headers(hashmap!{ s!("Accept") => s!("application/hal+json, application/json") })
-            .will_respond_with()
-                .status(200)
-                .headers(hashmap!{ s!("Content-Type") => s!("application/hal+json") })
-                .body(OptionalBody::Present(s!(r#"
-                    {
+                    }));
+            })
+            .interaction("a request for a providers pacts", |i| {
+                i.given("There are two pacts in the pact broker");
+                i.request
+                    .path("/pacts/provider/happy_provider/latest")
+                    .header("Accept", "application/hal+json, application/json");
+                i.response
+                    .header("Content-Type", "application/hal+json")
+                    .json_body(json_pattern!({
                         "_links":{
                             "pacts":[
                                 {"href":"http://localhost/pacts/provider/happy_provider/consumer/Consumer/version/1.0.0"},
                                 {"href":"http://localhost/pacts/provider/happy_provider/consumer/Consumer2/version/1.0.0"}
                             ]
                         }
-                    }
-                "#)))
-            .given(s!("There are two pacts in the pact broker"))
-            .upon_receiving(s!("a request for the first provider pact"))
-                .path(s!("/pacts/provider/happy_provider/consumer/Consumer/version/1.0.0"))
-                .headers(hashmap!{ s!("Accept") => s!("application/hal+json, application/json") })
-            .will_respond_with()
-                .status(200)
-                .headers(hashmap!{ s!("Content-Type") => s!("application/json") })
-                .body(OptionalBody::Present(pact.clone()))
-            .given(s!("There are two pacts in the pact broker"))
-            .upon_receiving(s!("a request for the second provider pact"))
-                .path(s!("/pacts/provider/happy_provider/consumer/Consumer2/version/1.0.0"))
-                .headers(hashmap!{ s!("Accept") => s!("application/hal+json, application/json") })
-            .will_respond_with()
-                .status(200)
-                .headers(hashmap!{ s!("Content-Type") => s!("application/json") })
-                .body(OptionalBody::Present(pact2.clone()))
-            .build();
+                    }));
+            })
+            .interaction("a request for the first provider pact", |i| {
+                i.given("There are two pacts in the pact broker");
+                i.request
+                    .path("/pacts/provider/happy_provider/consumer/Consumer/version/1.0.0")
+                    .header("Accept", "application/hal+json, application/json");
+                i.response
+                    .header("Content-Type", "application/json")
+                    .body(pact.clone());
+            })
+            .interaction("a request for the second provider pact", |i| {
+                i.given("There are two pacts in the pact broker");
+                i.request
+                    .path("/pacts/provider/happy_provider/consumer/Consumer2/version/1.0.0")
+                    .header("Accept", "application/hal+json, application/json");
+                i.response
+                    .header("Content-Type", "application/json")
+                    .body(pact2.clone());
+            })
+            .start_mock_server();
 
-        let result = pact_runner.run(&|broker_url| {
-            let result = fetch_pacts_from_broker(&broker_url, &s!("happy_provider"));
-            expect!(result.clone()).to(be_ok());
-            let pacts = result.unwrap();
-            expect!(pacts.len()).to(be_equal_to(2));
-            for pact in pacts {
-                expect!(pact).to(be_ok());
-            }
-            Ok(())
-        });
-        expect!(result).to(be_equal_to(VerificationResult::PactVerified));
+        let result = fetch_pacts_from_broker(&pact_broker.url().to_string(), &s!("happy_provider"));
+        expect!(result.clone()).to(be_ok());
+        let pacts = result.unwrap();
+        expect!(pacts.len()).to(be_equal_to(2));
+        for pact in pacts {
+            expect!(pact).to(be_ok());
+        }
     }
 }

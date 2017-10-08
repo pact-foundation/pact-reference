@@ -38,11 +38,7 @@ impl Matchable for SomethingLike {
         self.example.to_example()
     }
 
-    fn extract_matching_rules(
-        &self,
-        path: &str,
-        rules_out: &mut Matchers,
-    ) {
+    fn extract_matching_rules(&self, path: &str, rules_out: &mut Matchers) {
         rules_out.insert(path.to_owned(), hashmap!(s!("match") => s!("type")));
         self.example.extract_matching_rules(path, rules_out);
     }
@@ -90,28 +86,32 @@ impl Matchable for ArrayLike {
         serde_json::Value::Array(repeat(element).take(self.min_length).collect())
     }
 
-    fn extract_matching_rules(
-        &self,
-        path: &str,
-        rules_out: &mut Matchers,
-    ) {
-        rules_out.insert(path.to_owned(), hashmap!(
-            s!("match") => s!("type"),
-            s!("min") => format!("{}", self.min_length),
-        ));
-        rules_out.insert(format!("{}[*].*", path), hashmap!(
-            s!("match") => s!("type"),
-        ));
+    fn extract_matching_rules(&self, path: &str, rules_out: &mut Matchers) {
+        rules_out.insert(
+            path.to_owned(),
+            hashmap!(
+                s!("match") => s!("type"),
+                s!("min") => format!("{}", self.min_length),
+            ),
+        );
+        rules_out.insert(
+            format!("{}[*].*", path),
+            hashmap!(
+                s!("match") => s!("type"),
+            ),
+        );
         let new_path = format!("{}[*]", path);
-        self.example_element.extract_matching_rules(&new_path, rules_out);
+        self.example_element.extract_matching_rules(
+            &new_path,
+            rules_out,
+        );
     }
 }
 
 #[test]
 fn array_like_is_matchable() {
     let elem = SomethingLike::new(json_pattern!("hello"));
-    let matchable = ArrayLike::new(json_pattern!(elem))
-        .with_min_length(2);
+    let matchable = ArrayLike::new(json_pattern!(elem)).with_min_length(2);
     assert_eq!(matchable.to_example(), json!(["hello", "hello"]));
 
     let mut rules = HashMap::new();
@@ -153,15 +153,14 @@ impl Matchable for Term {
         json!(&self.example)
     }
 
-    fn extract_matching_rules(
-        &self,
-        path: &str,
-        rules_out: &mut Matchers,
-    ) {
-        rules_out.insert(path.to_owned(), hashmap!(
-            s!("match") => s!("regex"),
-            s!("regex") => s!(self.regex.as_str()),
-        ));
+    fn extract_matching_rules(&self, path: &str, rules_out: &mut Matchers) {
+        rules_out.insert(
+            path.to_owned(),
+            hashmap!(
+                s!("match") => s!("regex"),
+                s!("regex") => s!(self.regex.as_str()),
+            ),
+        );
     }
 }
 
