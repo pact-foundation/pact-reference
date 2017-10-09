@@ -4,7 +4,7 @@ use regex::Regex;
 use serde_json;
 use std::collections::HashMap;
 
-use matchable::obj_key_for_path;
+use patterns::obj_key_for_path;
 use prelude::*;
 
 /// Builder for `Request` objects. Normally created via `PactBuilder`.

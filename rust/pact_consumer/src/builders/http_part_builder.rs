@@ -4,7 +4,7 @@ use regex::Regex;
 use serde_json;
 use std::collections::HashMap;
 
-use matchable::obj_key_for_path;
+use patterns::obj_key_for_path;
 use prelude::*;
 
 /// Various methods shared between `RequestBuilder` and `ResponseBuilder`.
@@ -160,7 +160,7 @@ fn json_body_pattern() {
     let pattern = PactBuilder::new("C", "P")
         .interaction("I", |i| {
             i.request.json_body(json_pattern!({
-                "message": json_pattern!(SomethingLike::new(json_pattern!("Hello"))),
+                "message": SomethingLike::new(json_pattern!("Hello")),
             }));
         })
         .build();

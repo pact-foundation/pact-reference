@@ -6,15 +6,17 @@ use serde_json;
 #[cfg(test)]
 use std::collections::HashMap;
 use std::iter::repeat;
+use std::marker::PhantomData;
 
-use super::Matchable;
+use super::Pattern;
 use super::json_pattern::JsonPattern;
+use super::string_pattern::StringPattern;
 
-macro_rules! impl_from_matchable_for_json_pattern {
-    ($t:ty) => {
-        impl From<$t> for JsonPattern {
-            fn from(matchable: $t) -> Self {
-                JsonPattern::matchable(matchable)
+macro_rules! impl_from_for_pattern {
+    ($from:ty, $pattern:ident) => {
+        impl From<$from> for $pattern {
+            fn from(pattern: $from) -> Self {
+                $pattern::pattern(pattern)
             }
         }
     }
@@ -22,19 +24,21 @@ macro_rules! impl_from_matchable_for_json_pattern {
 
 /// Match values based on their data types.
 #[derive(Debug)]
-pub struct SomethingLike {
-    example: JsonPattern,
+pub struct SomethingLike<Nested: Pattern> {
+    example: Nested,
 }
 
-impl SomethingLike {
+impl<Nested: Pattern> SomethingLike<Nested> {
     /// Match all values which have the same type as `example`.
-    pub fn new(example: JsonPattern) -> SomethingLike {
-        SomethingLike { example: example }
+    pub fn new<E: Into<Nested>>(example: E) -> Self {
+        SomethingLike { example: example.into() }
     }
 }
 
-impl Matchable for SomethingLike {
-    fn to_example(&self) -> serde_json::Value {
+impl<Nested: Pattern> Pattern for SomethingLike<Nested> {
+    type Matches = Nested::Matches;
+
+    fn to_example(&self) -> Self::Matches {
         self.example.to_example()
     }
 
@@ -44,15 +48,23 @@ impl Matchable for SomethingLike {
     }
 }
 
-impl_from_matchable_for_json_pattern!(SomethingLike);
+impl_from_for_pattern!(SomethingLike<JsonPattern>, JsonPattern);
+impl_from_for_pattern!(SomethingLike<StringPattern>, StringPattern);
 
 #[test]
-fn something_like_is_matchable() {
-    let matchable = SomethingLike::new(json_pattern!("hello"));
+fn something_like_is_pattern() {
+    let matchable = SomethingLike::<JsonPattern>::new(json_pattern!("hello"));
     assert_eq!(matchable.to_example(), json!("hello"));
     let mut rules = HashMap::new();
     matchable.extract_matching_rules("$", &mut rules);
     assert_eq!(json!(rules), json!({"$": {"match": "type"}}));
+}
+
+#[test]
+fn something_like_into() {
+    // Make sure we can convert `SomethingLike` into different pattern types.
+    let _: JsonPattern = SomethingLike::new(json_pattern!("hello")).into();
+    let _: StringPattern = SomethingLike::new("hello".to_owned()).into();
 }
 
 /// Match an array with the specified "shape".
@@ -78,9 +90,11 @@ impl ArrayLike {
     }
 }
 
-impl_from_matchable_for_json_pattern!(ArrayLike);
+impl_from_for_pattern!(ArrayLike, JsonPattern);
 
-impl Matchable for ArrayLike {
+impl Pattern for ArrayLike {
+    type Matches = serde_json::Value;
+
     fn to_example(&self) -> serde_json::Value {
         let element = self.example_element.to_example();
         serde_json::Value::Array(repeat(element).take(self.min_length).collect())
@@ -109,7 +123,7 @@ impl Matchable for ArrayLike {
 }
 
 #[test]
-fn array_like_is_matchable() {
+fn array_like_is_pattern() {
     let elem = SomethingLike::new(json_pattern!("hello"));
     let matchable = ArrayLike::new(json_pattern!(elem)).with_min_length(2);
     assert_eq!(matchable.to_example(), json!(["hello", "hello"]));
@@ -130,27 +144,40 @@ fn array_like_is_matchable() {
     assert_eq!(json!(rules), expected_rules);
 }
 
-/// Match strings that match a regular expression.
+/// Match and generate strings that match a regular expression.
 #[derive(Debug)]
-pub struct Term {
+pub struct Term<Nested: Pattern> {
+    /// The example string we generate when asked.
     example: String,
+    /// The regex we use to match.
     regex: Regex,
+    /// Since we always store `example` as a string, we need to mention our
+    /// `Nested` type somewhere. We can do that using the zero-length
+    /// `PhantomData` type.
+    phantom: PhantomData<Nested>,
 }
 
-impl Term {
+impl<Nested: Pattern> Term<Nested> {
     /// Construct a new `Term`, given a regex and the example string to
     /// generate.
-    pub fn new<S: Into<String>>(regex: Regex, example: S) -> Term {
+    pub fn new<S: Into<String>>(regex: Regex, example: S) -> Self {
         Term {
             example: example.into(),
             regex: regex,
+            phantom: PhantomData,
         }
     }
 }
 
-impl Matchable for Term {
-    fn to_example(&self) -> serde_json::Value {
-        json!(&self.example)
+impl<Nested> Pattern for Term<Nested>
+where
+    Nested: Pattern,
+    Nested::Matches: From<String>,
+{
+    type Matches = Nested::Matches;
+
+    fn to_example(&self) -> Self::Matches {
+        From::from(self.example.clone())
     }
 
     fn extract_matching_rules(&self, path: &str, rules_out: &mut Matchers) {
@@ -164,11 +191,12 @@ impl Matchable for Term {
     }
 }
 
-impl_from_matchable_for_json_pattern!(Term);
+impl_from_for_pattern!(Term<JsonPattern>, JsonPattern);
+impl_from_for_pattern!(Term<StringPattern>, StringPattern);
 
 #[test]
-fn term_is_matchable() {
-    let matchable = Term::new(Regex::new("[Hh]ello").unwrap(), "hello");
+fn term_is_pattern() {
+    let matchable = Term::<JsonPattern>::new(Regex::new("[Hh]ello").unwrap(), "hello");
     assert_eq!(matchable.to_example(), json!("hello"));
 
     let mut rules = HashMap::new();
@@ -179,7 +207,9 @@ fn term_is_matchable() {
     assert_eq!(json!(rules), expected_rules);
 }
 
-// These were also provided by the Ruby library, but I'm not sure we need them:
-//
-// - QueryString
-// - QueryHash
+#[test]
+fn term_into() {
+    // Make sure we can convert `Term` into different pattern types.
+    let _: JsonPattern = Term::new(Regex::new("[Hh]ello").unwrap(), "hello").into();
+    let _: StringPattern = Term::new(Regex::new("[Hh]ello").unwrap(), "hello").into();
+}

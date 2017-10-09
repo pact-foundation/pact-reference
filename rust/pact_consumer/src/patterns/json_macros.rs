@@ -213,25 +213,25 @@ macro_rules! json_pattern_internal {
     //////////////////////////////////////////////////////////////////////////
 
     (null) => {
-        $crate::matchable::JsonPattern::null()
+        $crate::patterns::JsonPattern::null()
     };
 
     ([]) => {
-        $crate::matchable::JsonPattern::Array(vec![])
+        $crate::patterns::JsonPattern::Array(vec![])
     };
 
     ([ $($tt:tt)+ ]) => {
-        $crate::matchable::JsonPattern::Array(
+        $crate::patterns::JsonPattern::Array(
             json_pattern_internal!(@array [] $($tt)+)
         )
     };
 
     ({}) => {
-        $crate::matchable::JsonPattern::Object(::std::collections::HashMap::new())
+        $crate::patterns::JsonPattern::Object(::std::collections::HashMap::new())
     };
 
     ({ $($tt:tt)+ }) => {
-        $crate::matchable::JsonPattern::Object({
+        $crate::patterns::JsonPattern::Object({
             let mut object = ::std::collections::HashMap::new();
             json_pattern_internal!(@object object () ($($tt)+) ($($tt)+));
             object
@@ -242,7 +242,7 @@ macro_rules! json_pattern_internal {
     // Must be below every other rule.
     ($other:expr) => {
         {
-            let v: $crate::matchable::JsonPattern = $other.into();
+            let v: $crate::patterns::JsonPattern = $other.into();
             v
         }
     };

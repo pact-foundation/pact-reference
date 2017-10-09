@@ -3,16 +3,17 @@
 
 use pact_matching::models::Matchers;
 use regex::{Captures, Regex};
-use serde_json;
 use std::fmt::Debug;
 
 #[macro_use]
 mod json_macros;
 mod json_pattern;
 mod special_rules;
+mod string_pattern;
 
 pub use self::json_pattern::*;
 pub use self::special_rules::*;
+pub use self::string_pattern::*;
 
 /// Abstract interface to types which can:
 ///
@@ -28,10 +29,14 @@ pub use self::special_rules::*;
 /// parameterizing the input and output types, and possibly other changes.
 ///
 /// [spec]: https://docs.rs/pact_matching/0.2.2/pact_matching/
-pub trait Matchable: Debug {
+pub trait Pattern: Debug {
+    /// What type of data can this pattern be matched against? What kind of
+    /// example data does it generate?
+    type Matches;
+
     /// Convert this `Matchable` into an example data value, stripping out
     /// any special match rules.
-    fn to_example(&self) -> serde_json::Value;
+    fn to_example(&self) -> Self::Matches;
 
     /// Extract the matching rules from this `Matchable`, and insert them into
     /// `rules_out`, using `path` as the base path.

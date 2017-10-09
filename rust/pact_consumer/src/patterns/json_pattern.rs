@@ -6,7 +6,7 @@ use std::borrow::Cow;
 use std::collections::HashMap as Map;
 use std::iter::FromIterator;
 
-use super::{Matchable, obj_key_for_path};
+use super::{Pattern, obj_key_for_path};
 
 /// A pattern which can be used to either:
 ///
@@ -37,7 +37,7 @@ pub enum JsonPattern {
     Object(Map<String, JsonPattern>),
     /// A term which contains an arbitrary matchable. This is where rules like
     /// `SomethingLike` hook into our syntax.
-    Matchable(Box<Matchable>),
+    Pattern(Box<Pattern<Matches = serde_json::Value>>),
 }
 
 impl JsonPattern {
@@ -46,13 +46,18 @@ impl JsonPattern {
         JsonPattern::Json(serde_json::Value::Null)
     }
 
-    /// Construct a JSON pattern from any type implementing `Matchable`.
-    pub fn matchable<M: Matchable + 'static>(matchable: M) -> JsonPattern {
-        JsonPattern::Matchable(Box::new(matchable))
+    /// Construct a JSON pattern from a type implementing `Pattern`.
+    pub fn pattern<P>(pattern: P) -> JsonPattern
+    where
+        P: Pattern<Matches = serde_json::Value> + 'static,
+    {
+        JsonPattern::Pattern(Box::new(pattern))
     }
 }
 
-impl Matchable for JsonPattern {
+impl Pattern for JsonPattern {
+    type Matches = serde_json::Value;
+
     fn to_example(&self) -> serde_json::Value {
         match *self {
             JsonPattern::Json(ref json) => json.to_owned(),
@@ -63,7 +68,7 @@ impl Matchable for JsonPattern {
                 let fields = obj.into_iter().map(|(k, v)| (k.to_owned(), v.to_example()));
                 serde_json::Value::Object(serde_json::Map::from_iter(fields))
             }
-            JsonPattern::Matchable(ref matchable) => matchable.to_example(),
+            JsonPattern::Pattern(ref pattern) => pattern.to_example(),
         }
     }
 
@@ -82,22 +87,24 @@ impl Matchable for JsonPattern {
                     val.extract_matching_rules(&val_path, rules_out);
                 }
             }
-            JsonPattern::Matchable(ref matchable) => {
-                matchable.extract_matching_rules(path, rules_out);
+            JsonPattern::Pattern(ref pattern) => {
+                pattern.extract_matching_rules(path, rules_out);
             }
         }
     }
 }
 
 #[test]
-fn json_pattern_is_matchable() {
+fn json_pattern_is_pattern() {
     use env_logger;
-    let _ = env_logger::init();
+    use std::collections::HashMap;
 
     use super::special_rules::SomethingLike;
 
+    let _ = env_logger::init();
+
     // This is our pattern, combinging both example data and matching rules.
-    let matchable = json_pattern!({
+    let pattern = json_pattern!({
         "json": 1,
         "simple": SomethingLike::new(json_pattern!("a")),
         "array": [SomethingLike::new(json_pattern!("b"))],
@@ -109,15 +116,15 @@ fn json_pattern_is_matchable() {
         "simple": "a",
         "array": ["b"],
     });
-    assert_eq!(matchable.to_example(), expected_json);
+    assert_eq!(pattern.to_example(), expected_json);
 
     // Here are our matching rules, for passing to the low-level match engine.
     let expected_rules = json!({
         "$.simple": { "match": "type" },
         "$.array[0]": { "match": "type" },
     });
-    let mut rules = Map::new();
-    matchable.extract_matching_rules("$", &mut rules);
+    let mut rules = HashMap::new();
+    pattern.extract_matching_rules("$", &mut rules);
     assert_eq!(json!(rules), expected_rules);
 }
 

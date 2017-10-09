@@ -128,7 +128,7 @@ extern crate maplit;
 extern crate pact_matching;
 extern crate pact_mock_server;
 extern crate regex;
-#[macro_use]
+#[cfg_attr(test, macro_use)]
 extern crate serde_json;
 extern crate url;
 extern crate uuid;
@@ -136,7 +136,7 @@ extern crate uuid;
 // Child modules which define macros (must be first because macros are resolved)
 // in source inclusion order).
 #[macro_use]
-pub mod matchable;
+pub mod patterns;
 #[cfg(test)]
 #[macro_use]
 mod test_support;
@@ -153,6 +153,7 @@ pub mod mock_server;
 /// ```
 pub mod prelude {
     pub use builders::{HttpPartBuilder, PactBuilder};
-    pub use matchable::{ArrayLike, JsonPattern, Matchable, SomethingLike, Term};
+    pub use patterns::{Pattern, JsonPattern, StringPattern};
+    pub use patterns::{ArrayLike, SomethingLike, Term};
     pub use mock_server::{StartMockServer, ValidatingMockServer};
 }
