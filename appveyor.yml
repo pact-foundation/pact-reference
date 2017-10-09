@@ -10,7 +10,7 @@ environment:
   - TARGET: i686-pc-windows-gnu
 
 install:
-  - appveyor-retry appveyor DownloadFile "https://static.rust-lang.org/rustup/dist/${env:TARGET}/rustup-init.exe" -FileName rustup-init.exe
+  - appveyor-retry appveyor DownloadFile "https://static.rust-lang.org/rustup/dist/%TARGET%/rustup-init.exe" -FileName rustup-init.exe
   - rustup-init.exe -y
   - set PATH=%PATH%;C:\Users\appveyor\.cargo\bin
 
