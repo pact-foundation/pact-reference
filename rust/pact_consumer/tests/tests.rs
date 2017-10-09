@@ -5,9 +5,8 @@ extern crate reqwest;
 use pact_consumer::prelude::*;
 use std::io::prelude::*;
 
-/// This is supposed to be a doctest in lib.rs, but it's breaking there. This
-/// is written in a "neutral" Rust style, using the standard test framework and
-/// popular libraries.
+/// This is supposed to be a doctest in lib.rs, but it's breaking there, so
+/// we have an executable copy here.
 #[test]
 fn mock_server_passing_validation() {
     let _ = env_logger::init();
