@@ -64,7 +64,32 @@ fn something_like_is_pattern() {
 fn something_like_into() {
     // Make sure we can convert `SomethingLike` into different pattern types.
     let _: JsonPattern = SomethingLike::new(json_pattern!("hello")).into();
+    // We don't particularly care about having a nice syntax for
+    // `StringPattern`, because it's rarely useful in practice.
     let _: StringPattern = SomethingLike::new("hello".to_owned()).into();
+}
+
+/// Generates the specified value, matches any value of the same data type. This
+/// is intended for use inside `json_pattern!`, and it interprets its arguments
+/// as a `json_pattern!`.
+///
+/// ```
+/// # #[macro_use] extern crate pact_consumer;
+/// # fn main() {
+/// json_pattern!({
+///   "id": something_like!(10),
+///   "metadata": something_like!({}),
+/// });
+/// # }
+/// ```
+///
+/// If you're building `StringPattern` values, you'll need to call
+/// `SomethingLike::new` manually instead.
+#[macro_export]
+macro_rules! something_like {
+    ($($json_pattern:tt)+) => {
+        $crate::patterns::SomethingLike::new(json_pattern!($($json_pattern)+))
+    }
 }
 
 /// Match an array with the specified "shape".
@@ -144,6 +169,36 @@ fn array_like_is_pattern() {
     assert_eq!(json!(rules), expected_rules);
 }
 
+/// Generates the specified value, matches any value of the same data type. This
+/// is intended for use inside `json_pattern!`, and it interprets its arguments
+/// as a `json_pattern!`.
+///
+/// ```
+/// # #[macro_use] extern crate pact_consumer;
+/// # fn main() {
+/// json_pattern!({
+///   // Expect an array of strings.
+///   "tags": array_like!("tag"),
+///
+///   // Expect an array of objects, each of which has a name key containing
+///   // a string (but match the actual names by type).
+///   "people": array_like!({
+///     "name": "J. Smith",
+///   }),
+/// });
+/// # }
+/// ```
+#[macro_export]
+macro_rules! array_like {
+    ($($json_pattern:tt)+) => {
+        $crate::patterns::ArrayLike::new(json_pattern!($($json_pattern)+))
+    };
+
+    ($($json_pattern:tt)+, $min_len:expr) => {
+        $crate::patterns::ArrayLike::new(json_pattern!($($json_pattern)+))
+    };
+}
+
 /// Match and generate strings that match a regular expression.
 #[derive(Debug)]
 pub struct Term<Nested: Pattern> {
@@ -212,4 +267,38 @@ fn term_into() {
     // Make sure we can convert `Term` into different pattern types.
     let _: JsonPattern = Term::new(Regex::new("[Hh]ello").unwrap(), "hello").into();
     let _: StringPattern = Term::new(Regex::new("[Hh]ello").unwrap(), "hello").into();
+}
+
+/// Internal helper function called by `term!` to build a regex. Panics if the
+/// regex is invalid. (We use this partly because it's hard to refer to the
+/// `regex` crate from inside a public macro unless our caller imports it.)
+#[doc(hidden)]
+pub fn build_regex<S: AsRef<str>>(regex_str: S) -> Regex {
+    let regex_str = regex_str.as_ref();
+    match Regex::new(regex_str) {
+        Ok(regex) => regex,
+        Err(msg) => panic!("could not parse regex {:?}: {}", regex_str, msg),
+    }
+}
+
+/// A pattern which macthes the regular expression `$regex` (specified as a
+/// string) literal, and which generates `$example`.
+///
+/// ```
+/// # #[macro_use] extern crate pact_consumer;
+/// # fn main() {
+/// json_pattern!({
+///   // Match a string consisting of numbers and lower case letters, and
+///   // generate `"10a"`.$crate::patterns::
+///   "id_string": term!("^[0-9a-z]$", "10a")
+/// });
+/// # }
+/// ```
+#[macro_export]
+macro_rules! term {
+    ($regex:expr, $example:expr) => {
+        {
+            $crate::patterns::Term::new($crate::patterns::build_regex($regex), $example)
+        }
+    }
 }
