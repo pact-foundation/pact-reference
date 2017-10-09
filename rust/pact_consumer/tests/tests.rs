@@ -29,7 +29,7 @@ fn mock_server_passing_validation() {
         .start_mock_server();
 
     // You would use your actual client code here.
-    let mallory_url = alice_service.url().join("/mallory").unwrap();
+    let mallory_url = alice_service.path("/mallory");
     let mut response = reqwest::get(mallory_url).expect("could not fetch URL");
     let mut body = String::new();
     response.read_to_string(&mut body).expect("could not read response body");
@@ -52,6 +52,6 @@ fn mock_server_failing_validation() {
         .start_mock_server();
     // Call with the wrong URL, which should lead to a panic at the end of
     // the function.
-    let url = hello_service.url().join("/goodbye").unwrap();
+    let url = hello_service.path("/goodbye");
     let _ = reqwest::get(url);
 }

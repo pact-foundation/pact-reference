@@ -59,6 +59,17 @@ impl ValidatingMockServer {
         &self.url
     }
 
+    /// Given a path string, return a URL pointing to that path on the mock
+    /// server. If the `path` cannot be parsed as URL, **this function will
+    /// panic**. For a non-panicking version, call `.url()` instead and build
+    /// this path yourself.
+    pub fn path<P: AsRef<str>>(&self, path: P) -> Url {
+        // We panic here because this a _test_ library, the `?` operator is
+        // useless in tests, and filling up our test code with piles of `unwrap`
+        // calls is ugly.
+        self.url.join(path.as_ref()).expect("could not parse URL")
+    }
+
     /// Helper function called by our `drop` implementation. This basically exists
     /// so that it can return `Err(message)` whenever needed without making the
     /// flow control in `drop` ultra-complex.

@@ -64,7 +64,7 @@
 //! let alice_service = pact.start_mock_server();
 //!
 //! // You would use your actual client code here.
-//! let mallory_url = alice_service.url().join("/mallory").unwrap();
+//! let mallory_url = alice_service.path("/mallory");
 //! let mut response = reqwest::get(mallory_url).expect("could not fetch URL");
 //! let mut body = String::new();
 //! response.read_to_string(&mut body).expect("could not read response body");
@@ -78,18 +78,14 @@
 //!
 //! ## Matching using patterns
 //!
-//! You can also use patterns like `SomethingLike` or `Term` to allow more
+//! You can also use patterns like `something_like!` or `term!` to allow more
 //! general matches, and you can build complex patterns using the
 //! `json_pattern!` macro:
 //!
 //! ```
-//! // Add this to `main.rs` or `lib.rs`.
-//! extern crate regex;
-//!
 //! # #[macro_use] extern crate pact_consumer;
 //! # fn main() {
 //! use pact_consumer::prelude::*;
-//! use regex::Regex;
 //!
 //! PactBuilder::new("quotes client", "quotes service")
 //!     .interaction("add a new quote to the database", |i| {
@@ -100,18 +96,21 @@
 //!             .json_body(json_pattern!({
 //!                  // Allow the client to send any string as a quote.
 //!                  // When testing the server, use "Eureka!".
-//!                  "quote": SomethingLike::new(json_pattern!("Eureka!")),
+//!                  "quote": something_like!("Eureka!"),
 //!                  // Allow the client to send any string as an author.
 //!                  // When testing the server, use "Archimedes".
-//!                  "by": SomethingLike::new(json_pattern!("Archimedes")),
+//!                  "by": something_like!("Archimedes"),
+//!                  // Allow the client to send an array of strings.
+//!                  // When testing the server, send a single-item array
+//!                  // containing the string "greek".
+//!                  "tags": array_like!("greek"),
 //!              }));
 //!
-//!         let quotes_id = Regex::new("/quotes/[0-9]+").unwrap();
 //!         i.response
 //!             .status(201)
 //!             // Return a location of "/quotes/12" to the client. When
 //!             // testing the server, allow it to return any numeric ID.
-//!             .header("Location", Term::new(quotes_id, "/quotes/12"));
+//!             .header("Location", term!("^/quotes/[0-9]+$", "/quotes/12"));
 //!     });
 //! # }
 //! ```
