@@ -1,7 +1,6 @@
 use pact_matching::models::*;
 #[cfg(test)]
 use regex::Regex;
-use serde_json;
 use std::collections::HashMap;
 
 use prelude::*;
@@ -28,12 +27,9 @@ impl RequestBuilder {
     }
 
     /// Specify the request path. Defaults to `"/"`.
-    pub fn path<P: Into<JsonPattern>>(&mut self, path: P) -> &mut Self {
+    pub fn path<P: Into<StringPattern>>(&mut self, path: P) -> &mut Self {
         let path = path.into();
-        self.request.path = serde_json::from_value(path.to_example())
-                // TODO: This panics, which is extremely rude anywhere but
-                // tests. Do we want to panic, or return a runtime error?
-                .expect("path must be a string");
+        self.request.path = path.to_example();
         path.extract_matching_rules(
             "$.path",
             &mut self.request.matching_rules.get_defaulting(),
@@ -57,35 +53,31 @@ impl RequestBuilder {
     /// let digits_re = Regex::new("^[0-9]+$").unwrap();
     /// RequestBuilder::default()
     ///     .query_param("simple", "value")
-    ///     .query_param("pattern", Term::new(digits_re, "123"))
-    ///     .query_param("list", json_pattern!(["a", "b"]));
+    ///     .query_param("pattern", Term::new(digits_re, "123"));
     /// # }
     /// ```
-    pub fn query_param<K, V>(&mut self, key: K, values: V) -> &mut Self
+    ///
+    /// To pass multiple parameters with the same name, call `query_param` more
+    /// than once with the same `key`.
+    pub fn query_param<K, V>(&mut self, key: K, value: V) -> &mut Self
     where
         K: Into<String>,
-        V: Into<JsonPattern>,
+        V: Into<StringPattern>,
     {
         let key = key.into();
-        let values = values.into();
+        let value = value.into();
 
-        // Extract our example JSON.
-        //
-        // TODO: These calls to `expect` are rude, as described above.
-        let values_example = match values.to_example() {
-            serde_json::Value::String(s) => vec![s],
-            arr @ serde_json::Value::Array(_) => {
-                serde_json::from_value(arr).expect("expected array of strings")
-            }
-            other => panic!("expected array of strings, found: {}", other),
-        };
+        // Extract our example JSON and add it the `Vec` for the appropriate
+        // parameter.
         self.request
             .query
             .get_defaulting()
-            .insert(key.clone(), values_example);
+            .entry(key.clone())
+            .or_insert_with(Default::default)
+            .push(value.to_example());
 
         // Extract our matching rules.
-        values.extract_matching_rules(
+        value.extract_matching_rules(
             &format!("$.query{}", obj_key_for_path(&key)),
             &mut self.request.matching_rules.get_defaulting(),
         );

@@ -1,7 +1,6 @@
 use pact_matching::models::*;
 #[cfg(test)]
 use regex::Regex;
-use serde_json;
 use std::collections::HashMap;
 
 use prelude::*;
@@ -43,23 +42,20 @@ pub trait HttpPartBuilder {
     /// # fn main() {
     /// let digits_re = Regex::new("^[0-9]+$").unwrap();
     /// RequestBuilder::default()
-    ///     .header("X=Simple", "value")
+    ///     .header("X-Simple", "value")
     ///     .header("X-Digits", Term::new(digits_re, "123"));
     /// # }
     /// ```
     fn header<N, V>(&mut self, name: N, value: V) -> &mut Self
     where
         N: Into<String>,
-        V: Into<JsonPattern>,
+        V: Into<StringPattern>,
     {
         let name = name.into();
         let value = value.into();
         {
             let (headers, rules) = self.headers_and_matching_rules_mut();
-            let example_value: String = serde_json::from_value(value.to_example())
-                // TODO: This `expect` is fairly rude.
-                .expect("header value must be a string");
-            headers.insert(name.clone(), example_value);
+            headers.insert(name.clone(), value.to_example());
             value.extract_matching_rules(&format!("$.headers{}", obj_key_for_path(&name)), rules)
         }
         self
