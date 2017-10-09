@@ -144,6 +144,7 @@ mod test_support;
 // Other child modules.
 pub mod builders;
 pub mod mock_server;
+mod util;
 
 /// A "prelude" or a default list of import types to include. This includes
 /// the basic DSL, but it avoids including rarely-used types.

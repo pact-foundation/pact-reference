@@ -2,6 +2,7 @@ use pact_matching::models::*;
 use std::collections::HashMap;
 
 use prelude::*;
+use util::GetDefaulting;
 
 /// Builder for `Response` objects. Normally created via `PactBuilder`.
 pub struct ResponseBuilder {
@@ -43,19 +44,15 @@ impl Default for ResponseBuilder {
 impl HttpPartBuilder for ResponseBuilder {
     fn headers_and_matching_rules_mut(&mut self) -> (&mut HashMap<String, String>, &mut Matchers) {
         (
-            self.response.headers.get_or_insert_with(Default::default),
-            self.response.matching_rules.get_or_insert_with(
-                Default::default,
-            ),
+            self.response.headers.get_defaulting(),
+            self.response.matching_rules.get_defaulting(),
         )
     }
 
     fn body_and_matching_rules_mut(&mut self) -> (&mut OptionalBody, &mut Matchers) {
         (
             &mut self.response.body,
-            self.response.matching_rules.get_or_insert_with(
-                Default::default,
-            ),
+            self.response.matching_rules.get_defaulting(),
         )
 
     }

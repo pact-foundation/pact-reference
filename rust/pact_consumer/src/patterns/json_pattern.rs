@@ -6,7 +6,8 @@ use std::borrow::Cow;
 use std::collections::HashMap as Map;
 use std::iter::FromIterator;
 
-use super::{Pattern, obj_key_for_path};
+use super::Pattern;
+use util::obj_key_for_path;
 
 /// A pattern which can be used to either:
 ///

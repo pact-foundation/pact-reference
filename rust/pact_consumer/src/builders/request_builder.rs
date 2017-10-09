@@ -4,8 +4,8 @@ use regex::Regex;
 use serde_json;
 use std::collections::HashMap;
 
-use patterns::obj_key_for_path;
 use prelude::*;
+use util::{GetDefaulting, obj_key_for_path};
 
 /// Builder for `Request` objects. Normally created via `PactBuilder`.
 pub struct RequestBuilder {
@@ -36,9 +36,7 @@ impl RequestBuilder {
                 .expect("path must be a string");
         path.extract_matching_rules(
             "$.path",
-            &mut self.request.matching_rules.get_or_insert_with(
-                Default::default,
-            ),
+            &mut self.request.matching_rules.get_defaulting(),
         );
         self
     }
@@ -83,15 +81,13 @@ impl RequestBuilder {
         };
         self.request
             .query
-            .get_or_insert_with(Default::default)
+            .get_defaulting()
             .insert(key.clone(), values_example);
 
         // Extract our matching rules.
         values.extract_matching_rules(
             &format!("$.query{}", obj_key_for_path(&key)),
-            &mut self.request.matching_rules.get_or_insert_with(
-                Default::default,
-            ),
+            &mut self.request.matching_rules.get_defaulting(),
         );
 
         self
@@ -117,21 +113,16 @@ impl Default for RequestBuilder {
 impl HttpPartBuilder for RequestBuilder {
     fn headers_and_matching_rules_mut(&mut self) -> (&mut HashMap<String, String>, &mut Matchers) {
         (
-            self.request.headers.get_or_insert_with(Default::default),
-            self.request.matching_rules.get_or_insert_with(
-                Default::default,
-            ),
+            self.request.headers.get_defaulting(),
+            self.request.matching_rules.get_defaulting(),
         )
     }
 
     fn body_and_matching_rules_mut(&mut self) -> (&mut OptionalBody, &mut Matchers) {
         (
             &mut self.request.body,
-            self.request.matching_rules.get_or_insert_with(
-                Default::default,
-            ),
+            self.request.matching_rules.get_defaulting(),
         )
-
     }
 }
 

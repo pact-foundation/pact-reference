@@ -4,8 +4,8 @@ use regex::Regex;
 use serde_json;
 use std::collections::HashMap;
 
-use patterns::obj_key_for_path;
 use prelude::*;
+use util::obj_key_for_path;
 
 /// Various methods shared between `RequestBuilder` and `ResponseBuilder`.
 pub trait HttpPartBuilder {
