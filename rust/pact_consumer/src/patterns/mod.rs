@@ -7,6 +7,7 @@ use std::fmt::Debug;
 #[macro_use]
 mod json_macros;
 mod json_pattern;
+#[macro_use]
 mod special_rules;
 mod string_pattern;
 

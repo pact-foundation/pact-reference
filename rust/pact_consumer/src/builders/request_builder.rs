@@ -159,13 +159,9 @@ fn path_pattern() {
 
 #[test]
 fn query_param_pattern() {
-    let greeting_regex = Regex::new("h.*").unwrap();
     let pattern = PactBuilder::new("C", "P")
         .interaction("I", |i| {
-            i.request.query_param(
-                "greeting",
-                Term::new(greeting_regex, "hello"),
-            );
+            i.request.query_param("greeting", term!("^h.*$", "hello"));
         })
         .build();
     let good = PactBuilder::new("C", "P")
@@ -176,4 +172,25 @@ fn query_param_pattern() {
         .build();
     assert_requests_match!(good, pattern);
     assert_requests_do_not_match!(bad, pattern);
+}
+
+#[test]
+fn query_param_with_underscore() {
+    let pattern = PactBuilder::new("C", "P")
+        .interaction("get a user", |i| {
+            i.request
+                .path("/users")
+                // This `term!` was being ignored in `pact_matching`, but only
+                // if there was an underscore.
+                .query_param("user_id", term!("^[0-9]+$", "1"));
+        })
+        .build();
+    let good = PactBuilder::new("C", "P")
+        .interaction("I", |i| {
+            i.request
+                .path("/users")
+                // Call with a different ID than we expected.
+                .query_param("user_id", "2"); })
+        .build();
+    assert_requests_match!(good, pattern);
 }

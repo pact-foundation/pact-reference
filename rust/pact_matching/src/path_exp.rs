@@ -21,7 +21,7 @@ fn identifier<I>(ch: char, chars: &mut Peekable<I>, tokens: &mut Vec<PathToken>,
     let mut next_char = peek(chars);
     while next_char.is_some() {
         let ch = next_char.unwrap();
-        if ch.1.is_alphabetic() || ch.1.is_numeric() {
+        if ch.1.is_alphabetic() || ch.1.is_numeric() || ch.1 == '_' {
             chars.next();
             id.push(ch.1);
         } else if ch.1 == '.' || ch.1 == '\'' || ch.1 == '[' {
@@ -241,6 +241,13 @@ mod tests {
         expect!(parse_path_exp(s!("$.a.b.c"))).to(
             be_ok().value(vec![PathToken::Root, PathToken::Field(s!("a")), PathToken::Field(s!("b")),
             PathToken::Field(s!("c"))]));
+    }
+
+    #[test]
+    fn parse_path_exp_handles_underscores() {
+        expect!(parse_path_exp(s!("$.user_id"))).to(
+            be_ok().value(vec![PathToken::Root, PathToken::Field(s!("user_id"))])
+        );
     }
 
     #[test]

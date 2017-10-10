@@ -51,6 +51,21 @@ fn match_query_returns_nothing_if_there_are_no_query_strings() {
 }
 
 #[test]
+fn match_query_applies_matching_rules_when_param_has_an_underscore() {
+    let mut mismatches = vec![];
+    let expected = hashmap! { s!("user_id") => vec![s!("1")] };
+    let actual = hashmap! { s!("user_id") => vec![s!("2")] };
+    let rules = hashmap! {
+        s!("$.query.user_id") => hashmap! {
+            s!("match") => s!("regex"),
+            s!("regex") => s!("^[0-9]+$")
+        }
+    };
+    match_query(Some(expected), Some(actual), &mut mismatches, &Some(rules));
+    assert_eq!(mismatches, vec![]);
+}
+
+#[test]
 fn match_query_returns_a_mismatch_if_there_is_no_expected_query_string() {
     let mut mismatches = vec![];
     let expected = None;

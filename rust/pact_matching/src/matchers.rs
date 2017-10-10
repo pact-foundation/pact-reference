@@ -354,6 +354,13 @@ mod tests {
     }
 
     #[test]
+    fn matcher_is_defined_returns_true_when_the_path_contains_underscores() {
+        expect!(matcher_is_defined(&vec![s!("$"), s!("query"), s!("user_id")], &Some(hashmap!{
+            s!("$.query.user_id") => hashmap!{}
+        }))).to(be_true());
+    }
+
+    #[test]
     fn wildcard_matcher_is_defined_returns_false_when_there_are_no_matchers() {
         expect!(wildcard_matcher_is_defined(&vec![s!("$"), s!("a"), s!("b")], &None)).to(be_false());
     }
