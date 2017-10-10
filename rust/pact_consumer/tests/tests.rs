@@ -22,8 +22,8 @@ fn mock_server_passing_validation() {
             i.request.path("/mallory");
             // Define the response we want returned.
             i.response
-                .status(200)
-                .header("Content-Type", "text/plain")
+                .ok()
+                .content_type("text/plain")
                 .body("That is some good Mallory.");
         })
         .start_mock_server();

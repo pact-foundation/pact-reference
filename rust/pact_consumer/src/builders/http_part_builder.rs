@@ -61,6 +61,24 @@ pub trait HttpPartBuilder {
         self
     }
 
+    /// Set the `Content-Type` header.
+    fn content_type<CT>(&mut self, content_type: CT) -> &mut Self
+    where
+        CT: Into<StringPattern>,
+    {
+        self.header("Content-Type", content_type)
+    }
+
+    /// Set the `Content-Type` header to `text/html`.
+    fn html(&mut self) -> &mut Self {
+        self.content_type("text/html")
+    }
+
+    /// Set the `Content-Type` header to `application/json`.
+    fn json(&mut self) -> &mut Self {
+        self.content_type("application/json")
+    }
+
     /// Specify a body literal. This does not allow using patterns.
     ///
     /// ```

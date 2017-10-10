@@ -1,5 +1,21 @@
-//! The `pact_consumer` crate provides the test DSL for writing consumer pact
-//! tests. It implements the [V2 Pact specification][spec].
+//! The `pact_consumer` crate provides the test DSL for writing consumer [Pact
+//! tests][pact]. It implements the [V2 Pact specification][spec].
+//!
+//! [pact]: https://docs.pact.io/
+//! [spec]: https://github.com/pact-foundation/pact-specification
+//!
+//! The big advantages of Pact are:
+//!
+//! 1. The mocks you write to test the client can also be reused to verify that
+//!    the server would actually respond the way the client expects. This gives
+//!    the end-to-end assurance of integration tests (well, almost), but with
+//!    the speed and convenience of unit tests.
+//! 2. Pact has been implemented in many popular languages, so you can test
+//!    clients and servers in multiple languages.
+//!
+//! Whenever possible, we try to use vocabulary similar to the Ruby API for
+//! basic concepts, and to provide the same behavior. But we offer many handy
+//! builder methods to make tests cleaner.
 //!
 //! ## How to use it
 //!
@@ -35,10 +51,10 @@
 //!         i.given("there is some good mallory");
 //!         // Define the request, a GET (default) request to '/mallory'.
 //!         i.request.path("/mallory");
-//!         // Define the response we want returned.
+//!         // Define the response we want returned. We assume a 200 OK
+//!         // response by default.
 //!         i.response
-//!             .status(200)
-//!             .header("Content-Type", "text/plain")
+//!             .content_type("text/plain")
 //!             .body("That is some good Mallory.");
 //!     })
 //!     .build();
@@ -90,9 +106,9 @@
 //! PactBuilder::new("quotes client", "quotes service")
 //!     .interaction("add a new quote to the database", |i| {
 //!         i.request
-//!             .method("POST")
+//!             .post()
 //!             .path("/quotes")
-//!             .header("Content-Type", "application/json")
+//!             .json()
 //!             .json_body(json_pattern!({
 //!                  // Allow the client to send any string as a quote.
 //!                  // When testing the server, use "Eureka!".
@@ -107,13 +123,28 @@
 //!              }));
 //!
 //!         i.response
-//!             .status(201)
+//!             .created()
 //!             // Return a location of "/quotes/12" to the client. When
 //!             // testing the server, allow it to return any numeric ID.
 //!             .header("Location", term!("^/quotes/[0-9]+$", "/quotes/12"));
 //!     });
 //! # }
 //! ```
+//!
+//! The key insight here is this "pact" can be used to test both the client and
+//! the server:
+//!
+//! - When testing the **client**, we allow the request to be anything which
+//!   matches the patterns—so `"quote"` can be any string, not just `"Eureka!"`.
+//!   But we respond with the specified values, such as `"/quotes/12"`.
+//! - When testing the **server**, we send the specified values, such as
+//!   `"Eureka!"`. But we allow the server to respond with anything matching the
+//!   regular expression `^/quotes/[0-9]+$`, because we don't know what database
+//!   ID it will use.
+//!
+//! Also, when testing the server, we may need to set up particular database
+//! fixtures. This can be done using the string passed to `given` in the
+//! examples above.
 
 #![warn(missing_docs)]
 

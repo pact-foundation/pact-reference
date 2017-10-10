@@ -24,6 +24,39 @@ impl ResponseBuilder {
         self
     }
 
+    // This is a partial list of popular HTTP status codes. If you use any
+    // others regularly, feel free to add them.
+
+    /// Set the status code to `200 OK`. (This is default.)
+    pub fn ok(&mut self) -> &mut Self {
+        self.status(200)
+    }
+
+    /// Set the status code to `201 Created`.
+    pub fn created(&mut self) -> &mut Self {
+        self.status(201)
+    }
+
+    /// Set the status code to `204 No Content`.
+    pub fn no_content(&mut self) -> &mut Self {
+        self.status(204)
+    }
+
+    /// Set the status code to `401 Unauthorized`.
+    pub fn unauthorized(&mut self) -> &mut Self {
+        self.status(401)
+    }
+
+    /// Set the status code to `403 Forbidden`.
+    pub fn forbidden(&mut self) -> &mut Self {
+        self.status(403)
+    }
+
+    /// Set the status code to `404 Not Found`.
+    pub fn not_found(&mut self) -> &mut Self {
+        self.status(404)
+    }
+
     /// Build the specified `Response` object.
     pub fn build(&self) -> Response {
         let mut result = self.response.clone();

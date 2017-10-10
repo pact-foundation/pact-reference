@@ -26,6 +26,27 @@ impl RequestBuilder {
         self
     }
 
+    /// Set the HTTP method to `GET`. This is the default, so we don't actually
+    /// care.
+    pub fn get(&mut self) -> &mut Self {
+        self.method("GET")
+    }
+
+    /// Set the HTTP method to `POST`.
+    pub fn post(&mut self) -> &mut Self {
+        self.method("POST")
+    }
+
+    /// Set the HTTP method to `PUT`.
+    pub fn put(&mut self) -> &mut Self {
+        self.method("PUT")
+    }
+
+    /// Set the HTTP method to `DELETE`.
+    pub fn delete(&mut self) -> &mut Self {
+        self.method("DELETE")
+    }
+
     /// Specify the request path. Defaults to `"/"`.
     pub fn path<P: Into<StringPattern>>(&mut self, path: P) -> &mut Self {
         let path = path.into();
