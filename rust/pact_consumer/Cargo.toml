@@ -1,7 +1,7 @@
 [package]
 name = "pact_consumer"
 version = "0.2.1"
-authors = ["Ronald Holshausen <uglyog@gmail.com>"]
+authors = ["Ronald Holshausen <uglyog@gmail.com>", "Eric Kidd <git@randomhacks.net>"]
 description = "Pact-Rust module that provides support for writing consumer pact tests"
 documentation = "https://docs.rs/pact_consumer/0.2.1/pact_consumer/"
 homepage = "http://www.pact.io"
