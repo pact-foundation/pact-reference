@@ -145,7 +145,61 @@
 //! Also, when testing the server, we may need to set up particular database
 //! fixtures. This can be done using the string passed to `given` in the
 //! examples above.
-
+//!
+//! ## Testing using domain objects
+//!
+//! Normally, it's best to generate your JSON using your actual domain objects.
+//! This is easier, and it reduces duplication in your code.
+//!
+//! ```
+//! #[macro_use]
+//! extern crate pact_consumer;
+//! #[macro_use]
+//! extern crate serde_derive;
+//! #[macro_use]
+//! extern crate serde_json;
+//!
+//! use pact_consumer::prelude::*;
+//!
+//! /// Our application's domain object representing a user.
+//! #[derive(Deserialize, Serialize)]
+//! struct User {
+//!     /// All users have this field.
+//!     name: String,
+//!
+//!     /// The server may omit this field when sending JSON, or it may send it
+//!     /// as `null`.
+//!     comment: Option<String>,
+//! }
+//!
+//! # fn main() {
+//! // Create our example user using our normal application objects.
+//! let example = User {
+//!     name: "J. Smith".to_owned(),
+//!     comment: None,
+//! };
+//!
+//! PactBuilder::new("consumer", "provider")
+//!     .interaction("get all users", |i| {
+//!         i.given("a list of users in the database");
+//!         i.request.path("/users");
+//!         i.response
+//!             .json_utf8()
+//!             .json_body(each_like!(
+//!                 // Here, `strip_null_fields` will remove `comment` from
+//!                 // the generated JSON, allowing our pattern to match
+//!                 // missing comments, null comments, and comments with
+//!                 // strings.
+//!                 strip_null_fields(json!(example)),
+//!             ));
+//!     })
+//!     .build();
+//! # }
+//! ```
+//!
+//! For more advice on writing good pacts, see [Best Practices][].
+//!
+//! [Best Practices]: https://docs.pact.io/best_practices/consumer.html
 #![warn(missing_docs)]
 
 #[cfg(test)]
@@ -177,7 +231,7 @@ mod test_support;
 // Other child modules.
 pub mod builders;
 pub mod mock_server;
-mod util;
+pub mod util;
 
 /// A "prelude" or a default list of import types to include. This includes
 /// the basic DSL, but it avoids including rarely-used types.
@@ -190,4 +244,5 @@ pub mod prelude {
     pub use patterns::{Pattern, JsonPattern, StringPattern};
     pub use patterns::{EachLike, Like, Term};
     pub use mock_server::{StartMockServer, ValidatingMockServer};
+    pub use util::strip_null_fields;
 }

@@ -3,6 +3,81 @@
 //! the crate, but prevents them from winding up in our public API.
 
 use regex::{Captures, Regex};
+use serde_json;
+
+/// Internal helper method for `strip_null_fields`.
+fn strip_null_fields_mut(json: &mut serde_json::Value) {
+    use serde_json::Value;
+
+    match *json {
+        Value::Null | Value::Bool(_) | Value::Number(_) | Value::String(_) => {
+            // Nothing to do.
+        }
+        Value::Array(ref mut arr) => {
+            // Walk the array recursively, but leave `null` elements intact.
+            for mut v in arr {
+                strip_null_fields_mut(&mut v);
+            }
+        }
+        Value::Object(ref mut obj) => {
+            // Build a list of keys to remove. We need to do his first, because
+            // we can't mutate a Rust collection while iterating over it. (Not
+            // that you can't in _most_ languages, but Rust actually enforces
+            // this.)
+            let keys_to_remove = obj.iter().filter_map(|(k, v)| {
+                if v.is_null() {
+                    // Allocate a new copy of the string so that we don't hold
+                    // on to a pointer into `obj`.
+                    Some(k.to_owned())
+                } else {
+                    None
+                }
+            }).collect::<Vec<_>>();
+
+            // Now remove our keys.
+            for key in keys_to_remove {
+                obj.remove(&key);
+            }
+        }
+    }
+}
+
+/// Given a `serde_json::Value`, walk it recursively, removing any null fields,
+/// and return the updated value. Because of how this is normally called, it
+/// consumes its input value and returns the stripped value.
+///
+/// This function is most useful when serializing Rust types to JSON for
+/// use with `each_like!`, because it follows the pact convention of removing
+/// optional fields.
+///
+/// ```
+/// #[macro_use]
+/// extern crate pact_consumer;
+/// #[macro_use]
+/// extern crate serde_json;
+///
+/// use pact_consumer::prelude::*;
+///
+/// # fn main() {
+/// let actual = strip_null_fields(json!([
+///     null,
+///     { "a": 1, "b": null },
+/// ]));
+/// let expected = json!([
+///     null,       // nulls in arrays are left alone.
+///     { "a": 1 }, // nulls in objects are stripped.
+/// ]);
+/// assert_eq!(actual, expected);
+/// # }
+/// ```
+pub fn strip_null_fields<V>(json: V) -> serde_json::Value
+where
+    V: Into<serde_json::Value>,
+{
+    let mut json = json.into();
+    strip_null_fields_mut(&mut json);
+    json
+}
 
 /// Wrapper for `get_or_insert_with(Default::default)`, to simplify a common
 /// pattern of code in this crate and reduce ugly line wrapping.
