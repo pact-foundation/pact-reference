@@ -108,7 +108,7 @@
 //!         i.request
 //!             .post()
 //!             .path("/quotes")
-//!             .json()
+//!             .json_utf8()
 //!             .json_body(json_pattern!({
 //!                  // Allow the client to send any string as a quote.
 //!                  // When testing the server, use "Eureka!".

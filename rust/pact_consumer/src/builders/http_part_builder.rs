@@ -73,9 +73,13 @@ pub trait HttpPartBuilder {
         self.content_type("text/html")
     }
 
-    /// Set the `Content-Type` header to `application/json`.
-    fn json(&mut self) -> &mut Self {
-        self.content_type("application/json")
+    /// Set the `Content-Type` header to `application/json; charset=utf-8`,
+    /// with enough flexibility to cover common variations.
+    fn json_utf8(&mut self) -> &mut Self {
+        self.content_type(term!(
+            "^application/json; charset=(utf|UTF)-8$",
+            "application/json; charset=utf-8"
+        ))
     }
 
     /// Specify a body literal. This does not allow using patterns.
