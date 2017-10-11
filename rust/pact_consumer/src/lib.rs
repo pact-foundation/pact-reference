@@ -94,9 +94,9 @@
 //!
 //! ## Matching using patterns
 //!
-//! You can also use patterns like `something_like!` or `term!` to allow more
-//! general matches, and you can build complex patterns using the
-//! `json_pattern!` macro:
+//! You can also use patterns like `like!`, `each_like!` or `term!` to
+//! allow more general matches, and you can build complex patterns using
+//! the `json_pattern!` macro:
 //!
 //! ```
 //! # #[macro_use] extern crate pact_consumer;
@@ -112,14 +112,14 @@
 //!             .json_body(json_pattern!({
 //!                  // Allow the client to send any string as a quote.
 //!                  // When testing the server, use "Eureka!".
-//!                  "quote": something_like!("Eureka!"),
+//!                  "quote": like!("Eureka!"),
 //!                  // Allow the client to send any string as an author.
 //!                  // When testing the server, use "Archimedes".
-//!                  "by": something_like!("Archimedes"),
+//!                  "by": like!("Archimedes"),
 //!                  // Allow the client to send an array of strings.
 //!                  // When testing the server, send a single-item array
 //!                  // containing the string "greek".
-//!                  "tags": array_like!("greek"),
+//!                  "tags": each_like!("greek"),
 //!              }));
 //!
 //!         i.response
@@ -185,6 +185,6 @@ mod util;
 pub mod prelude {
     pub use builders::{HttpPartBuilder, PactBuilder};
     pub use patterns::{Pattern, JsonPattern, StringPattern};
-    pub use patterns::{ArrayLike, SomethingLike, Term};
+    pub use patterns::{EachLike, Like, Term};
     pub use mock_server::{StartMockServer, ValidatingMockServer};
 }

@@ -1,4 +1,4 @@
-//! Special matching rules, including `SomethingLike`, `Term`, etc.
+//! Special matching rules, including `Like`, `Term`, etc.
 
 use pact_matching::models::Matchers;
 use regex::Regex;
@@ -24,18 +24,18 @@ macro_rules! impl_from_for_pattern {
 
 /// Match values based on their data types.
 #[derive(Debug)]
-pub struct SomethingLike<Nested: Pattern> {
+pub struct Like<Nested: Pattern> {
     example: Nested,
 }
 
-impl<Nested: Pattern> SomethingLike<Nested> {
+impl<Nested: Pattern> Like<Nested> {
     /// Match all values which have the same type as `example`.
     pub fn new<E: Into<Nested>>(example: E) -> Self {
-        SomethingLike { example: example.into() }
+        Like { example: example.into() }
     }
 }
 
-impl<Nested: Pattern> Pattern for SomethingLike<Nested> {
+impl<Nested: Pattern> Pattern for Like<Nested> {
     type Matches = Nested::Matches;
 
     fn to_example(&self) -> Self::Matches {
@@ -48,12 +48,12 @@ impl<Nested: Pattern> Pattern for SomethingLike<Nested> {
     }
 }
 
-impl_from_for_pattern!(SomethingLike<JsonPattern>, JsonPattern);
-impl_from_for_pattern!(SomethingLike<StringPattern>, StringPattern);
+impl_from_for_pattern!(Like<JsonPattern>, JsonPattern);
+impl_from_for_pattern!(Like<StringPattern>, StringPattern);
 
 #[test]
-fn something_like_is_pattern() {
-    let matchable = SomethingLike::<JsonPattern>::new(json_pattern!("hello"));
+fn like_is_pattern() {
+    let matchable = Like::<JsonPattern>::new(json_pattern!("hello"));
     assert_eq!(matchable.to_example(), json!("hello"));
     let mut rules = HashMap::new();
     matchable.extract_matching_rules("$", &mut rules);
@@ -61,12 +61,12 @@ fn something_like_is_pattern() {
 }
 
 #[test]
-fn something_like_into() {
-    // Make sure we can convert `SomethingLike` into different pattern types.
-    let _: JsonPattern = SomethingLike::new(json_pattern!("hello")).into();
+fn like_into() {
+    // Make sure we can convert `Like` into different pattern types.
+    let _: JsonPattern = Like::new(json_pattern!("hello")).into();
     // We don't particularly care about having a nice syntax for
     // `StringPattern`, because it's rarely useful in practice.
-    let _: StringPattern = SomethingLike::new("hello".to_owned()).into();
+    let _: StringPattern = Like::new("hello".to_owned()).into();
 }
 
 /// Generates the specified value, matches any value of the same data type. This
@@ -77,47 +77,47 @@ fn something_like_into() {
 /// # #[macro_use] extern crate pact_consumer;
 /// # fn main() {
 /// json_pattern!({
-///   "id": something_like!(10),
-///   "metadata": something_like!({}),
+///   "id": like!(10),
+///   "metadata": like!({}),
 /// });
 /// # }
 /// ```
 ///
 /// If you're building `StringPattern` values, you'll need to call
-/// `SomethingLike::new` manually instead.
+/// `Like::new` manually instead.
 #[macro_export]
-macro_rules! something_like {
+macro_rules! like {
     ($($json_pattern:tt)+) => {
-        $crate::patterns::SomethingLike::new(json_pattern!($($json_pattern)+))
+        $crate::patterns::Like::new(json_pattern!($($json_pattern)+))
     }
 }
 
 /// Match an array with the specified "shape".
 #[derive(Debug)]
-pub struct ArrayLike {
+pub struct EachLike {
     example_element: JsonPattern,
     min_length: usize,
 }
 
-impl ArrayLike {
+impl EachLike {
     /// Match arrays containing elements like `example_element`.
-    pub fn new(example_element: JsonPattern) -> ArrayLike {
-        ArrayLike {
+    pub fn new(example_element: JsonPattern) -> EachLike {
+        EachLike {
             example_element: example_element,
             min_length: 1,
         }
     }
 
     /// Use this after `new` to set a minimum length for the matching array.
-    pub fn with_min_length(mut self, min_length: usize) -> ArrayLike {
+    pub fn with_min_length(mut self, min_length: usize) -> EachLike {
         self.min_length = min_length;
         self
     }
 }
 
-impl_from_for_pattern!(ArrayLike, JsonPattern);
+impl_from_for_pattern!(EachLike, JsonPattern);
 
-impl Pattern for ArrayLike {
+impl Pattern for EachLike {
     type Matches = serde_json::Value;
 
     fn to_example(&self) -> serde_json::Value {
@@ -148,9 +148,9 @@ impl Pattern for ArrayLike {
 }
 
 #[test]
-fn array_like_is_pattern() {
-    let elem = SomethingLike::new(json_pattern!("hello"));
-    let matchable = ArrayLike::new(json_pattern!(elem)).with_min_length(2);
+fn each_like_is_pattern() {
+    let elem = Like::new(json_pattern!("hello"));
+    let matchable = EachLike::new(json_pattern!(elem)).with_min_length(2);
     assert_eq!(matchable.to_example(), json!(["hello", "hello"]));
 
     let mut rules = HashMap::new();
@@ -163,7 +163,7 @@ fn array_like_is_pattern() {
         // do. It looks like it makes child objects in the array match their
         // fields by type automatically?
         "$[*].*": {"match": "type"},
-        // This is inserted by our nested `SomethingLike` rule.
+        // This is inserted by our nested `Like` rule.
         "$[*]": {"match": "type"},
     });
     assert_eq!(json!(rules), expected_rules);
@@ -178,24 +178,24 @@ fn array_like_is_pattern() {
 /// # fn main() {
 /// json_pattern!({
 ///   // Expect an array of strings.
-///   "tags": array_like!("tag"),
+///   "tags": each_like!("tag"),
 ///
 ///   // Expect an array of objects, each of which has a name key containing
 ///   // a string (but match the actual names by type).
-///   "people": array_like!({
+///   "people": each_like!({
 ///     "name": "J. Smith",
 ///   }),
 /// });
 /// # }
 /// ```
 #[macro_export]
-macro_rules! array_like {
+macro_rules! each_like {
     ($($json_pattern:tt)+) => {
-        $crate::patterns::ArrayLike::new(json_pattern!($($json_pattern)+))
+        $crate::patterns::EachLike::new(json_pattern!($($json_pattern)+))
     };
 
     ($($json_pattern:tt)+, $min_len:expr) => {
-        $crate::patterns::ArrayLike::new(json_pattern!($($json_pattern)+))
+        $crate::patterns::EachLike::new(json_pattern!($($json_pattern)+))
     };
 }
 

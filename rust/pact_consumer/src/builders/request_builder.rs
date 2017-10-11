@@ -71,10 +71,9 @@ impl RequestBuilder {
     /// use regex::Regex;
     ///
     /// # fn main() {
-    /// let digits_re = Regex::new("^[0-9]+$").unwrap();
     /// RequestBuilder::default()
     ///     .query_param("simple", "value")
-    ///     .query_param("pattern", Term::new(digits_re, "123"));
+    ///     .query_param("pattern", term!("^[0-9]+$", "123"));
     /// # }
     /// ```
     ///

@@ -40,10 +40,9 @@ pub trait HttpPartBuilder {
     /// use regex::Regex;
     ///
     /// # fn main() {
-    /// let digits_re = Regex::new("^[0-9]+$").unwrap();
     /// RequestBuilder::default()
     ///     .header("X-Simple", "value")
-    ///     .header("X-Digits", Term::new(digits_re, "123"));
+    ///     .header("X-Digits", term!("^[0-9]+$", "123"));
     /// # }
     /// ```
     fn header<N, V>(&mut self, name: N, value: V) -> &mut Self
@@ -116,7 +115,7 @@ pub trait HttpPartBuilder {
     ///
     /// # fn main() {
     /// RequestBuilder::default().json_body(json_pattern!({
-    ///     "message": SomethingLike::new(json_pattern!("Hello")),
+    ///     "message": like!("Hello"),
     /// }));
     /// # }
     /// ```
@@ -174,7 +173,7 @@ fn json_body_pattern() {
     let pattern = PactBuilder::new("C", "P")
         .interaction("I", |i| {
             i.request.json_body(json_pattern!({
-                "message": SomethingLike::new(json_pattern!("Hello")),
+                "message": Like::new(json_pattern!("Hello")),
             }));
         })
         .build();

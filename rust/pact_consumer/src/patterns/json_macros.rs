@@ -57,11 +57,11 @@
 ///     "location": json!(Point { x: 1.0, y: 2.0 }),
 ///
 ///     // You can use `something_like` to match by type only.
-///     "comment": something_like!("A comment goes here"),
+///     "comment": like!("A comment goes here"),
 ///
 ///     // You can use `array_like` to match an array of values which
 ///     // look like the example.
-///     "tags": array_like!("tag"),
+///     "tags": each_like!("tag"),
 /// });
 /// # }
 /// ```

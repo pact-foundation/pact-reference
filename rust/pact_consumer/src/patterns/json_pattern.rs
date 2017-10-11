@@ -37,7 +37,7 @@ pub enum JsonPattern {
     /// An object containing JSON patterns. May contain nested matching rules.
     Object(Map<String, JsonPattern>),
     /// A term which contains an arbitrary matchable. This is where rules like
-    /// `SomethingLike` hook into our syntax.
+    /// `Like` hook into our syntax.
     Pattern(Box<Pattern<Matches = serde_json::Value>>),
 }
 
@@ -100,15 +100,15 @@ fn json_pattern_is_pattern() {
     use env_logger;
     use std::collections::HashMap;
 
-    use super::special_rules::SomethingLike;
+    use super::special_rules::Like;
 
     let _ = env_logger::init();
 
     // This is our pattern, combinging both example data and matching rules.
     let pattern = json_pattern!({
         "json": 1,
-        "simple": SomethingLike::new(json_pattern!("a")),
-        "array": [SomethingLike::new(json_pattern!("b"))],
+        "simple": Like::new(json_pattern!("a")),
+        "array": [Like::new(json_pattern!("b"))],
     });
 
     // Here's our example JSON, without the matching rules.
