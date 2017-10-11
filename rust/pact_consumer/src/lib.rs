@@ -1,8 +1,16 @@
-//! The `pact_consumer` crate provides the test DSL for writing consumer [Pact
-//! tests][pact]. It implements the [V2 Pact specification][spec].
+//! The `pact_consumer` crate provides tools for writing consumer [Pact
+//! tests][pact]. It implements the [V2 Pact specification][spec]. You can also
+//! use it as a simple HTTP mocking library for Rust.
 //!
-//! [pact]: https://docs.pact.io/
-//! [spec]: https://github.com/pact-foundation/pact-specification
+//! [pact]: https://docs.pact.io/ [spec]:
+//! https://github.com/pact-foundation/pact-specification
+//!
+//! ## What is Pact?
+//!
+//! [Pact][pact] is a [cross-language standard][spec] for testing the
+//! communication between the consumer of a REST API, and the code that provides
+//! that API. Test cases are written from the consumer's perspective, and they
+//! can then be exported testing the provider.
 //!
 //! The big advantages of Pact are:
 //!
@@ -13,9 +21,9 @@
 //! 2. Pact has been implemented in many popular languages, so you can test
 //!    clients and servers in multiple languages.
 //!
-//! Whenever possible, we try to use vocabulary similar to the Ruby API for
-//! basic concepts, and to provide the same behavior. But we offer many handy
-//! builder methods to make tests cleaner.
+//! Whenever possible, we try to use vocabulary similar to the Ruby or
+//! JavaScript API for basic concepts, and we try to provide the same behavior.
+//! But we offer many handy builder methods to make tests cleaner.
 //!
 //! ## How to use it
 //!
@@ -94,9 +102,9 @@
 //!
 //! ## Matching using patterns
 //!
-//! You can also use patterns like `like!`, `each_like!` or `term!` to
-//! allow more general matches, and you can build complex patterns using
-//! the `json_pattern!` macro:
+//! You can also use patterns like `like!`, `each_like!` or `term!` to allow
+//! more general matches, and you can build complex patterns using the
+//! `json_pattern!` macro:
 //!
 //! ```
 //! # #[macro_use] extern crate pact_consumer;
