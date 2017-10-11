@@ -193,3 +193,28 @@ fn query_param_with_underscore() {
         .build();
     assert_requests_match!(good, pattern);
 }
+
+#[test]
+fn term_does_not_require_anchors() {
+    use prelude::*;
+
+    let pattern = PactBuilder::new("C", "P")
+        .interaction("I", |i| {
+            // Unfortunatley, we appear to need a leading "^" and trailing "$"
+            // on this regex, or else it will match the other examples below.
+            i.request.path(term!("^/users/[0-9]+$", "/users/12"));
+        })
+        .build();
+    let good = PactBuilder::new("C", "P")
+        .interaction("I", |i| { i.request.path("/users/2"); })
+        .build();
+    let bad1 = PactBuilder::new("C", "P")
+        .interaction("I", |i| { i.request.path("/users/2/posts"); })
+        .build();
+    let bad2 = PactBuilder::new("C", "P")
+        .interaction("I", |i| { i.request.path("/account/1/users/2"); })
+        .build();
+    assert_requests_match!(good, pattern);
+    assert_requests_do_not_match!(bad1, pattern);
+    assert_requests_do_not_match!(bad2, pattern);
+}
