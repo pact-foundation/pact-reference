@@ -96,7 +96,7 @@ macro_rules! like {
 #[derive(Debug)]
 pub struct EachLike {
     example_element: JsonPattern,
-    min_length: usize,
+    min_len: usize,
 }
 
 impl EachLike {
@@ -104,13 +104,13 @@ impl EachLike {
     pub fn new(example_element: JsonPattern) -> EachLike {
         EachLike {
             example_element: example_element,
-            min_length: 1,
+            min_len: 1,
         }
     }
 
     /// Use this after `new` to set a minimum length for the matching array.
-    pub fn with_min_length(mut self, min_length: usize) -> EachLike {
-        self.min_length = min_length;
+    pub fn with_min_len(mut self, min_len: usize) -> EachLike {
+        self.min_len = min_len;
         self
     }
 }
@@ -122,7 +122,7 @@ impl Pattern for EachLike {
 
     fn to_example(&self) -> serde_json::Value {
         let element = self.example_element.to_example();
-        serde_json::Value::Array(repeat(element).take(self.min_length).collect())
+        serde_json::Value::Array(repeat(element).take(self.min_len).collect())
     }
 
     fn extract_matching_rules(&self, path: &str, rules_out: &mut Matchers) {
@@ -130,7 +130,7 @@ impl Pattern for EachLike {
             path.to_owned(),
             hashmap!(
                 s!("match") => s!("type"),
-                s!("min") => format!("{}", self.min_length),
+                s!("min") => format!("{}", self.min_len),
             ),
         );
         rules_out.insert(
@@ -150,7 +150,7 @@ impl Pattern for EachLike {
 #[test]
 fn each_like_is_pattern() {
     let elem = Like::new(json_pattern!("hello"));
-    let matchable = EachLike::new(json_pattern!(elem)).with_min_length(2);
+    let matchable = EachLike::new(json_pattern!(elem)).with_min_len(2);
     assert_eq!(matchable.to_example(), json!(["hello", "hello"]));
 
     let mut rules = HashMap::new();
@@ -169,6 +169,48 @@ fn each_like_is_pattern() {
     assert_eq!(json!(rules), expected_rules);
 }
 
+// A hidden macro which does the hard work of expanding `each_like!`. We don't
+// include this in the docs because it reveals a bunch of implementation
+// details.
+//
+// This is a classic Rust "tt muncher" macro that uses special rules starting
+// with `@` to build a recursive token examiner.
+#[macro_export]
+#[doc(hidden)]
+macro_rules! each_like_helper {
+    // Parsing base case #1: We made it all the way to the end of our tokens
+    // without seeing a top-level comma.
+    (@parse [$($found:tt)*] ) => {
+        each_like_helper!(@expand [$($found)*] [])
+    };
+
+    // Parsing base case #2: We saw a top-level comma, so we're done parsing
+    // the JSON pattern.
+    (@parse [$($found:tt)*] , $($rest:tt)* ) => {
+        each_like_helper!(@expand [$($found)*] [$($rest)*])
+    };
+
+    // Parsing recursive case (must come last): We have some other token, so
+    // add it to what we've found and continue.
+    (@parse [$($found:tt)*] $next:tt $($rest:tt)* ) => {
+        each_like_helper!(@parse [$($found)* $next] $($rest)*)
+    };
+
+    // We're done parsing, and we didn't find `min`.
+    (@expand [$($pattern:tt)*] []) => {
+        $crate::patterns::EachLike::new(json_pattern!($($pattern)*))
+    };
+
+    // We're done parsing, and we did find `min`.
+    (@expand [$($pattern:tt)*] [min = $min_len:expr]) => {
+        $crate::patterns::EachLike::new(json_pattern!($($pattern)*))
+            .with_min_len($min_len)
+    };
+
+    // Entry point. Must come last, because it matches anything.
+    ($($tokens:tt)+) => (each_like_helper!(@parse [] $($tokens)+));
+}
+
 /// Generates the specified value, matches any value of the same data type. This
 /// is intended for use inside `json_pattern!`, and it interprets its arguments
 /// as a `json_pattern!`.
@@ -181,22 +223,37 @@ fn each_like_is_pattern() {
 ///   "tags": each_like!("tag"),
 ///
 ///   // Expect an array of objects, each of which has a name key containing
-///   // a string (but match the actual names by type).
+///   // a string (but match the actual names by type). Require a minimum of
+///   // two elements.
 ///   "people": each_like!({
 ///     "name": "J. Smith",
-///   }),
+///   }, min=2),
 /// });
 /// # }
 /// ```
 #[macro_export]
 macro_rules! each_like {
-    ($($json_pattern:tt)+) => {
-        $crate::patterns::EachLike::new(json_pattern!($($json_pattern)+))
-    };
+    ($($token:tt)+) => { each_like_helper!($($token)+) };
+}
 
-    ($($json_pattern:tt)+, $min_len:expr) => {
-        $crate::patterns::EachLike::new(json_pattern!($($json_pattern)+))
-    };
+#[test]
+fn each_like_macro_parsing() {
+    #[derive(Serialize)]
+    struct Point {
+        x: i32,
+        y: i32
+    }
+
+    // This is something users might plausibly want to do.
+    let simple = each_like!(json!(Point { x: 1, y: 2 }));
+    assert_eq!(simple.example_element.to_example(), json!({ "x": 1, "y": 2 }));
+    assert_eq!(simple.min_len, 1);
+
+    // And now with `min`, which requires quite a bit of complicated macro
+    // code to parse.
+    let with_min = each_like!(json!(Point { x: 1, y: 2 }), min = 2 + 1);
+    assert_eq!(with_min.example_element.to_example(), json!({ "x": 1, "y": 2 }));
+    assert_eq!(with_min.min_len, 3);
 }
 
 /// Match and generate strings that match a regular expression.

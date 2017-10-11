@@ -158,6 +158,9 @@ extern crate maplit;
 extern crate pact_matching;
 extern crate pact_mock_server;
 extern crate regex;
+#[cfg(test)]
+#[macro_use]
+extern crate serde_derive;
 #[cfg_attr(test, macro_use)]
 extern crate serde_json;
 extern crate url;
