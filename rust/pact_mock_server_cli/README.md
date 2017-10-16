@@ -77,6 +77,7 @@ FLAGS:
         --help    Prints help information
 
 OPTIONS:
+        --first-port <first-port>    the port that ports will start allocation from it
     -h, --host <host>            hostname the master mock server runs on (defaults to localhost)
     -l, --loglevel <loglevel>    Log level for mock servers to write to the log file (defaults to info) [values: error, warn,
                                  info, debug, trace, none]
