@@ -3,7 +3,7 @@ FROM scratch
 
 LABEL maintainer="assaf.katz@amdocs.com"
 
-ADD target/x86_64-unknown-linux-musl/release/pact_verifier_cli /  
+ADD target/x86_64-unknown-linux-musl/release/CLI_NAME /  
 EXPOSE 8080
 
-ENTRYPOINT ["/pact_verifier_cli"]  
+ENTRYPOINT ["/CLI_NAME"]  

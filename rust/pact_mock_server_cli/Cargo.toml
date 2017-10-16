@@ -1,6 +1,6 @@
 [package]
 name = "pact_mock_server_cli"
-version = "0.2.4"
+version = "0.2.5"
 authors = ["Ronald Holshausen <uglyog@gmail.com>"]
 description = "Standalone pact mock server for consumer pact tests"
 homepage = "http://www.pact.io"
