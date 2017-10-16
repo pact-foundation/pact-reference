@@ -5,6 +5,8 @@ use pact_mock_server::{
     iterate_mock_servers,
     lookup_mock_server,
     shutdown_mock_server,
+    set_first_port,
+    get_next_port,
     MockServer
 };
 use uuid::Uuid;
@@ -16,6 +18,7 @@ use verify;
 use webmachine_rust::*;
 use webmachine_rust::context::*;
 use webmachine_rust::headers::*;
+use clap::ArgMatches;
 
 fn json_error(error: String) -> String {
     let json_response = json!({ s!("error") : json!(error) });
@@ -29,7 +32,7 @@ fn start_provider(context: &mut WebmachineContext) -> Result<bool, u16> {
                 Ok(ref json) => {
                     let pact = Pact::from_json(&context.request.request_path, json);
                     let mock_server_id = Uuid::new_v4().simple().to_string();
-                    match start_mock_server(mock_server_id.clone(), pact, 0) {
+                    match start_mock_server(mock_server_id.clone(), pact, get_next_port()) {
                         Ok(mock_server) => {
                             let mock_server_json = json!({
                                 s!("id") : json!(mock_server_id.clone()),
@@ -196,7 +199,11 @@ impl Handler for ServerHandler {
     }
 }
 
-pub fn start_server(port: u16, output_path: Option<String>) -> Result<(), i32> {
+pub fn start_server(port: u16, matches: &ArgMatches) -> Result<(), i32> {
+    let output_path = matches.value_of("output").map(|s| s.to_owned());
+    if let Some(v) = matches.value_of("first-port") {
+        set_first_port(v.parse().unwrap())
+    }
     match Server::http(format!("0.0.0.0:{}", port).as_str()) {
         Ok(mut server) => {
             server.keep_alive(None);

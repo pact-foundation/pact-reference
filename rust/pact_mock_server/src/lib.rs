@@ -260,6 +260,7 @@ impl PartialEq for MockServer {
 
 lazy_static! {
     static ref MOCK_SERVERS: Mutex<BTreeMap<String, Box<MockServer>>> = Mutex::new(BTreeMap::new());
+    static ref FIRST_PORT : Mutex<i32> = Mutex::new(0);
 }
 
 fn match_request(req: &Request, interactions: &Vec<Interaction>) -> MatchResult {
@@ -557,6 +558,23 @@ pub fn shutdown_mock_server_by_port(port: i32) -> bool {
         None => false
     }
 }
+
+/// Set the first port if needed
+pub fn set_first_port(port : i32) {
+    let mut value  = FIRST_PORT.lock().unwrap();
+    *value = port;
+}
+
+/// Get the next port if first one was available, otherwise return 0
+pub fn get_next_port() -> i32 {
+    let value  = FIRST_PORT.lock().unwrap();
+    if *value == 0 {
+        0
+    } else {
+        *value + MOCK_SERVERS.lock().unwrap().len() as i32
+    }
+}
+
 
 /// External interface to create a mock server. A pointer to the pact JSON as a C string is passed in,
 /// as well as the port for the mock server to run on. A value of 0 for the port will result in a
