@@ -260,7 +260,7 @@ impl PartialEq for MockServer {
 
 lazy_static! {
     static ref MOCK_SERVERS: Mutex<BTreeMap<String, Box<MockServer>>> = Mutex::new(BTreeMap::new());
-    static ref FIRST_PORT : Mutex<i32> = Mutex::new(0);
+    static ref FIRST_PORT : Mutex<Option<i32>> = Mutex::new(None);
 }
 
 fn match_request(req: &Request, interactions: &Vec<Interaction>) -> MatchResult {
@@ -562,16 +562,16 @@ pub fn shutdown_mock_server_by_port(port: i32) -> bool {
 /// Set the first port if needed
 pub fn set_first_port(port : i32) {
     let mut value  = FIRST_PORT.lock().unwrap();
-    *value = port;
+    *value = Some(port);
 }
 
 /// Get the next port if first one was available, otherwise return 0
 pub fn get_next_port() -> i32 {
-    let value  = FIRST_PORT.lock().unwrap();
-    if *value == 0 {
+    if let Some(value)  = *(FIRST_PORT.lock().unwrap()) {
+        value + MOCK_SERVERS.lock().unwrap().len() as i32
+    }
+    else{
         0
-    } else {
-        *value + MOCK_SERVERS.lock().unwrap().len() as i32
     }
 }
 
