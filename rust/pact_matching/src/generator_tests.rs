@@ -8,6 +8,10 @@ use serde_json::Value;
 use maplit::*;
 use hamcrest2::prelude::*;
 use hamcrest2::*;
+use xmltree::{Element, XMLNode};
+use tempfile::tempfile;
+use std::io::{Read, Seek, SeekFrom};
+use std::fs::File;
 
 #[test]
 fn returns_original_response_if_there_are_no_generators() {
@@ -86,23 +90,23 @@ fn applies_query_generator_for_query_parameters_to_the_copy_of_the_request() {
 #[test]
 fn apply_generator_to_empty_body_test() {
   let generators = Generators::default();
-  expect!(generators.apply_body_generators(&OptionalBody::Empty, DetectedContentType::Text, &hashmap!{})).to(be_equal_to(OptionalBody::Empty));
-  expect!(generators.apply_body_generators(&OptionalBody::Null, DetectedContentType::Text, &hashmap!{})).to(be_equal_to(OptionalBody::Null));
-  expect!(generators.apply_body_generators(&OptionalBody::Missing, DetectedContentType::Text, &hashmap!{})).to(be_equal_to(OptionalBody::Missing));
+  expect!(generators.apply_body_generators(&OptionalBody::Empty, DetectedContentType::Text, &hashmap!{})).to(be_ok().value(OptionalBody::Empty));
+  expect!(generators.apply_body_generators(&OptionalBody::Null, DetectedContentType::Text, &hashmap!{})).to(be_ok().value(OptionalBody::Null));
+  expect!(generators.apply_body_generators(&OptionalBody::Missing, DetectedContentType::Text, &hashmap!{})).to(be_ok().value(OptionalBody::Missing));
 }
 
 #[test]
 fn do_not_apply_generators_if_there_are_no_body_generators() {
   let generators = Generators::default();
   let body = OptionalBody::Present("{\"a\": 100, \"b\": \"B\"}".into());
-  expect!(generators.apply_body_generators(&body, DetectedContentType::Json, &hashmap!{})).to(be_equal_to(body));
+  expect!(generators.apply_body_generators(&body, DetectedContentType::Json, &hashmap!{})).to(be_ok().value(body));
 }
 
 #[test]
 fn apply_generator_to_text_body_test() {
   let generators = Generators::default();
   let body = OptionalBody::Present("some text".into());
-  expect!(generators.apply_body_generators(&body, DetectedContentType::Text, &hashmap!{})).to(be_equal_to(body));
+  expect!(generators.apply_body_generators(&body, DetectedContentType::Text, &hashmap!{})).to(be_ok().value(body));
 }
 
 #[test]
@@ -140,7 +144,7 @@ fn does_not_change_body_if_there_are_no_generators() {
   let generators = generators!{};
   let processed = generators.apply_body_generators(&body, DetectedContentType::Json,
     &hashmap!{});
-  expect!(processed).to(be_equal_to(body));
+  expect!(processed).to(be_ok().value(body));
 }
 
 #[test]
@@ -306,33 +310,63 @@ fn applies_the_generator_to_the_object_graph_with_wildcard() {
 
 #[test]
 fn date_generator_test() {
-  let generated = Generator::Date(None).generate_value(&"".to_string(), &hashmap!{});
+  let generated = Generator::Date(None).generate_value("".to_string(), &hashmap!{});
   assert_that!(generated.unwrap(), matches_regex(r"^\d{4}-\d{2}-\d{2}$"));
 
-  let generated2 = Generator::Date(Some("yyyy-MM-ddZ".into())).generate_value(&"".to_string(), &hashmap!{});
+  let generated2 = Generator::Date(Some("yyyy-MM-ddZ".into())).generate_value("".to_string(), &hashmap!{});
   assert_that!(generated2.unwrap(), matches_regex(r"^\d{4}-\d{2}-\d{2}[-+]\d{4}$"));
 }
 
 #[test]
 fn time_generator_test() {
-  let generated = Generator::Time(None).generate_value(&"".to_string(), &hashmap!{});
+  let generated = Generator::Time(None).generate_value("".to_string(), &hashmap!{});
   assert_that!(generated.unwrap(), matches_regex(r"^\d{2}:\d{2}:\d{2}$"));
 
-  let generated2 = Generator::Time(Some("HH:mm:ssZ".into())).generate_value(&"".to_string(), &hashmap!{});
+  let generated2 = Generator::Time(Some("HH:mm:ssZ".into())).generate_value("".to_string(), &hashmap!{});
   assert_that!(generated2.unwrap(), matches_regex(r"^\d{2}:\d{2}:\d{2}[-+]\d+$"));
 }
 
 #[test]
 fn datetime_generator_test() {
-  let generated = Generator::DateTime(None).generate_value(&"".to_string(), &hashmap!{});
+  let generated = Generator::DateTime(None).generate_value("".to_string(), &hashmap!{});
   assert_that!(generated.unwrap(), matches_regex(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}[-+]\d+$"));
 
-  let generated2 = Generator::DateTime(Some("yyyy-MM-dd HH:mm:ssZ".into())).generate_value(&"".to_string(), &hashmap!{});
+  let generated2 = Generator::DateTime(Some("yyyy-MM-dd HH:mm:ssZ".into())).generate_value("".to_string(), &hashmap!{});
   assert_that!(generated2.unwrap(), matches_regex(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}[-+]\d+$"));
 }
 
 #[test]
 fn regex_generator_test() {
-  let generated = Generator::Regex(r"\d{4}\w{1,4}".into()).generate_value(&"".to_string(), &hashmap!{});
+  let generated = Generator::Regex(r"\d{4}\w{1,4}".into()).generate_value("".to_string(), &hashmap!{});
   assert_that!(generated.unwrap(), matches_regex(r"^\d{4}\w{1,4}$"));
+}
+
+#[test]
+fn applies_the_generator_to_xml() {
+  let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+    <root>
+      <a>100</a>
+      <b></b>
+      <c>C</c>
+    </root>
+  "#;
+  let doc = Element::parse(xml.as_bytes()).unwrap();
+  let mut xml_handler = XmlHandler { value: doc };
+
+  xml_handler.apply_key(&s!("$.root.b"), &Generator::RandomInt(0, 10), &hashmap!{});
+
+  let mut file: File = tempfile().unwrap();
+  xml_handler.value.write(file.try_clone().unwrap()).unwrap();
+  file.seek(SeekFrom::Start(0)).unwrap();
+  let mut buffer = String::new();
+  file.read_to_string(&mut buffer).unwrap();
+  expect!(buffer.clone()).to_not(be_equal_to(xml.to_string()));
+
+  let doc2 = Element::parse(buffer.as_bytes()).unwrap();
+  match &doc2.children[1] {
+    XMLNode::Element(element) => {
+      expect!(element.get_text().unwrap().to_string().chars()).to_not(be_empty())
+    },
+    _ => panic!("Invalid XML node found")
+  };
 }

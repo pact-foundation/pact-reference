@@ -1246,7 +1246,9 @@ dependencies = [
  "serde",
  "serde_json",
  "sxd-document",
+ "tempfile",
  "uuid 0.5.1",
+ "xmltree",
 ]
 
 [[package]]
@@ -2008,9 +2010,9 @@ checksum = "8ea5119cdb4c55b55d432abb513a0429384878c15dde60cc77b1c99de1a95a6a"
 
 [[package]]
 name = "sxd-document"
-version = "0.2.6"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e360d2575b173847506841ca97dbab96b6d27a2ec660b70932fe32a2b12e0a2"
+checksum = "94d82f37be9faf1b10a82c4bd492b74f698e40082f0f40de38ab275f31d42078"
 dependencies = [
  "peresil",
  "typed-arena",
@@ -2527,4 +2529,19 @@ checksum = "d59cefebd0c892fa2dd6de581e937301d8552cb44489cdff035c6187cb63fa5e"
 dependencies = [
  "winapi 0.2.8",
  "winapi-build",
+]
+
+[[package]]
+name = "xml-rs"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "541b12c998c5b56aa2b4e6f18f03664eef9a4fd0a246a55594efae6cc2d964b5"
+
+[[package]]
+name = "xmltree"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "77a607efe600db25447a8d9bab1f39217a82c4ba160b51b027d7c4f6053004df"
+dependencies = [
+ "xml-rs",
 ]

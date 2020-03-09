@@ -248,7 +248,7 @@ mod tests {
     expect!(request_builder.method()).to(be_equal_to("GET"));
     expect!(request_builder.url().as_str()).to(be_equal_to("http://example.test:8080/"));
 
-    let headers = dbg!(request_builder.headers());
+    let headers = request_builder.headers();
     expect!(headers.len()).to(be_equal_to(3));
     expect!(&headers["A"]).to(be_equal_to("B"));
     expect!(&headers["B"]).to(be_equal_to("C"));

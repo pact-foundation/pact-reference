@@ -337,6 +337,7 @@ use onig::Regex;
 use lazy_static::*;
 use ansi_term::*;
 use ansi_term::Colour::*;
+use log::*;
 
 #[macro_use] pub mod models;
 mod path_exp;
@@ -627,7 +628,7 @@ pub fn match_text(expected: &Vec<u8>, actual: &Vec<u8>, mismatches: &mut Vec<Mis
 /// Matches the actual request method to the expected one.
 pub fn match_method(expected: String, actual: String, mismatches: &mut Vec<Mismatch>) {
     if expected.to_lowercase() != actual.to_lowercase() {
-        mismatches.push(Mismatch::MethodMismatch { expected: expected, actual: actual });
+        mismatches.push(Mismatch::MethodMismatch { expected, actual });
     }
 }
 
@@ -970,7 +971,7 @@ pub fn generate_request(request: &models::Request, context: &HashMap<String, Val
     let generators = request.generators.clone();
     let mut request = request.clone();
     generators.apply_generator(&GeneratorCategory::PATH, |_, generator| {
-        match generator.generate_value(&request.path, context) {
+        match generator.generate_value(request.path.clone(), context) {
             Some(v) => request.path = v,
             None => ()
         }
@@ -978,7 +979,7 @@ pub fn generate_request(request: &models::Request, context: &HashMap<String, Val
     generators.apply_generator(&GeneratorCategory::HEADER, |key, generator| {
         match request.headers {
             Some(ref mut headers) => if headers.contains_key(key) {
-                match generator.generate_value(&headers.get(key).unwrap().clone(), context) {
+                match generator.generate_value(headers.get(key).unwrap().clone(), context) {
                     Some(v) => headers.insert(key.clone(), v),
                     None => None
                 };
@@ -992,8 +993,8 @@ pub fn generate_request(request: &models::Request, context: &HashMap<String, Val
           Some(parameter) => {
             let mut generated = parameter.clone();
             for (index, val) in parameter.iter().enumerate() {
-              match generator.generate_value(val, context) {
-                Some(v) => generated[index] = v,
+              match generator.generate_value(val.clone(), context) {
+                Some(v) => generated[index] = v.clone(),
                 None => ()
               };
             }
@@ -1004,8 +1005,11 @@ pub fn generate_request(request: &models::Request, context: &HashMap<String, Val
         None => ()
       }
     });
-    request.body = generators.apply_body_generators(&request.body, request.content_type_enum(),
-        context);
+    match generators.apply_body_generators(&request.body.clone(), request.content_type_enum(), context) {
+      Ok(body) => request.body = body,
+      Err(err) => error!("Failed to apply generators to the body: {}", err)
+    };
+
     request
 }
 
@@ -1014,7 +1018,7 @@ pub fn generate_response(response: &models::Response, context: &HashMap<String, 
   let generators = response.generators.clone();
   let mut response = response.clone();
   generators.apply_generator(&GeneratorCategory::STATUS, |_, generator| {
-    match generator.generate_value(&response.status, context) {
+    match generator.generate_value(response.status, context) {
       Some(v) => response.status = v,
       None => ()
     }
@@ -1022,7 +1026,7 @@ pub fn generate_response(response: &models::Response, context: &HashMap<String, 
   generators.apply_generator(&GeneratorCategory::HEADER, |key, generator| {
     match response.headers {
       Some(ref mut headers) => if headers.contains_key(key) {
-        match generator.generate_value(&headers.get(key).unwrap().clone(), context) {
+        match generator.generate_value(headers.get(key).unwrap().clone(), context) {
           Some(v) => headers.insert(key.clone(), v),
           None => None
         };
@@ -1030,8 +1034,11 @@ pub fn generate_response(response: &models::Response, context: &HashMap<String, 
       None => ()
     }
   });
-  response.body = generators.apply_body_generators(&response.body, response.content_type_enum(),
-    context);
+  match generators.apply_body_generators(&response.body, response.content_type_enum(), context) {
+    Ok(body) => response.body = body,
+    Err(err) => error!("Failed to apply generators to the body: {}", err)
+  }
+
   response
 }
 

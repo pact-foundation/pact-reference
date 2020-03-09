@@ -15,8 +15,6 @@ use rand::distributions::Alphanumeric;
 use uuid::Uuid;
 use crate::models::{OptionalBody, DetectedContentType};
 use crate::models::json_utils::{JsonToNum, json_to_string};
-use crate::models::xml_utils::parse_bytes;
-use sxd_document::dom::Document;
 use crate::path_exp::*;
 use itertools::Itertools;
 use indextree::{Arena, NodeId};
@@ -24,6 +22,8 @@ use chrono::prelude::*;
 use crate::time_utils::{parse_pattern, to_chrono_pattern};
 use nom::types::CompleteStr;
 use regex_syntax;
+use xmltree::{Element, XMLNode};
+use log::*;
 
 /// Trait to represent a generator
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Eq, Hash)]
@@ -109,11 +109,11 @@ impl Generator {
 pub trait GenerateValue<T> {
   /// Generates a new value based on the source value. `None` will be returned if the value can not
   /// be generated.
-  fn generate_value(&self, value: &T, context: &HashMap<String, Value>) -> Option<T>;
+  fn generate_value(&self, value: T, context: &HashMap<String, Value>) -> Option<T>;
 }
 
 impl GenerateValue<u16> for Generator {
-  fn generate_value(&self, _: &u16, _context: &HashMap<String, Value>) -> Option<u16> {
+  fn generate_value(&self, _: u16, _context: &HashMap<String, Value>) -> Option<u16> {
     match self {
       &Generator::RandomInt(min, max) => Some(rand::thread_rng().gen_range(min as u16, (max as u16).saturating_add(1))),
       &Generator::ProviderStateGenerator(ref _exp) => None,
@@ -139,7 +139,7 @@ fn generate_ascii_string(size: usize) -> String {
 }
 
 impl GenerateValue<String> for Generator {
-  fn generate_value(&self, _: &String, _context: &HashMap<String, Value>) -> Option<String> {
+  fn generate_value(&self, _: String, _context: &HashMap<String, Value>) -> Option<String> {
     let mut rnd = rand::thread_rng();
     match self {
       &Generator::RandomInt(min, max) => Some(format!("{}", rnd.gen_range(min, max.saturating_add(1)))),
@@ -196,41 +196,48 @@ impl GenerateValue<String> for Generator {
   }
 }
 
+impl GenerateValue<Vec<u8>> for Generator {
+  fn generate_value(&self, value: Vec<u8>, context: &HashMap<String, Value>) -> Option<Vec<u8>> {
+    self.generate_value(String::from_utf8(value).unwrap_or(String::default()), context)
+      .map(|v| v.as_bytes().to_vec())
+  }
+}
+
 impl GenerateValue<Vec<String>> for Generator {
-  fn generate_value(&self, vals: &Vec<String>, context: &HashMap<String, Value>) -> Option<Vec<String>> {
-    self.generate_value(vals.first().unwrap_or(&s!("")), context).map(|v| vec![v])
+  fn generate_value(&self, vals: Vec<String>, context: &HashMap<String, Value>) -> Option<Vec<String>> {
+    self.generate_value(vals.first().unwrap_or(&s!("")).clone(), context).map(|v| vec![v.clone()])
   }
 }
 
 impl GenerateValue<Value> for Generator {
-  fn generate_value(&self, value: &Value, _context: &HashMap<String, Value>) -> Option<Value> {
+  fn generate_value(&self, value: Value, _context: &HashMap<String, Value>) -> Option<Value> {
     match self {
       &Generator::RandomInt(min, max) => {
         let rand_int = rand::thread_rng().gen_range(min, max.saturating_add(1));
         match value {
-          &Value::String(_) => Some(json!(format!("{}", rand_int))),
-          &Value::Number(_) => Some(json!(rand_int)),
+          Value::String(_) => Some(json!(format!("{}", rand_int))),
+          Value::Number(_) => Some(json!(rand_int)),
           _ => None
         }
       },
       &Generator::Uuid => match value {
-        &Value::String(_) => Some(json!(Uuid::new_v4().simple().to_string())),
+        Value::String(_) => Some(json!(Uuid::new_v4().simple().to_string())),
         _ => None
       },
       &Generator::RandomDecimal(digits) => match value {
-        &Value::String(_) => Some(json!(generate_decimal(digits as usize))),
-        &Value::Number(_) => match generate_decimal(digits as usize).parse::<u64>() {
+        Value::String(_) => Some(json!(generate_decimal(digits as usize))),
+        Value::Number(_) => match generate_decimal(digits as usize).parse::<u64>() {
           Ok(val) => Some(json!(val)),
           Err(_) => None
         },
         _ => None
       },
       &Generator::RandomHexadecimal(digits) => match value {
-        &Value::String(_) => Some(json!(generate_hexadecimal(digits as usize))),
+        Value::String(_) => Some(json!(generate_hexadecimal(digits as usize))),
         _ => None
       },
       &Generator::RandomString(size) => match value {
-        &Value::String(_) => Some(json!(generate_ascii_string(size as usize))),
+        Value::String(_) => Some(json!(generate_ascii_string(size as usize))),
         _ => None
       },
       &Generator::Regex(ref regex) => {
@@ -338,7 +345,7 @@ impl Into<String> for GeneratorCategory {
 /// Trait to define a handler for applying generators to data of a particular content type.
 pub trait ContentTypeHandler<T> {
   /// Processes the body using the map of generators, returning a (possibly) updated body.
-  fn process_body(&mut self, generators: &HashMap<String, Generator>, context: &HashMap<String, Value>) -> OptionalBody;
+  fn process_body(&mut self, generators: &HashMap<String, Generator>, context: &HashMap<String, Value>) -> Result<OptionalBody, String>;
   /// Applies the generator to the key in the body.
   fn apply_key(&mut self, key: &String, generator: &Generator, context: &HashMap<String, Value>);
 }
@@ -421,11 +428,11 @@ impl JsonHandler {
 }
 
 impl ContentTypeHandler<Value> for JsonHandler {
-  fn process_body(&mut self, generators: &HashMap<String, Generator>, context: &HashMap<String, Value>) -> OptionalBody {
+  fn process_body(&mut self, generators: &HashMap<String, Generator>, context: &HashMap<String, Value>) -> Result<OptionalBody, String> {
     for (key, generator) in generators {
       self.apply_key(key, generator, context);
     };
-    OptionalBody::Present(self.value.to_string().into())
+    Ok(OptionalBody::Present(self.value.to_string().into()))
   }
 
   fn apply_key(&mut self, key: &String, generator: &Generator, context: &HashMap<String, Value>) {
@@ -448,7 +455,7 @@ impl ContentTypeHandler<Value> for JsonHandler {
         if !expanded_paths.is_empty() {
           for pointer_str in expanded_paths {
             match self.value.pointer_mut(&pointer_str) {
-              Some(json_value) => match generator.generate_value(&json_value.clone(), context) {
+              Some(json_value) => match generator.generate_value(json_value.clone(), context) {
                 Some(new_value) => *json_value = new_value,
                 None => ()
               },
@@ -456,7 +463,7 @@ impl ContentTypeHandler<Value> for JsonHandler {
             }
           }
         } else if path_exp.len() == 1 {
-          match generator.generate_value(&self.value.clone(), context) {
+          match generator.generate_value(self.value.clone(), context) {
             Some(new_value) => self.value = new_value,
             None => ()
           }
@@ -468,18 +475,129 @@ impl ContentTypeHandler<Value> for JsonHandler {
 }
 
 /// Implementation of a content type handler for XML (currently unimplemented).
-pub struct XmlHandler<'a> {
+pub struct XmlHandler {
   /// XML document to apply the generators to.
-  pub value: Document<'a>
+  pub value: Element
 }
 
-impl <'a> ContentTypeHandler<Document<'a>> for XmlHandler<'a> {
-  fn process_body(&mut self, _generators: &HashMap<String, Generator>, _context: &HashMap<String, Value>) -> OptionalBody {
-    unimplemented!()
+#[derive(Debug)]
+enum XmlNode<'a> {
+  Element(&'a mut xmltree::Element),
+  Children(&'a mut Vec<XMLNode>)
+}
+
+impl XmlHandler {
+  fn find_child<'a>(&self, children: &'a mut Vec<XMLNode>, name: &str) -> Option<&'a mut Element> {
+    children.iter_mut().find(|child| match child {
+      XMLNode::Element(element) => element.name == name,
+      _ => false
+    }).map(|child| match child {
+      XMLNode::Element(element) => Some(element),
+      _ => None
+    }).unwrap_or(None)
   }
 
-  fn apply_key(&mut self, _key: &String, _generator: &Generator, _context: &HashMap<String, Value>) {
-    unimplemented!()
+  fn query_object_graph<F: FnOnce(&mut XmlNode)>(&self, path_exp: &Vec<PathToken>, mut doc: Element, callback: F) -> Option<Element> {
+    let mut body_cursor = XmlNode::Element(&mut doc);
+    let mut it = path_exp.iter();
+    loop {
+      match it.next() {
+        Some(token) => {
+          match token {
+            &PathToken::Field(ref name) => {
+              match body_cursor {
+                XmlNode::Element(elem) => if elem.name == name.as_str() {
+                  body_cursor = XmlNode::Children(&mut elem.children)
+                } else {
+                  return None
+                },
+                XmlNode::Children(children) => match self.find_child(children, name.as_str()) {
+                  Some(node) => body_cursor = XmlNode::Element(node),
+                  None => return None
+                }
+              }
+            },
+            // &PathToken::Index(index) => {
+            //   match body_cursor.clone().as_array() {
+            //     Some(list) => if list.len() > index {
+            //       let node = tree.new_node(format!("{}", index));
+            //       node_cursor.append(node, tree);
+            //       body_cursor = list[index].clone();
+            //       node_cursor = node;
+            //     },
+            //     None => return
+            //   }
+            // }
+            // &PathToken::Star => {
+            //   match body_cursor.clone().as_object() {
+            //     Some(map) => {
+            //       let remaining = it.by_ref().cloned().collect();
+            //       for (key, val) in map {
+            //         let node = tree.new_node(key.clone());
+            //         node_cursor.append(node, tree);
+            //         body_cursor = val.clone();
+            //         self.query_object_graph(&remaining, tree, node, val.clone());
+            //       }
+            //     },
+            //     None => return
+            //   }
+            // },
+            // &PathToken::StarIndex => {
+            //   match body_cursor.clone().as_array() {
+            //     Some(list) => {
+            //       let remaining = it.by_ref().cloned().collect();
+            //       for (index, val) in list.iter().enumerate() {
+            //         let node = tree.new_node(format!("{}", index));
+            //         node_cursor.append(node, tree);
+            //         body_cursor = val.clone();
+            //         self.query_object_graph(&remaining, tree, node,val.clone());
+            //       }
+            //     },
+            //     None => return
+            //   }
+            // },
+            _ => ()
+          }
+        },
+        None => break
+      }
+    }
+
+    callback(&mut body_cursor);
+    Some(doc)
+  }
+}
+
+impl ContentTypeHandler<Element> for XmlHandler {
+  fn process_body(&mut self, generators: &HashMap<String, Generator>, context: &HashMap<String, Value>) -> Result<OptionalBody, String> {
+    for (key, generator) in generators {
+      self.apply_key(key, generator, context);
+    };
+    let mut output = Vec::new();
+    self.value.write(output.as_mut_slice()).map_err(|err| err.to_string())?;
+    Ok(OptionalBody::Present(output.clone()))
+  }
+
+  fn apply_key(&mut self, key: &String, generator: &Generator, context: &HashMap<String, Value>) {
+    match parse_path_exp(key.clone()) {
+      Ok(path_exp) => {
+        match self.query_object_graph(&path_exp, self.value.clone(), |node| {
+          match node {
+            XmlNode::Element(element) => {
+              let text = element.get_text().map(|t| t.to_string()).unwrap_or(String::default());
+              if let Some(val) = generator.generate_value(text, context) {
+                element.children.push(XMLNode::Text(val));
+              }
+            },
+            _ => ()
+          }
+        }) {
+          Some(val) => self.value = val,
+          None => ()
+        }
+      },
+      Err(err) => warn!("Generator path '{}' is invalid, ignoring: {}", key, err)
+    }
   }
 }
 
@@ -587,7 +705,7 @@ impl Generators {
   }
 
   /// Applies all the body generators to the body and returns a new body (if anything was applied).
-  pub fn apply_body_generators(&self, body: &OptionalBody, content_type: DetectedContentType, context: &HashMap<String, Value>) -> OptionalBody {
+  pub fn apply_body_generators(&self, body: &OptionalBody, content_type: DetectedContentType, context: &HashMap<String, Value>) -> Result<OptionalBody, String> {
     if body.is_present() && self.categories.contains_key(&GeneratorCategory::BODY) &&
       !self.categories[&GeneratorCategory::BODY].is_empty() {
       let generators = &self.categories[&GeneratorCategory::BODY];
@@ -599,26 +717,20 @@ impl Generators {
               let mut handler = JsonHandler { value: val };
               handler.process_body(&generators, context)
             },
-            Err(err) => {
-              log::error!("Failed to parse the body, so not applying any generators: {}", err);
-              body.clone()
-            }
+            Err(err) => Err(format!("Failed to parse the body, so not applying any generators: {}", err))
           }
         },
-        DetectedContentType::Xml => match parse_bytes(&body.value()) {
+        DetectedContentType::Xml => match Element::parse(body.value().as_slice()) {
           Ok(val) => {
-            let mut handler = XmlHandler { value: val.as_document() };
+            let mut handler = XmlHandler { value: val };
             handler.process_body(&generators, context)
           },
-          Err(err) => {
-            log::error!("Failed to parse the body, so not applying any generators: {}", err);
-            body.clone()
-          }
+          Err(err) => Err(format!("Failed to parse the body, so not applying any generators: {}", err))
         },
-        _ => body.clone()
+        _ => Ok(body.clone())
       }
     } else {
-      body.clone()
+      Ok(body.clone())
     }
   }
 }
@@ -902,7 +1014,7 @@ mod tests {
 
   #[test]
   fn generate_int_with_max_int_test() {
-    assert_that!(Generator::RandomInt(0, i32::max_value()).generate_value(&0,
+    assert_that!(Generator::RandomInt(0, i32::max_value()).generate_value(0,
       &hashmap!{}).unwrap().to_string(), matches_regex(r"^\d+$"));
   }
 }

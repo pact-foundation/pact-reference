@@ -234,11 +234,10 @@ fn validate_datetime_string<'a>(value: &String, pattern_tokens: &Vec<DateTimePat
       DateTimePatternToken::Iso8601Timezone => iso_timezone(buffer),
       DateTimePatternToken::AmPm => ampm(buffer)
     }.map_err(|err| format!("{:?}", err))?;
-    std::dbg!(result);
     buffer = result.0;
   }
 
-  if std::dbg!(buffer).len() > 0 {
+  if buffer.len() > 0 {
     Err(format!("Remaining data after applying pattern {:?}", buffer))
   } else {
     Ok(())
