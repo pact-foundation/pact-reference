@@ -155,6 +155,12 @@ impl Matches<Value> for Value {
           MatchingRule::Timestamp(ref s) => {
             validate_datetime(&value_of(actual), s)
               .map_err(|err| format!("Expected '{}' to match a timestamp format of '{}': {}", actual, s, err))
+          },
+          MatchingRule::MustBeOneOf(ref items) => if items.contains(&(actual.as_u64().unwrap() as u16)) {
+              Ok(())
+          } else {
+            println!("validating MustBeOneOf: {:?}, got: {:?}", items, actual);
+            Err(format!("'{}' is not present in {:?}", actual, items))
           }
        };
        debug!("JSON -> JSON: Comparing '{}' to '{}' using {:?} -> {:?}", self, actual, matcher, result);

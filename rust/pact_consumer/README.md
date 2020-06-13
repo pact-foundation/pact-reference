@@ -1,7 +1,7 @@
 # Pact test DSL for writing consumer pact tests in Rust
 
 This library provides a test DSL for writing consumer pact tests in Rust. It is based on the
-[V2 pact specification](https://github.com/pact-foundation/pact-specification/tree/version-2).
+[V3 pact specification](https://github.com/pact-foundation/pact-specification/tree/version-3).
 
 [Online rust docs](https://docs.rs/pact_consumer/)
 
@@ -15,6 +15,8 @@ pact_consumer = "0.2.0"
 ```
 
 You can now write a pact test using the consumer DSL.
+
+// TODO: This is out of date now
 
 ```rust
 use pact_consumer::prelude::*;

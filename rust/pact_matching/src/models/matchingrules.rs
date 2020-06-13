@@ -79,6 +79,8 @@ pub enum MatchingRule {
   MinMaxType(usize, usize),
   /// Match the value using a timestamp pattern
   Timestamp(String),
+  /// Must be one of a specific value
+  MustBeOneOf(Vec<u16>),
   /// Match the value using a time pattern
   Time(String),
   /// Match the value using a date pattern
@@ -244,7 +246,8 @@ impl MatchingRule {
       &MatchingRule::Number => json!({ "match": Value::String(s!("number")) }),
       &MatchingRule::Integer => json!({ "match": Value::String(s!("integer")) }),
       &MatchingRule::Decimal => json!({ "match": Value::String(s!("decimal")) }),
-      &MatchingRule::Null => json!({ "match": Value::String(s!("null")) })
+      &MatchingRule::Null => json!({ "match": Value::String(s!("null")) }),
+      &MatchingRule::MustBeOneOf(ref items) => json!({ "match": Value::String(s!("includes")), "values": items})
     }
   }
 

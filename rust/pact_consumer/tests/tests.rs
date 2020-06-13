@@ -9,12 +9,12 @@ use std::{
 use expectest::prelude::*;
 use expectest::expect;
 use reqwest::blocking::Client;
+use reqwest::StatusCode;
 use pact_matching::models::Pact;
 
 /// This is supposed to be a doctest in lib.rs, but it's breaking there, so
 /// we have an executable copy here.
 #[test]
-#[ignore]
 fn mock_server_passing_validation() {
     use expectest::*;
 
@@ -37,7 +37,7 @@ fn mock_server_passing_validation() {
           i.request.path("/mallory");
           // Define the response we want returned.
           i.response
-            .ok()
+            .success()
             .content_type("text/plain")
             .body("That is some good Mallory.");
         })
@@ -48,6 +48,7 @@ fn mock_server_passing_validation() {
       let mut response = reqwest::blocking::get(mallory_url).expect("could not fetch URL");
       let mut body = String::new();
       response.read_to_string(&mut body).expect("could not read response body");
+      assert_eq!(response.status(), StatusCode::OK);
       assert_eq!(body, "That is some good Mallory.");
     }
 

@@ -1,5 +1,5 @@
 use pact_matching::models::*;
-use pact_matching::models::matchingrules::MatchingRules;
+use pact_matching::models::matchingrules::{MatchingRules, MatchingRule, RuleLogic};
 use std::collections::HashMap;
 use maplit::*;
 
@@ -31,6 +31,13 @@ impl ResponseBuilder {
     /// Set the status code to `200 OK`. (This is default.)
     pub fn ok(&mut self) -> &mut Self {
         self.status(200)
+    }
+
+    /// Set the status code to `201 Created`.
+    pub fn success(&mut self) -> &mut Self {
+        self.status(200);
+        self.response.matching_rules.add_category("status").add_rule(&"status".to_string(), MatchingRule::MustBeOneOf(vec![200,201,202,203,204,205,206,207,208,209]), &RuleLogic::And);
+        self
     }
 
     /// Set the status code to `201 Created`.

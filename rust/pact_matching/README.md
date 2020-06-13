@@ -29,8 +29,8 @@ versions up to V3, but will converted a V1, V1.1 and V2 spec file to a V3 format
 
 V3 specification matching is supported for both JSON and XML bodies, headers, query strings and request paths.
 
-To understand the basic rules of matching, see [Matching Gotchas](https://github.com/realestate-com-au/pact/wiki/Matching-gotchas).
-For example test cases for matching, see the [Pact Specification Project, version 3](https://github.com/bethesque/pact-specification/tree/version-3).
+To understand the basic rules of matching, see [Matching Gotchas](https://github.com/pact-foundation/pact-ruby/wiki/Matching-gotchas).
+For example test cases for matching, see the [Pact Specification Project, version 3](https://github.com/pact-foundation/pact-specification/tree/version-3).
 
 By default, Pact will use string equality matching following Postel's Law. This means
 that for an actual value to match an expected one, they both must consist of the same
