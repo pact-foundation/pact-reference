@@ -971,27 +971,35 @@ fn convert_ptr_to_mime_part_body(file: *const c_char, part_name: &str, boundary:
   }
 }
 
+/// Request to the Plugin Admin to create a Test Session
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug)]
-pub struct PluginSession {
+pub struct PluginSessionRequest {
   // TODO
 }
 
+/// Response from the Plugin Admin server after creating a Test Session
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionCreateResponse {
+  /// unique session id
   pub id: String,
+  /// port for the calling code to communicate with
+  /// Probably ought to be a URL or similar
   pub port: i32,
 }
 
+/// Mismatches from the Plugin Mock Server
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct PluginMismatchedResponse {
+  /// Mismatches from the Plugin Mock Server
   pub mismatches: Vec<PluginMismatch>,
 }
 
+/// Interation level mismatch details for the Plugin Mock Server
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PluginMismatch {
@@ -1003,22 +1011,23 @@ pub struct PluginMismatch {
   mismatch: String,
 }
 
-/// Struct to represent the spawed plugin providers
+/// Struct to represent the spawed plugin mock servers
 pub struct PluginManager {
-  registered_plugins: BTreeMap<i32, PluginEntry>,
+  registered_plugins: BTreeMap<i32, PluginMockServer>,
 }
 
-pub struct PluginEntry {
+/// Represents the state of a given Plugin-based mock server
+pub struct PluginMockServer {
+  /// Mismatches from the Plugin Mock Server
   pub mismatches: Option<Vec<PluginMismatch>>,
+  /// HTTP admin port of the plugin
   pub admin_port: i32,
+  /// User accesible port for the mock server
   pub port: i32,
+  /// Host of the admin HTTP server
   pub host: String,
+  /// Session ID
   pub id: String,
-  // pub interactions: Vec<u8>
-  // Consumer
-  // Provider
-  // Interaction style?
-  // spec?
 }
 
 impl PluginManager {
@@ -1034,7 +1043,7 @@ impl PluginManager {
   pub fn register_plugin(
     &mut self,
     id: i32,
-    plugin: PluginEntry,
+    plugin: PluginMockServer,
   ) {
     self.registered_plugins.insert(
       id,
@@ -1047,7 +1056,7 @@ impl PluginManager {
   pub fn find_plugin_by_port(
     &self,
     id: i32,
-  ) -> Option<&PluginEntry> {
+  ) -> Option<&PluginMockServer> {
     self.registered_plugins.get(&id)
   }
 }
@@ -1070,7 +1079,7 @@ pub extern fn create_plugin_mock_server(port: i32, config: *const c_char) -> i32
   let client = reqwest::blocking::Client::new();
 
   // TODO: get from input
-  let create_request = PluginSession {};
+  let create_request = PluginSessionRequest {};
 
   let response = client.post(format!("http://localhost:{}/sessions", port).as_str())
       .json(&create_request)
@@ -1087,7 +1096,7 @@ pub extern fn create_plugin_mock_server(port: i32, config: *const c_char) -> i32
 
         PLUGIN_MANAGER.lock().unwrap()
           .get_or_insert_with(PluginManager::new)
-          .register_plugin(port, PluginEntry{
+          .register_plugin(port, PluginMockServer{
             mismatches: None,
             port: session.port,
             admin_port: port,
@@ -1149,7 +1158,7 @@ pub extern fn add_plugin_interaction(port: i32, interactions: *const c_char) -> 
   0
 }
 
-fn get_mismatches_for_plugin_server(session: &PluginEntry) -> Option<PluginMismatchedResponse> {
+fn get_mismatches_for_plugin_server(session: &PluginMockServer) -> Option<PluginMismatchedResponse> {
   let client = reqwest::blocking::Client::new();
   let response = client.get(format!("http://{}:{}/sessions/{}/mismatches", session.host, session.admin_port, session.id).as_str())
   .send();
@@ -1179,8 +1188,10 @@ pub extern fn plugin_mock_server_matched(port: i32) -> bool {
   let session = m.as_ref().unwrap().find_plugin_by_port(port);
 
   if let Some(session) = session {
-    if let Some(_) = get_mismatches_for_plugin_server(&session) {
-      return false
+    if let Some(res) = get_mismatches_for_plugin_server(&session) {
+      if res.mismatches.len() > 0 {
+        return false
+      }
     }
   }
 
@@ -1209,9 +1220,7 @@ pub extern fn plugin_mock_server_mismatches(port: i32) -> *const c_char {
   std::ptr::null_mut()
 }
 
-/// External interface to cleanup a mock server. This function will try terminate the mock server
-/// with the given port number and cleanup any memory allocated for it. Returns true, unless a
-/// mock server with the given port number does not exist, or the function panics.
+/// External interface to cleanup a mock server
 #[no_mangle]
 pub extern fn cleanup_plugin_mock_server(session_id: i32) -> bool {
   log::info!("cleaning up session with id {}", session_id);
