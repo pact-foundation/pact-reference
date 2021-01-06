@@ -43,12 +43,20 @@
 
 #![warn(missing_docs)]
 
+use reqwest::header::HeaderValue;
+use reqwest::header::HeaderMap;
+use reqwest::header::CONTENT_TYPE;
+use std::collections::BTreeMap;
+use std::sync::Mutex;
+use lazy_static::*;
 use std::any::Any;
 use std::ffi::CStr;
 use std::ffi::CString;
 use std::panic::catch_unwind;
 use std::ptr::null_mut;
 use std::str;
+use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 
 use chrono::Local;
 use env_logger::Builder;
@@ -961,4 +969,252 @@ fn convert_ptr_to_mime_part_body(file: *const c_char, part_name: &str, boundary:
     }?;
     file_as_multipart_body(file, part_name, boundary)
   }
+}
+
+#[skip_serializing_none]
+#[derive(Serialize, Deserialize, Debug)]
+pub struct PluginSession {
+  // TODO
+}
+
+#[skip_serializing_none]
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionCreateResponse {
+  pub id: String,
+  pub port: i32,
+}
+
+#[skip_serializing_none]
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginMismatchedResponse {
+  pub mismatches: Vec<PluginMismatch>,
+}
+
+#[skip_serializing_none]
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct PluginMismatch {
+  /// expected value
+  expected: String,
+  /// actual value
+  actual: String,
+  /// description of the mismatch
+  mismatch: String,
+}
+
+/// Struct to represent the spawed plugin providers
+pub struct PluginManager {
+  registered_plugins: BTreeMap<i32, PluginEntry>,
+}
+
+pub struct PluginEntry {
+  pub mismatches: Option<Vec<PluginMismatch>>,
+  pub admin_port: i32,
+  pub port: i32,
+  pub host: String,
+  pub id: String,
+  // pub interactions: Vec<u8>
+  // Consumer
+  // Provider
+  // Interaction style?
+  // spec?
+}
+
+impl PluginManager {
+  /// Construct a new ServerManager for scheduling several instances of mock servers
+  /// on one tokio runtime.
+  pub fn new() -> PluginManager {
+      PluginManager {
+        registered_plugins: BTreeMap::new(),
+      }
+  }
+
+  /// Start a new server on the runtime
+  pub fn register_plugin(
+    &mut self,
+    id: i32,
+    plugin: PluginEntry,
+  ) {
+    self.registered_plugins.insert(
+      id,
+      plugin
+    );
+  }
+
+  /// Find plugin by its port
+  /// perhaps it would be better if we lookup by id/uuid?
+  pub fn find_plugin_by_port(
+    &self,
+    id: i32,
+  ) -> Option<&PluginEntry> {
+    self.registered_plugins.get(&id)
+  }
+}
+
+
+lazy_static! {
+  ///
+  /// A global thread-safe, "init-on-demand" reference to a server manager.
+  /// When the server manager is initialized, it starts a separate thread on which
+  /// to serve requests.
+  ///
+  pub static ref PLUGIN_MANAGER: Mutex<Option<PluginManager>> = Mutex::new(Option::None);
+}
+
+// Returns the session ID
+#[no_mangle]
+pub extern fn create_plugin_mock_server(port: i32, config: *const c_char) -> i32 {
+  log::info!("initialising plugin");
+
+  let client = reqwest::blocking::Client::new();
+
+  // TODO: get from input
+  let create_request = PluginSession {};
+
+  let response = client.post(format!("http://localhost:{}/sessions", port).as_str())
+      .json(&create_request)
+      .send();
+
+  match response {
+    Ok(body) => {
+      if let Ok(body) = &body.text() {
+        let session: SessionCreateResponse = serde_json::from_str(body).unwrap_or(SessionCreateResponse {
+          id: "0".to_string(),
+          port: 0,
+        });
+        log::info!("deserialised into object: {:?}", session);
+
+        PLUGIN_MANAGER.lock().unwrap()
+          .get_or_insert_with(PluginManager::new)
+          .register_plugin(port, PluginEntry{
+            mismatches: None,
+            port: session.port,
+            admin_port: port,
+            host: "localhost".to_string(),
+            id: session.id,
+          });
+
+        session.port
+      } else {
+        0
+      }
+    },
+    Err(e) => {
+      log::error!("plugin errored: {}", e);
+      0
+    }
+  }
+}
+
+fn pact_request_headers() -> HeaderMap {
+  let mut headers = HeaderMap::new();
+  headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
+  headers
+}
+
+#[no_mangle]
+pub extern fn add_plugin_interaction(port: i32, interactions: *const c_char) -> i32 {
+  log::info!("adding interaction to plugin interface");
+
+  let mut s = PLUGIN_MANAGER.lock().unwrap();
+  let session = s.get_or_insert_with(PluginManager::new)
+  .find_plugin_by_port(port);
+
+  if let Some(session) = session {
+    if let Some(interactions) = convert_cstr("interactions", interactions) {
+      log::info!("have interactions, passing raw string (hopefully JSON formatted) to plugin server: {}", interactions);
+
+      // TODO: get host/port/session id from plugin config
+      let client = reqwest::blocking::Client::new();
+      let response = client.post(format!("http://{}:{}/sessions/{}/interactions", session.host, session.admin_port, session.id).as_str())
+      .body(interactions)
+      .headers(pact_request_headers())
+      .send();
+
+      match response {
+        Ok(body) => {
+          if let Ok(body) = &body.text() {
+            log::info!("response from adding interactions {}", body);
+          }
+        },
+        Err(e) => {
+          log::error!("plugin errored: {}", e);
+          return 1
+        }
+      }
+    }
+  }
+
+  0
+}
+
+fn get_mismatches_for_plugin_server(session: &PluginEntry) -> Option<PluginMismatchedResponse> {
+  let client = reqwest::blocking::Client::new();
+  let response = client.get(format!("http://{}:{}/sessions/{}/mismatches", session.host, session.admin_port, session.id).as_str())
+  .send();
+
+  match response {
+    Ok(body) => {
+      if let Ok(body) = &body.text() {
+        let res: PluginMismatchedResponse = serde_json::from_str(body.as_str()).unwrap();
+        log::info!("received mismatches: {:?}", res);
+
+        return Some(res)
+      }
+    },
+    Err(e) => {
+      log::error!("plugin errored: {}", e);
+    }
+  };
+
+  None
+}
+
+#[no_mangle]
+pub extern fn plugin_mock_server_matched(port: i32) -> bool {
+  log::info!("plugin mock server matched: {}", port);
+  let m = PLUGIN_MANAGER.lock().unwrap();
+
+  let session = m.as_ref().unwrap().find_plugin_by_port(port);
+
+  if let Some(session) = session {
+    if let Some(_) = get_mismatches_for_plugin_server(&session) {
+      return false
+    }
+  }
+
+  true
+}
+
+#[no_mangle]
+pub extern fn plugin_mock_server_mismatches(port: i32) -> *const c_char {
+  log::info!("plugin mock server mismatches: {}", port);
+  let s = PLUGIN_MANAGER.lock().unwrap();
+
+  // let session = s.get_or_insert_with(PluginManager::new)
+  let m = s.as_ref().unwrap();
+  let session = m.find_plugin_by_port(port);
+
+  if let Some(session) = session {
+    if let Some(res) = get_mismatches_for_plugin_server(&session) {
+      let res = serde_json::to_string(&PluginMismatchedResponse { mismatches: res.mismatches }).unwrap();
+      log::info!("plugin mock server, found mismatches: {}", &res);
+
+      return CString::new(res.as_str()).unwrap_or_default().into_raw()
+    }
+  }
+
+
+  std::ptr::null_mut()
+}
+
+/// External interface to cleanup a mock server. This function will try terminate the mock server
+/// with the given port number and cleanup any memory allocated for it. Returns true, unless a
+/// mock server with the given port number does not exist, or the function panics.
+#[no_mangle]
+pub extern fn cleanup_plugin_mock_server(session_id: i32) -> bool {
+  log::info!("cleaning up session with id {}", session_id);
+
+  true
 }

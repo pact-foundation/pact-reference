@@ -265,6 +265,10 @@ impl Interaction for V4Interaction {
     }
   }
 
+  fn is_plugin(&self) -> bool {
+    false
+  }
+
   fn as_message(&self) -> Option<Message> {
     match self {
       V4Interaction::AsynchronousMessages { id, description, provider_states, contents, metadata, matching_rules, generators, .. } =>

@@ -1044,6 +1044,8 @@ pub trait Interaction {
   fn as_request_response(&self) -> Option<RequestResponseInteraction>;
   /// If this is a message interaction
   fn is_message(&self) -> bool;
+  /// If this is a plugin based interaction
+  fn is_plugin(&self) -> bool;
   /// Returns the message interaction if it is one
   fn as_message(&self) -> Option<Message>;
   /// Interaction ID. This will only be set if the Pact file was fetched from a Pact Broker
@@ -1116,6 +1118,10 @@ impl Interaction for RequestResponseInteraction {
   }
 
   fn is_message(&self) -> bool {
+    false
+  }
+
+  fn is_plugin(&self) -> bool {
     false
   }
 

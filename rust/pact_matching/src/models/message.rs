@@ -64,6 +64,10 @@ impl Interaction for Message {
     true
   }
 
+  fn is_plugin(&self) -> bool {
+    false
+  }
+
   fn as_message(&self) -> Option<Message> {
     Some(self.clone())
   }
