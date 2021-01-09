@@ -23,7 +23,6 @@ log = "0.4.8"
 lazy_static = "1.4.0"
 maplit = "1.0.2"
 uuid = { version = "0.8", features = ["v4"] }
-nom = "^4.0"
 chrono = "0.4"
 chrono-tz = "0.4"
 rand_regex = "0.12.0"

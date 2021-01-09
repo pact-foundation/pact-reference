@@ -14,7 +14,7 @@ static ROOT: &str = "$";
 
 pub fn match_content_type<S>(data: &[u8], expected_content_type: S) -> Result<(), String>
   where S: Into<String> {
-  let result = tree_magic::from_u8(data);
+  let result = tree_magic_mini::from_u8(data);
   let expected = expected_content_type.into();
   let matches = result == expected;
   debug!("Matching binary contents by content type: expected '{}', detected '{}' -> {}",
