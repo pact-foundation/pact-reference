@@ -56,8 +56,7 @@ use std::ffi::CString;
 use std::panic::catch_unwind;
 use std::ptr::null_mut;
 use std::str;
-use std::path::PathBuf;
-
+use std::str::FromStr;
 use bytes::Bytes;
 use chrono::Local;
 use env_logger::Builder;
@@ -102,13 +101,9 @@ pub extern "C" fn version() -> *const c_char {
 #[no_mangle]
 pub unsafe extern fn init(log_env_var: *const c_char) {
   let log_env_var = if !log_env_var.is_null() {
-    let c_str = CStr::from_ptr(log_env_var);
-    match c_str.to_str() {
-      Ok(str) => str,
-      Err(err) => {
-        warn!("Failed to parse the environment variable name as a UTF-8 string: {}", err);
-        "LOG_LEVEL"
-      }
+    match convert_cstr("log env var", log_env_var) {
+      Some(level) => level,
+      None => "LOG_LEVEL"
     }
   } else {
     "LOG_LEVEL"
@@ -117,6 +112,52 @@ pub unsafe extern fn init(log_env_var: *const c_char) {
   let env = env_logger::Env::new().filter(log_env_var);
   let mut builder = Builder::from_env(env);
   builder.try_init().unwrap_or(());
+}
+
+/// Sets the log level explicitly
+///
+/// # Safety
+///
+/// Exported functions are inherently unsafe.
+#[no_mangle]
+pub unsafe extern fn log_level(level: *const c_char) {
+  let mut builder = Builder::from_default_env();
+  let log_level = log_level_from_c_char(level);
+
+  builder.filter_level(log_level.to_level_filter());
+  builder.try_init().unwrap_or(());
+}
+
+/// Log using the shared core logging facility, instead
+///
+/// * `log_level` - String. One of TRACE, DEBUG, INFO, WARN, ERROR
+/// * `message` - Message to log
+///
+/// Exported functions are inherently unsafe.
+#[no_mangle]
+pub unsafe extern fn log(log_level: *const c_char, message: *const c_char) {
+  if !message.is_null() {
+    match convert_cstr("message", message) {
+      Some(message) => log!(log_level_from_c_char(log_level), "{}", message),
+      None => ()
+    }
+  }
+}
+
+unsafe fn log_level_from_c_char(log_level: *const c_char) -> log::Level {
+  if !log_level.is_null() {
+    let level = match convert_cstr("log_level", log_level) {
+      Some(str) => str,
+      None => "INFO"
+    };
+
+    match log::Level::from_str(level) {
+      Ok(level) => level,
+      Err(_) => log::Level::Info
+    }
+  } else {
+    log::Level::Info
+  }
 }
 
 /// External interface to create a mock server. A pointer to the pact JSON as a C string is passed in,
