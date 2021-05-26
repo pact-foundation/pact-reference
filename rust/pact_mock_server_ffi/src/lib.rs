@@ -130,15 +130,19 @@ pub unsafe extern fn log_level(level: *const c_char) {
 
 /// Log using the shared core logging facility, instead
 ///
+/// * `source` - String. The source of the log, such as the class or caller framework to
+///                      disambiguate log lines from the rust logging (e.g. pact_go)
 /// * `log_level` - String. One of TRACE, DEBUG, INFO, WARN, ERROR
 /// * `message` - Message to log
 ///
 /// Exported functions are inherently unsafe.
 #[no_mangle]
-pub unsafe extern fn log(log_level: *const c_char, message: *const c_char) {
+pub unsafe extern fn log(source: *const c_char, log_level: *const c_char, message: *const c_char) {
+  let target = convert_cstr("target", source).unwrap_or("client");
+
   if !message.is_null() {
     match convert_cstr("message", message) {
-      Some(message) => log!(log_level_from_c_char(log_level), "{}", message),
+      Some(message) => log!(target: target, log_level_from_c_char(log_level), "{}", message),
       None => ()
     }
   }
