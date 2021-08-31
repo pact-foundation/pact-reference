@@ -683,7 +683,7 @@ pub extern fn pactffi_with_pact_metadata(
       child.insert(name.to_string(), value.to_string());
       inner.pact.metadata.insert(namespace.to_string(), child);
     } else {
-      log::warn!("no namespace provided for metadata {:?} => {:?}. Ignoring", name, value);
+      log::warn!("No namespace provided for metadata {:?} => {:?}. Ignoring", name, value);
     }
     !inner.mock_server_started
   }).unwrap_or(false)
@@ -1344,7 +1344,7 @@ pub extern fn pactffi_with_message_pact_metadata(pact: handles::MessagePactHandl
       child.insert(name.to_string(), value.to_string());
       inner.metadata.insert(namespace.to_string(), child);
     } else {
-      log::warn!("no namespace provided for metadata {:?} => {:?}. Ignoring", name, value);
+      log::warn!("No namespace provided for metadata {:?} => {:?}. Ignoring", name, value);
     }
   });
 }

@@ -49,7 +49,7 @@ impl Matches<&str> for String {
 
 impl Matches<&str> for &str {
   fn matches_with(&self, actual: &str, matcher: &MatchingRule, _cascaded: bool) -> anyhow::Result<()> {
-    debug!("String -> String: comparing '{}' to '{}' using {:?}", self, actual, matcher);
+    trace!("String -> String: comparing '{}' to '{}' using {:?}", self, actual, matcher);
     match matcher {
       MatchingRule::Regex(regex) => {
         match Regex::new(regex) {
@@ -137,7 +137,7 @@ impl Matches<u64> for String {
 
 impl Matches<u64> for &str {
   fn matches_with(&self, actual: u64, matcher: &MatchingRule, _cascaded: bool) -> anyhow::Result<()> {
-    log::debug!("String -> u64: comparing '{}' to {} using {:?}", self, actual, matcher);
+    log::trace!("String -> u64: comparing '{}' to {} using {:?}", self, actual, matcher);
     match matcher {
       MatchingRule::Regex(regex) => {
         match Regex::new(regex) {
@@ -174,7 +174,7 @@ impl Matches<u64> for &str {
 
 impl Matches<u64> for u64 {
   fn matches_with(&self, actual: u64, matcher: &MatchingRule, _cascaded: bool) -> anyhow::Result<()> {
-    debug!("u64 -> u64: comparing {} to {} using {:?}", self, actual, matcher);
+    trace!("u64 -> u64: comparing {} to {} using {:?}", self, actual, matcher);
     match matcher {
       MatchingRule::Regex(regex) => {
         match Regex::new(regex) {
@@ -216,7 +216,7 @@ impl Matches<u64> for u64 {
 
 impl Matches<f64> for u64 {
   fn matches_with(&self, actual: f64, matcher: &MatchingRule, _cascaded: bool) -> anyhow::Result<()> {
-    debug!("u64 -> f64: comparing {} to {} using {:?}", self, actual, matcher);
+    trace!("u64 -> f64: comparing {} to {} using {:?}", self, actual, matcher);
     match matcher {
       MatchingRule::Regex(regex) => {
         match Regex::new(regex) {
@@ -253,7 +253,7 @@ impl Matches<f64> for u64 {
 impl Matches<f64> for f64 {
   #[allow(clippy::float_cmp)]
   fn matches_with(&self, actual: f64, matcher: &MatchingRule, _cascaded: bool) -> anyhow::Result<()> {
-    debug!("f64 -> f64: comparing {} to {} using {:?}", self, actual, matcher);
+    trace!("f64 -> f64: comparing {} to {} using {:?}", self, actual, matcher);
     match matcher {
       MatchingRule::Regex(regex) => {
         match Regex::new(regex) {
@@ -294,7 +294,7 @@ impl Matches<f64> for f64 {
 
 impl Matches<u64> for f64 {
   fn matches_with(&self, actual: u64, matcher: &MatchingRule, _cascaded: bool) -> anyhow::Result<()> {
-    debug!("f64 -> u64: comparing {} to {} using {:?}", self, actual, matcher);
+    trace!("f64 -> u64: comparing {} to {} using {:?}", self, actual, matcher);
     match matcher {
       MatchingRule::Regex(ref regex) => {
         match Regex::new(regex) {
@@ -330,21 +330,21 @@ impl Matches<u64> for f64 {
 
 impl Matches<u16> for String {
   fn matches_with(&self, actual: u16, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
-    debug!("String -> u16: comparing '{}' to {} using {:?}", self, actual, matcher);
+    trace!("String -> u16: comparing '{}' to {} using {:?}", self, actual, matcher);
     self.matches_with(actual as u64, matcher, cascaded)
   }
 }
 
 impl Matches<u16> for &str {
   fn matches_with(&self, actual: u16, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
-    debug!("String -> u16: comparing '{}' to {} using {:?}", self, actual, matcher);
+    trace!("String -> u16: comparing '{}' to {} using {:?}", self, actual, matcher);
     self.matches_with(actual as u64, matcher, cascaded)
   }
 }
 
 impl Matches<u16> for u16 {
   fn matches_with(&self, actual: u16, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
-    debug!("u16 -> u16: comparing {} to {} using {:?}", self, actual, matcher);
+    trace!("u16 -> u16: comparing {} to {} using {:?}", self, actual, matcher);
     (*self as u64).matches_with(actual as u64, matcher, cascaded)
   }
 }
@@ -357,7 +357,7 @@ impl Matches<i64> for String {
 
 impl Matches<i64> for &str {
   fn matches_with(&self, actual: i64, matcher: &MatchingRule, _cascaded: bool) -> anyhow::Result<()> {
-    debug!("String -> i32: comparing '{}' to {} using {:?}", self, actual, matcher);
+    trace!("String -> i32: comparing '{}' to {} using {:?}", self, actual, matcher);
     match matcher {
       MatchingRule::Regex(regex) => {
         match Regex::new(regex) {
@@ -393,7 +393,7 @@ impl Matches<i64> for &str {
 
 impl Matches<i64> for i64 {
   fn matches_with(&self, actual: i64, matcher: &MatchingRule, _cascaded: bool) -> anyhow::Result<()> {
-    debug!("i64 -> i64: comparing {} to {} using {:?}", self, actual, matcher);
+    trace!("i64 -> i64: comparing {} to {} using {:?}", self, actual, matcher);
     match matcher {
       MatchingRule::Regex(regex) => {
         match Regex::new(regex) {
@@ -452,7 +452,7 @@ impl Matches<i32> for i32 {
 
 impl Matches<bool> for bool {
   fn matches_with(&self, actual: bool, matcher: &MatchingRule, _cascaded: bool) -> anyhow::Result<()> {
-    debug!("bool -> bool: comparing '{}' to {} using {:?}", self, actual, matcher);
+    trace!("bool -> bool: comparing '{}' to {} using {:?}", self, actual, matcher);
     match matcher {
       MatchingRule::Regex(regex) => {
         match Regex::new(regex) {
@@ -483,7 +483,7 @@ impl Matches<bool> for bool {
 
 impl Matches<&Bytes> for Bytes {
   fn matches_with(&self, actual: &Bytes, matcher: &MatchingRule, _cascaded: bool) -> anyhow::Result<()> {
-    debug!("Bytes -> Bytes: comparing {} bytes to {} bytes using {:?}", self.len(), actual.len(), matcher);
+    trace!("Bytes -> Bytes: comparing {} bytes to {} bytes using {:?}", self.len(), actual.len(), matcher);
     match matcher {
       MatchingRule::Regex(regex) => {
         match Regex::new(regex) {

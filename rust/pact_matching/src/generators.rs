@@ -56,7 +56,7 @@ pub fn generators_process_body(
 ) -> OptionalBody {
   match content_type {
     Some(content_type) => if content_type.is_json() {
-      debug!("apply_body_generators: JSON content type");
+      trace!("apply_body_generators: JSON content type");
       let result: Result<Value, serde_json::Error> = serde_json::from_slice(&body.value().unwrap_or_default());
       match result {
         Ok(val) => {
@@ -72,7 +72,7 @@ pub fn generators_process_body(
         }
       }
     } else if content_type.is_xml() {
-      debug!("apply_body_generators: XML content type");
+      trace!("apply_body_generators: XML content type");
       match parse_bytes(&body.value().unwrap_or_default()) {
         Ok(val) => {
           let mut handler = XmlHandler { value: val.as_document() };
@@ -102,13 +102,13 @@ pub(crate) fn find_matching_variant<T>(
   where T: Clone + std::fmt::Debug {
   let result = variants.iter()
     .find(|(index, rules, _)| {
-      debug!("find_matching_variant: Comparing variant {} with value '{:?}'", index, value);
+      trace!("find_matching_variant: Comparing variant {} with value '{:?}'", index, value);
       let context = MatchingContext::new(DiffConfig::NoUnexpectedKeys, rules);
       let matches = callback(&vec!["$"], value, &context);
-      debug!("find_matching_variant: Comparing variant {} => {}", index, matches);
+      trace!("find_matching_variant: Comparing variant {} => {}", index, matches);
       matches
     });
-  debug!("find_matching_variant: result = {:?}", result);
+  trace!("find_matching_variant: result = {:?}", result);
   result.map(|(index, _, generators)| (*index, generators.clone()))
 }
 

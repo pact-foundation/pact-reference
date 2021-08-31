@@ -45,7 +45,7 @@ pub async fn create_mock_server(host: &str, port: u16, matches: &ArgMatches<'_>)
           if response.status().is_success() {
             match response.json::<Value>().await {
               Ok(json) => {
-                debug!("Got response from master server: {:?}", json);
+                trace!("Got response from master server: {:?}", json);
                 let mock_server = json.get("mockServer")
                   .ok_or_else(|| handle_error("Invalid JSON received from master server - no mockServer attribute"))?;
                 let id = mock_server.get("id")

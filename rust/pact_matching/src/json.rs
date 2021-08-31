@@ -282,7 +282,7 @@ pub fn display_diff(expected: &String, actual: &String, path: &str, indent: &str
 }
 
 pub(crate) fn compare(path: &[&str], expected: &Value, actual: &Value, context: &MatchingContext) -> Result<(), Vec<Mismatch>> {
-  debug!("compare: Comparing path {}", path.join("."));
+  trace!("compare: Comparing path {}", path.join("."));
   match (expected, actual) {
     (&Value::Object(ref emap), &Value::Object(ref amap)) => compare_maps(path, emap, amap, context),
     (&Value::Object(_), _) => {
@@ -311,9 +311,9 @@ pub(crate) fn compare(path: &[&str], expected: &Value, actual: &Value, context: 
 fn compare_maps(path: &[&str], expected: &serde_json::Map<String, Value>, actual: &serde_json::Map<String, Value>,
                 context: &MatchingContext) -> Result<(), Vec<Mismatch>> {
   let spath = path.join(".");
-  debug!("compare_maps: Comparing maps at {}: {:?} -> {:?}", spath, expected, actual);
+  debug!("Comparing maps at {}: {:?} -> {:?}", spath, expected, actual);
   if expected.is_empty() && context.config == DiffConfig::NoUnexpectedKeys && !actual.is_empty() {
-    debug!("compare_maps: Expected map is empty, but actual is not");
+    debug!("Expected map is empty, but actual is not");
     Err(vec![ Mismatch::BodyMismatch {
       path: spath,
       expected: Some(json_to_string(&json!(expected)).into()),
@@ -326,7 +326,7 @@ fn compare_maps(path: &[&str], expected: &serde_json::Map<String, Value>, actual
     let actual = actual.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
 
     if context.matcher_is_defined(path) {
-      debug!("compare_maps: Matcher is defined for path {}", spath);
+      debug!("There is a matcher defined for path {}", spath);
       for matcher in context.select_best_matcher(path).rules {
         result = merge_result(result,compare_maps_with_matchingrule(&matcher, path, &expected, &actual, &context, &mut |p, expected, actual| {
           compare(&p, expected, actual, context)
@@ -350,7 +350,7 @@ fn compare_lists(path: &[&str], expected: &Vec<Value>, actual: &Vec<Value>,
                  context: &MatchingContext) -> Result<(), Vec<Mismatch>> {
   let spath = path.join(".");
   if context.matcher_is_defined(path) {
-    debug!("compare_lists: matcher defined for path '{}'", spath);
+    trace!("compare_lists: matcher defined for path '{}'", spath);
     let mut result = Ok(());
     for matcher in context.select_best_matcher(path).rules {
       let values_result = compare_lists_with_matchingrule(&matcher, path, expected, actual, context, &|p, expected, actual, context| {
@@ -403,12 +403,12 @@ fn compare_list_content(path: &[&str], expected: &Vec<Value>, actual: &Vec<Value
 
 fn compare_values(path: &[&str], expected: &Value, actual: &Value, context: &MatchingContext) -> Result<(), Vec<Mismatch>> {
   let matcher_result = if context.matcher_is_defined(&path) {
-    debug!("compare_values: Calling match_values for path {}", path.join("."));
+    trace!("compare_values: Calling match_values for path {}", path.join("."));
     match_values(path, context, expected, actual)
   } else {
     expected.matches_with(actual, &MatchingRule::Equality, false).map_err(|err| vec![err.to_string()])
   };
-  log::debug!("compare_values: Comparing '{:?}' to '{:?}' at path '{}' -> {:?}", expected, actual, path.join("."), matcher_result);
+  log::debug!("Comparing value '{:?}' to '{:?}' at path '{}' -> {:?}", expected, actual, path.join("."), matcher_result);
   matcher_result.map_err(|messages| {
     messages.iter().map(|message| {
       Mismatch::BodyMismatch {

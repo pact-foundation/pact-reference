@@ -14,7 +14,7 @@ macro_rules! ffi_fn {
             use $crate::log::TARGET;
             use $crate::error::catch_panic;
 
-            ::log::debug!(target: TARGET, "{}::{}", module_path!(), stringify!($name));
+            ::log::trace!(target: TARGET, "{}::{}", module_path!(), stringify!($name));
 
             $(
                 ::log::trace!(target: TARGET, "@param {} = {:?}", stringify!($arg), $arg);

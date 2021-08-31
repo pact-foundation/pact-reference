@@ -168,7 +168,7 @@ pub fn compare_maps_with_matchingrule<T: Display + Debug>(
   ) -> Result<(), Vec<Mismatch>>) -> Result<(), Vec<Mismatch>> {
   let mut result = Ok(());
   if context.values_matcher_defined(&path) {
-    debug!("Values matcher is defined for path {:?}", path);
+    trace!("Values matcher is defined for path {:?}", path);
     for (key, value) in actual.iter() {
       let mut p = path.to_vec();
       p.push(key);

@@ -44,7 +44,7 @@ pub fn match_octet_stream(expected: &dyn HttpPart, actual: &dyn HttpPart, contex
   let mut mismatches = vec![];
   let expected = expected.body().value().unwrap_or_default();
   let actual = actual.body().value().unwrap_or_default();
-  debug!("matching binary contents ({} bytes)", actual.len());
+  debug!("Matching binary contents ({} bytes)", actual.len());
   let path = vec!["$"];
   if context.matcher_is_defined(&path) {
     let matchers = context.select_best_matcher(&path);
@@ -131,7 +131,7 @@ struct MimeFile {
 
 pub fn match_mime_multipart(expected: &dyn HttpPart, actual: &dyn HttpPart, context: &MatchingContext) -> Result<(), Vec<super::Mismatch>> {
   let mut mismatches = vec![];
-  debug!("matching MIME multipart contents");
+  debug!("Matching MIME multipart contents");
 
   let actual_parts = parse_multipart(actual.body().value().unwrap_or_default().reader(), actual.headers());
   let expected_parts = parse_multipart(expected.body().value().unwrap_or_default().reader(), expected.headers());
@@ -222,7 +222,7 @@ fn match_mime_part(expected: &MimePart, actual: &MimePart, context: &MatchingCon
 fn match_field(key: &String, expected: &String, actual: &String, context: &MatchingContext) -> Result<(), Vec<Mismatch>> {
   let path = vec![ROOT, key.as_str()];
   let matcher_result = if context.matcher_is_defined(&path) {
-    debug!("Calling match_values for path $.{}", key);
+    log::trace!("Calling match_values for path $.{}", key);
     match_values(&path, context, expected.as_str(), actual.as_str())
   } else {
     expected.as_str().matches_with(actual.as_str(), &MatchingRule::Equality, false).map_err(|err|
@@ -252,7 +252,7 @@ fn first(bytes: &[u8], len: usize) -> &[u8] {
 
 impl Matches<&MimeFile> for &MimeFile {
   fn matches_with(&self, actual: &MimeFile, matcher: &MatchingRule, _cascaded: bool) -> anyhow::Result<()> {
-    debug!("FilePart: comparing binary data to '{:?}' using {:?}", actual.content_type, matcher);
+    log::trace!("FilePart: comparing binary data to '{:?}' using {:?}", actual.content_type, matcher);
     match matcher {
       MatchingRule::Regex(ref regex) => {
         match Regex::new(regex) {
@@ -299,7 +299,7 @@ impl Matches<&MimeFile> for &MimeFile {
 fn match_file(key: &String, expected: &MimeFile, actual: &MimeFile, context: &MatchingContext) -> Result<(), Vec<Mismatch>> {
   let path = vec![ROOT, key.as_str()];
   let matcher_result = if context.matcher_is_defined(&path) {
-    debug!("Calling match_values for path $.{}", key);
+    log::trace!("Calling match_values for path $.{}", key);
     match_values( &path, context, expected, actual).map_err(|errors| {
       errors.iter().map(|err| Mismatch::BodyMismatch {
         path: path.join("."),

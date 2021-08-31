@@ -154,7 +154,7 @@ fn path_to_string(path: &Vec<&str>) -> String {
 fn compare_element(path: &Vec<&str>, expected: &Element, actual: &Element,
   mismatches: &mut Vec<super::Mismatch>, context: &MatchingContext) {
   let matcher_result = if context.matcher_is_defined(&path) {
-    debug!("calling match_values {:?} on {:?}", path, actual);
+    trace!("calling match_values {:?} on {:?}", path, actual);
     match_values(&path, context, expected, actual)
   } else {
     expected.matches_with(actual, &MatchingRule::Equality, false).map_err(|err| vec![err.to_string()])
@@ -278,7 +278,7 @@ fn compare_children(path: &Vec<&str>, expected: &Element, actual: &Element,
         let expected_children = expected_children_by_name.remove(&key).unwrap();
         let expected = expected_children.iter().next().unwrap();
         if context.type_matcher_defined(&p) {
-          log::debug!("Matcher defined for path {}", path_to_string(&p));
+          log::trace!("Matcher defined for path {}", path_to_string(&p));
           for child in group {
             compare_element(&p, &expected, &child, mismatches, context);
           }

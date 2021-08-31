@@ -60,7 +60,7 @@ fn handle_cli() -> Result<(), i32> {
 fn handle_matches(args: &ArgMatches) -> Result<(), i32> {
   let log_level = args.value_of("loglevel");
   if let Err(err) = setup_loggers(log_level.unwrap_or("warn")) {
-    eprintln!("WARN: Could not setup loggers: {}", err);
+    eprintln!("ERROR: Could not setup loggers: {}", err);
     eprintln!();
   }
 

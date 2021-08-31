@@ -49,7 +49,7 @@ fn extract_path(uri: &hyper::Uri) -> String {
 }
 
 fn extract_query_string(uri: &hyper::Uri) -> Option<HashMap<String, Vec<String>>> {
-  debug!("Extracting query from uri {:?}", uri);
+  trace!("Extracting query from uri {:?}", uri);
   uri.path_and_query()
     .and_then(|path_and_query| {
       trace!("path_and_query -> {:?}", path_and_query);
@@ -173,7 +173,7 @@ fn match_result_to_hyper_response(
           "port": ms.port
         })
       };
-      debug!("Test context = {:?}", context);
+      trace!("Test context = {:?}", context);
       let response = pact_matching::generate_response(response, &GeneratorTestMode::Consumer, &context);
       info!("Request matched, sending response {}", response);
       if response.has_text_body() {
@@ -196,7 +196,6 @@ fn match_result_to_hyper_response(
         .map_err(|_| InteractionError::ResponseBodyError)
     },
     _ => {
-      debug!("Request did not match: {}", match_result);
       if cors_preflight && request.method.to_uppercase() == "OPTIONS" {
         info!("Responding to CORS pre-flight request");
         let origin = match request.headers.clone() {
@@ -221,6 +220,7 @@ fn match_result_to_hyper_response(
           .body(Body::empty())
           .map_err(|_| InteractionError::ResponseBodyError)
       } else {
+        info!("Request did not match: {}", match_result);
         Response::builder()
           .status(500)
           .header(hyper::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
@@ -239,7 +239,7 @@ async fn handle_request(
   matches: Arc<Mutex<Vec<MatchResult>>>,
   mock_server: Arc<Mutex<MockServer>>
 ) -> Result<Response<Body>, InteractionError> {
-  debug!("Creating pact request from hyper request");
+  trace!("Creating pact request from hyper request");
 
   {
     let mut guard = mock_server.lock().unwrap();
@@ -248,7 +248,7 @@ async fn handle_request(
   }
 
   let pact_request = hyper_request_to_pact_request(req).await?;
-  info!("Received request {}", pact_request);
+  trace!("Received request {}", pact_request);
   if pact_request.has_text_body() {
     debug!("     body: '{}'", pact_request.body.str_value());
   }

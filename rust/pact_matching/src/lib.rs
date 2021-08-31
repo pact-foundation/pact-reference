@@ -1187,7 +1187,7 @@ fn compare_bodies(content_type: &ContentType, expected: &dyn HttpPart, actual: &
       }
     },
     None => {
-      debug!("No body matcher defined for content type '{}', using plain text matcher", content_type);
+      warn!("No body matcher defined for content type '{}', using plain text matcher", content_type);
       if let Err(m) = match_text(&expected.body().value(), &actual.body().value(), &context) {
         mismatches.extend_from_slice(&*m);
       }
@@ -1247,10 +1247,10 @@ pub fn match_body(
 ) -> BodyMatchResult {
   let expected_content_type = expected.content_type().unwrap_or_default();
   let actual_content_type = actual.content_type().unwrap_or_default();
-  debug!("expected content type = '{}', actual content type = '{}'", expected_content_type,
+  debug!("Expected content type is '{}', actual content type is '{}'", expected_content_type,
          actual_content_type);
   let content_type_matcher = header_context.select_best_matcher(&vec!["$", "Content-Type"]);
-  debug!("content type header matcher = '{:?}'", content_type_matcher);
+  debug!("Content type header matcher is '{:?}'", content_type_matcher);
   if expected_content_type.is_unknown() || actual_content_type.is_unknown() ||
     expected_content_type.is_equivalent_to(&actual_content_type) ||
     (!content_type_matcher.is_empty() &&
@@ -1360,7 +1360,7 @@ pub fn match_message_contents(
   let expected_content_type = expected_message.message_content_type().unwrap_or_default();
   let actual_content_type = actual.as_message()
     .map(|m| HttpPart::content_type(&m)).flatten().unwrap_or_default();
-  debug!("expected content type = '{}', actual content type = '{}'", expected_content_type,
+  debug!("Expected content type is '{}', actual content type is '{}'", expected_content_type,
          actual_content_type);
   if expected_content_type.is_equivalent_to(&actual_content_type) {
     let result = if expected.is_v4() || actual.is_v4() {
@@ -1406,7 +1406,7 @@ pub fn match_message_metadata(
   actual: &Box<dyn Interaction + Send>,
   context: &MatchingContext
 ) -> HashMap<String, Vec<Mismatch>> {
-  debug!("Matching message metadata for '{}'", expected.description());
+  trace!("Matching message metadata for '{}'", expected.description());
   let mut result = hashmap!{};
   let expected_metadata = if let Some(expected) = expected.as_v4_async_message() {
     expected.contents.metadata
@@ -1442,7 +1442,7 @@ pub fn match_message_metadata(
 }
 
 fn match_metadata_value(key: &str, expected: &Value, actual: &Value, context: &MatchingContext) -> Result<(), Vec<Mismatch>> {
-  debug!("Comparing metadata values for key '{}'", key);
+  trace!("Comparing metadata values for key '{}'", key);
   let path = vec![key];
   let matcher_result = if context.matcher_is_defined(&path) {
     matchers::match_values(&path, context, expected, actual)
@@ -1507,7 +1507,7 @@ pub fn generate_request(request: &Request, mode: &GeneratorTestMode, context: &H
 
   let generators = request.build_generators(&GeneratorCategory::PATH);
   if !generators.is_empty() {
-    debug!("Applying path generator...");
+    trace!("Applying path generator...");
     apply_generators(mode, &generators, &mut |_, generator| {
       if let Ok(v) = generator.generate_value(&request.path, context, &DefaultVariantMatcher.boxed()) {
         request.path = v;
@@ -1517,7 +1517,7 @@ pub fn generate_request(request: &Request, mode: &GeneratorTestMode, context: &H
 
   let generators = request.build_generators(&GeneratorCategory::HEADER);
   if !generators.is_empty() {
-    debug!("Applying header generators...");
+    trace!("Applying header generators...");
     apply_generators(mode, &generators, &mut |key, generator| {
       if let Some(header) = key.first_field() {
         if let Some(ref mut headers) = request.headers {
@@ -1533,7 +1533,7 @@ pub fn generate_request(request: &Request, mode: &GeneratorTestMode, context: &H
 
   let generators = request.build_generators(&GeneratorCategory::QUERY);
   if !generators.is_empty() {
-    debug!("Applying query generators...");
+    trace!("Applying query generators...");
     apply_generators(mode, &generators, &mut |key, generator| {
       if let Some(param) = key.first_field() {
         if let Some(ref mut parameters) = request.query {
@@ -1553,7 +1553,7 @@ pub fn generate_request(request: &Request, mode: &GeneratorTestMode, context: &H
 
   let generators = request.build_generators(&GeneratorCategory::BODY);
   if !generators.is_empty() && request.body.is_present() {
-    debug!("Applying body generators...");
+    trace!("Applying body generators...");
     request.body = generators_process_body(mode, &request.body, request.content_type(),
                                          context, &generators, &DefaultVariantMatcher.boxed());
   }
@@ -1566,17 +1566,17 @@ pub fn generate_response(response: &Response, mode: &GeneratorTestMode, context:
   let mut response = response.clone();
   let generators = response.build_generators(&GeneratorCategory::STATUS);
   if !generators.is_empty() {
-    debug!("Applying status generator...");
+    trace!("Applying status generator...");
     apply_generators(mode, &generators, &mut |_, generator| {
       if let Ok(v) = generator.generate_value(&response.status, context, &DefaultVariantMatcher.boxed()) {
-        debug!("Generated value for status: {}", v);
+        debug!("Generated value for response status: {}", v);
         response.status = v;
       }
     });
   }
   let generators = response.build_generators(&GeneratorCategory::HEADER);
   if !generators.is_empty() {
-    debug!("Applying header generators...");
+    trace!("Applying header generators...");
     apply_generators(mode, &generators, &mut |key, generator| {
       if let Some(header) = key.first_field() {
         if let Some(ref mut headers) = response.headers {
@@ -1595,7 +1595,7 @@ pub fn generate_response(response: &Response, mode: &GeneratorTestMode, context:
   }
   let generators = response.build_generators(&GeneratorCategory::BODY);
   if !generators.is_empty() && response.body.is_present() {
-    debug!("Applying body generators...");
+    trace!("Applying body generators...");
     response.body = generators_process_body(mode, &response.body, response.content_type(),
                                             context, &generators, &DefaultVariantMatcher.boxed());
   }

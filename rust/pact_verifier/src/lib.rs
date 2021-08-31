@@ -265,7 +265,7 @@ async fn execute_state_change<S: ProviderStateExecutor>(
         println!("  Given {}", Style::new().bold().paint(provider_state.name.clone()));
     }
     let result = provider_state_executor.call(interaction_id, provider_state, setup, Some(client)).await;
-    log::debug!("State Change: \"{:?}\" -> {:?}", provider_state, result);
+    log::trace!("State Change: \"{:?}\" -> {:?}", provider_state, result);
     result.map_err(|err| MismatchResult::Error(err.description, err.interaction_id))
 }
 
@@ -286,7 +286,7 @@ async fn verify_interaction<F: RequestFilterExecutor, S: ProviderStateExecutor>(
     interaction.provider_states().iter().map(|state| (state, client.clone())))
     .then(|(state, client)| {
       let state_name = state.name.clone();
-      info!("Running provider state change handler '{}' for '{}'", state_name, interaction.description());
+      log::debug!("Running provider state change handler '{}' for '{}'", state_name, interaction.description());
       async move {
         execute_state_change(&state, true, interaction.id(), &client,
                              provider_state_executor.clone())
@@ -327,7 +327,7 @@ async fn verify_interaction<F: RequestFilterExecutor, S: ProviderStateExecutor>(
       interaction.provider_states().iter().map(|state| (state, client.clone())))
       .then(|(state, client)| async move {
         let state_name = state.name.clone();
-        info!("Running provider state change handler '{}' for '{}'", state_name, interaction.description());
+        debug!("Running provider state change handler '{}' for '{}'", state_name, interaction.description());
         execute_state_change(&state, false, interaction.id(), &client,
                              provider_state_executor.clone())
           .map_err(|err| {
@@ -365,7 +365,7 @@ fn display_result(
 
 fn walkdir(dir: &Path) -> anyhow::Result<Vec<anyhow::Result<Box<dyn Pact>>>> {
     let mut pacts = vec![];
-    log::debug!("Scanning {:?}", dir);
+    log::trace!("Scanning {:?}", dir);
     for entry in fs::read_dir(dir)? {
         let entry = entry?;
         let path = entry.path();
@@ -693,7 +693,7 @@ async fn fetch_pact(source: PactSource) -> Vec<Result<(Box<dyn Pact>, Option<Pac
           for result in pacts.iter() {
             match result {
               Ok((pact, _, links)) => {
-                log::debug!("Got pact with links {:?}", links);
+                log::trace!("Got pact with links {:?}", links);
                 if let Ok(pact) = pact.as_request_response_pact() {
                   buffer.push(Ok((Box::new(pact) as Box<dyn Pact>, None, PactSource::BrokerUrl(provider_name.clone(), broker_url.clone(), auth.clone(), links.clone()))))
                 }
@@ -726,7 +726,7 @@ async fn fetch_pact(source: PactSource) -> Vec<Result<(Box<dyn Pact>, Option<Pac
           for result in pacts.iter() {
             match result {
               Ok((pact, context, links)) => {
-                log::debug!("Got pact with links {:?}", links);
+                log::trace!("Got pact with links {:?}", links);
                 if let Ok(pact) = pact.as_request_response_pact() {
 
                   buffer.push(Ok((Box::new(pact) as Box<dyn Pact>, context.clone(), PactSource::BrokerUrl(provider_name.clone(), broker_url.clone(), auth.clone(), links.clone()))))

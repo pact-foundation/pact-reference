@@ -47,7 +47,7 @@ pub unsafe extern fn pactffi_init(log_env_var: *const c_char) {
         match c_str.to_str() {
             Ok(str) => str,
             Err(err) => {
-                ::log::warn!("Failed to parse the environment variable name as a UTF-8 string: {}", err);
+                ::log::warn!("Failed to parse the log level environment variable name as a UTF-8 string: {}", err);
                 "LOG_LEVEL"
             }
         }
@@ -108,14 +108,14 @@ unsafe fn log_level_from_c_char(log_level: *const c_char) -> ::log::Level {
 fn convert_cstr(name: &str, value: *const c_char) -> Option<&str> {
     unsafe {
         if value.is_null() {
-            ::log::warn!("{} is NULL!", name);
+            ::log::error!("Pact_ffi was passed a string '{}' which is NULL! This is probably a bug in the caller of pact_ffi", name);
             None
         } else {
             let c_str = CStr::from_ptr(value);
             match c_str.to_str() {
                 Ok(str) => Some(str),
                 Err(err) => {
-                    ::log::warn!("Failed to parse {} name as a UTF-8 string: {}", name, err);
+                    ::log::error!("Failed to parse {} name as a UTF-8 string: {}. This may be a bug in the caller of pact_ffi", name, err);
                     None
                 }
             }
