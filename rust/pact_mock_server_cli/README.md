@@ -8,7 +8,7 @@ restful web api or through the command line interface. It implements the [V3 Pac
 
 ## Command line interface
 
-The mock server is bundles as a single binary executable `pact_mock_server_cli`. Running this with out any options displays
+The mock server is bundled as a single binary executable `pact_mock_server_cli`. Running this without any options displays
 the standard help.
 
 ```console
