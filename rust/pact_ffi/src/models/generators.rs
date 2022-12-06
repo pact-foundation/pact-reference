@@ -1,12 +1,12 @@
 //! FFI functions to deal with generators and generated values
 
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use libc::{c_char, c_ushort};
 use pact_models::generators::{GenerateValue, Generator, NoopVariantMatcher, VariantMatcher};
 use serde_json::Value;
 use tracing::{error, warn};
 
-use crate::{as_ref, ffi_fn};
+use crate::{as_ref, ffi_fn, safe_str};
 use crate::util::{ptr, string};
 
 ffi_fn! {
@@ -24,6 +24,29 @@ ffi_fn! {
     string::to_c(&json)? as *const c_char
   } {
     ptr::null_to::<c_char>()
+  }
+ }
+
+ffi_fn! {
+  /// Get a Generator from its JSON representation.
+  ///
+  /// Will return a NULL pointer if the generator was invalid.
+  ///
+  /// # Safety
+  ///
+  /// This function will fail if it is passed a NULL pointer, or the owner of the generator has
+  /// been deleted.
+  fn pactffi_generator_from_json(generator: *const c_char) -> *const Generator {
+    let generator = safe_str!(generator);
+    let value: serde_json::Value = serde_json::from_str(generator).context("error parsing generator as JSON")?;
+    let result = Generator::from_json(&value);
+
+    match result {
+      Ok(rule) => ptr::raw_to(rule) as *const Generator,
+      _ => ptr::null_to::<Generator>()
+    }
+  } {
+      ptr::null_to::<Generator>()
   }
 }
 
@@ -108,13 +131,14 @@ mod tests {
   use std::ffi::CString;
   use expectest::prelude::*;
   use libc::c_char;
-  use pact_models::generators::Generator;
+  use pact_models::generators::{Generator};
   use pact_models::prelude::Generator::{RandomInt, RandomString};
 
   use crate::models::generators::{
     pactffi_generator_generate_integer,
     pactffi_generator_generate_string,
-    pactffi_generator_to_json
+    pactffi_generator_to_json,
+    pactffi_generator_from_json,
   };
   use crate::util::ptr::null_to;
   use crate::util::string;
@@ -155,5 +179,15 @@ mod tests {
     let json_ptr = pactffi_generator_to_json(generator_ptr);
     let json = unsafe { CString::from_raw(json_ptr as *mut c_char) };
     expect!(json.to_string_lossy()).to(be_equal_to("{\"max\":100,\"min\":10,\"type\":\"RandomInt\"}"));
+  }
+
+  #[test]
+  fn generator_from_json() {
+    let json_string = CString::new("{\"max\":100,\"min\":10,\"type\":\"RandomInt\"}").unwrap();
+    let rule_ptr = pactffi_generator_from_json(json_string.as_ptr());
+
+    unsafe {
+      expect!(rule_ptr.as_ref().unwrap().name()).to(be_eq("RandomInt"));
+    }
   }
 }

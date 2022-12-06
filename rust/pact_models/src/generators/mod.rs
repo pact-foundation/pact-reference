@@ -232,6 +232,24 @@ impl Generator {
     }
   }
 
+  /// Builds a `Generator` from a `Value` struct
+  pub fn from_json(value: &Value) -> anyhow::Result<Generator> {
+    match value {
+      Value::Object(m) => match m.get("type") {
+        Some(match_val) => {
+          let val = json_to_string(match_val);
+          if let Some(generator) = Generator::from_map(val.as_str(), m) {
+            Ok(generator)
+          } else {
+            Err(anyhow!("Generator missing 'type' field and unable to guess its type"))
+          }
+        }
+        _ => Err(anyhow!("Generator missing 'type' field and unable to guess its type"))
+      },
+      _ => Err(anyhow!("Generator JSON is not an Object")),
+    }
+  }
+
   /// If this generator is compatible with the given generator mode
   pub fn corresponds_to_mode(&self, mode: &GeneratorTestMode) -> bool {
     match self {

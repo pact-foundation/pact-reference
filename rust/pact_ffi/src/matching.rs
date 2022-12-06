@@ -262,7 +262,8 @@ ffi_fn! {
 
 #[cfg(test)]
 mod tests {
-  use std::ffi::{c_char, CString};
+  use std::ffi::{CString};
+  use libc::{c_char};
 
   use expectest::prelude::*;
   use pact_models::matchingrules::MatchingRule;
