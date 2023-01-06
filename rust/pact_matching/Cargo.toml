@@ -39,7 +39,7 @@ multipart = { version = "0.18.0", default-features = false, features = ["server"
 http = "0.2.7"
 mime = "0.3.16"
 bytes = { version = "1.1.0", features = ["serde"] }
-tokio = { version = "1.23.0", features = ["full"] }
+tokio = { version = "1.23.1", features = ["full"] }
 pact-plugin-driver = "0.2.2"
 md5 = "0.7.0"
 tracing = "0.1.37" # This needs to be the same version across all the libs (i.e. plugin driver, pact ffi)

@@ -30,7 +30,7 @@ difference = "2.0.0"
 futures = "0.3.25"
 mime = "0.3.16"
 bytes = "1.2.1"
-tokio = { version = "1.23.0", features = ["full"] }
+tokio = { version = "1.23.1", features = ["full"] }
 http = "0.2.8"
 async-trait = "0.1.58"
 thiserror = "1.0.37"
