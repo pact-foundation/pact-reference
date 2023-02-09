@@ -1,5 +1,5 @@
 load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
-load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_static_library")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_shared_library")
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 
 package(default_visibility = ["//visibility:public"])
@@ -10,7 +10,7 @@ cargo_build_script(
     srcs = ["//pact_ffi:build.rs"],
     deps = all_crate_deps(package_name = "pact_ffi") + ["@crate_index//:os_info"],
 )
-rust_static_library(
+rust_shared_library(
     name = "pact_ffi",
     srcs = glob(
         ["src/**/*.rs"]
