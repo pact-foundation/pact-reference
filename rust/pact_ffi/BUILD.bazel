@@ -1,0 +1,25 @@
+load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_static_library")
+load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
+
+package(default_visibility = ["//visibility:public"])
+
+
+cargo_build_script(
+    name = "build",
+    srcs = ["//pact_ffi:build.rs"],
+    deps = all_crate_deps(package_name = "pact_ffi") + ["@crate_index//:os_info"],
+)
+rust_static_library(
+    name = "pact_ffi",
+    srcs = glob(
+        ["src/**/*.rs"]
+    ),
+    data = ["src/mock_server/ca.pem",
+            "src/mock_server/self-signed.key",
+            "src/mock_server/self-signed.crt",],
+    deps = ["//pact_matching",
+            "//pact_verifier",
+            "//pact_mock_server"]
+            + all_crate_deps(package_name = "pact_ffi") + [":build"],
+)

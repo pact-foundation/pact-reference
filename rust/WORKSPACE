@@ -1,0 +1,58 @@
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+#### RUST ####
+http_archive(
+    name = "rules_rust",
+    sha256 = "d125fb75432dc3b20e9b5a19347b45ec607fabe75f98c6c4ba9badaab9c193ce",
+    urls = ["https://github.com/bazelbuild/rules_rust/releases/download/0.17.0/rules_rust-v0.17.0.tar.gz"],
+)
+
+load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies", "rust_register_toolchains")
+
+rules_rust_dependencies()
+
+rust_register_toolchains(
+    edition = "2021",
+)
+
+load("@rules_rust//crate_universe:repositories.bzl", "crate_universe_dependencies")
+
+crate_universe_dependencies(bootstrap = True)
+
+load("@rules_rust//crate_universe:defs.bzl", "crate", "crates_repository", "splicing_config")
+load("@rules_rust//cargo:defs.bzl", "cargo_bootstrap_repository")
+
+
+load("@rules_rust//crate_universe:repositories.bzl", "crate_universe_dependencies")
+
+crate_universe_dependencies(bootstrap = True)
+load("@rules_rust//crate_universe:defs.bzl", "crates_repository", "crate")
+
+crates_repository(
+    name = "crate_index",
+    cargo_lockfile = "//:Cargo.lock",
+    generator = "@cargo_bazel_bootstrap//:cargo-bazel",
+    lockfile = "//:cargo-bazel-lock.json",
+    manifests = [
+        "//:Cargo.toml",
+        "//:pact_cli/Cargo.toml",
+        "//:pact_consumer/Cargo.toml",
+        "//:pact_ffi/Cargo.toml",
+        "//:pact_matching/Cargo.toml",
+        "//:pact_mock_server/Cargo.toml",
+        "//:pact_mock_server_cli/Cargo.toml",
+        "//:pact_models/Cargo.toml",
+        "//:pact_verifier/Cargo.toml",
+        "//:pact_verifier_cli/Cargo.toml",
+    ],
+    packages = {
+       "os_info": crate.spec(
+        version = "3.5.1",
+    )},
+)
+
+load("@crate_index//:defs.bzl", "crate_repositories")
+
+crate_repositories()
+
+
