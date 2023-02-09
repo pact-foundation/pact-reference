@@ -15,15 +15,6 @@ rust_register_toolchains(
 
 )
 
-load("@rules_rust//rust:defs.bzl", "rust_common")
-load("@rules_rust//cargo:defs.bzl", "cargo_bootstrap_repository")
-
-cargo_bootstrap_repository(
-    name = "pact_verifier_cli",
-    cargo_lockfile = "//:Cargo.lock",
-    cargo_toml = "//:Cargo.toml",
-)
-
 load("@rules_rust//crate_universe:repositories.bzl", "crate_universe_dependencies")
 crate_universe_dependencies(bootstrap = True)
 
