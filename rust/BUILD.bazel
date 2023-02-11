@@ -3,4 +3,6 @@ filegroup(
     srcs = glob([
         ":pact_ffi/libpact_ffi.a",
     ]),
+    visibility = ["//visibility:public"],
+
 )
