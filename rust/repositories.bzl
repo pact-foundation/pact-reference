@@ -1,5 +1,3 @@
-
-
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:utils.bzl", "maybe")
 load("@bazel_tools//tools/build_defs/repo:git.bzl","git_repository")
@@ -14,9 +12,8 @@ def repos():
 
     maybe(
         git_repository,
-        name = "source",
+        name = "pact_reference2",
         remote = "https://github.com/opicaud/pact-reference",
-        commit = "e6946c41cb5298d4fda311f326c37e02f43c2479",
-        shallow_since = "1676312949 +0100",
+        branch = "master",
         strip_prefix = "rust",
     )
