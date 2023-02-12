@@ -11,6 +11,7 @@ def deps():
 def load_crat():
     crates_repository(
         name = "crate_index",
+<<<<<<< HEAD
         cargo_lockfile = "@source//:Cargo.lock",
         generator = "@cargo_bazel_bootstrap//:cargo-bazel",
         lockfile = "@source//:cargo-bazel-lock.json",
@@ -25,6 +26,22 @@ def load_crat():
             "@source//:pact_models/Cargo.toml",
             "@source//:pact_verifier/Cargo.toml",
             "@source//:pact_verifier_cli/Cargo.toml",
+=======
+        cargo_lockfile = "@pact_reference2//:Cargo.lock",
+        generator = "@cargo_bazel_bootstrap//:cargo-bazel",
+        lockfile = "@pact_reference2//:cargo-bazel-lock.json",
+        manifests = [
+            "@pact_reference2//:Cargo.toml",
+            "@pact_reference2//:pact_cli/Cargo.toml",
+            "@pact_reference2//:pact_consumer/Cargo.toml",
+            "@pact_reference2//:pact_ffi/Cargo.toml",
+            "@pact_reference2//:pact_matching/Cargo.toml",
+            "@pact_reference2//:pact_mock_server/Cargo.toml",
+            "@pact_reference2//:pact_mock_server_cli/Cargo.toml",
+            "@pact_reference2//:pact_models/Cargo.toml",
+            "@pact_reference2//:pact_verifier/Cargo.toml",
+            "@pact_reference2//:pact_verifier_cli/Cargo.toml",
+>>>>>>> cf0ed7af (fix: feat deps pattern to use via external libpact_ffi.a)
         ],
         packages = {
            "os_info": crate.spec(
