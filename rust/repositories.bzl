@@ -12,7 +12,7 @@ def repos():
 
     maybe(
         git_repository,
-        name = "pact_reference2",
+        name = "source",
         remote = "https://github.com/opicaud/pact-reference",
         branch = "master",
         strip_prefix = "rust",
