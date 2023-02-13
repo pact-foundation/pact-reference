@@ -1,8 +1,0 @@
-filegroup(
-    name = "libpact_ffi.a",
-    srcs = [
-        "//pact_ffi",
-    ],
-    visibility = ["//visibility:public"],
-
-)
