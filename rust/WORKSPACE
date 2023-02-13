@@ -9,9 +9,12 @@ http_archive(
 
 load("@rules_rust//rust:repositories.bzl", "rules_rust_dependencies", "rust_register_toolchains")
 rules_rust_dependencies()
-rust_register_toolchains(edition = "2021")
 
-<<<<<<< HEAD
+rust_register_toolchains(
+    edition = "2021",
+
+)
+
 load("@rules_rust//rust:defs.bzl", "rust_common")
 load("@rules_rust//cargo:defs.bzl", "cargo_bootstrap_repository")
 
@@ -24,12 +27,6 @@ cargo_bootstrap_repository(
 load("@rules_rust//crate_universe:repositories.bzl", "crate_universe_dependencies")
 crate_universe_dependencies(bootstrap = True)
 
-load("@rules_rust//crate_universe:defs.bzl", "crate", "crates_repository", "splicing_config")
-=======
-load("@rules_rust//crate_universe:repositories.bzl", "crate_universe_dependencies")
-crate_universe_dependencies(bootstrap = True)
-
->>>>>>> db6d6e00 (feat: introduce repositories.bzl)
 load("@rules_rust//crate_universe:defs.bzl", "crates_repository", "crate")
 crates_repository(
     name = "crate_index",
@@ -54,19 +51,7 @@ crates_repository(
     )},
 )
 
-<<<<<<< HEAD
-
-
-
-=======
->>>>>>> db6d6e00 (feat: introduce repositories.bzl)
 load("@crate_index//:defs.bzl", "crate_repositories")
 crate_repositories()
 
 
-
-cargo_bootstrap_repository(
-    name = "pact_verifier_cli",
-    cargo_lockfile = "@pact-reference//:Cargo.lock",
-    cargo_toml = "@pact-reference//Cargo.toml",
-)
