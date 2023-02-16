@@ -12,12 +12,12 @@ rules_rust_dependencies()
 
 rust_register_toolchains(
     edition = "2021",
-
 )
 
 load("@rules_rust//crate_universe:repositories.bzl", "crate_universe_dependencies")
 crate_universe_dependencies(bootstrap = True)
 
+load("@rules_rust//crate_universe:defs.bzl", "crate", "crates_repository", "splicing_config")
 load("@rules_rust//crate_universe:defs.bzl", "crates_repository", "crate")
 crates_repository(
     name = "crate_index",
@@ -44,5 +44,4 @@ crates_repository(
 
 load("@crate_index//:defs.bzl", "crate_repositories")
 crate_repositories()
-
 
