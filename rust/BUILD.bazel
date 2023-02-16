@@ -1,0 +1,8 @@
+load("@rules_rust//cargo:defs.bzl", "cargo_bootstrap_repository")
+
+filegroup(
+    name = "pact_bin",
+    srcs = [
+        "@pact_verifier_cli"
+    ],
+)
