@@ -6,3 +6,11 @@ filegroup(
         "@pact_verifier_cli"
     ],
 )
+
+filegroup(
+    name = "pact_verifier_cli",
+    srcs = ["//pact_verifier_cli"],
+    visibility = ["//visibility:public"],
+
+)
+
