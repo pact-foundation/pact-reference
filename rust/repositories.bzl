@@ -14,7 +14,7 @@ def repos():
         git_repository,
         name = "source",
         remote = "https://github.com/opicaud/pact-reference",
-        commit = "dd1097656f82ff99beadb3f01c70638bf581fc27",
-        shallow_since = "1676577520 +0100",
+        commit = "bce093ea41752b2d0e12e3b80cbcee34e8dfc74b",
+        shallow_since = "1684235942 +0200",
         strip_prefix = "rust",
     )
