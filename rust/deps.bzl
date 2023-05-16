@@ -13,7 +13,7 @@ def load_crat():
         name = "crate_index",
         cargo_lockfile = "@source//:Cargo.lock",
         generator = "@cargo_bazel_bootstrap//:cargo-bazel",
-        lockfile = "@source//:cargo-bazel-lock.json",
+        lockfile = "@//:cargo-bazel-lock.json",
         manifests = [
             "@source//:Cargo.toml",
             "@source//:pact_cli/Cargo.toml",
