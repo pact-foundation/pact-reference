@@ -12,7 +12,6 @@ def load_crat():
     crates_repository(
         name = "crate_index",
         cargo_lockfile = "@source//:Cargo.lock",
-        generator = "@cargo_bazel_bootstrap//:cargo-bazel",
         lockfile = "@//:cargo-bazel-lock.json",
         manifests = [
             "@source//:Cargo.toml",
