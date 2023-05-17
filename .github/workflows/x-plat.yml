@@ -1,0 +1,395 @@
+name: FFI - Cross
+
+on:
+  push:
+  release:
+    types: [published]
+
+jobs:
+  cross:
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        crate: [pact_ffi]
+        target: # https://github.com/cross-rs/cross/blob/main/targets.toml
+          # ✅ These all build with cross 
+          - x86_64-unknown-linux-gnu
+          - x86_64-unknown-linux-musl
+          - aarch64-unknown-linux-gnu
+          - aarch64-unknown-linux-musl
+          - arm-unknown-linux-gnueabi
+          - arm-unknown-linux-gnueabihf
+          - arm-unknown-linux-musleabi
+          - arm-unknown-linux-musleabihf
+          - armv7-unknown-linux-gnueabi
+          - armv7-unknown-linux-gnueabihf
+          - armv7-unknown-linux-musleabi
+          - armv7-unknown-linux-musleabihf
+          - i586-unknown-linux-gnu
+          - i686-unknown-linux-gnu
+          - x86_64-unknown-netbsd
+          - x86_64-unknown-freebsd
+          - armv5te-unknown-linux-gnueabi
+          - armv5te-unknown-linux-musleabi
+          - arm-linux-androideabi
+          - armv7-linux-androideabi
+          - aarch64-linux-android
+          - i686-linux-android
+          - x86_64-linux-android
+          - thumbv7neon-linux-androideabi
+          - thumbv7neon-unknown-linux-gnueabihf
+          # ✅ The above build with cross 
+
+          # 🚧 This did build with cross?! 
+
+          - i686-pc-windows-gnu
+          # ❌ These dont build with cross, or fall back to host and fail 
+
+
+          # - i586-unknown-linux-musl
+          # - i686-unknown-linux-musl
+          # = note: /usr/local/bin/../lib/gcc/i586-linux-musl/9.2.0/../../../../i586-linux-musl/bin/ld: /target/i586-unknown-linux-musl/release/deps/libring-85b4fbaf5798ec9c.rlib(aes_nohw.o): in function `GFp_aes_nohw_ctr32_encrypt_blocks':
+          #   /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ring-0.16.20/crypto/fipsmodule/aes/aes_nohw.c:961: undefined reference to `__stack_chk_fail_local'
+          #   /usr/local/bin/../lib/gcc/i586-linux-musl/9.2.0/../../../../i586-linux-musl/bin/ld: /target/i586-unknown-linux-musl/release/deps/libring-85b4fbaf5798ec9c.rlib(poly1305.o): in function `poly1305_update':
+          #   /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ring-0.16.20/crypto/poly1305/poly1305.c:158: undefined reference to `__stack_chk_fail_local'
+          #   /usr/local/bin/../lib/gcc/i586-linux-musl/9.2.0/../../../../i586-linux-musl/bin/ld: /target/i586-unknown-linux-musl/release/deps/libring-85b4fbaf5798ec9c.rlib(curve25519.o): in function `ge_double_scalarmult_vartime':
+          #   /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ring-0.16.20/crypto/curve25519/curve25519.c:937: undefined reference to `__stack_chk_fail_local'
+          #   /usr/local/bin/../lib/gcc/i586-linux-musl/9.2.0/../../../../i586-linux-musl/bin/ld: /target/i586-unknown-linux-musl/release/deps/libring-85b4fbaf5798ec9c.rlib(curve25519.o): in function `GFp_x25519_ge_frombytes_vartime':
+          #   /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ring-0.16.20/crypto/curve25519/curve25519.c:520: undefined reference to `__stack_chk_fail_local'
+          #   /usr/local/bin/../lib/gcc/i586-linux-musl/9.2.0/../../../../i586-linux-musl/bin/ld: /target/i586-unknown-linux-musl/release/deps/libring-85b4fbaf5798ec9c.rlib(curve25519.o): in function `GFp_x25519_ge_scalarmult_base':
+          #   /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ring-0.16.20/crypto/curve25519/curve25519.c:828: undefined reference to `__stack_chk_fail_local'
+          #   /usr/local/bin/../lib/gcc/i586-linux-musl/9.2.0/../../../../i586-linux-musl/bin/ld: /target/i586-unknown-linux-musl/release/deps/libring-85b4fbaf5798ec9c.rlib(curve25519.o):/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ring-0.16.20/crypto/curve25519/curve25519.c:1854: more undefined references to `__stack_chk_fail_local' follow
+          #   collect2: error: ld returned 1 exit status
+          # = note: some `extern` functions couldn't be found; some native libraries may need to be installed or have their path specified
+          # = note: use the `-l` flag to specify native libraries to link
+          # = note: use the `cargo:rustc-link-lib` directive to specify the native libraries to link with Cargo (see https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorustc-link-libkindname)
+          # - i686-unknown-freebsd # fails to build
+          # /usr/local/lib/gcc/i686-unknown-freebsd12/6.4.0/../../../../i686-unknown-freebsd12/bin/ld: /target/i686-unknown-freebsd/release/deps/libring-045c2b14a100e932.rlib(aes_nohw.o): in function `GFp_aes_nohw_ctr32_encrypt_blocks':
+          #   /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ring-0.16.20/crypto/fipsmodule/aes/aes_nohw.c:961: undefined reference to `__stack_chk_fail_local'
+          #   /usr/local/lib/gcc/i686-unknown-freebsd12/6.4.0/../../../../i686-unknown-freebsd12/bin/ld: /target/i686-unknown-freebsd/release/deps/libring-045c2b14a100e932.rlib(poly1305.o): in function `poly1305_update':
+          #   /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ring-0.16.20/crypto/poly1305/poly1305.c:158: undefined reference to `__stack_chk_fail_local'
+          #   /usr/local/lib/gcc/i686-unknown-freebsd12/6.4.0/../../../../i686-unknown-freebsd12/bin/ld: /target/i686-unknown-freebsd/release/deps/libring-045c2b14a100e932.rlib(curve25519.o): in function `ge_double_scalarmult_vartime':
+          #   /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ring-0.16.20/crypto/curve25519/curve25519.c:937: undefined reference to `__stack_chk_fail_local'
+          #   /usr/local/lib/gcc/i686-unknown-freebsd12/6.4.0/../../../../i686-unknown-freebsd12/bin/ld: /target/i686-unknown-freebsd/release/deps/libring-045c2b14a100e932.rlib(curve25519.o): in function `GFp_x25519_ge_frombytes_vartime':
+          #   /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ring-0.16.20/crypto/curve25519/curve25519.c:520: undefined reference to `__stack_chk_fail_local'
+          #   /usr/local/lib/gcc/i686-unknown-freebsd12/6.4.0/../../../../i686-unknown-freebsd12/bin/ld: /target/i686-unknown-freebsd/release/deps/libring-045c2b14a100e932.rlib(curve25519.o): in function `GFp_x25519_ge_scalarmult_base':
+          #   /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ring-0.16.20/crypto/curve25519/curve25519.c:828: undefined reference to `__stack_chk_fail_local'
+          #   /usr/local/lib/gcc/i686-unknown-freebsd12/6.4.0/../../../../i686-unknown-freebsd12/bin/ld: /target/i686-unknown-freebsd/release/deps/libring-045c2b14a100e932.rlib(curve25519.o):/home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ring-0.16.20/crypto/curve25519/curve25519.c:1854: more undefined references to `__stack_chk_fail_local' follow
+          #   collect2: error: ld returned 1 exit status
+          # = note: some `extern` functions couldn't be found; some native libraries may need to be installed or have their path specified
+          # = note: use the `-l` flag to specify native libraries to link
+          # = note: use the `cargo:rustc-link-lib` directive to specify the native libraries to link with Cargo (see https://doc.rust-lang.org/cargo/reference/build-scripts.html#cargorustc-link-libkindname)
+          # - aarch64-unknown-freebsd  # fails to build
+          # error: component 'rust-std' for target 'aarch64-unknown-freebsd' is unavailable for download for channel 'nightly'
+          # - armv6-unknown-freebsd  # fails to build
+          # error: component 'rust-std' for target 'armv6-unknown-freebsd' is unavailable for download for channel 'nightly'
+          # - armv7-unknown-freebsd  # fails to build
+          # error: component 'rust-std' for target 'armv7-unknown-freebsd' is unavailable for download for channel 'nightly'
+          
+          # - asmjs-unknown-emscripten
+          # 199 |     compile_error!("unsupported target for `mio::unix::pipe`");
+
+          # # All MIPS builds - error: failed to run custom build command for `ring v0.16.20`
+          # - mips-unknown-linux-gnu
+          # - mips-unknown-linux-musl
+          # - mipsel-unknown-linux-gnu
+          # - mipsel-unknown-linux-musl
+          # - mips64-unknown-linux-gnuabi64
+          # - mips64el-unknown-linux-gnuabi64
+          # - mips64-unknown-linux-muslabi64
+          # - mips64el-unknown-linux-muslabi64
+
+
+          # - powerpc-unknown-linux-gnu
+          # # error: failed to run custom build command for `ring v0.16.20`
+          # - powerpc64-unknown-linux-gnu
+          # # error: failed to run custom build command for `ring v0.16.20`
+          # - powerpc64le-unknown-linux-gnu
+          # # error: failed to run custom build command for `ring v0.16.20`
+          # - powerpc64le-unknown-linux-musl
+          # # error: component 'rust-std' for target 'powerpc64le-unknown-linux-musl' is unavailable for download for channel 'nightly'
+          # - riscv64gc-unknown-linux-gnu
+          # # error: failed to run custom build command for `ring v0.16.20`
+          # - s390x-unknown-linux-gnu
+          # # error: failed to run custom build command for `ring v0.16.20`
+          # - s390x-unknown-linux-musl
+          # # error: component 'rust-std' for target 's390x-unknown-linux-musl' is unavailable for download for channel 'nightly'
+          # - sparc64-unknown-linux-gnu
+          # # error: failed to run custom build command for `ring v0.16.20`
+
+
+          # - wasm32-unknown-emscripten
+          # 199 |     compile_error!("unsupported target for `mio::unix::pipe`");
+
+          # - sparcv9-sun-solaris
+          # # 199 |     compile_error!("unsupported target for `mio::unix::pipe`");
+          # - x86_64-sun-solaris
+          # # 199 |     compile_error!("unsupported target for `mio::unix::pipe`");
+          # - x86_64-unknown-illumos
+          # # error[E0425]: cannot find function `allocate` in module `sys`
+          # #  --> /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/fs2-0.4.3/src/lib.rs:104:14
+
+          # - x86_64-unknown-dragonfly
+
+          # # error[E0463]: can't find crate for `std`
+          # # |
+          # # = note: the `thumbv6m-none-eabi` target may not support the standard library
+          # # = note: `std` is required by `serde` because it does not declare `#![no_std]`
+          # # = help: consider building the standard library from source with `cargo build -Zbuild-std`
+          # - thumbv6m-none-eabi
+          # - thumbv7em-none-eabi
+          # - thumbv7em-none-eabihf
+          # - thumbv7m-none-eabi
+          # - thumbv8m.base-none-eabi
+          # - thumbv8m.main-none-eabi
+          
+          # - x86_64-pc-windows-msvc
+          # # --- stderr
+          # # running "cc" "-O3" "-ffunction-sections" "-fdata-sections" "-m64" "-I" "include" "-Wall" "-Wextra" "/GS" "/Gy" "/EHsc" "/GR-" "/Zc:wchar_t" "/Zc:forScope" "/Zc:inline" "/Zc:rvalueCast" "/sdl" "/Wall" "/wd4127" "/wd4464" "/wd4514" "/wd4710" "/wd4711" "/wd4820" "/wd5045" "/Ox" "-DNDEBUG" "-c" "/Fo/home/runner/work/pact-reference/pact-reference/rust/target/x86_64-pc-windows-msvc/release/build/ring-6ebd52ee81449ee8/out/aes_nohw.obj" "crypto/fipsmodule/aes/aes_nohw.c"
+          # # cc: error: -E or -x required when input is from standard input
+          # # thread 'main' panicked at 'execution failed', /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ring-0.16.20/build.rs:656:9
+          # # note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+          # - x86_64-pc-windows-gnu # ✅
+          # - aarch64-pc-windows-msvc
+          # --- stderr
+          # running "cc" "-O3" "-ffunction-sections" "-fdata-sections" "-I" "include" "-Wall" "-Wextra" "/GS" "/Gy" "/EHsc" "/GR-" "/Zc:wchar_t" "/Zc:forScope" "/Zc:inline" "/Zc:rvalueCast" "/sdl" "/Wall" "/wd4127" "/wd4464" "/wd4514" "/wd4710" "/wd4711" "/wd4820" "/wd5045" "/Ox" "-DNDEBUG" "-c" "/Fo/home/runner/work/pact-reference/pact-reference/rust/target/aarch64-pc-windows-msvc/release/build/ring-9d224d33b6544594/out/aes_nohw.obj" "crypto/fipsmodule/aes/aes_nohw.c"
+          # cc: error: -E or -x required when input is from standard input
+          # thread 'main' panicked at 'execution failed', /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ring-0.16.20/build.rs:656:9
+
+          # - aarch64-pc-windows-gnullvm
+          # # error: component 'rust-std' for target 'aarch64-pc-windows-gnullvm' is unavailable for download for channel 'nightly'
+          # - aarch64-uwp-windows-msvc
+          # # error: component 'rust-std' for target 'aarch64-uwp-windows-msvc' is unavailable for download for channel 'nightly'
+          # - i586-pc-windows-msvc
+          # # --- stderr
+          # # running "cc" "-O3" "-ffunction-sections" "-fdata-sections" "-m32" "-I" "include" "-Wall" "-Wextra" "/GS" "/Gy" "/EHsc" "/GR-" "/Zc:wchar_t" "/Zc:forScope" "/Zc:inline" "/Zc:rvalueCast" "/sdl" "/Wall" "/wd4127" "/wd4464" "/wd4514" "/wd4710" "/wd4711" "/wd4820" "/wd5045" "/Ox" "-DNDEBUG" "-c" "/Fo/home/runner/work/pact-reference/pact-reference/rust/target/i586-pc-windows-msvc/release/build/ring-c2331d92d4e35b3e/out/aes_nohw.obj" "crypto/fipsmodule/aes/aes_nohw.c"
+          # # cc: error: -E or -x required when input is from standard input
+          # # In file included from /usr/lib/gcc/x86_64-linux-gnu/11/include/stdint.h:9,
+          # #                  from include/GFp/base.h:66,
+          # #                  from include/GFp/aes.h:52,
+          # #                  from crypto/fipsmodule/aes/aes_nohw.c:15:
+          # # /usr/include/stdint.h:26:10: fatal error: bits/libc-header-start.h: No such file or directory
+          # #    26 | #include <bits/libc-header-start.h>
+          # #       |          ^~~~~~~~~~~~~~~~~~~~~~~~~~
+          # # compilation terminated.
+          # # thread 'main' panicked at 'execution failed', /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ring-0.16.20/build.rs:656:9
+          # # note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+          # - i686-pc-windows-gnu
+          # - i686-pc-windows-msvc
+          # #   --- stderr
+          # #   running "cc" "-O3" "-ffunction-sections" "-fdata-sections" "-m32" "-I" "include" "-Wall" "-Wextra" "/GS" "/Gy" "/EHsc" "/GR-" "/Zc:wchar_t" "/Zc:forScope" "/Zc:inline" "/Zc:rvalueCast" "/sdl" "/Wall" "/wd4127" "/wd4464" "/wd4514" "/wd4710" "/wd4711" "/wd4820" "/wd5045" "/Ox" "-DNDEBUG" "-c" "/Fo/home/runner/work/pact-reference/pact-reference/rust/target/i686-pc-windows-msvc/release/build/ring-1b1a65c4b81efaf2/out/aes_nohw.obj" "crypto/fipsmodule/aes/aes_nohw.c"
+          # #   cc: error: -E or -x required when input is from standard input
+          # #   In file included from /usr/lib/gcc/x86_64-linux-gnu/11/include/stdint.h:9,
+          # #                   from include/GFp/base.h:66,
+          # #                   from include/GFp/aes.h:52,
+          # #                   from crypto/fipsmodule/aes/aes_nohw.c:15:
+          # #   /usr/include/stdint.h:26:10: fatal error: bits/libc-header-start.h: No such file or directory
+          # #     26 | #include <bits/libc-header-start.h>
+          # #         |          ^~~~~~~~~~~~~~~~~~~~~~~~~~
+          # #   compilation terminated.
+          # #   thread 'main' panicked at 'execution failed', /home/runner/.cargo/registry/src/index.crates.io-6f17d22bba15001f/ring-0.16.20/build.rs:656:9
+          # #   note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+          # # warning: build failed, waiting for other jobs to finish...
+          # - i686-uwp-windows-gnu
+          # # error: component 'rust-std' for target 'i686-uwp-windows-gnu' is unavailable for download for channel 'nightly'
+          # - i686-uwp-windows-msvc
+          # # error: component 'rust-std' for target 'i686-uwp-windows-msvc' is unavailable for download for channel 'nightly'
+          # - thumbv7a-pc-windows-msvc
+          # # error: component 'rust-std' for target 'thumbv7a-pc-windows-msvc' is unavailable for download for channel 'nightly'
+          # - thumbv7a-uwp-windows-msvc
+          # # error: component 'rust-std' for target 'thumbv7a-uwp-windows-msvc' is unavailable for download for channel 'nightly'
+
+          # - x86_64-pc-windows-gnullvm
+          # # error: component 'rust-std' for target 'x86_64-pc-windows-gnullvm' is unavailable for download for channel 'nightly'
+
+          # - x86_64-uwp-windows-gnu
+          # # error: component 'rust-std' for target 'x86_64-uwp-windows-gnu' is unavailable for download for channel 'nightly'
+          # - x86_64-uwp-windows-msvc
+          # # error: component 'rust-std' for target 'x86_64-uwp-windows-msvc' is unavailable for download for channel 'nightly'
+    steps:
+      - uses: actions/checkout@v3
+      - run: rustc --version || true
+        shell: bash
+      - uses: dtolnay/rust-toolchain@stable
+        continue-on-error: true
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+      - name: Build ${{ matrix.crate }} with cross for ${{ matrix.target }}
+        run: ./build-cross.sh
+        working-directory: rust/${{ matrix.crate }}
+        shell: bash
+        env:
+          target: ${{ matrix.target }}
+      - name: Show ${{ matrix.crate }} release
+        run: ls && ls ../../artifacts
+        working-directory: rust/target/${{ matrix.target }}/release
+        shell: bash
+      - name: Upload the artifacts
+        uses: actions/upload-artifact@v3.1.2
+        with:
+          name: release-artifacts
+          path: rust/target/artifacts
+      - name: Upload Release Assets
+        if: (startsWith(github.ref, 'refs/tags/libpact_ffi')  || startsWith(github.ref, 'refs/tags/pact_verifier_cli') || startsWith(github.ref, 'refs/tags/pact_mock_server_cli'))
+        uses: svenstaro/upload-release-action@2.5.0
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: rust/target/artifacts/*
+          file_glob: true
+          tag: ${{ github.ref }}
+
+  windows:
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest]
+        crate: [pact_ffi]
+        target:
+          - x86_64-pc-windows-msvc # ✅
+          - aarch64-pc-windows-msvc # ✅
+          - i686-pc-windows-msvc # ✅
+          - x86_64-pc-windows-gnu # ✅
+          # - i686-pc-windows-gnu # native with cargo error: linker `i686-w64-mingw32-gcc` not found
+          # - i586-pc-windows-msvc # Fails, could be possible. https://seri.tools/blog/compiling-rust-for-legacy-windows/
+          # - aarch64-pc-windows-gnullvm
+          # - aarch64-uwp-windows-msvc
+          # - i686-uwp-windows-gnu
+          # - i686-uwp-windows-msvc
+          # - thumbv7a-pc-windows-msvc
+          # - thumbv7a-uwp-windows-msvc
+          # - x86_64-pc-windows-gnullvm
+          # - x86_64-uwp-windows-gnu
+          # - x86_64-uwp-windows-msvc
+    steps:
+      - uses: actions/checkout@v3
+      - run: rustc --version || true
+        shell: bash
+      - uses: dtolnay/rust-toolchain@stable
+        continue-on-error: true
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+      - name: Build ${{ matrix.crate }} with cross for ${{ matrix.target }}
+        run: ./build-cross.sh
+        working-directory: rust/${{ matrix.crate }}
+        shell: bash
+        env:
+          target: ${{ matrix.target }}
+      - name: Show ${{ matrix.crate }} release
+        run: ls && ls ../../artifacts
+        working-directory: rust/target/${{ matrix.target }}/release
+        shell: bash
+      - name: Upload the artifacts
+        uses: actions/upload-artifact@v3.1.2
+        with:
+          name: release-artifacts
+          path: rust/target/artifacts
+      - name: Upload Release Assets
+        if: (startsWith(github.ref, 'refs/tags/libpact_ffi')  || startsWith(github.ref, 'refs/tags/pact_verifier_cli') || startsWith(github.ref, 'refs/tags/pact_mock_server_cli'))
+        uses: svenstaro/upload-release-action@2.5.0
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: rust/target/artifacts/*
+          file_glob: true
+          tag: ${{ github.ref }}
+
+  macos:
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        crate: [pact_ffi]
+        os: [macos-latest]
+        target:
+          - aarch64-apple-darwin # ✅
+          - x86_64-apple-darwin # ✅
+          - aarch64-apple-ios # ✅
+          - aarch64-apple-ios-sim # ✅
+          - x86_64-apple-ios # ✅
+          # - x86_64h-apple-darwin # https://doc.rust-lang.org/nightly/rustc/platform-support/x86_64h-apple-darwin.html
+          # - i686-apple-darwin
+          # - armv7k-apple-watchos
+          # - aarch64-apple-tvos
+          # - aarch64-apple-watchos-sim
+          # - arm64_32-apple-watchos
+          # - x86_64-apple-watchos-sim
+          # - x86_64-apple-tvos
+          # - armv7s-apple-ios
+          # - armv7-apple-ios
+          # - aarch64-apple-ios-macabi
+          # - x86_64-apple-ios-macabi
+          # - i386-apple-ios
+    steps:
+      - uses: actions/checkout@v3
+      - run: rustc --version || true
+        shell: bash
+      - uses: dtolnay/rust-toolchain@stable
+        continue-on-error: true
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+      - name: Build ${{ matrix.crate }} with cross for ${{ matrix.target }}
+        run: ./build-cross.sh
+        working-directory: rust/${{ matrix.crate }}
+        shell: bash
+        env:
+          target: ${{ matrix.target }}
+      - name: Show ${{ matrix.crate }} release
+        run: ls && ls ../../artifacts
+        working-directory: rust/target/${{ matrix.target }}/release
+        shell: bash
+      - name: Upload the artifacts
+        uses: actions/upload-artifact@v3.1.2
+        with:
+          name: release-artifacts
+          path: rust/target/artifacts
+      - name: Upload Release Assets
+        if: (startsWith(github.ref, 'refs/tags/libpact_ffi')  || startsWith(github.ref, 'refs/tags/pact_verifier_cli') || startsWith(github.ref, 'refs/tags/pact_mock_server_cli'))
+        uses: svenstaro/upload-release-action@2.5.0
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: rust/target/artifacts/*
+          file_glob: true
+          tag: ${{ github.ref }}
+
+
+  build_headers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: rustc --version || true
+        shell: bash
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+      - name: Build headers with cargo pact_ffi
+        run: ./build-headers.sh
+        working-directory: rust/pact_ffi
+        shell: bash
+      - name: Upload the artifacts
+        uses: actions/upload-artifact@v3.1.2
+        with:
+          name: release-artifacts
+          path: rust/target/artifacts
+      - name: Upload Release Assets
+        if: startsWith(github.ref, 'refs/tags/libpact_ffi')
+        uses: svenstaro/upload-release-action@2.5.0
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: rust/target/artifacts/*
+          file_glob: true
+          tag: ${{ github.ref }}

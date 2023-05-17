@@ -1,8 +1,9 @@
 name: Release workflow
 
 on:
-  release:
-    types: [published]
+  workflow_dispatch:
+  # release:
+  #   types: [published]
 
 jobs:
   build-release:

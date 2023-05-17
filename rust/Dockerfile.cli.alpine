@@ -1,0 +1,55 @@
+ARG ALPINE_VERSION 3
+FROM alpine:${ALPINE_VERSION} AS base
+## Available node alpine images
+# linux/amd64
+# linux/arm/v6
+# linux/arm/v7
+# linux/arm64/v8
+# linux/ppc64le
+# linux/s390x
+
+ARG PACT_TOOL=pact_verifier_cli
+ARG PACT_TOOL_VERSION=0.10.9
+ENV DOWNLOAD_LOCATION=https://github.com/pact-foundation/pact-reference/releases/download/${PACT_TOOL}-v${PACT_TOOL_VERSION}/
+FROM base AS base-amd64
+ARG PACT_TOOL_VERSION
+ENV PACT_ARCHIVE_FILENAME=${PACT_TOOL}-x86_64-unknown-linux-musl.gz
+FROM base AS base-arm64
+ARG PACT_TOOL_VERSION
+ENV PACT_ARCHIVE_FILENAME=${PACT_TOOL}-aarch64-unknown-linux-musl.gz
+FROM base AS base-armv7
+ARG PACT_TOOL_VERSION
+ENV PACT_ARCHIVE_FILENAME=${PACT_TOOL}-armv7-unknown-linux-musleabi.gz
+# ENV PACT_ARCHIVE_FILENAME=${PACT_TOOL_VERSION}-armv7-unknown-linux-musleabihf.gz
+FROM base AS base-arm
+ARG PACT_TOOL_VERSION
+ENV PACT_ARCHIVE_FILENAME=${PACT_TOOL}-arm-unknown-linux-musleabi.gz
+# ENV PACT_ARCHIVE_FILENAME=${PACT_TOOL_VERSION}-arm-unknown-linux-musleabihf.gz
+FROM base AS base-armv6
+ARG PACT_TOOL_VERSION
+ENV PACT_ARCHIVE_FILENAME=${PACT_TOOL}-arm-unknown-linux-musleabi.gz
+# ENV PACT_ARCHIVE_FILENAME=${PACT_TOOL_VERSION}-arm-unknown-linux-musleabihf.gz
+FROM base AS base-armv5te
+ARG PACT_TOOL_VERSION
+ENV PACT_ARCHIVE_FILENAME=${PACT_TOOL}-armv5te-unknown-linux-musleabi.gz
+FROM base AS base-i586
+ARG PACT_TOOL_VERSION
+ENV PACT_ARCHIVE_FILENAME=${PACT_TOOL}-i586-unknown-linux-musl.gz
+FROM base AS base-i686
+ARG PACT_TOOL_VERSION
+ENV PACT_ARCHIVE_FILENAME=${PACT_TOOL}-i686-unknown-linux-musl.gz
+ARG TARGETARCH
+FROM base-$TARGETARCH AS pb-dev
+
+RUN env
+
+ARG TARGETARCH
+ARG PACT_TOOL_VERSION
+ARG PACT_TOOL
+
+RUN wget -O - "$DOWNLOAD_LOCATION$PACT_ARCHIVE_FILENAME" | gunzip -c > $PACT_TOOL \
+ && chmod +x "$PACT_TOOL" \
+ && mv "$PACT_TOOL" "/usr/local/bin/${PACT_TOOL}"
+
+RUN "$PACT_TOOL" --version
+ENTRYPOINT [ "pact_verifier_cli" ]
