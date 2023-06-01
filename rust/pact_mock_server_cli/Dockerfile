@@ -14,7 +14,7 @@ RUN sed -i -e 's/pact_mock_server = {\s*version\s*=\s*"\([^"]*\).*/pact_mock_ser
 RUN cd build && cargo build --release
 
 # Now, we need to build our _real_ Docker container, copying in the executable.
-FROM alpine:3.16
+FROM alpine:3
 RUN apk --no-cache add ca-certificates
 COPY --from=builder \
     /build/target/release/pact_mock_server_cli \
