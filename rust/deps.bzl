@@ -29,4 +29,12 @@ def load_crat(json):
            "os_info": crate.spec(
             version = "3.5.1",
         )},
+         annotations = {
+            "onig_sys": [crate.annotation(
+            shallow_since="1686508130 +0100"
+            )],
+            "onig": [crate.annotation(
+            shallow_since="1686508130 +0100"
+            )],
+        }
     )
