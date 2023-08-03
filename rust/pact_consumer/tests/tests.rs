@@ -47,22 +47,24 @@ async fn mock_server_passing_validation() -> anyhow::Result<()> {
           // Define the request, a GET (default) request to '/mallory'.
           i.request.path("/mallory");
           i.request.header("content-type", "application/json");
+          i.request.header("x-custom-json", "{\"foo\": \"bar\", \"bar\": \"baz\"}");
           // Define the response we want returned.
           i.response
-            .ok()
-            .content_type("text/plain")
-            .body("That is some good Mallory.");
+          .ok()
+          .content_type("text/plain")
+          .body("That is some good Mallory.");
 
-          // Return the interaction back to the pact framework
-          i.clone()
-        })
-        .start_mock_server(None);
-
-      // You would use your actual client code here.
-      let mallory_url = alice_service.path("/mallory");
-      let client = reqwest::Client::new();
-      let response = client.get(mallory_url)
+        // Return the interaction back to the pact framework
+        i.clone()
+      })
+      .start_mock_server(None);
+    
+    // You would use your actual client code here.
+    let mallory_url = alice_service.path("/mallory");
+    let client = reqwest::Client::new();
+    let response = client.get(mallory_url)
         .header("content-type", "application/json")
+        .header("x-custom-json", "{\"foo\": \"bar\", \"bar\": \"baz\"}")
         .send().await
         .expect("could not fetch URL");
       let body = response.text().await.expect("could not read response body");

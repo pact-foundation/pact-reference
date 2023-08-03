@@ -10,6 +10,7 @@ use expectest::prelude::*;
 use itertools::Itertools;
 use libc::c_char;
 use maplit::*;
+use pact_ffi::mock_server::handles::pactffi_with_header_v2;
 use pact_models::bodies::OptionalBody;
 use pretty_assertions::assert_eq;
 use reqwest::blocking::Client;
@@ -621,4 +622,50 @@ fn each_key_matcher() {
     "Expected 'key' to match '[a-z]{3,}[0-9]'",
     "Expected 'not valid' to match '[a-z]{3,}[0-9]'"
   ], messages);
+}
+
+// Issue pact-js/1058
+#[test_log::test]
+#[allow(deprecated)]
+fn json_in_headers() {
+  let consumer_name = CString::new("pact-js-1058-consumer").unwrap();
+  let provider_name = CString::new("pact-js-1058-provider").unwrap();
+  let pact_handle = pactffi_new_pact(consumer_name.as_ptr(), provider_name.as_ptr());
+  let description = CString::new("pact-js-1058").unwrap();
+  let interaction = pactffi_new_interaction(pact_handle.clone(), description.as_ptr());
+
+  let path = CString::new("/").unwrap();
+  let address = CString::new("127.0.0.1:0").unwrap();
+  let method = CString::new("GET").unwrap();
+  let header_name = CString::new("X-Some-Header").unwrap();
+  let header_value = CString::new(r#"{"foo": "bar", "baz": "bat"}"#).unwrap();
+
+  pactffi_upon_receiving(interaction.clone(), description.as_ptr());
+  pactffi_with_request(interaction.clone(), method.as_ptr(), path.as_ptr());
+  pactffi_with_header_v2(interaction.clone(), InteractionPart::Request, header_name.as_ptr(), 0, header_value.as_ptr());
+  pactffi_response_status(interaction.clone(), 200);
+
+  let port = pactffi_create_mock_server_for_pact(pact_handle.clone(), address.as_ptr(), false);
+
+  expect!(port).to(be_greater_than(0));
+
+  let client = Client::default();
+  let result = client.get(format!("http://127.0.0.1:{}/", port).as_str())
+    .header("X-Some-Header", "{\"foo\": \"bar\", \"baz\": \"bat\"}")
+    .send();
+
+  let mismatches = unsafe {
+    CStr::from_ptr(pactffi_mock_server_mismatches(port)).to_string_lossy().into_owned()
+  };
+
+  pactffi_cleanup_mock_server(port);
+
+  match result {
+    Ok(res) => {
+      expect!(res.status()).to(be_eq(200));
+    },
+    Err(err) => {
+      panic!("expected 200 response but request failed: {}", err);
+    }
+  };
 }
