@@ -13,7 +13,7 @@ RUN sed -i -e 's/pact_verifier = {\s*version\s*=\s*"\([^"]*\).*/pact_verifier = 
 RUN cd build && cargo build --release
 
 # Now, we need to build our _real_ Docker container, copying in the executable.
-FROM alpine:3.16.2
+FROM alpine:3.18.3
 RUN apk --no-cache add ca-certificates
 COPY --from=builder \
     /build/target/release/pact_verifier_cli \
