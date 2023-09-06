@@ -1,3 +1,2 @@
-build --enable_bzlmod
 common --registry=https://bcr.bazel.build
 common --registry=https://raw.githubusercontent.com/matts1/bazel-central-registry/main
