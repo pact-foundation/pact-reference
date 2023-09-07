@@ -9,6 +9,7 @@ rust_library(
     srcs = glob(
         ["src/**/*.rs"]
     ),
+    crate_features = ["tls", "plugins"],
     deps = ["//pact_matching"] + all_crate_deps(package_name = "pact_mock_server"),
 
 )

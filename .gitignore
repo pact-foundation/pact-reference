@@ -45,3 +45,5 @@ php/composer.lock
 pkg/
 python/venv/
 python/pacts
+
+rust/bazel-*
