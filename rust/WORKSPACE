@@ -14,43 +14,16 @@ rust_register_toolchains(
     edition = "2021",
 )
 
-load("@rules_rust//crate_universe:repositories.bzl", "crate_universe_dependencies")
-crate_universe_dependencies(bootstrap = True)
+load("//:repositories.bzl", "repos")
 
-load("@rules_rust//crate_universe:defs.bzl", "crate", "crates_repository", "splicing_config")
-load("@rules_rust//crate_universe:defs.bzl", "crates_repository", "crate")
-crates_repository(
-    name = "crate_index",
-    cargo_lockfile = "//:Cargo.lock",
-    generator = "@cargo_bazel_bootstrap//:cargo-bazel",
-    lockfile = "//:cargo-bazel-lock.json",
-    manifests = [
-        "//:Cargo.toml",
-        "//:pact_cli/Cargo.toml",
-        "//:pact_consumer/Cargo.toml",
-        "//:pact_ffi/Cargo.toml",
-        "//:pact_matching/Cargo.toml",
-        "//:pact_mock_server/Cargo.toml",
-        "//:pact_mock_server_cli/Cargo.toml",
-        "//:pact_models/Cargo.toml",
-        "//:pact_verifier/Cargo.toml",
-        "//:pact_verifier_cli/Cargo.toml",
-    ],
-    packages = {
-       "os_info": crate.spec(
-        version = "3.5.1",
-        ),
-    },
-    annotations = {
-        "onig_sys": [crate.annotation(
-        shallow_since="1686508130 +0100"
-        )],
-        "onig": [crate.annotation(
-        shallow_since="1686508130 +0100"
-        )],
-    }
-)
+repos()
 
-load("@crate_index//:defs.bzl", "crate_repositories")
-crate_repositories()
+load("//:deps.bzl", "deps")
 
+deps()
+
+load("//:create_crate.bzl", "create_crate_repositories")
+
+create_crate_repositories()
+
+load("//:create_pact_binaries.bzl", "create_pact_binaries")

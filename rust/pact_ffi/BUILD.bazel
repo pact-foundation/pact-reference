@@ -28,6 +28,6 @@ rust_shared_library(
 cc_library(
     name = "pact_ffi",
     deps = [":pact_ffi_lib"],
-    linkstatic=1,
+    #linkstatic=1,
     visibility = ["//visibility:public"],
 )
