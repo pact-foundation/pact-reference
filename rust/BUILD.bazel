@@ -10,11 +10,11 @@ filegroup(
 
 pact_reference_toolchain(
     name = "toolchain_impl",
-    pact_verifier_cli = ":pact_verifier_cli_archive",
+    pact_verifier_cli = ":pact_verifier_cli_toolchain",
 )
 
 genrule(
-    name = "pact_verifier_cli_archive",
+    name = "pact_verifier_cli_toolchain",
     outs = ["pact_verifier_cli_bin"],
     srcs = ["@pact_verifier_cli_archive//file"],
     cmd = "gzip -d - < $< > $@",
