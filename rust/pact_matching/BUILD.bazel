@@ -1,0 +1,12 @@
+load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
+package(default_visibility = ["//visibility:public"])
+
+rust_library(
+    name = "pact_matching",
+    srcs = glob(
+        ["src/**/*.rs"]
+    ),
+    deps = all_crate_deps(package_name = "pact_matching"),
+
+)

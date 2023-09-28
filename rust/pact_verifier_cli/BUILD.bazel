@@ -1,0 +1,11 @@
+load("@crate_index//:defs.bzl", "aliases", "all_crate_deps")
+load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
+load("@rules_rust//rust:defs.bzl", "rust_binary")
+
+rust_binary(
+    name = "pact_verifier_cli",
+    srcs = glob(["src/*.rs"]),
+    deps = all_crate_deps(package_name = "pact_verifier_cli", normal = "True") + ["//pact_verifier"],
+    visibility = ["//visibility:public"],
+
+)

@@ -1,0 +1,33 @@
+load("@rules_rust//cargo:defs.bzl", "cargo_bootstrap_repository")
+load("//:toolchains.bzl", "pact_reference_toolchain")
+
+filegroup(
+    name = "pact_verifier_cli",
+    srcs = ["//pact_verifier_cli"],
+    visibility = ["//visibility:public"],
+
+)
+
+pact_reference_toolchain(
+    name = "toolchain_impl",
+    pact_verifier_cli = ":pact_verifier_cli_toolchain",
+)
+
+genrule(
+    name = "pact_verifier_cli_toolchain",
+    outs = ["pact_verifier_cli_bin"],
+    srcs = ["@pact_verifier_cli_archive//file"],
+    cmd = "gzip -d - < $< > $@",
+)
+
+toolchain(
+    name = "toolchain",
+    toolchain = ":toolchain_impl",
+    toolchain_type = ":toolchain_type",
+)
+
+toolchain_type(
+    name = "toolchain_type",
+    visibility = ["//visibility:public"],
+)
+
