@@ -1959,7 +1959,7 @@ dependencies = [
 
 [[package]]
 name = "pact_consumer"
-version = "1.0.4"
+version = "1.0.5"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1983,7 +1983,7 @@ dependencies = [
 
 [[package]]
 name = "pact_matching"
-version = "1.1.6"
+version = "1.1.7"
 dependencies = [
  "ansi_term",
  "anyhow",
@@ -2021,7 +2021,7 @@ dependencies = [
 
 [[package]]
 name = "pact_mock_server"
-version = "1.2.3"
+version = "1.2.4"
 dependencies = [
  "anyhow",
  "bytes",
@@ -2088,7 +2088,7 @@ dependencies = [
 
 [[package]]
 name = "pact_verifier"
-version = "1.0.3"
+version = "1.0.4"
 dependencies = [
  "ansi_term",
  "anyhow",
@@ -2724,9 +2724,9 @@ checksum = "d626bb9dae77e28219937af045c257c28bfd3f69333c512553507f5f9798cb76"
 
 [[package]]
 name = "rustix"
-version = "0.37.23"
+version = "0.37.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d69718bf81c6127a49dc64e44a742e8bb9213c0ff8869a22c308f84c1d4ab06"
+checksum = "d4eb579851244c2c03e7c24f501c3432bed80b8f720af1d6e5b0e0f01555a035"
 dependencies = [
  "bitflags 1.3.2",
  "errno",
@@ -3210,7 +3210,7 @@ version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8e6bf6f19e9f8ed8d4048dc22981458ebcf406d67e94cd422e5ecd73d63b3237"
 dependencies = [
- "rustix 0.37.23",
+ "rustix 0.37.25",
  "windows-sys 0.48.0",
 ]
 
