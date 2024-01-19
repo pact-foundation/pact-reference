@@ -1098,9 +1098,9 @@ dependencies = [
 
 [[package]]
 name = "h2"
-version = "0.3.23"
+version = "0.3.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b553656127a00601c8ae5590fcfdc118e4083a7924b6cf4ffc1ea4b99dc429d7"
+checksum = "bb2c4422095b67ee78da96fbb51a4cc413b3b25883c7717ff7ca1ab31022c9c9"
 dependencies = [
  "bytes",
  "fnv",
@@ -2024,9 +2024,9 @@ dependencies = [
 
 [[package]]
 name = "pact_models"
-version = "1.1.14"
+version = "1.1.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3c70648053a4449b06e2bd57d16081d191ade86b3aefbb0fd74ab0315494099"
+checksum = "9df032ef35daa821080992acc4418e75708c43fd02a75a3424465bdcec479e8c"
 dependencies = [
  "anyhow",
  "ariadne",
