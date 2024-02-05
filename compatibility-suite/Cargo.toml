@@ -13,7 +13,7 @@ futures = "0.3.29"
 itertools = "0.11.0"
 lazy_static = "1.4.0"
 maplit = "1.0.2"
-pact_models = "~1.1.17"
+pact_models = { version = "~1.1.17", path = "../rust/pact_models" }
 pact_matching = { version = "1.1.9", path = "../rust/pact_matching" }
 pact_mock_server = { version = "1.2.4", path = "../rust/pact_mock_server" }
 pact_verifier = { version = "1.0.5", path = "../rust/pact_verifier" }
@@ -29,6 +29,9 @@ tokio = { version = "1.33.0", features = ["full"] }
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.17", features = ["env-filter", "tracing-log", "fmt"] }
 uuid = { version = "1.5.0", features = ["v4"] }
+
+[patch.crates-io]
+pact_models = { path = "../rust/pact_models" }
 
 [[test]]
 name = "v1_consumer"
