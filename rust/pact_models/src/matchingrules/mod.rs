@@ -1282,6 +1282,13 @@ impl MatchingRules {
       .or_insert_with(|| MatchingRuleCategory::empty(category.clone()));
     entry.add_rules(rules);
   }
+
+  /// Merge the rules from the other matching rules into this one.
+  pub fn merge(&mut self, other: &MatchingRules) {
+    for (category, rules) in &other.rules {
+      self.add_rules(category.clone(), rules.clone());
+    }
+  }
 }
 
 impl Hash for MatchingRules {
@@ -2527,5 +2534,50 @@ mod tests {
     assert_ne!(m1, m3);
     assert_ne!(m1, m4);
     assert_ne!(m2, m3);
+  }
+
+  #[test]
+  fn matchingrules_merge() {
+    let mut m1 = MatchingRules::default();
+    let m2 = matchingrules!{
+      "body" => {
+        "$.a.b" => [ MatchingRule::Type ]
+      }
+    };
+    let m3 = matchingrules!{
+      "body" => {
+        "$.a.c" => [ MatchingRule::Equality ]
+      }
+    };
+    let m4 = matchingrules!{
+      "header" => {
+        "$.x-test" => [ MatchingRule::Regex(".*".to_owned()) ]
+      }
+    };
+
+    assert_eq!(m1.rules.len(), 0);
+    assert_eq!(m1.rules.values().map(|v| v.rules.len()).sum::<usize>(), 0);
+    m1.merge(&m2);
+    assert_eq!(m1.rules.len(), 1);
+    assert_eq!(m1.rules.values().map(|v| v.rules.len()).sum::<usize>(), 1);
+    m1.merge(&m3);
+    assert_eq!(m1.rules.len(), 1);
+    assert_eq!(m1.rules.values().map(|v| v.rules.len()).sum::<usize>(), 2);
+    m1.merge(&m4);
+    assert_eq!(m1.rules.len(), 2);
+    assert_eq!(m1.rules.values().map(|v| v.rules.len()).sum::<usize>(), 3);
+
+    assert_eq!(
+      m1,
+      matchingrules!{
+        "body" => {
+          "$.a.b" => [ MatchingRule::Type ],
+          "$.a.c" => [ MatchingRule::Equality ]
+        },
+        "header" => {
+          "$.x-test" => [ MatchingRule::Regex(".*".to_owned()) ]
+        }
+      }
+    )
   }
 }
