@@ -125,7 +125,7 @@ use pact_models::headers::parse_header;
 use pact_models::http_parts::HttpPart;
 use pact_models::interaction::Interaction;
 use pact_models::json_utils::json_to_string;
-use pact_models::matchingrules::{Category, MatchingRule, MatchingRuleCategory, MatchingRules, RuleLogic};
+use pact_models::matchingrules::{matchers_from_json, Category, MatchingRule, MatchingRuleCategory, MatchingRules, RuleLogic};
 use pact_models::pact::{ReadWritePact, write_pact};
 use pact_models::path_exp::DocPath;
 use pact_models::prelude::Pact;
@@ -1809,6 +1809,92 @@ pub extern fn pactffi_with_binary_file(
   }
 }
 
+ffi_fn!{
+  /// Add matching rules to the interaction.
+  ///
+  /// * `interaction` - Interaction handle to set the matching rules for.
+  /// * `part` - Request or response part (if applicable).
+  /// * `rules` - JSON string of the matching rules to add to the interaction.
+  ///
+  /// This function can be called multiple times, in which case the matching
+  /// rules will be merged. The function will return `true` if the rules were
+  /// successfully added, and `false` if an error occurred.
+  ///
+  /// For synchronous messages which allow multiple responses, the matching
+  /// rules will be added to all the responses.
+  ///
+  /// # Safety
+  ///
+  /// The rules parameter must be a valid pointer to a NULL terminated UTF-8
+  /// string.
+  fn pactffi_with_matching_rules(
+    interaction: InteractionHandle,
+  part: InteractionPart,
+    rules: *const c_char
+  ) -> bool {
+    let rules = match convert_cstr("rules", rules) {
+      Some(rules) => rules,
+      None => {
+        error!("with_matching_rules: Rules value is not valid (NULL or non-UTF-8)");
+        return Ok(false);
+      }
+    };
+
+    let rules = match serde_json::from_str::<Value>(rules) {
+      Ok(Value::Object(rules)) => rules,
+      Ok(_) => {
+        error!("with_matching_rules: Rules value is not a JSON object");
+        return Ok(false);
+      },
+      Err(err) => {
+        error!("with_matching_rules: Failed to parse the matching rules: {}", err);
+        return Ok(false);
+      }
+    };
+
+    // Wrap the rules in a object with a "matchingRules" key if it is not
+    // already, as this is required for `matchers_from_json`.
+    let rules = if rules.contains_key("matchingRules") {
+      Value::Object(rules)
+    } else {
+      json!({ "matchingRules": rules })
+    };
+    let rules = match matchers_from_json(&rules, &None) {
+      Ok(rules) => rules,
+      Err(err) => {
+        error!("with_matching_rules: Failed to load the matching rules: {}", err);
+        return Ok(false);
+      }
+    };
+
+    interaction.with_interaction(&move |_, _, inner| {
+      if let Some(reqres) = inner.as_v4_http_mut() {
+        match part {
+          InteractionPart::Request => reqres.request.matching_rules_mut().merge(&rules),
+          InteractionPart::Response => reqres.response.matching_rules_mut().merge(&rules)
+        };
+        Ok(())
+      } else if let Some(message) = inner.as_v4_async_message_mut() {
+        message.matching_rules_mut().merge(&rules);
+        Ok(())
+      } else if let Some(sync_message) = inner.as_v4_sync_message_mut() {
+        match part {
+          InteractionPart::Request => sync_message.request.matching_rules_mut().merge(&rules),
+          InteractionPart::Response => sync_message.response.iter_mut().for_each(|response| response.matching_rules_mut().merge(&rules))
+        };
+        Ok(())
+      } else {
+        error!("Interaction is an unknown type, is {}", inner.type_of());
+        Err(())
+      }
+    }).unwrap_or(Err(())).is_ok()
+  }
+  // Failure block
+  {
+    false
+  }
+}
+
 fn add_content_type_matching_rule_to_body(is_supported: bool, matching_rules: &mut MatchingRules, content_type: &str) {
   if is_supported {
     matching_rules.add_category("body").add_rule(
@@ -3446,5 +3532,73 @@ mod tests {
     expect!(&interaction.response.generators).to(be_equal_to(&generators! {
       "status" => { "$" => Generator::RandomInt(201, 299) }
     }));
+  }
+
+  #[test]
+  fn pactffi_with_matching_rules_v2_test() {
+    let pact_handle = PactHandle::new("Consumer", "Provider");
+    let description = CString::new("Matching Rule Test").unwrap();
+    let i_handle = pactffi_new_interaction(pact_handle, description.as_ptr());
+
+    let matching_rule = CString::new(r#"{
+        "$.body.one": {
+          "match": "regex",
+          "regex": "\\w{3}\\d{3}"
+        }
+      }"#).unwrap();
+    let result = pactffi_with_matching_rules(
+      i_handle,
+      InteractionPart::Request,
+      matching_rule.as_ptr(),
+    );
+    expect!(result).to(be_true());
+
+    let interaction = i_handle.with_interaction(&|_, _, inner| {
+      inner.as_v4_http().unwrap()
+    }).unwrap();
+
+    pactffi_free_pact_handle(pact_handle);
+    assert_eq!(interaction.request.matching_rules, matchingrules! {
+      "body" => {
+        "$.one" => [ MatchingRule::Regex("\\w{3}\\d{3}".to_string()) ]
+      }
+    });
+  }
+
+  #[test]
+  fn pactffi_with_matching_rules_v4_test() {
+    let pact_handle = PactHandle::new("Consumer", "Provider");
+    let description = CString::new("Matching Rule Test").unwrap();
+    let i_handle = pactffi_new_interaction(pact_handle, description.as_ptr());
+
+    let matching_rule = CString::new(r#"{
+      "body": {
+        "$.*": {
+          "combine": "AND",
+          "matchers": [
+            {
+              "match": "semver"
+            }
+          ]
+        }
+      }
+    }"#).unwrap();
+    let result = pactffi_with_matching_rules(
+      i_handle,
+      InteractionPart::Response,
+      matching_rule.as_ptr(),
+    );
+    expect!(result).to(be_true());
+
+    let interaction = i_handle.with_interaction(&|_, _, inner| {
+      inner.as_v4_http().unwrap()
+    }).unwrap();
+
+    pactffi_free_pact_handle(pact_handle);
+    assert_eq!(interaction.response.matching_rules, matchingrules! {
+      "body" => {
+        "$.*" => [ MatchingRule::Semver ]
+      }
+    });
   }
 }
