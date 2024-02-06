@@ -33,7 +33,7 @@ log = "0.4.20"
 lazy_static = "1.4.0"
 pact_matching = { version = "~1.1.9", path = "../pact_matching", default-features = false }
 pact_mock_server = { version = "~1.2.4", path = "../pact_mock_server", default-features = false }
-pact_models = { version = "~1.1.17", path = "../pact_models", default-features = false }
+pact_models = { version = "~1.2.0", path = "../pact_models", default-features = false }
 rand = "0.8.5"
 regex = "1.10.2"
 reqwest = { version = "0.11.23", default-features = false, features = ["rustls-tls-native-roots", "blocking", "json"] }
