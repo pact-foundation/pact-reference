@@ -41,8 +41,8 @@ use pact_ffi::mock_server::handles::{
   pactffi_new_message,
   pactffi_new_message_pact,
   pactffi_new_pact,
-  pactffi_with_specification,
   pactffi_response_status,
+  pactffi_set_key,
   pactffi_upon_receiving,
   pactffi_with_binary_file,
   pactffi_with_body,
@@ -51,6 +51,7 @@ use pact_ffi::mock_server::handles::{
   pactffi_with_multipart_file_v2,
   pactffi_with_query_parameter_v2,
   pactffi_with_request,
+  pactffi_with_specification,
   pactffi_write_message_pact_file
 };
 use pact_ffi::mock_server::handles::{pact_default_file_name, pactffi_free_pact_handle, pactffi_given_with_params, pactffi_pact_handle_write_file, pactffi_with_header_v2, PactHandle};
@@ -227,6 +228,34 @@ fn create_multipart_file_v2() {
     boundary = boundary
   ));
   assert_eq!(expected_req_body, body);
+}
+
+#[test]
+fn set_key() {
+  let consumer_name = CString::new("consumer").unwrap();
+  let provider_name = CString::new("provider").unwrap();
+  let pact_handle = pactffi_new_pact(consumer_name.as_ptr(), provider_name.as_ptr());
+  let description = CString::new("set_key").unwrap();
+  let interaction = pactffi_new_interaction(pact_handle, description.as_ptr());
+  let key = CString::new("foobar").unwrap();
+
+  assert!(pactffi_set_key(interaction, key.as_ptr()));
+
+  interaction.with_interaction(&|_, _, i| {
+    assert_eq!(
+      i.as_v4_http().unwrap().key,
+      Some("foobar".to_string())
+    )
+  });
+
+  assert!(pactffi_set_key(interaction, null()));
+
+  interaction.with_interaction(&|_, _, i| {
+    assert_eq!(
+      i.as_v4_http().unwrap().key,
+      None
+    )
+  });
 }
 
 #[test_log::test]

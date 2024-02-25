@@ -2064,6 +2064,53 @@ pub extern fn pactffi_with_multipart_file(
   pactffi_with_multipart_file_v2(interaction, part, content_type, file, part_name, std::ptr::null())
 }
 
+ffi_fn!{
+  /// Sets the key attribute for the interaction.
+  ///
+  /// * `interaction` - Interaction handle to modify.
+  /// * `value` - Key value. This must be a valid UTF-8 null-terminated string,
+  ///   or NULL to clear the key.
+  ///
+  /// This function will return `true` if the key was successfully updated.
+  ///
+  /// # Safety
+  ///
+  /// The key parameter must be a valid pointer to a NULL terminated UTF-8, or
+  /// NULL if the key is to be cleared.
+  fn pactffi_set_key(interaction: InteractionHandle, value: *const c_char) -> bool {
+    let value = if value.is_null() {
+      None
+    } else {
+      match convert_cstr("value", value) {
+        Some(value) => Some(value.to_string()),
+        None => {
+          error!("set_key: Value is not valid (NULL or non-UTF-8)");
+          return Err(anyhow!("Value is not valid (NULL or non-UTF-8)"));
+        }
+      }
+    };
+
+    interaction.with_interaction(&|_, _, inner| {
+      if let Some(reqres) = inner.as_v4_http_mut() {
+        reqres.key = value.clone();
+        Ok(())
+      } else if let Some(message) = inner.as_v4_async_message_mut() {
+        message.key = value.clone();
+        Ok(())
+      } else if let Some(sync_message) = inner.as_v4_sync_message_mut() {
+        sync_message.key = value.clone();
+        Ok(())
+      } else {
+        error!("Interaction is an unknown type, is {}", inner.type_of());
+        Err(anyhow!("Interaction is an unknown type, is {}", inner.type_of()))
+      }
+    }).unwrap_or(Err(anyhow!("Not value to unwrap"))).is_ok()
+  } {
+    false
+  }
+}
+
+
 fn convert_ptr_to_body(body: *const u8, size: size_t, content_type: Option<ContentType>) -> OptionalBody {
   if body.is_null() {
     OptionalBody::Null
