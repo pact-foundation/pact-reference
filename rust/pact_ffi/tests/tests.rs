@@ -31,6 +31,10 @@ use pact_ffi::mock_server::{
 #[allow(deprecated)]
 use pact_ffi::mock_server::handles::{
   InteractionPart,
+  PactHandle,
+  pact_default_file_name,
+  pactffi_free_pact_handle,
+  pactffi_given_with_params,
   pactffi_message_expects_to_receive,
   pactffi_message_given,
   pactffi_message_reify,
@@ -41,20 +45,22 @@ use pact_ffi::mock_server::handles::{
   pactffi_new_message,
   pactffi_new_message_pact,
   pactffi_new_pact,
+  pactffi_pact_handle_write_file,
   pactffi_response_status,
   pactffi_set_key,
+  pactffi_set_pending,
   pactffi_upon_receiving,
   pactffi_with_binary_file,
   pactffi_with_body,
   pactffi_with_header,
+  pactffi_with_header_v2,
   pactffi_with_multipart_file,
   pactffi_with_multipart_file_v2,
   pactffi_with_query_parameter_v2,
   pactffi_with_request,
   pactffi_with_specification,
-  pactffi_write_message_pact_file
+  pactffi_write_message_pact_file,
 };
-use pact_ffi::mock_server::handles::{pact_default_file_name, pactffi_free_pact_handle, pactffi_given_with_params, pactffi_pact_handle_write_file, pactffi_with_header_v2, PactHandle};
 use pact_ffi::verifier::{
   OptionsFlags,
   pactffi_verifier_add_directory_source,
@@ -254,6 +260,33 @@ fn set_key() {
     assert_eq!(
       i.as_v4_http().unwrap().key,
       None
+    )
+  });
+}
+
+#[test]
+fn set_pending() {
+  let consumer_name = CString::new("consumer").unwrap();
+  let provider_name = CString::new("provider").unwrap();
+  let pact_handle = pactffi_new_pact(consumer_name.as_ptr(), provider_name.as_ptr());
+  let description = CString::new("set_pending").unwrap();
+  let interaction = pactffi_new_interaction(pact_handle, description.as_ptr());
+
+  assert!(pactffi_set_pending(interaction, true));
+
+  interaction.with_interaction(&|_, _, i| {
+    assert_eq!(
+      i.as_v4_http().unwrap().pending,
+      true,
+    )
+  });
+
+  assert!(pactffi_set_pending(interaction, false));
+
+  interaction.with_interaction(&|_, _, i| {
+    assert_eq!(
+      i.as_v4_http().unwrap().pending,
+      false,
     )
   });
 }

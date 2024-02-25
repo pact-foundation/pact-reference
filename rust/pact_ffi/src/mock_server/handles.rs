@@ -2110,6 +2110,33 @@ ffi_fn!{
   }
 }
 
+ffi_fn!{
+  /// Mark the interaction as pending.
+  ///
+  /// * `interaction` - Interaction handle to modify.
+  /// * `pending` - Boolean value to toggle the pending state of the interaction.
+  ///
+  /// This function will return `true` if the key was successfully updated.
+  fn pactffi_set_pending(interaction: InteractionHandle, pending: bool) -> bool {
+    interaction.with_interaction(&|_, _, inner| {
+      if let Some(reqres) = inner.as_v4_http_mut() {
+        reqres.pending = pending;
+        Ok(())
+      } else if let Some(message) = inner.as_v4_async_message_mut() {
+        message.pending = pending;
+        Ok(())
+      } else if let Some(sync_message) = inner.as_v4_sync_message_mut() {
+        sync_message.pending = pending;
+        Ok(())
+      } else {
+        error!("Interaction is an unknown type, is {}", inner.type_of());
+        Err(anyhow!("Interaction is an unknown type, is {}", inner.type_of()))
+      }
+    }).unwrap_or(Err(anyhow!("Not value to unwrap"))).is_ok()
+  } {
+    false
+  }
+}
 
 fn convert_ptr_to_body(body: *const u8, size: size_t, content_type: Option<ContentType>) -> OptionalBody {
   if body.is_null() {
