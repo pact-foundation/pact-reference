@@ -47,6 +47,7 @@ use pact_ffi::mock_server::handles::{
   pactffi_new_pact,
   pactffi_pact_handle_write_file,
   pactffi_response_status,
+  pactffi_set_comment,
   pactffi_set_key,
   pactffi_set_pending,
   pactffi_upon_receiving,
@@ -287,6 +288,60 @@ fn set_pending() {
     assert_eq!(
       i.as_v4_http().unwrap().pending,
       false,
+    )
+  });
+}
+
+#[test]
+fn set_comment() {
+  let consumer_name = CString::new("consumer").unwrap();
+  let provider_name = CString::new("provider").unwrap();
+  let pact_handle = pactffi_new_pact(consumer_name.as_ptr(), provider_name.as_ptr());
+  let description = CString::new("set_comment").unwrap();
+  let interaction = pactffi_new_interaction(pact_handle, description.as_ptr());
+
+  let key_int = CString::new("key_int").unwrap();
+  let value_int = CString::new("1234").unwrap();
+  let key_str = CString::new("key_str").unwrap();
+  let value_str = CString::new("some string").unwrap();
+  let key_bool = CString::new("key_bool").unwrap();
+  let value_bool = CString::new("true").unwrap();
+  let key_float = CString::new("key_float").unwrap();
+  let value_float = CString::new("12.34").unwrap();
+  let key_array = CString::new("key_array").unwrap();
+  let value_array = CString::new("[1, 2, 3]").unwrap();
+  let key_obj = CString::new("key_object").unwrap();
+  let value_obj = CString::new("{\"key\": \"value\"}").unwrap();
+
+  assert!(pactffi_set_comment(interaction, key_int.as_ptr(), value_int.as_ptr()));
+  assert!(pactffi_set_comment(interaction, key_str.as_ptr(), value_str.as_ptr()));
+  assert!(pactffi_set_comment(interaction, key_bool.as_ptr(), value_bool.as_ptr()));
+  assert!(pactffi_set_comment(interaction, key_float.as_ptr(), value_float.as_ptr()));
+  assert!(pactffi_set_comment(interaction, key_array.as_ptr(), value_array.as_ptr()));
+  assert!(pactffi_set_comment(interaction, key_obj.as_ptr(), value_obj.as_ptr()));
+
+  interaction.with_interaction(&|_, _, i| {
+    let interaction = i.as_v4_http().unwrap();
+    assert_eq!(interaction.comments["key_int"], json!(1234));
+    assert_eq!(interaction.comments["key_str"], json!("some string"));
+    assert_eq!(interaction.comments["key_bool"], json!(true));
+    assert_eq!(interaction.comments["key_float"], json!(12.34));
+    assert_eq!(interaction.comments["key_array"], json!([1, 2, 3]));
+    assert_eq!(interaction.comments["key_object"], json!({"key": "value"}));
+  });
+
+  assert!(pactffi_set_comment(interaction, key_int.as_ptr(), null()));
+  assert!(pactffi_set_comment(interaction, key_str.as_ptr(), null()));
+  assert!(pactffi_set_comment(interaction, key_bool.as_ptr(), null()));
+  assert!(pactffi_set_comment(interaction, key_float.as_ptr(), null()));
+  assert!(pactffi_set_comment(interaction, key_array.as_ptr(), null()));
+  assert!(pactffi_set_comment(interaction, key_obj.as_ptr(), null()));
+
+  interaction.with_interaction(&|_, _, i| {
+    let interaction = i.as_v4_http().unwrap();
+    assert_eq!(
+      interaction.comments,
+      hashmap!{}
     )
   });
 }

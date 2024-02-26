@@ -2138,6 +2138,78 @@ ffi_fn!{
   }
 }
 
+ffi_fn!{
+  /// Add a comment to the interaction.
+  ///
+  /// * `interaction` - Interaction handle to set the comments for.
+  /// * `key` - Key value
+  /// * `value` - Comment value. This may be any valid JSON value, or a NULL to
+  ///   clear the comment.
+  ///
+  /// This function will return `true` if the comments were successfully
+  /// updated. Both `key` and `value` must be valid UTF-8 null-terminated
+  /// strings; or in the case of `value`, it may also be a NULL pointer in which
+  /// case the comment will be cleared.
+  ///
+  /// Note that a `value` that deserialize to a JSON null will result in a
+  /// comment being added, with the value being the JSON null.
+  ///
+  /// # Safety
+  ///
+  /// The comments parameter must be a valid pointer to a NULL terminated UTF-8,
+  /// or NULL if the comment is to be cleared.
+  fn pactffi_set_comment(interaction: InteractionHandle, key: *const c_char, value: *const c_char) -> bool {
+    let key = match convert_cstr("key", key) {
+      Some(key) => key,
+      None => {
+        error!("set_comments: Key value is not valid (NULL or non-UTF-8)");
+        return Err(anyhow!("Key value is not valid (NULL or non-UTF-8)"));
+      }
+    };
+    let value: Option<serde_json::Value> = if value.is_null() {
+      None
+    } else {
+      match convert_cstr("value", value) {
+        Some(value) =>{ match serde_json::from_str(value) {
+          Ok(value) => Some(value),
+          Err(_) => Some(serde_json::Value::String(value.to_string())),
+        }},
+        None => {
+          error!("set_comments: Value is not valid (non-UTF-8)");
+          return Err(anyhow!("Value is not valid (non-UTF-8)"));
+        }
+      }
+    };
+
+    interaction.with_interaction(&|_, _, inner| {
+      if let Some(reqres) = inner.as_v4_http_mut() {
+        match &value {
+          Some(value) => reqres.comments.insert(key.to_string(), value.clone()),
+          None => reqres.comments.remove(key)
+        };
+        Ok(())
+      } else if let Some(message) = inner.as_v4_async_message_mut() {
+        match &value {
+          Some(value) => message.comments.insert(key.to_string(), value.clone()),
+          None => message.comments.remove(key)
+        };
+        Ok(())
+      } else if let Some(sync_message) = inner.as_v4_sync_message_mut() {
+        match &value {
+          Some(value) => sync_message.comments.insert(key.to_string(), value.clone()),
+          None => sync_message.comments.remove(key)
+        };
+        Ok(())
+      } else {
+        error!("Interaction is an unknown type, is {}", inner.type_of());
+        Err(anyhow!("Interaction is an unknown type, is {}", inner.type_of()))
+      }
+    }).unwrap_or(Err(anyhow!("Not value to unwrap"))).is_ok()
+  } {
+    false
+  }
+}
+
 fn convert_ptr_to_body(body: *const u8, size: size_t, content_type: Option<ContentType>) -> OptionalBody {
   if body.is_null() {
     OptionalBody::Null
