@@ -287,7 +287,7 @@ impl MessageInteractionBuilder {
             self.setup_core_matcher(&ct, &contents_hashmap, Some(content_matcher));
           } else {
             debug!("Plugin matcher, will get the plugin to provide the interaction contents");
-            match content_matcher.configure_interation(&ct, contents_hashmap).await {
+            match content_matcher.configure_interaction(&ct, contents_hashmap).await {
               Ok((contents, plugin_config)) => {
                 if let Some(contents) = contents.first() {
                   self.message_contents = InteractionContents::from(contents);

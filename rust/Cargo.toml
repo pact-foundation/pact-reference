@@ -12,3 +12,5 @@ resolver = "2"
 
 [patch.crates-io]
 onig = { git = "https://github.com/rust-onig/rust-onig", default-features = false }
+pact-plugin-driver = { path = "/home/ronald/Development/Projects/Pact/pact-plugins/drivers/rust/driver" }
+pact_mock_server = { path = "/home/ronald/Development/Projects/Pact/pact-core-mock-server/pact_mock_server" }

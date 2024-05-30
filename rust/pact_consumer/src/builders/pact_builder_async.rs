@@ -132,7 +132,7 @@ impl PactBuilderAsync {
         dependency_type: Default::default()
       }).await;
       match result {
-        Ok(plugin) => self.pact.add_plugin(plugin.manifest.name.as_str(), plugin.manifest.version.as_str(), None)
+        Ok(plugin) => self.pact.add_plugin(plugin.manifest().name.as_str(), plugin.manifest().version.as_str(), None)
           .expect("Could not add plugin to pact"),
         Err(err) => panic!("Could not load plugin - {}", err)
       }
