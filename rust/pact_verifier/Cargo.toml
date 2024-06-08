@@ -36,8 +36,8 @@ lazy_static = "1.4.0"
 maplit = "1.0.2"
 mime = "0.3.17"
 pact_matching = { version = "~1.2.3", path = "../pact_matching", default-features = false }
-pact_models = { version = "~1.2.0", default-features = false }
-pact-plugin-driver = { version = "~0.6.1", optional = true, default-features = false }
+pact_models = { version = "~1.2.0", default-features = false, path = "../pact_models"  }
+pact-plugin-driver = { version = "~0.6.2", optional = true, default-features = false }
 regex = "1.10.4"
 reqwest = { version = "0.12.3", default-features = false, features = ["rustls-tls-native-roots", "blocking", "json"] }
 serde = "1.0.197"

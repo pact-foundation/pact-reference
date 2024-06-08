@@ -12,3 +12,7 @@ resolver = "2"
 
 [patch.crates-io]
 onig = { git = "https://github.com/rust-onig/rust-onig", default-features = false }
+pact_models = { path = "./pact_models" }
+pact_matching = { path = "./pact_matching" }
+pact_mock_server = { git = 'https://github.com/pact-reference/pact-core-mock-server.git', branch = "issue/134_missing_buffer_logs" }
+pact-plugin-driver = { git = 'https://github.com/pact-reference/pact-plugins.git', branch = "issue/134_missing_buffer_logs" }
