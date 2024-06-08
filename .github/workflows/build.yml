@@ -27,6 +27,12 @@ jobs:
         env:
           RUST_LOG: debug
           RUST_BACKTRACE: 1
+      - name: Run mock_server_logs test
+        run: cargo test -p pact_ffi returns_mock_server_logs -- --nocapture --include-ignored
+        working-directory: rust
+        env:
+          RUST_LOG: debug
+          RUST_BACKTRACE: 1
       - name: Build Components
         run: cargo build
         working-directory: rust

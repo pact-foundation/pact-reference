@@ -9,7 +9,9 @@ use bytes::Bytes;
 use expectest::prelude::*;
 use itertools::Itertools;
 use libc::c_char;
+use log::LevelFilter;
 use maplit::*;
+use pact_ffi::log::pactffi_log_to_buffer;
 use pact_models::bodies::OptionalBody;
 use pact_models::PactSpecification;
 use pretty_assertions::assert_eq;
@@ -19,14 +21,14 @@ use tempfile::TempDir;
 use serde_json::{json, Value};
 use rstest::rstest;
 use regex::Regex;
-
 #[allow(deprecated)]
 use pact_ffi::mock_server::{
   pactffi_cleanup_mock_server,
   pactffi_create_mock_server,
   pactffi_create_mock_server_for_pact,
   pactffi_mock_server_mismatches,
-  pactffi_write_pact_file
+  pactffi_write_pact_file,
+  pactffi_mock_server_logs,
 };
 #[allow(deprecated)]
 use pact_ffi::mock_server::handles::{
@@ -1405,4 +1407,31 @@ fn matching_definition_expressions_matcher() {
       panic!("expected 200 response but request failed: {}", err);
     }
   };
+}
+
+// Run independently as this log settings are global, and other tests affect this one.
+// cargo test -p pact_ffi returns_mock_server_logs -- --nocapture --include-ignored
+#[ignore]
+#[test]
+fn returns_mock_server_logs() {
+  let pact_json = include_str!("post-pact.json");
+  let pact_json_c = CString::new(pact_json).expect("Could not construct C string from json");
+  let address = CString::new("127.0.0.1:0").unwrap();
+  #[allow(deprecated)]
+  let port = pactffi_create_mock_server(pact_json_c.as_ptr(), address.as_ptr(), false);
+  expect!(port).to(be_greater_than(0));
+  pactffi_log_to_buffer(LevelFilter::Debug.into());
+  let client = Client::default();
+  client.post(format!("http://127.0.0.1:{}/path", port).as_str())
+    .header(CONTENT_TYPE, "application/json")
+    .body(r#"{"foo":"no-very-bar"}"#)
+    .send().expect("Sent POST request to mock server");
+
+  let logs =  unsafe {
+    CStr::from_ptr(pactffi_mock_server_logs(port)).to_string_lossy().into_owned()
+  };
+  println!("{}",logs);
+  assert_ne!(logs,"", "logs are empty");
+
+  pactffi_cleanup_mock_server(port);
 }
