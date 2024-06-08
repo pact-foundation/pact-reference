@@ -1863,7 +1863,7 @@ checksum = "b15813163c1d831bf4a13c3610c05c0d03b39feb07f7e09fa234dac9b15aaf39"
 [[package]]
 name = "pact-plugin-driver"
 version = "0.6.2"
-source = "git+https://github.com/you54f/pact-plugins.git?branch=fix/logging_min#baeff6ca0f474bd5fe348daf8fb7b873bd6397a2"
+source = "git+https://github.com/pact-foundation/pact-plugins.git?branch=issue/134_missing_buffer_logs#63b28a993044ee6320fb9a8f971bff4bebdf36c9"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2039,7 +2039,7 @@ dependencies = [
 [[package]]
 name = "pact_mock_server"
 version = "1.2.9"
-source = "git+https://github.com/you54f/pact-core-mock-server.git?branch=fix/logging_min#46689503e977fd42f993a54a8bf9a658e711987b"
+source = "git+https://github.com/pact-foundation/pact-core-mock-server.git?branch=issue/134_missing_buffer_logs#c5ed4b633b6085756a5b6eadb2ccb15060f4a64f"
 dependencies = [
  "anyhow",
  "bytes",
