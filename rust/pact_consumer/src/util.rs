@@ -89,7 +89,7 @@ impl<T: Default> GetDefaulting<T> for Option<T> {
 
 /// Either panic with `msg`, or if we're already in the middle of a panic,
 /// just print `msg` to standard error.
-pub(crate) fn panic_or_print_error(msg: &str) {
+pub(crate) fn panic_or_print_error(msg: &anyhow::Error) {
     if thread::panicking() {
         // The current thread is panicking, so don't try to panic again, because
         // double panics don't print useful explanations of why the test failed.

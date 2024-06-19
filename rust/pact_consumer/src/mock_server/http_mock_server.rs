@@ -3,20 +3,21 @@
 use std::{env, thread};
 use std::fmt::Write;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use anyhow::anyhow;
 
+use pact_matching::metrics::{MetricEvent, send_metrics};
+use pact_mock_server::builder::MockServerBuilder;
+use pact_mock_server::matching::MatchResult;
+use pact_mock_server::mock_server;
+use pact_mock_server::mock_server::MockServerMetrics;
 use pact_models::pact::Pact;
 #[cfg(feature = "plugins")] use pact_models::plugins::PluginData;
 #[cfg(feature = "plugins")] use pact_plugin_driver::plugin_manager::{drop_plugin_access, increment_plugin_access};
 #[cfg(feature = "plugins")] use pact_plugin_driver::plugin_models::{PluginDependency, PluginDependencyType};
-use tracing::{debug, warn};
+use tokio::runtime::Runtime;
+#[allow(unused_imports)] use tracing::{debug, trace, warn};
 use url::Url;
-use uuid::Uuid;
-
-use pact_matching::metrics::{MetricEvent, send_metrics};
-use pact_mock_server::matching::MatchResult;
-use pact_mock_server::mock_server;
-use pact_mock_server::mock_server::{MockServerConfig, MockServerMetrics};
 
 use crate::mock_server::ValidatingMockServer;
 use crate::util::panic_or_print_error;
@@ -33,13 +34,13 @@ pub struct ValidatingHttpMockServer {
   // The URL of our mock server.
   url: Url,
   // The mock server instance
-  mock_server: Arc<Mutex<mock_server::MockServer>>,
-  // Signal received when the server thread is done executing
-  done_rx: std::sync::mpsc::Receiver<()>,
+  mock_server: mock_server::MockServer,
   // Output directory to write pact files
   output_dir: Option<PathBuf>,
   // overwrite or merge Pact files
-  overwrite: bool
+  overwrite: bool,
+  // Tokio Runtime used to drive the mock server
+  runtime: Option<Arc<Runtime>>
 }
 
 impl ValidatingHttpMockServer {
@@ -51,64 +52,45 @@ impl ValidatingHttpMockServer {
   pub fn start(pact: Box<dyn Pact + Send + Sync>, output_dir: Option<PathBuf>) -> Box<dyn ValidatingMockServer> {
     debug!("Starting mock server from pact {:?}", pact);
 
-    #[allow(unused_variables)] let plugin_data = pact.plugin_data();
-    #[cfg(feature = "plugins")] Self::increment_plugin_access(&plugin_data);
+    // Start a tokio runtime to drive the mock server
+    let runtime = Arc::new(tokio::runtime::Builder::new_multi_thread()
+      .enable_all()
+      .worker_threads(1)
+      .build()
+      .expect("Could not start a new Tokio runtime"));
 
-    // Spawn new runtime in thread to prevent reactor execution context conflict
-    let (pact_tx, pact_rx) = std::sync::mpsc::channel::<Box<dyn Pact + Send + Sync>>();
-    pact_tx.send(pact).expect("INTERNAL ERROR: Could not pass pact into mock server thread");
-    let (mock_server, done_rx) = std::thread::spawn(|| {
-      let runtime = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .expect("new runtime");
+    #[cfg(feature = "plugins")]
+    Self::increment_plugin_access(&pact.plugin_data());
 
-      let (mock_server, server_future) = runtime.block_on(async move {
-        mock_server::MockServer::new(
-          Uuid::new_v4().to_string(),
-          pact_rx.recv().unwrap(),
-          ([0, 0, 0, 0], 0).into(),
-          MockServerConfig::default()
-        )
-          .await
-          .unwrap()
-      });
-
-      // Start the actual thread the runtime will run on
-      let (done_tx, done_rx) = std::sync::mpsc::channel::<()>();
-      let tname = format!(
-        "test({})-pact-mock-server",
-        thread::current().name().unwrap_or("<unknown>")
-      );
-      thread::Builder::new()
-        .name(tname)
-        .spawn(move || {
-          runtime.block_on(server_future);
-          let _ = done_tx.send(());
-          #[cfg(feature = "plugins")] Self::decrement_plugin_access(&plugin_data);
-        })
-        .expect("thread spawn");
-
-      (mock_server, done_rx)
-    })
+    // Start a background thread to run the mock server tasks on the runtime
+    let tname = format!("test({})-pact-mock-server",
+      thread::current().name().unwrap_or("<unknown>")
+    );
+    let rt = runtime.clone();
+    let mock_server = thread::Builder::new()
+      .name(tname)
+      .spawn(move || {
+       rt.block_on(MockServerBuilder::new()
+          .with_pact(pact)
+          .bind_to("127.0.0.0:0")
+          .start())
+      })
+      .expect("INTERNAL ERROR: Could not spawn a thread to run the mock server")
       .join()
-      .unwrap();
+      .expect("INTERNAL ERROR: Failed to spawn the mock server task onto the runtime")
+      .expect("Failed to start the mock server");
 
-    let (description, url_str) = {
-      let ms = mock_server.lock().unwrap();
-      let pact = ms.pact.as_ref();
-      let description = format!(
-        "{}/{}", pact.consumer().name, pact.provider().name
-      );
-      (description, ms.url())
-    };
+    let pact = &mock_server.pact;
+    let description = format!("{}/{}", pact.consumer().name, pact.provider().name);
+    let url_str = mock_server.url();
+
     Box::new(ValidatingHttpMockServer {
       description,
-      url: url_str.parse().expect("invalid mock server URL"),
+      url: url_str.parse().expect(format!("invalid mock server URL '{}'", url_str).as_str()),
       mock_server,
-      done_rx,
       output_dir,
-      overwrite: false
+      overwrite: false,
+      runtime: Some(runtime)
     })
   }
 
@@ -144,61 +126,46 @@ impl ValidatingHttpMockServer {
   pub async fn start_async(pact: Box<dyn Pact + Send + Sync>, output_dir: Option<PathBuf>) -> Box<dyn ValidatingMockServer> {
     debug!("Starting mock server from pact {:?}", pact);
 
-    #[allow(unused_variables)] let plugin_data = pact.plugin_data();
-    #[cfg(feature = "plugins")] Self::increment_plugin_access(&plugin_data);
+    #[cfg(feature = "plugins")] Self::increment_plugin_access(&pact.plugin_data());
 
-    let (mock_server, server_future) = mock_server::MockServer::new(
-      Uuid::new_v4().to_string(),
-      pact,
-      ([0, 0, 0, 0], 0 as u16).into(),
-      MockServerConfig::default()
-    )
+    let mock_server = MockServerBuilder::new()
+      .with_pact(pact)
+      .bind_to("0.0.0.0:0")
+      .start()
       .await
-      .unwrap();
+      .expect("Could not start the mock server");
 
-    let (done_tx, done_rx) = std::sync::mpsc::channel::<()>();
-    tokio::spawn(async move {
-      server_future.await;
-      let _ = done_tx.send(());
-      #[cfg(feature = "plugins")] Self::decrement_plugin_access(&plugin_data);
-    });
-
-    let (description, url_str) = {
-      let ms = mock_server.lock().unwrap();
-      let pact = ms.pact.as_ref();
-      let description = format!(
-        "{}/{}", pact.consumer().name, pact.provider().name
-      );
-      (description, ms.url())
-    };
+    let pact = &mock_server.pact;
+    let description = format!("{}/{}", pact.consumer().name, pact.provider().name);
+    let url_str = mock_server.url();
     Box::new(ValidatingHttpMockServer {
       description,
       url: url_str.parse().expect("invalid mock server URL"),
       mock_server,
-      done_rx,
       output_dir,
-      overwrite: false
+      overwrite: false,
+      runtime: None
     })
   }
 
   /// Helper function called by our `drop` implementation. This basically exists
   /// so that it can return `Err(message)` whenever needed without making the
   /// flow control in `drop` ultra-complex.
-  fn drop_helper(&mut self) -> Result<(), String> {
-    // Kill the server
-    let mut ms = self.mock_server.lock().unwrap();
-    ms.shutdown()?;
+  fn drop_helper(&mut self) -> anyhow::Result<()> {
+    // Kill the mock server
+    self.mock_server.shutdown()?;
 
-    // Wait for the server thread to finish
-    if let Err(_) = self.done_rx.recv_timeout(std::time::Duration::from_secs(3)) {
-      warn!("Timed out waiting for mock server to finish");
+    #[cfg(feature = "plugins")] Self::decrement_plugin_access(&self.mock_server.pact.plugin_data());
+
+    // If there is a Tokio runtime for the mock server, try shut that down
+    if let Some(runtime) = self.runtime.take() {
+      if let Some(runtime) = Arc::into_inner(runtime) {
+        runtime.shutdown_background();
+      }
     }
 
     // Send any metrics in another thread as this thread could be panicking due to an assertion.
-    let interactions = {
-      let pact = ms.pact.as_ref();
-      pact.interactions().len()
-    };
+    let interactions = self.mock_server.pact.interactions().len();
     thread::spawn(move || {
       send_metrics(MetricEvent::ConsumerTestRun {
         interactions,
@@ -208,9 +175,8 @@ impl ValidatingHttpMockServer {
       });
     });
 
-    // Look up any mismatches which occurred.
-    let mismatches = ms.mismatches();
-
+    // Look up any mismatches which occurred with the mock server.
+    let mismatches = self.mock_server.mismatches();
     if mismatches.is_empty() {
       // Success! Write out the generated pact file.
       let output_dir = self.output_dir.as_ref()
@@ -232,8 +198,8 @@ impl ValidatingHttpMockServer {
         })
         .ok()
         .unwrap_or(self.overwrite);
-      ms.write_pact(&Some(output_dir), overwrite)
-        .map_err(|err| format!("error writing pact: {}", err))?;
+      self.mock_server.write_pact(&Some(output_dir), overwrite)
+        .map_err(|err| anyhow!("error writing pact: {}", err))?;
       Ok(())
     } else {
       // Failure. Format our errors.
@@ -262,7 +228,7 @@ impl ValidatingHttpMockServer {
           }
         }
       }
-      Err(msg)
+      Err(anyhow!(msg))
     }
   }
 }
@@ -280,11 +246,11 @@ impl ValidatingMockServer for ValidatingHttpMockServer {
   }
 
   fn status(&self) -> Vec<MatchResult> {
-    self.mock_server.lock().unwrap().mismatches()
+    self.mock_server.mismatches()
   }
 
   fn metrics(&self) -> MockServerMetrics {
-    self.mock_server.lock().unwrap().metrics.clone()
+    self.mock_server.metrics.lock().unwrap().clone()
   }
 }
 

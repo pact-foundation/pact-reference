@@ -21,6 +21,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use pact_consumer::{json_pattern, json_pattern_internal, like, object_matching, matching_regex};
+use pact_consumer::mock_server::StartMockServerAsync;
 use pact_consumer::prelude::*;
 
 /// This is supposed to be a doctest in mod, but it's breaking there, so
@@ -134,7 +135,8 @@ async fn mock_server_passing_validation_async_version() {
       i.clone()
     })
     .await
-    .start_mock_server(None);
+    .start_mock_server_async(None)
+    .await;
 
   // You would use your actual client code here.
   let mallory_url = alice_service.path("/mallory");

@@ -50,6 +50,7 @@ use std::ffi::CString;
 use std::net::ToSocketAddrs;
 use std::panic::catch_unwind;
 use std::str::from_utf8;
+use anyhow::anyhow;
 
 use chrono::Local;
 use either::Either;
@@ -65,7 +66,19 @@ use uuid::Uuid;
 
 use pact_matching::logging::fetch_buffer_contents;
 use pact_matching::metrics::{MetricEvent, send_metrics};
-use pact_mock_server::{MANAGER, mock_server_mismatches, MockServerError, tls::TlsConfigBuilder, WritePactFileErr};
+use pact_mock_server::{MANAGER, MockServerError, WritePactFileErr};
+use pact_mock_server::legacy::{
+  create_mock_server,
+  create_tls_mock_server,
+  find_mock_server_by_port,
+  mock_server_matched,
+  mock_server_mismatches,
+  shutdown_mock_server_by_id,
+  start_mock_server_for_transport,
+  start_mock_server_with_config,
+  start_tls_mock_server_with_config,
+  write_pact_file
+};
 use pact_mock_server::mock_server::MockServerConfig;
 use pact_mock_server::server_manager::ServerManager;
 use pact_models::generators::GeneratorCategory;
@@ -130,8 +143,8 @@ pub extern fn pactffi_create_mock_server(pact_str: *const c_char, addr_str: *con
 
     if let Ok(Ok(addr)) = str::from_utf8(addr_c_str.to_bytes()).map(|s| s.parse::<std::net::SocketAddr>()) {
       let server_result = match tls_config {
-        Some(tls_config) => pact_mock_server::create_tls_mock_server(str::from_utf8(c_str.to_bytes()).unwrap(), addr, &tls_config),
-        None => pact_mock_server::create_mock_server(str::from_utf8(c_str.to_bytes()).unwrap(), addr)
+        Some(tls_config) => create_tls_mock_server(str::from_utf8(c_str.to_bytes()).unwrap(), addr, &tls_config),
+        None => create_mock_server(str::from_utf8(c_str.to_bytes()).unwrap(), addr)
       };
       match server_result {
         Ok(ms_port) => ms_port,
@@ -222,9 +235,9 @@ pub extern fn pactffi_create_mock_server_for_pact(pact: PactHandle, addr_str: *c
           .. MockServerConfig::default()
         };
         let server_result = match &tls_config {
-          Some(tls_config) => pact_mock_server::start_tls_mock_server_with_config(
+          Some(tls_config) => start_tls_mock_server_with_config(
             Uuid::new_v4().to_string(), inner.pact.boxed(), addr, tls_config, config),
-          None => pact_mock_server::start_mock_server_with_config(Uuid::new_v4().to_string(),
+          None => start_mock_server_with_config(Uuid::new_v4().to_string(),
             inner.pact.boxed(), addr, config)
         };
         match server_result {
@@ -257,10 +270,26 @@ fn setup_tls_config(tls: bool) -> Result<Option<ServerConfig>, i32> {
   if tls {
     let key = include_str!("self-signed.key");
     let cert = include_str!("self-signed.crt");
-    match TlsConfigBuilder::new()
-      .key(key.as_bytes())
-      .cert(cert.as_bytes())
-      .build() {
+    let mut k = key.as_bytes();
+    let private_key =  rustls_pemfile::pkcs8_private_keys(&mut k)
+      .next()
+      .ok_or("INTERNAL ERROR: No Private key found in private key file")
+      .map_err(|err| {
+        error!("Failed to build TLS configuration - {}", err);
+        -6
+      })?
+      .map_err(|err| {
+        error!("Failed to build TLS configuration - {}", err);
+        -6
+      })?;
+    let mut c = cert.as_bytes();
+    let mut certs = vec![];
+    for c in rustls_pemfile::certs(&mut c) {
+      certs.push(c.map_err(|err| {  error!("{}", err); -6 })?);
+    }
+    match ServerConfig::builder()
+      .with_no_client_auth()
+      .with_single_cert(certs, private_key.into()) {
       Ok(tls_config) => Ok(Some(tls_config)),
       Err(err) => {
         error!("Failed to build TLS configuration - {}", err);
@@ -337,7 +366,7 @@ ffi_fn! {
             .. transport_config.unwrap_or_default()
           };
 
-          match pact_mock_server::start_mock_server_for_transport(Uuid::new_v4().to_string(),
+          match start_mock_server_for_transport(Uuid::new_v4().to_string(),
             inner.pact.boxed(), socket_addr, transport, config) {
             Ok(ms_port) => {
               inner.mock_server_started = true;
@@ -367,7 +396,7 @@ ffi_fn! {
 #[no_mangle]
 pub extern fn pactffi_mock_server_matched(mock_server_port: i32) -> bool {
   let result = catch_unwind(|| {
-    pact_mock_server::mock_server_matched(mock_server_port)
+    mock_server_matched(mock_server_port)
   });
 
   match result {
@@ -424,12 +453,9 @@ pub extern fn pactffi_mock_server_mismatches(mock_server_port: i32) -> *mut c_ch
 #[no_mangle]
 pub extern fn pactffi_cleanup_mock_server(mock_server_port: i32) -> bool {
   let result = catch_unwind(|| {
-    let id = pact_mock_server::find_mock_server_by_port(mock_server_port as u16, &|_, id, mock_server| {
+    let id = find_mock_server_by_port(mock_server_port as u16, &|_, id, mock_server| {
       let interactions = match mock_server {
-        Either::Left(ms) => {
-          let pact = ms.pact.as_ref();
-          pact.interactions().len()
-        },
+        Either::Left(ms) => ms.pact.interactions().len(),
         Either::Right(ms) => ms.pact.interactions.len()
       };
       send_metrics(MetricEvent::ConsumerTestRun {
@@ -441,7 +467,7 @@ pub extern fn pactffi_cleanup_mock_server(mock_server_port: i32) -> bool {
       id.clone()
     });
     if let Some(id) = id {
-      pact_mock_server::shutdown_mock_server_by_id(id.as_str())
+      shutdown_mock_server_by_id(id.as_str())
     } else {
       false
     }
@@ -481,7 +507,7 @@ pub extern fn pactffi_write_pact_file(mock_server_port: i32, directory: *const c
     let dir = path_from_dir(directory, None);
     let path = dir.map(|path| path.into_os_string().into_string().unwrap_or_default());
 
-    pact_mock_server::write_pact_file(mock_server_port, path, overwrite)
+    write_pact_file(mock_server_port, path, overwrite)
   });
 
   match result {

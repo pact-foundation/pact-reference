@@ -23,7 +23,7 @@ clap = "2.34.0"
 either = "1.9.0"
 env_logger = "0.11.3"
 futures = "0.3.29"
-itertools = "0.12.0"
+itertools = "0.13.0"
 lazy_static = "1.4.0"
 libc = "0.2.151"
 log = "0.4.20"
@@ -31,7 +31,7 @@ maplit = "1.0.2"
 multipart = { version = "0.18.0", default-features = false, features = ["client", "mock"] }
 onig = { version = "6.4.0", default-features = false }
 pact_matching = { version = "~1.2.4", path = "../pact_matching" }
-pact_mock_server = { version = "~1.2.8" }
+pact_mock_server = { version = "~2.0.0-beta.0" }
 pact_models = { version = "~1.2.1" }
 pact-plugin-driver = { version = "~0.6.1" }
 pact_verifier = { version = "~1.2.2", path = "../pact_verifier" }
@@ -40,12 +40,14 @@ rand = "0.8.5"
 rand_regex = "0.15.1"
 regex = "1.10.2"
 regex-syntax = "0.6.29"
+rustls = "0.23.10"
+rustls-pemfile = "2.1.2"
 serde = { version = "1.0.193", features = ["derive"] }
 serde_json = "1.0.108"
 sxd-document = "0.3.2"
 thiserror = "1.0.51"
 tokio = { version = "1.35.1", features = ["full"] }
-tokio-rustls = "0.24.1"
+tokio-rustls = "0.26.0"
 tracing = "0.1.40" # This needs to be the same version across all the libs (i.e. plugin driver)
 tracing-core = "0.1.32"  # This needs to be the same version across all the pact libs (i.e. plugin driver)
 tracing-log = "0.2.0"
@@ -61,7 +63,7 @@ test-log = "0.2.14"
 tempfile = "3.8.1"
 home = "0.5.9"
 pretty_assertions = "1.4.0"
-rstest = "0.19.0"
+rstest = "0.21.0"
 
 [lib]
 crate-type = ["cdylib", "staticlib", "rlib"]

@@ -104,7 +104,6 @@
 //!
 //! ```
 //! use pact_consumer::prelude::*;
-//! use pact_consumer::*;
 //!
 //! PactBuilder::new("quotes client", "quotes service")
 //!     .interaction("add a new quote to the database", "", |mut i| {
@@ -156,7 +155,6 @@
 //!
 //! ```
 //! use pact_consumer::prelude::*;
-//! use pact_consumer::{each_like, each_like_helper, json_pattern};
 //! use serde::{Deserialize, Serialize};
 //!
 //! /// Our application's domain object representing a user.
@@ -210,7 +208,6 @@
 //!
 //! ```rust
 //! use pact_consumer::prelude::*;
-//! use pact_consumer::*;
 //! use expectest::prelude::*;
 //! use serde_json::{Value, from_slice};
 //!
@@ -392,6 +389,14 @@ pub mod util;
 /// use pact_consumer::prelude::*;
 /// ```
 pub mod prelude {
+    pub use crate::{
+        like,
+        each_like,
+        each_like_helper,
+        term,
+        json_pattern,
+        json_pattern_internal
+    };
     pub use crate::builders::{HttpPartBuilder, PactBuilder, PactBuilderAsync};
     #[cfg(feature = "plugins")] pub use crate::builders::plugin_builder::PluginInteractionBuilder;
     pub use crate::mock_server::{StartMockServer, ValidatingMockServer};

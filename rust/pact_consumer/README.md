@@ -19,7 +19,6 @@ You can now write a pact test using the consumer DSL.
 
 ```rust
 use pact_consumer::prelude::*;
-use pact_consumer::*;
 
 #[tokio::test]
 async fn a_service_consumer_side_of_a_pact_goes_a_little_something_like_this() {
@@ -76,7 +75,6 @@ file.
 
 ```rust
 use pact_consumer::prelude::*;
-use pact_consumer::*;
 
 #[test]
 fn a_message_consumer_side_of_a_pact_goes_a_little_something_like_this() {
@@ -120,7 +118,6 @@ one or more response messages are returned. Examples of this would be things lik
 
 ```rust
 use pact_consumer::prelude::*;
-use pact_consumer::*;
 use expectest::prelude::*;
 use serde_json::{Value, from_slice};
 

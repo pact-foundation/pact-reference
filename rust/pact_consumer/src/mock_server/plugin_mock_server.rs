@@ -177,7 +177,7 @@ impl Drop for PluginMockServer {
   fn drop(&mut self) {
     let result = self.drop_helper();
     if let Err(msg) = result {
-      panic_or_print_error(msg.to_string().as_str());
+      panic_or_print_error(&msg);
     }
   }
 }
