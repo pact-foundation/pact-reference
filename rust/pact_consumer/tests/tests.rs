@@ -100,6 +100,33 @@ async fn mock_server_passing_validation() -> anyhow::Result<()> {
   Ok(())
 }
 
+#[test_log::test]
+fn mock_server_passing_validation_blocking() -> anyhow::Result<()> {
+  let alice_service = PactBuilder::new_v4("BlockingConsumer", "Alice Service")
+    .interaction("a retrieve Mallory request", "", |mut i| {
+      i.given("there is some good mallory");
+      i.request.path("/mallory");
+      i.request.header("content-type", "application/json");
+      i.response
+        .ok()
+        .content_type("text/plain")
+        .body("That is some good Mallory.");
+      i.clone()
+    })
+    .start_mock_server(None);
+
+  let mallory_url = alice_service.path("/mallory");
+  let client = reqwest::blocking::Client::new();
+  let response = client.get(mallory_url)
+    .header("content-type", "application/json")
+    .send()
+    .expect("could not fetch URL");
+  let body = response.text().expect("could not read response body");
+  assert_eq!(body, "That is some good Mallory.");
+
+  Ok(())
+}
+
 fn output_dir(path: &str) -> PathBuf {
   match Path::new(path).canonicalize() {
     Ok(path) => {
