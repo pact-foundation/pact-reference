@@ -57,7 +57,7 @@
 //!         // Return the interaction builder back to the pact framework
 //!         i
 //!     })
-//!     .start_mock_server(None);
+//!     .start_mock_server(None, None);
 //! ```
 //!
 //! You can than use an HTTP client like `reqwest` to make requests against your
@@ -82,7 +82,7 @@
 //! #             .body("That is some good Mallory.");
 //! #         // Return the interaction builder back to the pact framework
 //! #         i
-//! #     }).start_mock_server(None);
+//! #     }).start_mock_server(None, None);
 //!
 //! // You would use your actual client code here.
 //! let mallory_url = provider_service.path("/mallory");
@@ -345,7 +345,7 @@
 //!     })
 //!     .await
 //!     // Now start the mock server
-//!     .start_mock_server_async(None)
+//!     .start_mock_server_async(None, None)
 //!     .await;
 //!
 //!     // Now we can make our actual request for the CSV file and validate the response

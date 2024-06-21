@@ -91,7 +91,7 @@ async fn verify_pact_with_match_values_matcher() {
       i
     })
     .await
-    .start_mock_server(None);
+    .start_mock_server(None, None);
 
   #[allow(deprecated)]
   let provider = ProviderInfo {
@@ -146,7 +146,7 @@ async fn verify_pact_with_attributes_with_special_values() {
       }));
       i
     })
-    .start_mock_server(None);
+    .start_mock_server(None, None);
 
   #[allow(deprecated)]
   let provider = ProviderInfo {
@@ -231,7 +231,7 @@ async fn verifying_a_pact_with_min_type_matcher_and_child_arrays() {
       i
     })
     .await
-    .start_mock_server(None);
+    .start_mock_server(None, None);
 
   #[allow(deprecated)]
   let provider = ProviderInfo {
@@ -294,7 +294,7 @@ async fn verify_multiple_pacts() {
 
       i
     })
-    .start_mock_server(None);
+    .start_mock_server(None, None);
 
   let pact_one_file = fixture_path("pact-one.json");
   let pact_one = read_file(&pact_one_file).unwrap();
@@ -475,7 +475,7 @@ async fn verify_multiple_pacts() {
       i
     })
     .await
-    .start_mock_server(None);
+    .start_mock_server(None, None);
 
   #[allow(deprecated)]
   let provider_info = ProviderInfo {
@@ -544,7 +544,7 @@ async fn verify_message_pact_with_two_interactions() {
 
       i
     })
-    .start_mock_server(None);
+    .start_mock_server(None, None);
 
   let pact_file = fixture_path("message-pact.json");
   let pact = read_file(&pact_file).unwrap();
@@ -670,7 +670,7 @@ async fn verify_message_pact_with_two_interactions() {
       i
     })
     .await
-    .start_mock_server(None);
+    .start_mock_server(None, None);
 
   #[allow(deprecated)]
     let provider_info = ProviderInfo {
@@ -743,7 +743,7 @@ async fn verify_message_pact_with_matching_rules_on_metadata() {
 
       i
     })
-    .start_mock_server(None);
+    .start_mock_server(None, None);
 
   let pact_file = fixture_path("message-pact-with-metadata-matchingrule.json");
   #[allow(deprecated)]
@@ -803,7 +803,7 @@ async fn verify_pact_with_matcher_on_last_modified_header() {
         i
       })
       .await
-      .start_mock_server(None);
+      .start_mock_server(None, None);
 
     #[allow(deprecated)]
       let provider = ProviderInfo {
@@ -896,7 +896,7 @@ async fn broker_validation_errors_should_be_shown_to_the_user() {
       i
     })
     .await
-    .start_mock_server(None);
+    .start_mock_server(None, None);
 
   #[allow(deprecated)]
     let provider_info = ProviderInfo {
@@ -965,7 +965,7 @@ async fn verify_pact_with_body_but_no_content_type() {
       i.response.ok();
       i
     })
-    .start_mock_server(None);
+    .start_mock_server(None, None);
 
   #[allow(deprecated)]
     let provider = ProviderInfo {

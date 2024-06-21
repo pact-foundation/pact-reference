@@ -2,6 +2,7 @@ use std::future::Future;
 use std::path::PathBuf;
 
 use async_trait::async_trait;
+use pact_mock_server::mock_server::MockServerConfig;
 use pact_models::{Consumer, Provider};
 use pact_models::interaction::Interaction;
 use pact_models::pact::Pact;
@@ -251,7 +252,11 @@ impl PactBuilderAsync {
 }
 
 impl StartMockServer for PactBuilderAsync {
-  fn start_mock_server(&self, _catalog_entry: Option<&str>) -> Box<dyn ValidatingMockServer> {
+  fn start_mock_server(
+    &self,
+    _catalog_entry: Option<&str>,
+    mock_server_config: Option<MockServerConfig>
+  ) -> Box<dyn ValidatingMockServer> {
     #[cfg(feature = "plugins")]
     {
       match _catalog_entry {
@@ -264,20 +269,24 @@ impl StartMockServer for PactBuilderAsync {
           }
           None => panic!("Did not find a catalogue entry for key '{}'", entry_name)
         }
-        None => ValidatingHttpMockServer::start(self.build(), self.output_dir.clone())
+        None => ValidatingHttpMockServer::start(self.build(), self.output_dir.clone(), mock_server_config)
       }
     }
 
     #[cfg(not(feature = "plugins"))]
     {
-      ValidatingHttpMockServer::start(self.build(), self.output_dir.clone())
+      ValidatingHttpMockServer::start(self.build(), self.output_dir.clone(), mock_server_config)
     }
   }
 }
 
 #[async_trait]
 impl StartMockServerAsync for PactBuilderAsync {
-  async fn start_mock_server_async(&self, _catalog_entry: Option<&str>) -> Box<dyn ValidatingMockServer> {
+  async fn start_mock_server_async(
+    &self,
+    _catalog_entry: Option<&str>,
+    mock_server_config: Option<MockServerConfig>
+  ) -> Box<dyn ValidatingMockServer> {
     #[cfg(feature = "plugins")]
     {
       match _catalog_entry {
@@ -290,13 +299,13 @@ impl StartMockServerAsync for PactBuilderAsync {
           }
           None => panic!("Did not find a catalogue entry for key '{}'", entry_name)
         }
-        None => ValidatingHttpMockServer::start_async(self.build(), self.output_dir.clone()).await
+        None => ValidatingHttpMockServer::start_async(self.build(), self.output_dir.clone(), mock_server_config).await
       }
     }
 
     #[cfg(not(feature = "plugins"))]
     {
-      ValidatingHttpMockServer::start_async(self.build(), self.output_dir.clone()).await
+      ValidatingHttpMockServer::start_async(self.build(), self.output_dir.clone(), mock_server_config).await
     }
   }
 }

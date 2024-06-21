@@ -8,19 +8,28 @@ use std::time::Duration;
 use anyhow::anyhow;
 use async_trait::async_trait;
 use expectest::prelude::*;
-use maplit::*;
+use maplit::hashmap;
+use reqwest::Client;
+use serde_json::{json, Value};
+
+use pact_consumer::prelude::*;
 use pact_models::Consumer;
 use pact_models::pact::Pact;
 use pact_models::provider_states::*;
 use pact_models::sync_interaction::RequestResponseInteraction;
 use pact_models::sync_pact::RequestResponsePact;
-use reqwest::Client;
-use serde_json::{json, Value};
+use pact_mock_server::mock_server::MockServerConfig;
 
-use pact_consumer::*;
-use pact_consumer::prelude::*;
-
-use crate::{NullRequestFilterExecutor, PactSource, ProviderInfo, ProviderStateExecutor, ProviderTransport, publish_result, PublishOptions, VerificationOptions};
+use crate::{
+  NullRequestFilterExecutor,
+  PactSource,
+  ProviderInfo,
+  ProviderStateExecutor,
+  ProviderTransport,
+  publish_result,
+  PublishOptions,
+  VerificationOptions
+};
 use crate::callback_executors::HttpRequestProviderStateExecutor;
 use crate::pact_broker::Link;
 use crate::verification_result::VerificationInteractionResult;
@@ -159,7 +168,7 @@ async fn test_state_change_with_parameters() {
       i.response.status(200);
       i
     })
-    .start_mock_server(None);
+    .start_mock_server(None, None);
 
   let provider_state = ProviderState {
     name: "TestState".to_string(),
@@ -194,7 +203,7 @@ async fn test_state_change_with_parameters_in_query() {
       i.response.status(200);
       i
     })
-    .start_mock_server(None);
+    .start_mock_server(None, None);
 
   let provider_state = ProviderState {
     name: "TestState".to_string(),
@@ -229,7 +238,7 @@ async fn test_state_change_returning_json_values() {
       i.response.body("{\"a\": \"A\", \"b\": 100}");
       i
     })
-    .start_mock_server(None);
+    .start_mock_server(None, None);
 
   let provider_state = ProviderState {
     name: "TestState".to_string(),
@@ -265,7 +274,7 @@ fn publish_result_does_nothing_if_not_from_broker() {
           i.response.status(201);
           i
         })
-        .start_mock_server(None);
+        .start_mock_server(None, None);
 
       let options = super::PublishOptions {
         provider_version: None,
@@ -300,7 +309,7 @@ async fn publish_successful_result_to_broker() {
       i
     })
     .await
-    .start_mock_server(None);
+    .start_mock_server(None, None);
 
   let options = super::PublishOptions {
     provider_version: Some("1".into()),
@@ -525,7 +534,7 @@ async fn test_fetch_pact_from_url_with_links() {
       i
     })
     .await
-    .start_mock_server(None);
+    .start_mock_server(None, None);
 
   let url = server.url().join(path).unwrap();
   let provider = ProviderInfo::default();
@@ -660,7 +669,7 @@ async fn when_no_pacts_is_error_is_false_should_not_generate_error() {
       i
     })
     .await
-    .start_mock_server(None);
+    .start_mock_server(None, Some(MockServerConfig::with_keep_alive(true)));
 
   let provider = ProviderInfo {
     name: "sad_provider".to_string(),
@@ -752,7 +761,7 @@ async fn when_no_pacts_is_error_is_false_should_not_generate_error_if_it_is_404_
       i
     })
     .await
-    .start_mock_server(None);
+    .start_mock_server(None, None);
 
   let provider = ProviderInfo {
     name: "sad_provider".to_string(),
@@ -1009,7 +1018,7 @@ async fn test_publish_results_from_url_source_with_provider_branch() {
         i
       })
       .await
-      .start_mock_server(None);
+      .start_mock_server(None, None);
 
   let url = server.url().join(path).unwrap();
   let provider = ProviderInfo::default();

@@ -58,6 +58,7 @@ quickcheck = "1.0.3"
 expectest = "0.12.0"
 env_logger = "0.11.3"
 pact_consumer = { version = "~1.2.2", path = "../pact_consumer" }
+pact_mock_server = { version = "~2.0.0-beta.2", default-features = false }
 test-log = { version = "0.2.15", features = ["trace"] }
 tracing-subscriber = { version = "0.3.18", features = ["env-filter", "tracing-log", "fmt"] }
 chrono = "0.4.38"

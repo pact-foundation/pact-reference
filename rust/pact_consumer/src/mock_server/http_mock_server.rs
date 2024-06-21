@@ -10,7 +10,7 @@ use pact_matching::metrics::{MetricEvent, send_metrics};
 use pact_mock_server::builder::MockServerBuilder;
 use pact_mock_server::matching::MatchResult;
 use pact_mock_server::mock_server;
-use pact_mock_server::mock_server::MockServerMetrics;
+use pact_mock_server::mock_server::{MockServerConfig, MockServerMetrics};
 use pact_models::pact::Pact;
 #[cfg(feature = "plugins")] use pact_models::plugins::PluginData;
 #[cfg(feature = "plugins")] use pact_plugin_driver::plugin_manager::{drop_plugin_access, increment_plugin_access};
@@ -49,7 +49,11 @@ impl ValidatingHttpMockServer {
   ///
   /// Panics:
   /// Will panic if the provided Pact can not be sent to the background thread.
-  pub fn start(pact: Box<dyn Pact + Send + Sync>, output_dir: Option<PathBuf>) -> Box<dyn ValidatingMockServer> {
+  pub fn start(
+    pact: Box<dyn Pact + Send + Sync>,
+    output_dir: Option<PathBuf>,
+    mock_server_config: Option<MockServerConfig>
+  ) -> Box<dyn ValidatingMockServer> {
     debug!("Starting mock server from pact {:?}", pact);
 
     // Start a tokio runtime to drive the mock server
@@ -70,10 +74,15 @@ impl ValidatingHttpMockServer {
     let mock_server = thread::Builder::new()
       .name(tname)
       .spawn(move || {
-       rt.block_on(MockServerBuilder::new()
-          .with_pact(pact)
-          .bind_to("127.0.0.0:0")
-          .start())
+        let mut builder = MockServerBuilder::new()
+          .with_pact(pact);
+        if let Some(config) = mock_server_config {
+            builder = builder.with_config(config);
+        }
+        if !builder.address_assigned() {
+          builder = builder.bind_to_ip4_port(0)
+        };
+        rt.block_on(builder.start())
       })
       .expect("INTERNAL ERROR: Could not spawn a thread to run the mock server")
       .join()
@@ -123,14 +132,24 @@ impl ValidatingHttpMockServer {
   ///
   /// Panics:
   /// Will panic if unable to get the URL to the spawned mock server
-  pub async fn start_async(pact: Box<dyn Pact + Send + Sync>, output_dir: Option<PathBuf>) -> Box<dyn ValidatingMockServer> {
+  pub async fn start_async(
+    pact: Box<dyn Pact + Send + Sync>,
+    output_dir: Option<PathBuf>,
+    mock_server_config: Option<MockServerConfig>
+  ) -> Box<dyn ValidatingMockServer> {
     debug!("Starting mock server from pact {:?}", pact);
 
     #[cfg(feature = "plugins")] Self::increment_plugin_access(&pact.plugin_data());
 
-    let mock_server = MockServerBuilder::new()
-      .with_pact(pact)
-      .bind_to("0.0.0.0:0")
+    let mut builder = MockServerBuilder::new()
+      .with_pact(pact);
+    if let Some(config) = mock_server_config {
+      builder = builder.with_config(config);
+    }
+    if !builder.address_assigned() {
+      builder = builder.bind_to_ip4_port(0)
+    };
+    let mock_server = builder
       .start()
       .await
       .expect("Could not start the mock server");

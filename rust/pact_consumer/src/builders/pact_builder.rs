@@ -1,6 +1,7 @@
 use std::fmt::{Debug, Formatter};
 use std::panic::RefUnwindSafe;
 use std::path::PathBuf;
+use pact_mock_server::mock_server::MockServerConfig;
 
 use pact_models::{Consumer, Provider};
 use pact_models::interaction::Interaction;
@@ -282,7 +283,11 @@ impl PactBuilder {
 }
 
 impl StartMockServer for PactBuilder {
-  fn start_mock_server(&self, _catalog_entry: Option<&str>) -> Box<dyn ValidatingMockServer> {
+  fn start_mock_server(
+    &self,
+    _catalog_entry: Option<&str>,
+    mock_server_config: Option<MockServerConfig>
+  ) -> Box<dyn ValidatingMockServer> {
     #[cfg(feature = "plugins")]
     {
       match _catalog_entry {
@@ -295,13 +300,13 @@ impl StartMockServer for PactBuilder {
           }
           None => panic!("Did not find a catalogue entry for key '{}'", entry_name)
         }
-        None => ValidatingHttpMockServer::start(self.build(), self.output_dir.clone())
+        None => ValidatingHttpMockServer::start(self.build(), self.output_dir.clone(), mock_server_config)
       }
     }
 
     #[cfg(not(feature = "plugins"))]
     {
-      ValidatingHttpMockServer::start(self.build(), self.output_dir.clone())
+      ValidatingHttpMockServer::start(self.build(), self.output_dir.clone(), mock_server_config)
     }
   }
 }

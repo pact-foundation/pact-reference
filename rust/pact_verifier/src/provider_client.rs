@@ -480,7 +480,7 @@ mod tests {
         i
       })
       .await
-      .start_mock_server(None);
+      .start_mock_server(None, None);
 
     #[allow(deprecated)]
     let provider = ProviderInfo {
