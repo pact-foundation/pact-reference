@@ -4,6 +4,8 @@ on: [push, pull_request]
 
 env:
   pact_do_not_track: true
+  # Without this fails to compile on Windows
+  AWS_LC_SYS_NO_ASM: 1
 
 jobs:
   v1:
