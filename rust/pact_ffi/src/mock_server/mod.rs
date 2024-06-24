@@ -50,22 +50,11 @@ use std::ffi::CString;
 use std::net::ToSocketAddrs;
 use std::panic::catch_unwind;
 use std::str::from_utf8;
-use anyhow::anyhow;
 
 use chrono::Local;
 use either::Either;
 use libc::c_char;
 use onig::Regex;
-use pact_models::pact::Pact;
-use pact_models::time_utils::{parse_pattern, to_chrono_pattern};
-use rand::prelude::*;
-use serde_json::Value;
-use tokio_rustls::rustls::ServerConfig;
-use tracing::{error, warn};
-use uuid::Uuid;
-
-use pact_matching::logging::fetch_buffer_contents;
-use pact_matching::metrics::{MetricEvent, send_metrics};
 use pact_mock_server::{MANAGER, MockServerError, WritePactFileErr};
 use pact_mock_server::legacy::{
   create_mock_server,
@@ -81,8 +70,18 @@ use pact_mock_server::legacy::{
 };
 use pact_mock_server::mock_server::MockServerConfig;
 use pact_mock_server::server_manager::ServerManager;
+use rand::prelude::*;
+use serde_json::Value;
+use tokio_rustls::rustls::ServerConfig;
+use tracing::{error, warn};
+use uuid::Uuid;
+
+use pact_matching::logging::fetch_buffer_contents;
+use pact_matching::metrics::{MetricEvent, send_metrics};
 use pact_models::generators::GeneratorCategory;
 use pact_models::matchingrules::{Category, MatchingRuleCategory};
+use pact_models::pact::Pact;
+use pact_models::time_utils::{parse_pattern, to_chrono_pattern};
 
 use crate::{convert_cstr, ffi_fn, safe_str};
 use crate::mock_server::handles::{PactHandle, path_from_dir};

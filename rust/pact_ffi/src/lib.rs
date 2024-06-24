@@ -11,6 +11,8 @@ use std::str::FromStr;
 
 use lazy_static::lazy_static;
 use libc::c_char;
+use rustls::crypto::CryptoProvider;
+use rustls::crypto::ring::default_provider;
 use tracing::{debug, error, info, trace, warn};
 use tracing_core::{Level, LevelFilter};
 use tracing_log::AsLog;
@@ -80,6 +82,13 @@ pub unsafe extern fn pactffi_init(log_env_var: *const c_char) {
     if let Err(err) = tracing::subscriber::set_global_default(subscriber) {
       eprintln!("Failed to initialise global tracing subscriber - {err}");
     };
+
+  if CryptoProvider::get_default().is_none() {
+    warn!("No TLS cryptographic provided has been configured, defaulting to the standard FIPS provider from ring");
+    if let Err(_err) = CryptoProvider::install_default(default_provider()) {
+      error!("Failed to install the standard FIPS provider, HTTPS requests may not work");
+    }
+  }
 }
 
 /// Initialises logging, and sets the log level explicitly. This function should only be called
@@ -337,9 +346,9 @@ mod tests {
 
   use expectest::prelude::*;
   use rstest::rstest;
+  use tracing_core::LevelFilter;
 
   use super::*;
-  use tracing_core::LevelFilter;
 
   #[rstest]
   #[case("trace", LevelFilter::TRACE)]

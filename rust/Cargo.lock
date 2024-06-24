@@ -2184,9 +2184,7 @@ dependencies = [
 
 [[package]]
 name = "pact_mock_server"
-version = "2.0.0-beta.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "801c47d489dff87c64ff80a93bd9c915a3c5300b2433df1e11d8851f16d6131b"
+version = "2.0.0-beta.3"
 dependencies = [
  "anyhow",
  "bytes",
@@ -4093,9 +4091,9 @@ checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "uuid"
-version = "1.8.0"
+version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a183cf7feeba97b4dd1c0d46788634f6221d87fa961b305bed08c851829efcc0"
+checksum = "3ea73390fe27785838dcbf75b91b1d84799e28f1ce71e6f372a5dc2200c80de5"
 dependencies = [
  "getrandom",
 ]
