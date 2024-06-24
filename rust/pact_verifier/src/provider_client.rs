@@ -21,7 +21,7 @@ use pact_models::headers::parse_header;
 use pact_models::v4::http_parts::{HttpRequest, HttpResponse};
 use reqwest::{Client, Error, RequestBuilder};
 use serde_json::Value;
-use tracing::{debug, info, warn};
+use tracing::{debug, info, trace, warn};
 
 use crate::{ProviderInfo, ProviderTransport, RequestFilterExecutor, VerificationOptions};
 use crate::utils::with_retries;
@@ -206,6 +206,7 @@ pub async fn make_provider_request<F: RequestFilterExecutor>(
     request.clone()
   };
 
+  trace!("transport = {:?}", transport);
   #[allow(deprecated)]
   let base_url = transport
     .map(|trans| trans.base_url(&provider.host))

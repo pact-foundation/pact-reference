@@ -3,10 +3,10 @@
 use std::sync::Arc;
 
 use itertools::Itertools;
-use pact_models::prelude::HttpAuth;
 use serde_json::Value;
 use tracing::{debug, error};
 
+use pact_models::prelude::HttpAuth;
 use pact_verifier::{ConsumerVersionSelector, FilterInfo, NullRequestFilterExecutor, PactSource, ProviderInfo, ProviderTransport, PublishOptions, VerificationOptions, verify_provider_async};
 use pact_verifier::callback_executors::HttpRequestProviderStateExecutor;
 use pact_verifier::metrics::VerificationMetrics;
@@ -107,7 +107,7 @@ impl VerifierHandle {
         transport: scheme.clone(),
         port,
         path: if path.is_empty() { None } else { Some(path) },
-        scheme: None
+        scheme: if scheme.is_empty() { None } else { Some(scheme.clone()) }
       } ]
     }
   }
@@ -341,4 +341,42 @@ impl Default for VerifierHandle {
      #[allow(deprecated)]
      Self::new()
    }
+}
+
+#[cfg(test)]
+mod tests {
+  use expectest::prelude::*;
+  use serde_json::Value;
+
+  use pact_models::pact::Pact;
+  use pact_models::PactSpecification;
+  use pact_models::v4::interaction::V4Interaction;
+  use pact_models::v4::pact::V4Pact;
+  use pact_models::v4::synch_http::SynchronousHttp;
+  use pact_verifier::PactSource;
+
+  use crate::verifier::handle::VerifierHandle;
+
+  #[test]
+  fn update_provider_info_sets_scheme_correctly() {
+    let mut handle = VerifierHandle::new_for_application("test", "0.0.0");
+    handle.update_provider_info("Test".to_string(), "https".to_string(), "localhost".to_string(), 1234, "".to_string());
+
+    let interaction = SynchronousHttp {
+      transport: Some("https".to_string()),
+      .. SynchronousHttp::default()
+    };
+    let pact = V4Pact {
+      interactions: vec![ interaction.boxed_v4() ],
+      .. V4Pact::default()
+    };
+    handle.sources.push(PactSource::String(pact.to_json(PactSpecification::V4).unwrap().to_string()));
+    let status = handle.execute();
+
+    expect!(status).to(be_equal_to(1));
+    expect!(handle.verifier_output.result).to(be_false());
+    let error: Value = handle.verifier_output.errors[0].clone().1.into();
+    let message = error.as_object().unwrap()["message"].as_str().unwrap();
+    expect!(message).to(be_equal_to("error sending request for url (https://localhost:1234/)"));
+  }
 }

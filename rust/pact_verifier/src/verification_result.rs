@@ -100,7 +100,7 @@ impl Into<Value> for VerificationExecutionResult {
 
 /// Result of performing a match. This is a reduced version of crate::MismatchResult to make
 /// it thread and panic boundary safe
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum VerificationMismatchResult {
   /// Response mismatches
   Mismatches {

@@ -1,5 +1,30 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 0.4.21 - Bugfix Release
+
+* 3acc9ae5 - Merge pull request #443 from pact-foundation/feat/generate-contents (Ronald Holshausen, Wed Jun 19 14:21:50 2024 +1000)
+* a18b7746 - feat: add `generate_contents` methods (JP-Ellis, Mon Jun 17 14:35:10 2024 +1000)
+* 30bac100 - feat: add with_generators (JP-Ellis, Tue Jun 18 12:08:44 2024 +1000)
+* 598377d4 - feat(ffi): add async message iterator (JP-Ellis, Fri Jun 14 20:11:49 2024 +1000)
+* dad482f5 - chore: Upgrade pact_verifier to 1.2.2 (Ronald Holshausen, Fri Jun 14 11:21:54 2024 +1000)
+* 29c3b5f0 - chore: Upgrade pact_matching to 1.2.4 (Ronald Holshausen, Fri Jun 14 10:18:26 2024 +1000)
+* 30998a95 - chore: Upgrade pact_models to 1.2.1 (Ronald Holshausen, Wed Jun 12 15:26:49 2024 +1000)
+* ab80cd2b - fix: merge pact duplicates with diff desc/same prov state fix: merge message / sync pacts with no provider state (Yousaf Nabi, Sat Jun 8 23:48:30 2024 +0100)
+* 0998cd29 - chore(FFI): Disable test using curl as the header fails to compile (Ronald Holshausen, Wed Jun 12 11:38:21 2024 +1000)
+* d7489b8d - chore(FFI): Add a test for mock server logs from C example (Ronald Holshausen, Wed Jun 12 11:21:28 2024 +1000)
+* 278f56fa - fix: FFI Inmemory sink uses the global static `LOG_BUFFER` in the pact_matching crate #434 (Ronald Holshausen, Tue Jun 11 16:56:15 2024 +1000)
+* b7869cdb - Merge pull request #439 from pact-foundation/feat/with-metadata (Ronald Holshausen, Tue Jun 11 16:19:07 2024 +1000)
+* 19957df5 - chore: Lock tracing crates to the same version via cargo patch block (Ronald Holshausen, Tue Jun 11 16:00:04 2024 +1000)
+* dd6381c1 - feat(ffi): add with_metadata (JP-Ellis, Tue Jun 11 15:26:54 2024 +1000)
+* 582de5c9 - refactor: update pact_ffi/pact_verifier_cli release workflows macos (Yousaf Nabi, Sat Jun 8 02:48:40 2024 +0100)
+* c9443652 - refactor: update pact_ffi/pact_verifier_cli release workflows (Yousaf Nabi, Sat Jun 8 02:45:46 2024 +0100)
+* 5699cab7 - chore: Upgrade pact_mock_server to 1.2.8 (Ronald Holshausen, Thu May 30 16:53:17 2024 +1000)
+* a811b8a4 - chore: Update pact_matching to 1.2.3 (Ronald Holshausen, Thu May 30 15:57:32 2024 +1000)
+* 4f01a302 - chore: Fix project so build works (Ronald Holshausen, Thu May 30 12:01:44 2024 +1000)
+* b0fd7e2f - chore: refactor to preserve existing error messages (Yousaf Nabi, Wed May 29 03:31:11 2024 +0100)
+* 968be075 - feat: update content_type_matching logic for binary payloads (Yousaf Nabi, Tue May 28 23:25:07 2024 +0100)
+* efc3dc49 - bump version to 0.4.21 (Ronald Holshausen, Thu May 9 14:03:59 2024 +1000)
+
 # 0.4.20 - Maintenance Release
 
 * 2c28d36b - chore(FFI): Upgrade dependencies (Ronald Holshausen, Wed May 8 16:32:55 2024 +1000)

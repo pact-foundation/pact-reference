@@ -1,10 +1,15 @@
 //! V4 Synchronous request/response messages
 
+use std::collections::HashMap;
+
 use anyhow::anyhow;
 use bytes::Bytes;
+use futures::executor::block_on;
 use libc::{c_char, c_int, c_uchar, c_uint, EXIT_FAILURE, EXIT_SUCCESS, size_t};
+use pact_matching::generators::apply_generators_to_sync_message;
 use pact_models::bodies::OptionalBody;
 use pact_models::content_types::{ContentType, ContentTypeHint};
+use pact_models::generators::GeneratorTestMode;
 use pact_models::provider_states::ProviderState;
 use pact_models::v4::message_parts::MessageContents;
 use pact_models::v4::sync_message::SynchronousMessage;
@@ -204,6 +209,41 @@ ffi_fn! {
     fn pactffi_sync_message_get_request_contents(message: *const SynchronousMessage) -> *const MessageContents {
         let message = as_ref!(message);
         &message.request as *const MessageContents
+    } {
+        std::ptr::null()
+    }
+}
+
+ffi_fn! {
+    /// Generate the request contents of a `SynchronousMessage` as a
+    /// `MessageContents` pointer.
+    ///
+    /// This function differs from [`pactffi_sync_message_get_request_contents`]
+    /// in that it will process the message contents for any generators or
+    /// matchers that are present in the message in order to generate the actual
+    /// message contents as would be received by the consumer.
+    ///
+    /// # Safety
+    ///
+    /// The data pointed to by the pointer must be deleted with
+    /// [`pactffi_message_contents_delete`][crate::models::contents::pactffi_message_contents_delete]
+    ///
+    /// # Error Handling
+    ///
+    /// If the message is NULL, returns NULL.
+    fn pactffi_sync_message_generate_request_contents(message: *const SynchronousMessage) -> *const MessageContents {
+        let message = as_ref!(message);
+        let context = HashMap::new();
+        let plugin_data = Vec::new();
+        let interaction_data = HashMap::new();
+        let (contents, _) = block_on(apply_generators_to_sync_message(
+            &message,
+            &GeneratorTestMode::Consumer,
+            &context,
+            &plugin_data,
+            &interaction_data,
+        ));
+        ptr::raw_to(contents) as *const MessageContents
     } {
         std::ptr::null()
     }
@@ -438,6 +478,46 @@ ffi_fn! {
 }
 
 ffi_fn! {
+    /// Generate the response contents of a `SynchronousMessage` as a
+    /// `MessageContents` pointer.
+    ///
+    /// This function differs from
+    /// [`pactffi_sync_message_get_response_contents`] in that it will process
+    /// the message contents for any generators or matchers that are present in
+    /// the message in order to generate the actual message contents as would be
+    /// received by the consumer.
+    ///
+    /// # Safety
+    ///
+    /// The data pointed to by the pointer must be deleted with
+    /// [`pactffi_message_contents_delete`][crate::models::contents::pactffi_message_contents_delete]
+    ///
+    /// # Error Handling
+    ///
+    /// If the message is NULL, returns NULL.
+    fn pactffi_sync_message_generate_response_contents(message: *const SynchronousMessage, index: size_t) -> *const MessageContents {
+        let message = as_ref!(message);
+        if index >= message.response.len() {
+            return Ok(std::ptr::null());
+        }
+
+        let context = HashMap::new();
+        let plugin_data = Vec::new();
+        let interaction_data = HashMap::new();
+        let (_, mut responses) = block_on(apply_generators_to_sync_message(
+            &message,
+            &GeneratorTestMode::Consumer,
+            &context,
+            &plugin_data,
+            &interaction_data,
+        ));
+        ptr::raw_to(responses.swap_remove(index)) as *const MessageContents
+    } {
+        std::ptr::null()
+    }
+}
+
+ffi_fn! {
     /// Get a copy of the description.
     ///
     /// # Safety
@@ -551,18 +631,22 @@ mod tests {
   use expectest::prelude::*;
   use libc::c_char;
 
-  use crate::models::sync_message::{
+  use pact_models::generators;
+  use pact_models::generators::Generator;
+
+  use super::{
     pactffi_sync_message_delete,
-    pactffi_sync_message_get_request_contents_str,
+    pactffi_sync_message_generate_request_contents,
     pactffi_sync_message_get_request_contents_length,
-    pactffi_sync_message_get_response_contents_str,
+    pactffi_sync_message_get_request_contents_str,
     pactffi_sync_message_get_response_contents_length,
+    pactffi_sync_message_get_response_contents_str,
     pactffi_sync_message_new,
     pactffi_sync_message_set_request_contents_str,
-    pactffi_sync_message_set_response_contents_str
+    pactffi_sync_message_set_response_contents_str,
   };
 
-  #[test]
+    #[test]
     fn get_and_set_message_contents() {
       let message = pactffi_sync_message_new();
       let message_contents = CString::new("This is a string").unwrap();
@@ -595,5 +679,26 @@ mod tests {
       expect!(response_len1).to(be_equal_to(0));
       expect!(response_str2.to_str().unwrap()).to(be_equal_to("This is another string"));
       expect!(response_len2).to(be_equal_to(22));
+    }
+
+    #[test]
+    fn test_generate_contents() {
+        let message = pactffi_sync_message_new();
+        let message_contents = CString::new(r#"{ "id": 1 }"#).unwrap();
+        let content_type = CString::new("application/json").unwrap();
+        pactffi_sync_message_set_request_contents_str(message, message_contents.as_ptr(), content_type.as_ptr());
+
+        unsafe { &mut *message }.request.generators.add_generators(generators!{
+            "body" => {
+                "$.id" => Generator::RandomInt(1000, 1000)
+            }
+        });
+
+        let contents = pactffi_sync_message_generate_request_contents(message);
+
+        assert_eq!(
+            r#"{"id":1000}"#,
+            unsafe { &*contents }.contents.value_as_string().unwrap()
+        );
     }
 }

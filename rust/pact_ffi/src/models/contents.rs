@@ -15,6 +15,22 @@ use crate::string::optional_str;
 use crate::util::*;
 
 ffi_fn! {
+    /// Delete the message contents instance.
+    ///
+    /// # Safety
+    ///
+    /// This should only be called on a message contents that require deletion.
+    /// The function creating the message contents should document whether it
+    /// requires deletion.
+    ///
+    /// Deleting a message content which is associated with an interaction
+    /// will result in undefined behaviour.
+    fn pactffi_message_contents_delete(contents: *const MessageContents) {
+        ptr::drop_raw(contents as *mut MessageContents);
+    }
+}
+
+ffi_fn! {
     /// Get the message contents in string form.
     ///
     /// # Safety

@@ -120,7 +120,7 @@ use maplit::*;
 use pact_models::{Consumer, PactSpecification, Provider};
 use pact_models::bodies::OptionalBody;
 use pact_models::content_types::{ContentType, detect_content_type_from_string, JSON, TEXT, XML};
-use pact_models::generators::{Generator, Generators};
+use pact_models::generators::{generators_from_json, Generator, Generators};
 use pact_models::headers::parse_header;
 use pact_models::http_parts::HttpPart;
 use pact_models::interaction::Interaction;
@@ -2053,7 +2053,7 @@ ffi_fn!{
   /// string.
   fn pactffi_with_matching_rules(
     interaction: InteractionHandle,
-  part: InteractionPart,
+    part: InteractionPart,
     rules: *const c_char
   ) -> bool {
     let rules = match convert_cstr("rules", rules) {
@@ -2118,6 +2118,94 @@ ffi_fn!{
     false
   }
 }
+
+ffi_fn!{
+  /// Add generators to the interaction.
+  ///
+  /// * `interaction` - Interaction handle to set the generators for.
+  /// * `part` - Request or response part (if applicable).
+  /// * `generators` - JSON string of the generators to add to the interaction.
+  ///
+  /// This function can be called multiple times, in which case the generators
+  /// will be combined (provided they don't clash). The function will return
+  /// `true` if the rules were successfully added, and `false` if an error
+  /// occurred.
+  ///
+  /// For synchronous messages which allow multiple responses, the generators
+  /// will be added to all the responses.
+  ///
+  /// # Safety
+  ///
+  /// The generators parameter must be a valid pointer to a NULL terminated
+  /// UTF-8 string.
+  fn pactffi_with_generators(
+    interaction: InteractionHandle,
+    part: InteractionPart,
+    generators: *const c_char
+  ) -> bool {
+    let generators = match convert_cstr("generators", generators) {
+      Some(generators) => generators,
+      None => {
+        error!("with_generators: Generator value is not valid (NULL or non-UTF-8)");
+        return Ok(false);
+      }
+    };
+
+    let generators = match serde_json::from_str::<Value>(generators) {
+      Ok(Value::Object(generators)) => generators,
+      Ok(_) => {
+        error!("with_generators: Generator value is not a JSON object");
+        return Ok(false);
+      },
+      Err(err) => {
+        error!("with_generators: Failed to parse the generators: {}", err);
+        return Ok(false);
+      }
+    };
+
+    // Wrap the generators a object with a "generators" key if it is not
+    // already, as this is required for `generators_from_json`.
+    let generators = if generators.contains_key("generators") {
+      Value::Object(generators)
+    } else {
+      json!({ "generators": generators })
+    };
+    let generators = match generators_from_json(&generators) {
+      Ok(generators) => generators,
+      Err(err) => {
+        error!("with_generators: Failed to load the generators: {}", err);
+        return Ok(false);
+      }
+    };
+
+    interaction.with_interaction(&move |_, _, inner| {
+      if let Some(reqres) = inner.as_v4_http_mut() {
+        match part {
+          InteractionPart::Request => reqres.request.generators_mut().add_generators(generators.clone()),
+          InteractionPart::Response => reqres.response.generators_mut().add_generators(generators.clone())
+        };
+        Ok(())
+      } else if let Some(message) = inner.as_v4_async_message_mut() {
+        message.generators_mut().add_generators(generators.clone());
+        Ok(())
+      } else if let Some(sync_message) = inner.as_v4_sync_message_mut() {
+        match part {
+          InteractionPart::Request => sync_message.request.generators_mut().add_generators(generators.clone()),
+          InteractionPart::Response => sync_message.response.iter_mut().for_each(|response| response.generators_mut().add_generators(generators.clone()))
+        };
+        Ok(())
+      } else {
+        error!("Interaction is an unknown type, is {}", inner.type_of());
+        Err(())
+      }
+    }).unwrap_or(Err(())).is_ok()
+  }
+  // Failure block
+  {
+    false
+  }
+}
+
 
 fn add_content_type_matching_rule_to_body(is_supported: bool, matching_rules: &mut MatchingRules, content_type: &str) {
   if is_supported {
@@ -4102,6 +4190,40 @@ mod tests {
     assert_eq!(interaction.response.matching_rules, matchingrules! {
       "body" => {
         "$.*" => [ MatchingRule::Semver ]
+      }
+    });
+  }
+
+  #[test]
+  fn pactffi_with_generators_test() {
+    let pact_handle = PactHandle::new("Consumer", "Provider");
+    let description = CString::new("Generator Test").unwrap();
+    let i_handle = pactffi_new_interaction(pact_handle, description.as_ptr());
+
+    let generator = CString::new(r#"{
+      "body": {
+        "$.id": {
+          "type": "RandomInt",
+          "min": 0,
+          "max": 1000
+        }
+      }
+    }"#).unwrap();
+    let result = pactffi_with_generators(
+      i_handle,
+      InteractionPart::Response,
+      generator.as_ptr(),
+    );
+    assert!(result);
+
+    let interaction = i_handle.with_interaction(&|_, _, inner| {
+      inner.as_v4_http().unwrap()
+    }).unwrap();
+
+    pactffi_free_pact_handle(pact_handle);
+    assert_eq!(interaction.response.generators, generators!{
+      "body" => {
+        "$.id" => Generator::RandomInt(0, 1000)
       }
     });
   }
