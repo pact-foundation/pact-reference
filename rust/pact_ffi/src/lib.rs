@@ -84,9 +84,9 @@ pub unsafe extern fn pactffi_init(log_env_var: *const c_char) {
     };
 
   if CryptoProvider::get_default().is_none() {
-    warn!("No TLS cryptographic provided has been configured, defaulting to the standard FIPS provider from ring");
+    warn!("No TLS cryptographic provider has been configured, defaulting to the standard provider from ring");
     if let Err(_err) = CryptoProvider::install_default(default_provider()) {
-      error!("Failed to install the standard FIPS provider, HTTPS requests may not work");
+      error!("Failed to install the standard cryptographic provider, HTTPS requests may not work");
     }
   }
 }
