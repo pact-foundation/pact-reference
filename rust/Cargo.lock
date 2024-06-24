@@ -2118,6 +2118,7 @@ dependencies = [
  "rstest 0.21.0",
  "rustls 0.23.10",
  "rustls-pemfile 2.1.2",
+ "rustls-webpki 0.102.4",
  "serde",
  "serde_json",
  "sxd-document",
@@ -2184,9 +2185,8 @@ dependencies = [
 
 [[package]]
 name = "pact_mock_server"
-version = "2.0.0-beta.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "915d86123576bbfe4b2edf8c33b3f203e42751a5aff045e7bf2a30ac9a6336ff"
+version = "2.0.0-beta.4"
+source = "git+https://github.com/pact-foundation/pact-core-mock-server.git?branch=v2.0.x#a2591dbade87955ec6beabc11821083f3692c360"
 dependencies = [
  "anyhow",
  "bytes",
@@ -2204,6 +2204,7 @@ dependencies = [
  "rcgen",
  "rustls 0.23.10",
  "rustls-pemfile 2.1.2",
+ "rustls-webpki 0.102.4",
  "serde",
  "serde_json",
  "thiserror",
