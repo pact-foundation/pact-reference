@@ -2080,7 +2080,7 @@ dependencies = [
 [[package]]
 name = "pact_mock_server"
 version = "2.0.0-beta.4"
-source = "git+https://github.com/pact-foundation/pact-core-mock-server.git?branch=v2.0.x#72259393d5b54127fef47deae7c26c1752238016"
+source = "git+https://github.com/pact-foundation/pact-core-mock-server.git?branch=v2.0.x#6453371f47fb4a8be87bf34b6a4832b036e2f117"
 dependencies = [
  "anyhow",
  "bytes",
