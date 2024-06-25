@@ -693,8 +693,6 @@ fn pactffi_with_binary_file_feature_test(specification: PactSpecification, expec
     .header("Content-Type", "image/gif")
     .body(buffer)
     .send();
-
-  println!("pactffi_with_binary_file_feature_test v{}: {}", specification, mismatches);
   match result {
     Ok(res) => {
       let status = res.status();
@@ -710,6 +708,7 @@ fn pactffi_with_binary_file_feature_test(specification: PactSpecification, expec
   let mismatches = unsafe {
     CStr::from_ptr(pactffi_mock_server_mismatches(port)).to_string_lossy().into_owned()
   };
+  println!("pactffi_with_binary_file_feature_test v{}: {}", specification, mismatches);
 
   pactffi_cleanup_mock_server(port);
 
