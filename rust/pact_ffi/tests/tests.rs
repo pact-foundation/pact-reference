@@ -694,10 +694,6 @@ fn pactffi_with_binary_file_feature_test(specification: PactSpecification, expec
     .body(buffer)
     .send();
 
-  let mismatches = unsafe {
-    CStr::from_ptr(pactffi_mock_server_mismatches(port)).to_string_lossy().into_owned()
-  };
-
   println!("pactffi_with_binary_file_feature_test v{}: {}", specification, mismatches);
   match result {
     Ok(res) => {
@@ -710,6 +706,11 @@ fn pactffi_with_binary_file_feature_test(specification: PactSpecification, expec
   };
 
   pactffi_write_pact_file(port, file_path.as_ptr(), true);
+
+  let mismatches = unsafe {
+    CStr::from_ptr(pactffi_mock_server_mismatches(port)).to_string_lossy().into_owned()
+  };
+
   pactffi_cleanup_mock_server(port);
 
   expect!(mismatches).to(be_equal_to("[]"));
