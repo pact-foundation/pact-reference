@@ -58,7 +58,7 @@ zeroize = "1.7.0"
 
 [dev-dependencies]
 expectest = "0.12.0"
-reqwest = { version = "0.12.4", default-features = false, features = ["native-tls-vendored", "blocking", "json"] }
+reqwest = { version = "0.12.4", default-features = false, features = ["rustls-tls-native-roots", "blocking", "json"] }
 quickcheck = "1.0.3"
 test-log = "0.2.14"
 tempfile = "3.8.1"

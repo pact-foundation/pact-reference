@@ -32,7 +32,7 @@ maplit = "1.0.2"
 pact_models = { version = "~1.2.1", default-features = false }
 pact_verifier = { version = "~1.2.2", path = "../pact_verifier", default-features = false }
 regex = "1.10.2"
-reqwest = { version = "0.12.4", default-features = false, features = ["native-tls-vendored", "blocking", "json"] }
+reqwest = { version = "0.12.4", default-features = false, features = ["rustls-tls-native-roots", "blocking", "json"] }
 serde_json = "1.0.108"
 strip-ansi-escapes = { version = "0.2.0", optional = true }
 time = "0.3.31"
