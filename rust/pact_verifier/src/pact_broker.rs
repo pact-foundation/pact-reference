@@ -2567,7 +2567,7 @@ mod tests {
         i
       })
       .await
-      .start_mock_server(None);
+      .start_mock_server(None, None);
 
     let client = HALClient::with_url(pact_broker.url().as_str(), None);
     let result = client.navigate("next", &hashmap!{}).await.unwrap();
@@ -2585,7 +2585,7 @@ mod tests {
         i
       })
       .await
-      .start_mock_server(None);
+      .start_mock_server(None, None);
 
     let mut client = HALClient::with_url(pact_broker.url().as_str(), None);
     client.path_info = Some(json!({
@@ -2617,7 +2617,7 @@ mod tests {
         i
       })
       .await
-      .start_mock_server(None);
+      .start_mock_server(None, None);
 
     let client = HALClient::with_url(pact_broker.url().join("/base-path").unwrap().as_str(), None);
     let result = client.navigate("next", &hashmap!{}).await.unwrap();
