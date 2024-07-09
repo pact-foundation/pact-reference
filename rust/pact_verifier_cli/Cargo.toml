@@ -27,6 +27,7 @@ anyhow = "1.0.75"
 clap = { version = "4.5.4", features = ["cargo", "env"] }
 env_logger = "0.11.2"
 junit-report = { version = "0.8.3", optional = true }
+lazy_static = "1.5.0"
 log = "0.4.20"
 maplit = "1.0.2"
 pact_models = { version = "~1.2.1", default-features = false }
@@ -44,4 +45,5 @@ tracing-subscriber = { version = "0.3.18", features = ["env-filter", "tracing-lo
 
 [dev-dependencies]
 expectest = "0.12.0"
+rstest = "0.21.0"
 trycmd = "0.15.0"

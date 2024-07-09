@@ -1,17 +1,21 @@
 //! # Standalone Pact Verifier
 //!
-//! This project provides a command line interface to verify pact files against a running provider. It is a single executable binary. It implements the [V2 Pact specification](https://github.com/pact-foundation/pact-specification/tree/version-2).
+//! This project provides a command line interface to verify pact files against a running provider. It is a single 
+//! executable binary. It implements all the Pact specifications up to [V4](https://github.com/pact-foundation/pact-specification/tree/version-4).
 //!
 //! [Online rust docs](https://docs.rs/pact_verifier_cli/)
 //!
-//! The Pact Verifier works by taking all the interactions (requests and responses) from a number of pact files. For each interaction, it will make the request defined in the pact to a running service provider and check the response received back against the one defined in the pact file. All mismatches will then be reported.
+//! The Pact Verifier works by taking all the interactions (requests and responses) from a number of pact files. For each 
+//! interaction, it will make the request defined in the pact to a running service provider and check the response received
+//! back against the one defined in the pact file. All mismatches will then be reported.
 //!
 //! ## Command line interface
 //!
-//! The pact verifier is bundled as a single binary executable `pact_verifier_cli`. Running this with out any options displays the standard help.
+//! The pact verifier is bundled as a single binary executable `pact_verifier_cli`. Running this without any options 
+//! displays the standard help.
 //!
-//! ```console,ignore
-//! pact_verifier_cli
+//! ```console
+//! $ pact_verifier_cli,ignore
 //! Standalone pact verifier for provider pact verification
 //!
 //! Usage: pact_verifier_cli [OPTIONS]
@@ -113,30 +117,37 @@
 //!
 //! ### Log Level
 //!
-//! You can control the log level with the `-l, --loglevel <loglevel>` option. It defaults to warn, and the options that you can specify are: error, warn, info, debug, trace, none.
+//! You can control the log level with the `-l, --loglevel <loglevel>` option. It defaults to warn, and the options that 
+//! you can specify are: error, warn, info, debug, trace, none.
 //!
 //! ### Pact File Sources
 //!
 //! You can specify the pacts to verify with the following options. They can be repeated to set multiple sources.
 //!
-//! | Option | Type | Description |
-//! |--------|------|-------------|
-//! | `-f, --file <file>` | File | Loads a pact from the given file |
-//! | `-u, --url <url>` | URL | Loads a pact from a URL resource |
-//! | `-d, --dir <dir>` | Directory | Loads all the pacts from the given directory |
+//! | Option                          | Type        | Description                                                                                                          |
+//! |---------------------------------|-------------|----------------------------------------------------------------------------------------------------------------------|
+//! | `-f, --file <file>`             | File        | Loads a pact from the given file                                                                                     |
+//! | `-u, --url <url>`               | URL         | Loads a pact from a URL resource                                                                                     |
+//! | `-d, --dir <dir>`               | Directory   | Loads all the pacts from the given directory                                                                         |
 //! | `-b, --broker-url <broker-url>` | Pact Broker | Loads all the pacts for the provider from the pact broker. Requires the `-n, --provider-name <provider-name>` option |
+//!
+//! #### Verifying a Pact via a webhook callback
+//!
+//! The Pact Broker allows for Pacts to be verified via a callback that supplies the URL to the Pact to verify. To verify
+//! just the Pact from the webhook call, use the `--webhook-callback-url` set to the supplied URL in conjunction with the 
+//! `--broker-url` option.
 //!
 //! ### Provider Options
 //!
 //! The running provider can be specified with the following options:
 //!
-//! | Option | Description |
-//! |--------|-------------|
-//! | `-h, --hostname <hostname>` | The provider hostname (defaults to `localhost`) |
-//! | `-p, --port <port>` | The provider port (defaults to 8080) |
-//! | `-n, --provider-name <provider-name>` | The name of the provider. Required if you are loading pacts from a pact broker |
-//! | `--base-path <base-path>` | If the provider is mounted on a sub-path, you can use this option to set the base path to add to all requests |
-//! | `--transport <transport>` | Protocol transport to use. Defaults to HTTP. |
+//! | Option                                | Description                                                                                                   |
+//! |---------------------------------------|---------------------------------------------------------------------------------------------------------------|
+//! | `-h, --hostname <hostname>`           | The provider hostname, defaults to `localhost`                                                                |
+//! | `-p, --port <port>`                   | The provider port (defaults to protocol default 80/443)                                                       |
+//! | `-n, --provider-name <provider-name>` | The name of the provider. Required if you are loading pacts from a pact broker                                |
+//! | `--base-path <base-path>`             | If the provider is mounted on a sub-path, you can use this option to set the base path to add to all requests |
+//! | `--transport <transport>`             | Protocol transport to use. Defaults to HTTP.                                                                  |
 //!
 //! ### Filtering the interactions
 //!
@@ -144,35 +155,75 @@
 //!
 //! #### `-c, --filter-consumer <filter-consumer>`
 //!
-//! This will only verify the interactions of matching consumers. You can specify multiple consumers by either seperating the names with a comma, or repeating the option.
+//! This will only verify the interactions of matching consumers. You can specify multiple consumers by either separating
+//! the names with a comma, or repeating the option.
 //!
 //! #### `--filter-description <filter-description>`
 //!
-//! This option will filter the interactions that are verified that match by desciption. You can use a regular expression to match.
+//! This option will filter the interactions that are verified that match by description. You can use a regular expression
+//! to match.
 //!
 //! #### `--filter-state <filter-state>`
 //!
-//! This option will filter the interactions that are verified that match by provider state. You can use a regular expression to match. Can't be used with the `--filter-no-state` option.
+//! This option will filter the interactions that are verified that match by provider state. You can use a regular
+//! expression to match. Can't be used with the `--filter-no-state` option.
 //!
 //! #### `--filter-no-state`
 //!
-//! This option will filter the interactions that are verified that don't have a defined provider state. Can't be used with the `--filter-state` option.
+//! This option will filter the interactions that are verified that don't have a defined provider state. Can't be used
+//! with the `--filter-state` option.
 //!
 //! ### State change requests
 //!
-//! Provider states are a mechanism to define the state that the provider needs to be in to be able to verify a particular request. This is achieved by setting a state change URL that will receive a POST request with the provider state before the actual request is made.
+//! [Provider states](https://docs.pact.io/getting_started/provider_states) are a mechanism to define the state that the 
+//! provider needs to be in to be able to verify a particular request. This is achieved by setting a state change URL that
+//! will receive a POST request with the provider state before the actual request is made.
+//!
+//! *NOTE:* For verifying messages fetched via HTTP, the provider state is also passed in the request to fetch the message,
+//! so the state change URL is not required.
+//!
+//! For example, if a Pact file being verified has a provider state *"a user exists in the database"* and the provider state 
+//! URL is set to `http://localhost:8080/provider-state`, then the following request would be made before the interaction
+//! is verified:
+//!
+//! ```http request
+//! POST /provider-state HTTP/1.1
+//! Host: localhost:8080
+//! content-type: application/json
+//!
+//! {
+//!     "state": "a user exists in the database",
+//!     "params": {},
+//!     "action": "setup"
+//! }
+//! ```
+//!
+//! If any parameters are configured for the provider state, they will be passed in the *"params"* attribute.
 //!
 //! #### `-s, --state-change-url <state-change-url>`
 //!
-//! This sets the URL that the POST requests will be made to before each actual request.
+//! This sets the absolute URL that the POST requests will be made to before each actual request. If this value is not
+//! set, the state change request will not be made. 
 //!
 //! #### `--state-change-as-query`
 //!
-//! By default, the state for the state change request will be sent as a JSON document in the body of the request. This option forces it to be sent as a query parameter instead.
+//! By default, the state for the state change request will be sent as a JSON document in the body of the request. This 
+//! option forces it to be sent as query parameters instead.
 //!
 //! #### `--state-change-teardown`
 //!
-//! This option will cause the verifier to also make a tear down request after the main request is made. It will receive a second field in the body or a query parameter named `action` with the value `teardown`.
+//! This option will cause the verifier to also make a tear down request after the main request is made. It will receive a 
+//! field in the body or a query parameter named `action` with the value `teardown`.
+//!
+//! #### `--consumer-version-selectors`
+//!
+//! Accepts a set of [Consumer Version Selectors](https://docs.pact.io/pact_broker/advanced_topics/consumer_version_selectors/) encoded as JSON.
+//!
+//! An example of a well-formed argument value might be:
+//!
+//! ```sh
+//! --consumer-version-selectors '{"branch": "master"}'
+//! ```
 //!
 //! ## Example run
 //!
@@ -234,26 +285,26 @@
 //! Failures:
 //!
 //! 0) Verifying a pact between Consumer and happy_provider - a request friends returns a response which has a matching body
-//!     expected "application/json" body but was "text/plain"
+//!     expected 'application/json' body but was 'text/plain'
 //!
 //! 1) Verifying a pact between Consumer and happy_provider - a request friends returns a response which has status code 200
 //!     expected 200 but was 404
 //!
-//! 2) Verifying a pact between Consumer and happy_provider - a request friends returns a response which includes header "Content-Type" with value "application/json"
-//!     Expected header "Content-Type" to have value "application/json" but was "text/plain"
+//! 2) Verifying a pact between Consumer and happy_provider - a request friends returns a response which includes header 'Content-Type' with value 'application/json'
+//!     Expected header 'Content-Type' to have value 'application/json' but was 'text/plain'
 //!
 //! 3) Verifying a pact between Consumer and happy_provider Given I am friends with Fred - a request to unfriend returns a response which has a matching body
 //!     $.body -> Type mismatch: Expected Map {"reply":"Bye"} but received  "Ok"
 //!
 //!
 //! 4) Verifying a pact between Consumer2 and happy_provider - a request friends returns a response which has a matching body
-//!     expected "application/json" body but was "text/plain"
+//!     expected 'application/json' body but was 'text/plain'
 //!
 //! 5) Verifying a pact between Consumer2 and happy_provider - a request friends returns a response which has status code 200
 //!     expected 200 but was 404
 //!
-//! 6) Verifying a pact between Consumer2 and happy_provider - a request friends returns a response which includes header "Content-Type" with value "application/json"
-//!     Expected header "Content-Type" to have value "application/json" but was "text/plain"
+//! 6) Verifying a pact between Consumer2 and happy_provider - a request friends returns a response which includes header 'Content-Type' with value 'application/json'
+//!     Expected header 'Content-Type' to have value 'application/json' but was 'text/plain'
 //!
 //! 7) Verifying a pact between Consumer2 and happy_provider Given I am friends with Fred - a request to unfriend returns a response which has a matching body
 //!     $.body -> Type mismatch: Expected Map {"reply":"Bye"} but received  "Ok"
@@ -262,6 +313,77 @@
 //!
 //! There were 8 pact failures
 //!
+//! ```
+//!
+//! ## Verifying message pacts
+//!
+//! Message pacts can be verified, the messages just need to be fetched from an HTTP endpoint. The verifier will send a
+//! POST request to the configured provider and expect the message payload in the response. The POST request will include
+//! the description and any provider states configured in the Pact file for the message, formatted as JSON.
+//!
+//! Example POST request:
+//!
+//! ```json
+//! {
+//!     "description": "Test Message",
+//!     "providerStates":[ {"name": "message exists"} ]
+//! }
+//! ```
+//!
+//! ### Verifying metadata
+//!
+//! Message metadata can be included as base64 encoded key/value pairs in the response, packed into the `Pact-Message-Metadata` HTTP header, and will be compared against any expected metadata in the pact file.
+//!
+//! The values may contain any valid JSON.
+//!
+//! For example, given this metadata:
+//!
+//! ```json
+//! {
+//!   "Content-Type": "application/json",
+//!   "topic": "baz",
+//!   "number": 27,
+//!   "complex": {
+//!     "foo": "bar"
+//!   }
+//! }
+//! ```
+//!
+//! we would encode it into a base64 string, giving us `ewogICJDb250ZW50LVR5cGUiOiAiYXBwbGljYXRpb24vanNvbiIsCiAgInRvcGljIjogImJheiIsCiAgIm51bWJlciI6IDI3LAogICJjb21wbGV4IjogewogICAgImZvbyI6ICJiYXIiCiAgfQp9Cg==`.
+//!
+//! ## TLS and Certificate Management
+//!
+//! Pact uses the [rustls-native-certs](https://lib.rs/crates/rustls-native-certs) crate, which will respect the platform's native certificate store when operating as a TLS client:
+//!
+//! This is supported on Windows, macOS and Linux:
+//!
+//! * On Windows, certificates are loaded from the system certificate store. The schannel crate is used to access the Windows certificate store APIs.
+//! * On macOS, certificates are loaded from the keychain. The user, admin and system trust settings are merged together as documented by Apple. The security-framework crate is used to access the keystore APIs.
+//! * On Linux and other UNIX-like operating systems, the openssl-probe crate is used to discover the filename of the system CA bundle.
+//!
+//! On Linux the standard OpenSSL environment variables `SSL_CERT_FILE` and `SSL_CERT_DIR` will also be respected.
+//!
+//! ## Verifying V4 Pact files
+//!
+//! ### Pact files that require plugins
+//!
+//! Pact files that require plugins can be verified with version 0.9.0-beta.0+. For details on how plugins work, see the
+//! [Pact plugin project](https://github.com/pact-foundation/pact-plugins).
+//!
+//! Each required plugin is defined in the `plugins` section in the Pact metadata in the Pact file. The plugins will be 
+//! loaded from the plugin directory. By default, this is `~/.pact/plugins` or the value of the `PACT_PLUGIN_DIR` environment 
+//! variable. Each plugin required by the Pact file must be installed there. You will need to follow the installation 
+//! instructions for each plugin, but the default is to unpack the plugin into a sub-directory `<plugin-name>-<plugin-version>`
+//! (i.e., for the Protobuf plugin 0.0.0 it will be `protobuf-0.0.0`). The plugin manifest file must be present for the
+//! plugin to be able to be loaded.
+//!
+//! ### Verifying both HTTP and message interactions
+//!
+//! V4 Pact files can support both HTTP and message-based interactions in the same file. In this case, the be able to 
+//! handle the verification for both types of interactions you need to use the `--transports <transports>` option. This will
+//! allow configuring different ports to send the different requests to.
+//!
+//! For example, `--transports http:8080 message:8081` will send HTTP requests to port 8080 and message requests to port 8081.
 //! ```
 
 #![warn(missing_docs)]
@@ -489,14 +611,14 @@ fn setup_pretty_log(level: &str, coloured_output: bool) {
 
 #[allow(deprecated)]
 pub(crate) fn configure_provider(matches: &ArgMatches) -> ProviderInfo {
-  // It is ok to unwrap values here, as they have all been validated by the CLI
-  let transports = matches.get_many::<(String, u16)>("transports")
+  // It is ok to unwrap values here, as they have all been validated by the CLI parser
+  let transports = matches.get_many::<(String, u16, Option<String>)>("transports")
     .map(|values| {
-      values.map(|(transport, port)| {
+      values.map(|(transport, port, base_path)| {
         ProviderTransport {
           transport: transport.to_string(),
           port: Some(*port),
-          path: None,
+          path: base_path.clone(),
           scheme: None
         }
       }).collect()

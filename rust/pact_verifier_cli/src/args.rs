@@ -1,5 +1,6 @@
 use clap::{Arg, ArgAction, ArgGroup, Command, command};
 use clap::builder::{FalseyValueParser, NonEmptyStringValueParser, PossibleValuesParser};
+use lazy_static::lazy_static;
 use regex::Regex;
 
 fn port_value(v: &str) -> Result<u16, String> {
@@ -20,14 +21,26 @@ fn validate_regex(val: &str) -> Result<String, String> {
   }
 }
 
-fn transport_value(v: &str) -> Result<(String, u16), String> {
-  let (transport, port) = v.split_once(':')
-    .ok_or_else(|| format!("'{}' is not a valid transport, it must be in the form TRANSPORT:PORT", v))?;
-  if transport.is_empty() {
-    return Err(format!("'{}' is not a valid transport, the transport part is empty", v));
+lazy_static! {
+  static ref TRANSPORT_VALUE_RE: Regex = Regex::new(r#"^(\w+):(\d+)(\/[^\s]*)?$"#).unwrap();
+}
+
+fn transport_value(v: &str) -> Result<(String, u16, Option<String>), String> {
+  if let Some(result) = TRANSPORT_VALUE_RE.captures(v) {
+    let transport = if let Some(transport) = result.get(1) {
+      transport.as_str().to_string()
+    } else {
+      return Err(format!("'{}' is not a valid transport, the transport part is empty", v));
+    };
+    let port = if let Some(port) = result.get(2) {
+      port.as_str().parse::<u16>().unwrap() // Ok to unwrap, the regex will only allow digits
+    } else {
+      return Err(format!("'{}' is not a valid transport, the port part is empty", v));
+    };
+    Ok((transport, port, result.get(3).map(|v| v.as_str().to_string())))
+  } else {
+    Err(format!("'{}' is not a valid transport, it must be in the form TRANSPORT:PORT[/path]", v))
   }
-  port.parse::<u16>().map(|port| (transport.to_string(), port))
-    .map_err(|e| format!("'{}' is not a valid port value: {}", port, e) )
 }
 
 pub(crate) fn setup_app() -> Command {
@@ -334,6 +347,7 @@ pub(crate) fn setup_app() -> Command {
 #[cfg(test)]
 mod test {
   use expectest::prelude::*;
+  use rstest::rstest;
 
   use crate::args::setup_app;
 
@@ -354,12 +368,27 @@ mod test {
 
   #[test]
   fn validates_transport_value() {
-    expect!(transport_value("http:1234")).to(be_ok());
+    expect!(transport_value("http:1234")).to(be_ok().value(("http".to_string(), 1234, None)));
     expect!(transport_value("1234x")).to(be_err());
     expect!(transport_value(":1234")).to(be_err());
     expect!(transport_value("x:")).to(be_err());
     expect!(transport_value("x:x")).to(be_err());
     expect!(transport_value("x:1234x")).to(be_err());
+    expect!(transport_value("x:1234/x")).to(be_ok());
+    expect!(transport_value("x:1234/p a t h")).to(be_err());
+    expect!(transport_value("x:1234/p-a%20t%20h")).to(be_ok());
+  }
+
+  #[rstest(
+    value,                          expected_value,
+    case("http:1234/",              ("http".to_string(), 1234, Some("/".to_string()))),
+    case("http:1234/p",             ("http".to_string(), 1234, Some("/p".to_string()))),
+    case("http:1234/p/",            ("http".to_string(), 1234, Some("/p/".to_string()))),
+    case("http:1234/path/2",        ("http".to_string(), 1234, Some("/path/2".to_string()))),
+    case("http:1234/path/2/s%20s",  ("http".to_string(), 1234, Some("/path/2/s%20s".to_string())))
+  )]
+  fn validates_transport_value_with_path(value: &str, expected_value: (String, u16, Option<String>)) {
+    expect!(transport_value(value)).to(be_ok().value(expected_value));
   }
 
   #[test]

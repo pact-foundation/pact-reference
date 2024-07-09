@@ -1,14 +1,18 @@
 # Standalone Pact Verifier
 
-This project provides a command line interface to verify pact files against a running provider. It is a single executable binary. It implements the [V3 Pact specification](https://github.com/pact-foundation/pact-specification/tree/version-3).
+This project provides a command line interface to verify pact files against a running provider. It is a single 
+executable binary. It implements all the Pact specifications up to [V4](https://github.com/pact-foundation/pact-specification/tree/version-4).
 
 [Online rust docs](https://docs.rs/pact_verifier_cli/)
 
-The Pact Verifier works by taking all the interactions (requests and responses) from a number of pact files. For each interaction, it will make the request defined in the pact to a running service provider and check the response received back against the one defined in the pact file. All mismatches will then be reported.
+The Pact Verifier works by taking all the interactions (requests and responses) from a number of pact files. For each 
+interaction, it will make the request defined in the pact to a running service provider and check the response received
+back against the one defined in the pact file. All mismatches will then be reported.
 
 ## Command line interface
 
-The pact verifier is bundled as a single binary executable `pact_verifier_cli`. Running this without any options displays the standard help.
+The pact verifier is bundled as a single binary executable `pact_verifier_cli`. Running this without any options 
+displays the standard help.
 
 ```console
 $ pact_verifier_cli,ignore
@@ -113,7 +117,8 @@ Pact Broker options:
 
 ### Log Level
 
-You can control the log level with the `-l, --loglevel <loglevel>` option. It defaults to warn, and the options that you can specify are: error, warn, info, debug, trace, none.
+You can control the log level with the `-l, --loglevel <loglevel>` option. It defaults to warn, and the options that 
+you can specify are: error, warn, info, debug, trace, none.
 
 ### Pact File Sources
 
@@ -170,30 +175,51 @@ with the `--filter-state` option.
 
 ### State change requests
 
-Provider states are a mechanism to define the state that the provider needs to be in to be able to verify a particular
-request. This is achieved by setting a state change URL that will receive a POST request with the provider state before
-the actual request is made.
+[Provider states](https://docs.pact.io/getting_started/provider_states) are a mechanism to define the state that the 
+provider needs to be in to be able to verify a particular request. This is achieved by setting a state change URL that
+will receive a POST request with the provider state before the actual request is made.
 
 *NOTE:* For verifying messages fetched via HTTP, the provider state is also passed in the request to fetch the message,
 so the state change URL is not required.
 
+For example, if a Pact file being verified has a provider state *"a user exists in the database"* and the provider state 
+URL is set to `http://localhost:8080/provider-state`, then the following request would be made before the interaction
+is verified:
+
+```http request
+POST /provider-state HTTP/1.1
+Host: localhost:8080
+content-type: application/json
+
+{
+    "state": "a user exists in the database",
+    "params": {},
+    "action": "setup"
+}
+```
+
+If any parameters are configured for the provider state, they will be passed in the *"params"* attribute.
+
 #### `-s, --state-change-url <state-change-url>`
 
-This sets the URL that the POST requests will be made to before each actual request.
+This sets the absolute URL that the POST requests will be made to before each actual request. If this value is not
+set, the state change request will not be made. 
 
 #### `--state-change-as-query`
 
-By default, the state for the state change request will be sent as a JSON document in the body of the request. This option forces it to be sent as a query parameter instead.
+By default, the state for the state change request will be sent as a JSON document in the body of the request. This 
+option forces it to be sent as query parameters instead.
 
 #### `--state-change-teardown`
 
-This option will cause the verifier to also make a tear down request after the main request is made. It will receive a second field in the body or a query parameter named `action` with the value `teardown`.
+This option will cause the verifier to also make a tear down request after the main request is made. It will receive a 
+field in the body or a query parameter named `action` with the value `teardown`.
 
 #### `--consumer-version-selectors`
 
 Accepts a set of [Consumer Version Selectors](https://docs.pact.io/pact_broker/advanced_topics/consumer_version_selectors/) encoded as JSON.
 
-An example well formed argument value might be:
+An example of a well-formed argument value might be:
 
 ```sh
 --consumer-version-selectors '{"branch": "master"}'
@@ -337,7 +363,9 @@ This is supported on Windows, macOS and Linux:
 
 On Linux the standard OpenSSL environment variables `SSL_CERT_FILE` and `SSL_CERT_DIR` will also be respected.
 
-## Verifying V4 Pact files that require plugins
+## Verifying V4 Pact files
+
+### Pact files that require plugins
 
 Pact files that require plugins can be verified with version 0.9.0-beta.0+. For details on how plugins work, see the
 [Pact plugin project](https://github.com/pact-foundation/pact-plugins).
@@ -348,3 +376,11 @@ variable. Each plugin required by the Pact file must be installed there. You wil
 instructions for each plugin, but the default is to unpack the plugin into a sub-directory `<plugin-name>-<plugin-version>`
 (i.e., for the Protobuf plugin 0.0.0 it will be `protobuf-0.0.0`). The plugin manifest file must be present for the
 plugin to be able to be loaded.
+
+### Verifying both HTTP and message interactions
+
+V4 Pact files can support both HTTP and message-based interactions in the same file. In this case, the be able to 
+handle the verification for both types of interactions you need to use the `--transports <transports>` option. This will
+allow configuring different ports to send the different requests to.
+
+For example, `--transports http:8080 message:8081` will send HTTP requests to port 8080 and message requests to port 8081.
