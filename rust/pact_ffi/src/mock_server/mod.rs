@@ -211,6 +211,7 @@ pub extern fn pactffi_get_tls_ca_certificate() -> *mut c_char  {
 #[no_mangle]
 #[tracing::instrument(level = "trace")]
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
+#[deprecated(note = "This function is deprecated and replaced with `pactffi_create_mock_server_for_transport`")]
 pub extern fn pactffi_create_mock_server_for_pact(pact: PactHandle, addr_str: *const c_char, tls: bool) -> i32 {
   let result = catch_unwind(|| {
     let addr_c_str = unsafe {
@@ -340,7 +341,7 @@ ffi_fn! {
     transport_config: *const c_char
   ) -> i32 {
     let addr = safe_str!(addr);
-    let transport = safe_str!(transport);
+    let transport = optional_str(transport).unwrap_or_else(|| "http".to_string());
 
     let transport_config = match optional_str(transport_config).map(|config| str::parse::<Value>(config.as_str())) {
       None => Ok(None),
@@ -366,7 +367,7 @@ ffi_fn! {
           };
 
           match start_mock_server_for_transport(Uuid::new_v4().to_string(),
-            inner.pact.boxed(), socket_addr, transport, config) {
+            inner.pact.boxed(), socket_addr, transport.as_str(), config) {
             Ok(ms_port) => {
               inner.mock_server_started = true;
               ms_port
