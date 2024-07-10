@@ -225,7 +225,9 @@ impl ValidatingHttpMockServer {
       Ok(())
     } else {
       // Failure. Format our errors.
-      let size = termsize::get().map(|sz| sz.cols).unwrap_or(120) - 2;
+      let size = termsize::get()
+        .map(|sz| if sz.cols > 2 { sz.cols - 2 } else { 0 })
+        .unwrap_or(78);
       let pad = "-".repeat(size as usize);
       let mut msg = format!(" {} \nMock server {} failed verification:\n", pad, self.description);
       for mismatch in mismatches {
