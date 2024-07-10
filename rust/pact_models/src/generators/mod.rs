@@ -19,7 +19,7 @@ use rand::prelude::*;
 #[cfg(target_family = "wasm")] use regex::{Captures, Regex};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use tracing::{debug, trace, warn};
+use tracing::{debug, instrument, trace, warn};
 use uuid::Uuid;
 
 use crate::bodies::OptionalBody;
@@ -768,6 +768,7 @@ macro_rules! generators {
   }};
 }
 
+#[instrument(level = "trace")]
 pub fn generate_value_from_context(expression: &str, context: &HashMap<&str, Value>, data_type: &Option<DataType>) -> anyhow::Result<DataValue> {
   let result = if contains_expressions(expression) {
     parse_expression(expression, &MapValueResolver { context: context.clone() })

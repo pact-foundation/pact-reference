@@ -1051,3 +1051,97 @@ async fn fetch_pact_from_dir_filters_by_provider_name() {
   let (pact, _, _, _) = first_result.unwrap();
   expect!(pact.provider().name).to(be_equal_to(provider.name));
 }
+
+// Issue #441
+#[test_log::test(tokio::test)]
+async fn support_passing_provider_state_params_to_provider_state_generator() {
+  let server = PactBuilderAsync::new("RustPactVerifier", "441Provider")
+    .interaction("a request say hello to John", "", |mut i| async move {
+      i.request
+        .path("/api/hello/John");
+      i.response
+        .header("content-type", "application/json")
+        .json_body(json_pattern!({
+          "name": "John"
+        }));
+      i
+    })
+    .await
+    .start_mock_server(None, None);
+
+  #[allow(deprecated)]
+  let provider = ProviderInfo {
+    name: "provider_states_values".to_string(),
+    host: server.url().host_str().unwrap().to_string(),
+    port: Some(server.url().port().unwrap()),
+    transports: vec![
+      ProviderTransport {
+        transport: "HTTP".to_string(),
+        port: Some(server.url().port().unwrap()),
+        path: None,
+        scheme: Some("http".to_string())
+      }
+    ],
+    .. ProviderInfo::default()
+  };
+
+  let verification_options = VerificationOptions::<NullRequestFilterExecutor> {
+    no_pacts_is_error: false,
+    .. VerificationOptions::default()
+  };
+  let provider_states = Arc::new(DummyProviderStateExecutor{});
+
+  let pact = RequestResponsePact::from_json("test", &json!({
+    "consumer": {
+      "name": "SomeConsumer"
+    },
+    "interactions": [
+      {
+        "description": "Hello John",
+        "providerStates": [
+          {
+            "name": "User exists",
+            "params": {
+              "name": "John"
+            }
+          }
+        ],
+        "request": {
+          "generators": {
+            "path": {
+              "dataType": "STRING",
+              "expression": "/api/hello/${name}",
+              "type": "ProviderState"
+            }
+          },
+          "method": "GET",
+          "path": "/api/hello/James"
+        },
+        "response": {
+          "body": {
+            "name": "John"
+          },
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "status": 200
+        }
+      }
+    ],
+    "metadata": {
+      "pact-jvm": {
+        "version": "4.6.7"
+      },
+      "pactSpecification": {
+        "version": "3.0.0"
+      }
+    },
+    "provider": {
+      "name": "SomeProvider"
+    }
+  })).unwrap();
+  let interaction = pact.interactions.first().unwrap();
+
+  let result = super::verify_interaction(&provider, interaction, &pact.boxed(), &verification_options, &provider_states).await;
+  expect!(result).to(be_ok());
+}

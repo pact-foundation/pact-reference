@@ -2,8 +2,7 @@
 //! Most of these are `pub(crate)`, which makes them available to the rest of
 //! the crate, but prevents them from winding up in our public API.
 
-use std::{io, thread};
-use std::io::Write;
+use std::thread;
 
 /// Internal helper method for `strip_null_fields`.
 fn strip_null_fields_mut(json: &mut serde_json::Value) {
@@ -93,9 +92,9 @@ pub(crate) fn panic_or_print_error(msg: &anyhow::Error) {
     if thread::panicking() {
         // The current thread is panicking, so don't try to panic again, because
         // double panics don't print useful explanations of why the test failed.
-        // Instead, just print to `stderr`. Ignore any errors, because there's
+        // Instead, just print to `stdout`. Ignore any errors, because there's
         // not much we can do if we can't panic and we can't write to `stderr`.
-        let _ = writeln!(io::stderr(), "{}", msg);
+        let _ = println!("{}", msg);
     } else {
         panic!("{}", msg);
     }

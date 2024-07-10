@@ -1963,6 +1963,7 @@ dependencies = [
  "reqwest 0.12.5",
  "serde",
  "serde_json",
+ "termsize",
  "test-log",
  "tokio",
  "tokio-test",
@@ -3463,6 +3464,17 @@ dependencies = [
  "fastrand",
  "rustix",
  "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "termsize"
+version = "0.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "57b7ef97a4926a63d0c1751922fe1339556c68ab2c4ac791c3b1cff0dc7c6c67"
+dependencies = [
+ "atty",
+ "libc",
+ "winapi",
 ]
 
 [[package]]

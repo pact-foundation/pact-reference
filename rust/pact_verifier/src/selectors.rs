@@ -1,10 +1,12 @@
 //! Module to deal with consumer version selectors
 
+use serde_json::{from_value, Value};
+
 use crate::ConsumerVersionSelector;
 
-/// Parses a vector of JSON strings into a vector of consumer version selectors
-pub fn json_to_selectors(tags: Vec<&str>) -> Vec<ConsumerVersionSelector> {
-  tags.iter().map(|t| serde_json::from_str(t))
+/// Parses a vector of JSON into a vector of consumer version selectors
+pub fn json_to_selectors(json: Vec<Value>) -> Vec<ConsumerVersionSelector> {
+  json.iter().map(|t| from_value(t.clone()))
     .flatten()
     .collect()
 }

@@ -2,6 +2,7 @@ use clap::{Arg, ArgAction, ArgGroup, Command, command};
 use clap::builder::{FalseyValueParser, NonEmptyStringValueParser, PossibleValuesParser};
 use lazy_static::lazy_static;
 use regex::Regex;
+use serde_json::Value;
 
 fn port_value(v: &str) -> Result<u16, String> {
   v.parse::<u16>().map_err(|e| format!("'{}' is not a valid port value: {}", v, e) )
@@ -19,6 +20,10 @@ fn validate_regex(val: &str) -> Result<String, String> {
       .map(|_| val.to_string())
       .map_err(|err| format!("'{}' is an invalid filter value: {}", val, err))
   }
+}
+
+fn json_value(v: &str) -> Result<Value, String> {
+  serde_json::from_str(v).map_err(|err| format!("'{}' is not valid JSON: {}", v, err))
 }
 
 lazy_static! {
@@ -223,7 +228,6 @@ pub(crate) fn setup_app() -> Command {
     .arg(Arg::new("custom-header")
       .long("header")
       .short('H')
-      .action(ArgAction::Set)
       .action(ArgAction::Append)
       .value_parser(NonEmptyStringValueParser::new())
       .help("Add a custom header to be included in the calls to the provider. Values must be in the form KEY=VALUE, where KEY and VALUE contain ASCII characters (32-127) only. Can be repeated."))
@@ -278,7 +282,6 @@ pub(crate) fn setup_app() -> Command {
     .arg(Arg::new("filter-consumer")
       .short('c')
       .long("filter-consumer")
-      .action(ArgAction::Set)
       .action(ArgAction::Append)
       .value_parser(NonEmptyStringValueParser::new())
       .help("Consumer name to filter the pacts to be verified (can be repeated)"))
@@ -325,9 +328,8 @@ pub(crate) fn setup_app() -> Command {
       .help("Consumer tags to use when fetching pacts from the Broker. Accepts comma-separated values."))
     .arg(Arg::new("consumer-version-selectors")
       .long("consumer-version-selectors")
-      .action(ArgAction::Set)
       .action(ArgAction::Append)
-      .value_parser(NonEmptyStringValueParser::new())
+      .value_parser(json_value)
       .requires("broker-url")
       .conflicts_with("consumer-version-tags")
       .help("Consumer version selectors to use when fetching pacts from the Broker. Accepts a JSON string as per https://docs.pact.io/pact_broker/advanced_topics/consumer_version_selectors/. Can be repeated."))

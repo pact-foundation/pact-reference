@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 use clap::{AppSettings, ArgMatches, ErrorKind};
 use maplit::hashmap;
+use serde_json::Value;
 use pact_models::http_utils::HttpAuth;
 use pact_models::PactSpecification;
 use tracing::{debug, error, warn};
@@ -60,7 +61,10 @@ fn pact_source(matches: &ArgMatches) -> Vec<PactSource> {
       let provider_branch = matches.value_of("provider-branch").map(|v| v.to_string());
       let selectors = if matches.is_present("consumer-version-selectors") {
         matches.values_of("consumer-version-selectors")
-          .map_or_else(Vec::new, |s| json_to_selectors(s.collect::<Vec<_>>()))
+          .map_or_else(Vec::new, |s| json_to_selectors(s
+            .map(|cvs| serde_json::from_str::<Value>(cvs))
+            .flatten()
+            .collect::<Vec<_>>()))
       } else if matches.is_present("consumer-version-tags") {
         matches.values_of("consumer-version-tags")
           .map_or_else(Vec::new, |tags| consumer_tags_to_selectors(tags.collect::<Vec<_>>()))

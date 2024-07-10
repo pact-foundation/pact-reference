@@ -400,6 +400,7 @@ use clap::ArgMatches;
 use clap::error::ErrorKind;
 use log::{LevelFilter};
 use maplit::hashmap;
+use serde_json::Value;
 use pact_models::{PACT_RUST_VERSION, PactSpecification};
 use pact_models::prelude::HttpAuth;
 use tokio::time::sleep;
@@ -689,8 +690,8 @@ fn pact_source(matches: &ArgMatches) -> Vec<PactSource> {
         let provider_branch = matches.get_one::<String>("provider-branch").cloned();
 
         let selectors = if matches.contains_id("consumer-version-selectors") {
-          matches.get_many::<String>("consumer-version-selectors")
-            .map_or_else(Vec::new, |s| json_to_selectors(s.map(|v| v.as_str()).collect::<Vec<_>>()))
+          matches.get_many::<Value>("consumer-version-selectors")
+            .map_or_else(Vec::new, |s| json_to_selectors(s.into_iter().cloned().collect::<Vec<_>>()))
         } else if matches.contains_id("consumer-version-tags") {
           matches.get_many::<String>("consumer-version-tags")
             .map_or_else(Vec::new, |tags| consumer_tags_to_selectors(tags.map(|v| v.as_str()).collect::<Vec<_>>()))

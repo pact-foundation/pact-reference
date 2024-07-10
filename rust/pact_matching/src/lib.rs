@@ -2056,6 +2056,7 @@ pub async fn match_sync_message_response<'a>(
 
 /// Generates the request by applying any defined generators
 // TODO: Need to pass in any plugin data
+#[instrument(level = "trace")]
 pub async fn generate_request(request: &HttpRequest, mode: &GeneratorTestMode, context: &HashMap<&str, Value>) -> HttpRequest {
   trace!(?request, ?mode, ?context, "generate_request");
   let mut request = request.clone();

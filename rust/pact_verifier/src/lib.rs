@@ -428,13 +428,22 @@ async fn verify_interaction<'a, F: RequestFilterExecutor, S: ProviderStateExecut
   let context = execute_provider_states(interaction, provider_state_executor, &client, true)
     .await
     .map_err(|e| (e, vec![], start.elapsed()))?;
-  let provider_states_context = context
+  let mut provider_states_context = hashmap!{};
+  for provider_state in interaction.provider_states() {
+    for (k, v) in provider_state.params {
+      provider_states_context.insert(k, v);
+    }
+  }
+  for (k, v) in context {
+    provider_states_context.insert(k, v);
+  }
+  let provider_states_context = provider_states_context
     .iter()
     .map(|(k, v)| (k.as_str(), v.clone()))
     .collect();
 
   info!("Running provider verification for '{}'", interaction.description());
-  trace!("Interaction to verify: {:?}", interaction);
+  trace!(?provider_states_context, "Interaction to verify: {:?}", interaction);
 
   #[allow(unused_assignments)] let mut result = Ok((None, vec![]));
   #[cfg(feature = "plugins")]

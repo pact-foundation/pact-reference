@@ -4,20 +4,23 @@ use std::{env, thread};
 use std::fmt::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
-use anyhow::anyhow;
 
-use pact_matching::metrics::{MetricEvent, send_metrics};
+use anyhow::anyhow;
+use itertools::Itertools;
 use pact_mock_server::builder::MockServerBuilder;
 use pact_mock_server::matching::MatchResult;
 use pact_mock_server::mock_server;
 use pact_mock_server::mock_server::{MockServerConfig, MockServerMetrics};
-use pact_models::pact::Pact;
-#[cfg(feature = "plugins")] use pact_models::plugins::PluginData;
 #[cfg(feature = "plugins")] use pact_plugin_driver::plugin_manager::{drop_plugin_access, increment_plugin_access};
 #[cfg(feature = "plugins")] use pact_plugin_driver::plugin_models::{PluginDependency, PluginDependencyType};
 use tokio::runtime::Runtime;
 #[allow(unused_imports)] use tracing::{debug, trace, warn};
 use url::Url;
+
+use pact_matching::metrics::{MetricEvent, send_metrics};
+use pact_models::pact::Pact;
+#[cfg(feature = "plugins")] use pact_models::plugins::PluginData;
+use pact_models::v4::http_parts::HttpRequest;
 
 use crate::mock_server::ValidatingMockServer;
 use crate::util::panic_or_print_error;
@@ -222,34 +225,44 @@ impl ValidatingHttpMockServer {
       Ok(())
     } else {
       // Failure. Format our errors.
-      let mut msg = format!("mock server {} failed verification:\n", self.description,);
+      let size = termsize::get().map(|sz| sz.cols).unwrap_or(120) - 2;
+      let pad = "-".repeat(size as usize);
+      let mut msg = format!(" {} \nMock server {} failed verification:\n", pad, self.description);
       for mismatch in mismatches {
         match mismatch {
           MatchResult::RequestMatch(..) => {
-            unreachable!("list of mismatches contains a match");
+            warn!("list of mismatches contains a match");
           }
           MatchResult::RequestMismatch(request, _, mismatches) => {
-            let _ = writeln!(&mut msg, "- request {}:", request);
+            let _ = writeln!(&mut msg, "\n  - request {}:\n", request);
             for m in mismatches {
-              let _ = writeln!(&mut msg, "  - {}", m.description());
+              let _ = writeln!(&mut msg, "    - {}", m.description());
             }
           }
           MatchResult::RequestNotFound(request) => {
-            let _ = writeln!(&mut msg, "- received unexpected request:");
-            let _ = writeln!(&mut msg, "{:#?}", request);
+            let _ = writeln!(&mut msg, "\n  - received unexpected request {}:\n", short_description(&request));
+            let debug_str = format!("{:#?}", request);
+            let _ = writeln!(&mut msg, "{}", debug_str.lines().map(|ln| format!("      {}", ln)).join("\n"));
           }
           MatchResult::MissingRequest(request) => {
             let _ = writeln!(
               &mut msg,
-              "- request {} expected, but never occurred", request,
+              "\n  - request {} expected, but never occurred:\n", short_description(&request),
             );
-            let _ = writeln!(&mut msg, "{:#?}", request);
+            let debug_str = format!("{:#?}", request);
+            let _ = writeln!(&mut msg, "{}", debug_str.lines().map(|ln| format!("      {}", ln)).join("\n"));
           }
         }
       }
+      let _ = writeln!(&mut msg, " {} ", pad);
       Err(anyhow!(msg))
     }
   }
+}
+
+// TODO: Implement this in the HTTP request struct
+fn short_description(request: &HttpRequest) -> String {
+  format!("{} {}", request.method.to_uppercase(), request.path)
 }
 
 impl ValidatingMockServer for ValidatingHttpMockServer {

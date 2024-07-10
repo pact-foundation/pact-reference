@@ -184,6 +184,11 @@ impl HttpRequest {
       None => None
     }
   }
+
+  /// Brief one-line description of the request
+  pub fn short_description(&self) -> String {
+    format!("{} {}", self.method.to_uppercase(), self.path)
+  }
 }
 
 impl PartialEq for HttpRequest {

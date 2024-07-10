@@ -547,6 +547,9 @@ ffi_fn! {
     /// If a username and password is given, then basic authentication will be used when fetching
     /// the pact file. If a token is provided, then bearer token authentication will be used.
     ///
+    /// This function will return zero unless any of the consumer version selectors are not valid
+    /// JSON, in which case, it will return -1.
+    ///
     /// # Safety
     ///
     /// All string fields must contain valid UTF-8. Invalid UTF-8
@@ -567,7 +570,7 @@ ffi_fn! {
       consumer_version_selectors_len: c_ushort,
       consumer_version_tags: *const *const c_char,
       consumer_version_tags_len: c_ushort
-    ) {
+    ) -> c_int {
       let handle = as_mut!(handle);
       let url = safe_str!(url);
       let provider_branch: Option<String> = if provider_branch.is_null() {
@@ -604,7 +607,23 @@ ffi_fn! {
       let consumer_version_tags_vector = get_vector(consumer_version_tags, consumer_version_tags_len);
 
       let selectors = if consumer_version_selectors_vector.len() > 0 {
-        json_to_selectors(consumer_version_selectors_vector.iter().map(|s| &**s).collect())
+        let mut selectors = vec![];
+        let mut errors = false;
+        for s in consumer_version_selectors_vector {
+          match serde_json::from_str(s.as_str()) {
+            Ok(cvs) => selectors.push(cvs),
+            Err(err) => {
+              error!("Failed to parse consumer version selector '{}' as JSON: {}", s, err);
+              errors = true;
+            }
+          }
+        }
+
+        if errors {
+          return Ok(-1);
+        }
+
+        json_to_selectors(selectors)
       } else if consumer_version_tags_vector.len() > 0 {
         consumer_tags_to_selectors(consumer_version_tags_vector.iter().map(|s| &**s).collect())
       } else {
@@ -612,7 +631,9 @@ ffi_fn! {
       };
 
       handle.add_pact_broker_source(url, enable_pending > 0, wip, provider_tags_vector, provider_branch, selectors, &auth);
-    }
+
+      0
+    } { -2 }
 }
 
 ffi_fn! {
@@ -902,6 +923,7 @@ ffi_fn! {
 #[cfg(test)]
 mod tests {
   use std::ffi::CString;
+  use std::ptr::null;
 
   use expectest::prelude::*;
   use libc::c_char;
@@ -955,5 +977,59 @@ We are tracking events anonymously to gather important usage statistics like Pac
 \n\nFailures:\n\n\
 1) Verifying a pact between test_consumer and test_provider Given test state - test interaction - error sending request for url (http://localhost/): error trying to connect: tcp connect error: Connection refused (os error 111)\n\
 \n\nThere were 1 pact failures\n\n"));
+  }
+
+  #[test]
+  fn pactffi_verifier_broker_source_with_selectors_test() {
+    let mut handle = VerifierHandle::new_for_application("test", "0.0.0");
+    let url = CString::new("http://127.0.0.1:8080").unwrap();
+    let provider_branch = CString::new("main").unwrap();
+    let cvs_1 = CString::new(r#"{"mainBranch":true}"#).unwrap();
+    let cvs_2 = CString::new(r#"{"deployedOrReleased":true}"#).unwrap();
+    let consumer_version_selectors = [ cvs_1.as_ptr(), cvs_2.as_ptr() ];
+    let result = super::pactffi_verifier_broker_source_with_selectors(
+      &mut handle,
+      url.as_ptr(),
+      null(),
+      null(),
+      null(),
+      0,
+      null(),
+      null(),
+      0,
+      provider_branch.as_ptr(),
+      consumer_version_selectors.as_ptr(),
+      2,
+      null(),
+      0
+    );
+    expect!(result).to(be_equal_to(0));
+  }
+
+  #[test_log::test]
+  fn pactffi_verifier_broker_source_with_selectors_error_test() {
+    let mut handle = VerifierHandle::new_for_application("test", "0.0.0");
+    let url = CString::new("http://127.0.0.1:8080").unwrap();
+    let provider_branch = CString::new("main").unwrap();
+    let cvs_1 = CString::new(r#"{"mainBranch":true"#).unwrap();
+    let cvs_2 = CString::new(r#"{"deployedOrReleased:true}"#).unwrap();
+    let consumer_version_selectors = [ cvs_1.as_ptr(), cvs_2.as_ptr() ];
+    let result = super::pactffi_verifier_broker_source_with_selectors(
+      &mut handle,
+      url.as_ptr(),
+      null(),
+      null(),
+      null(),
+      0,
+      null(),
+      null(),
+      0,
+      provider_branch.as_ptr(),
+      consumer_version_selectors.as_ptr(),
+      2,
+      null(),
+      0
+    );
+    expect!(result).to(be_equal_to(-1));
   }
 }
