@@ -79,6 +79,9 @@ ffi_fn! {
     /// Get a Handle to a newly created verifier. You should call `pactffi_verifier_shutdown` when
     /// done with the verifier to free all allocated resources.
     ///
+    /// By default, verification results will not be published. To enable publishing, use
+    /// `pactffi_verifier_set_publish_options` to set the required values and enable it.
+    ///
     /// Deprecated: This function is deprecated. Use `pactffi_verifier_new_for_application` which allows the
     /// calling application/framework name and version to be specified.
     ///
@@ -101,7 +104,10 @@ ffi_fn! {
 
 ffi_fn! {
   /// Get a Handle to a newly created verifier. You should call `pactffi_verifier_shutdown` when
-  /// done with the verifier to free all allocated resources
+  /// done with the verifier to free all allocated resources.
+  ///
+  /// By default, verification results will not be published. To enable publishing, use
+  /// `pactffi_verifier_set_publish_options` to set the required values and enable it.
   ///
   /// # Safety
   ///
@@ -320,16 +326,19 @@ ffi_fn! {
 }
 
 ffi_fn! {
-  /// Set the options used when publishing verification results to the Pact Broker
+  /// Set the options used when publishing verification results to the Pact Broker. By default,
+  /// verification results will not be published unless this function is called.
   ///
   /// # Args
-  /// 
+  ///
   /// - `handle` - The pact verifier handle to update
   /// - `provider_version` - Version of the provider to publish
-  /// - `build_url` - URL to the build which ran the verification
-  /// - `provider_tags` - Collection of tags for the provider
-  /// - `provider_tags_len` - Number of provider tags supplied
-  /// - `provider_branch` - Name of the branch used for verification
+  /// - `build_url` - URL to the build which ran the verification [OPTIONAL]
+  /// - `provider_tags` - Collection of tags for the provider [OPTIONAL]
+  /// - `provider_tags_len` - Number of provider tags supplied [OPTIONAL]
+  /// - `provider_branch` - Name of the branch used for verification [OPTIONAL]
+  ///
+  /// For optional args, a NULL pointer can be used.
   ///
   /// # Safety
   ///
@@ -346,24 +355,12 @@ ffi_fn! {
   ) -> c_int {
     let handle = as_mut!(handle);
     let provider_version = safe_str!(provider_version);
-    let build_url = if_null(build_url, "");
-    let provider_branch = if_null(provider_branch, "");
-
-    let build_url = if !build_url.is_empty() {
-      Some(build_url)
-    } else {
-      None
-    };
+    let build_url = optional_str(build_url);
+    let provider_branch = optional_str(provider_branch);
 
     let tags = get_vector(provider_tags, provider_tags_len);
 
-    let branch = if !provider_branch.is_empty() {
-      Some(provider_branch)
-    } else {
-      None
-    };
-
-    handle.update_publish_options(provider_version, build_url, tags, branch);
+    handle.update_publish_options(provider_version, build_url, tags, provider_branch);
 
     EXIT_SUCCESS
   } {
