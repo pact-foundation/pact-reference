@@ -14,12 +14,13 @@ exclude = [
 ]
 
 [features]
-default = ["datetime", "xml", "plugins", "multipart", "tls"]
+default = ["datetime", "xml", "plugins", "multipart", "tls", "colour"]
 datetime = ["pact_models/datetime", "pact_matching/datetime", "pact_mock_server/datetime", "pact-plugin-driver?/datetime"] # Support for date/time matchers and expressions
 xml = ["pact_models/xml", "pact_matching/xml", "pact_mock_server/xml", "pact-plugin-driver?/xml"] # support for matching XML documents
 plugins = ["dep:pact-plugin-driver", "pact_matching/plugins", "pact_mock_server/plugins"]
 multipart = ["pact_matching/multipart", "pact_mock_server/multipart"] # suport for MIME multipart bodies
 tls = ["pact_mock_server/tls"]
+colour = ["dep:yansi"]
 
 [dependencies]
 anyhow = "1.0.82"
@@ -41,6 +42,7 @@ tracing = "0.1.40"
 tracing-core = "0.1.32"
 url = "2.5.0"
 uuid = { version = "1.8.0", features = ["v4"] }
+yansi = { version = "1.0.1", optional = true }
 
 [dev-dependencies]
 quickcheck = "1.0.3"
