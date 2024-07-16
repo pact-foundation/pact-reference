@@ -119,7 +119,7 @@ use libc::{c_char, c_int, c_uint, c_ushort, EXIT_FAILURE, EXIT_SUCCESS, size_t};
 use maplit::*;
 use pact_models::{Consumer, PactSpecification, Provider};
 use pact_models::bodies::OptionalBody;
-use pact_models::content_types::{ContentType, detect_content_type_from_string, JSON, TEXT, XML};
+use pact_models::content_types::{detect_content_type_from_string, ContentType, TEXT};
 use pact_models::generators::{generators_from_json, Generator, Generators};
 use pact_models::headers::parse_header;
 use pact_models::http_parts::HttpPart;
@@ -1650,183 +1650,253 @@ pub extern fn pactffi_response_status_v2(interaction: InteractionHandle, status:
   }).unwrap_or(false)
 }
 
-/// Adds the body for the interaction. Returns false if the interaction or Pact can't be
-/// modified (i.e. the mock server for it has already started)
+/// Process the body, including generators and matching rules.
 ///
-/// * `part` - The part of the interaction to add the body to (Request or Response).
-/// * `content_type` - The content type of the body. Defaults to `text/plain`. Will be ignored if a content type
-///   header is already set.
-/// * `body` - The body contents. For JSON payloads, matching rules can be embedded in the body. See
-/// [IntegrationJson.md](https://github.com/pact-foundation/pact-reference/blob/master/rust/pact_ffi/IntegrationJson.md)
+/// As the body may contain embedded generators and matching rules, we must use
+/// `process_json` and `process_xml` to ensure they are processed correctly and
+/// added to the `generators` and `matching_rules`.
 ///
-/// For HTTP and async message interactions, this will overwrite the body. With asynchronous messages, the
-/// part parameter will be ignored. With synchronous messages, the request contents will be overwritten,
-/// while a new response will be appended to the message.
+/// The content type is obtained from a number of sources, in the following
+/// order:
+///
+/// - The `content_type` parameter, if provided; or,
+/// - The `content_type_hint` parameter, if provided (e.g. from the
+///   `Content-Type` header); or,
+/// - From the body itself; or,
+/// - Defaults to `text/plain` as a last resort.
+fn process_body(
+    body: &str,
+    content_type: &Option<ContentType>,
+    content_type_hint: &Option<ContentType>,
+    matching_rules: &mut MatchingRules,
+    generators: &mut Generators,
+) -> OptionalBody {
+    trace!(
+        ">>> process_body({:?}, {:?}, {:?}, {:?}, {:?})",
+        body,
+        content_type,
+        content_type_hint,
+        matching_rules,
+        generators
+    );
+    let detected_type = detect_content_type_from_string(body);
+    let content_type = content_type
+        .clone()
+        .or_else(|| content_type_hint.clone())
+        .or_else(|| detected_type.clone())
+        .or_else(|| Some(TEXT.clone()));
+    trace!(
+        "Detected content type: {:?}; Resulting content type: {:?}",
+        detected_type,
+        content_type
+    );
+
+    match content_type {
+        Some(ct) if ct.is_json() => {
+            trace!("Processing JSON body");
+            // As the JSON body may contain embedded generators and matching
+            // rules, we must use `process_json` to ensure they are processed
+            // correctly and added to the `generators` and `matching_rules`.
+            let category = matching_rules.add_category("body");
+            OptionalBody::Present(
+                Bytes::from(process_json(body.to_string(), category, generators)),
+                Some(ct),
+                None,
+            )
+        }
+        Some(ct) if ct.is_xml() => {
+            // The XML payload may contain one of two cases:
+            // 1. A raw XML payload
+            // 2. A JSON payload describing the XML payload, including any
+            //    embedded generators and matching rules.
+            match detected_type {
+                Some(detected_ct) if detected_ct.is_json() => {
+                    trace!("Processing JSON description for XML body");
+                    let category = matching_rules.add_category("body");
+                    OptionalBody::Present(
+                        Bytes::from(
+                            process_xml(body.to_string(), category, generators).unwrap_or_default(),
+                        ),
+                        Some(ct), // Note to use the provided content type, not the detected one
+                        None,
+                    )
+                }
+                _ => {
+                    trace!("Raw XML body left as is");
+                    OptionalBody::from(body)
+                }
+            }
+        }
+        _ => {
+            // We either have no content type, or an unsupported content type.
+            trace!("Raw body");
+            OptionalBody::from(body)
+        }
+    }
+}
+
+/// Adds the body for the interaction. Returns false if the interaction or Pact
+/// can't be modified (i.e. the mock server for it has already started)
+///
+/// * `part` - The part of the interaction to add the body to (Request or
+///   Response). This is ignored for asynchronous message interactions.
+/// * `content_type` - The content type of the body, or `NULL` to use the
+///   internal logic.
+/// * `body` - The body contents. For JSON payloads, matching rules can be
+///   embedded in the body. See
+///   [IntegrationJson.md](https://github.com/pact-foundation/pact-reference/blob/master/rust/pact_ffi/IntegrationJson.md)
+///
+/// If the `content_type` is determined as follows, whichever is first:
+///
+/// - The `content_type` argument to this function
+/// - The `Content-Type` header for HTTP interaction, or `contentType` metadata
+///   entry for message interactions.
+/// - From automatic detection of the body contents.
+/// - Defaults to `text/plain` as a last resort.
+///
+/// Furthermore, the `Content-Type` header or `contentType` metadata entry will
+/// be updated with the above determined content type, _unless_ it is already
+/// set.
+///
+/// This function will overwrite the body contents if they exist, with the
+/// exception of the response part of synchronous message interactions, where a
+/// new response will be appended.
 ///
 /// # Safety
 ///
-/// The interaction contents and content type must either be NULL pointers, or point to valid
-/// UTF-8 encoded NULL-terminated strings. Otherwise, behaviour is undefined.
+/// The interaction contents and content type must either be NULL pointers, or
+/// point to valid UTF-8 encoded NULL-terminated strings. Otherwise, behaviour
+/// is undefined.
 ///
 /// # Error Handling
 ///
-/// If the contents is a NULL pointer, it will set the body contents as null. If the content
-/// type is a null pointer, or can't be parsed, it will set the content type as TEXT.
-/// Returns false if the interaction or Pact can't be modified (i.e. the mock server for it has
-/// already started) or an error has occurred.
+/// If the contents is a NULL pointer, it will set the body contents as null. If
+/// the content type is a null pointer, or can't be parsed, it will set the
+/// content type as TEXT. Returns false if the interaction or Pact can't be
+/// modified (i.e. the mock server for it has already started) or an error has
+/// occurred.
 #[no_mangle]
-pub extern fn pactffi_with_body(
-  interaction: InteractionHandle,
-  part: InteractionPart,
-  content_type: *const c_char,
-  body: *const c_char
+pub extern "C" fn pactffi_with_body(
+    interaction: InteractionHandle,
+    part: InteractionPart,
+    content_type: *const c_char,
+    body: *const c_char,
 ) -> bool {
-  trace!(">>> pactffi_with_body({:?}, {:?}, {:?}, {:?})", interaction, part, content_type, body);
-  let content_type = convert_cstr("content_type", content_type).unwrap_or("text/plain");
-  let body = convert_cstr("body", body).unwrap_or_default();
-  let content_type_header = "Content-Type".to_string();
+    trace!(
+        ">>> pactffi_with_body({:?}, {:?}, {:?}, {:?})",
+        interaction,
+        part,
+        content_type,
+        body
+    );
+    let content_type =
+        convert_cstr("content_type", content_type).map(|ct| ContentType::parse(ct).unwrap());
+    trace!(?content_type);
+    let content_type_header = "Content-Type".to_string();
+    let body = convert_cstr("body", body).unwrap_or_default();
 
-  interaction.with_interaction(&|_, mock_server_started, inner| {
-    if let Some(reqres) = inner.as_v4_http_mut() {
-      match part {
-        InteractionPart::Request => {
-          trace!("Setting up the request body");
-          if !reqres.request.has_header(&content_type_header) {
-            match reqres.request.headers {
-              Some(ref mut headers) => {
-                headers.insert(content_type_header.clone(), vec![content_type.to_string()]);
-              },
-              None => {
-                reqres.request.headers = Some(hashmap! { content_type_header.clone() => vec![ content_type.to_string() ]});
-              }
-            }
-          }
-          let body = if reqres.request.content_type().unwrap_or_default().is_json() {
-            let category = reqres.request.matching_rules.add_category("body");
-            OptionalBody::Present(Bytes::from(process_json(body.to_string(), category, &mut reqres.request.generators)),
-                                  Some(ContentType::parse(content_type).unwrap()), None)
-          } else if reqres.request.content_type().unwrap_or_default().is_xml() {
-            // Try detect the intermediate JSON format
-            trace!("Content type is XML, try sniff the provided body format");
-            if let Some(ct) = detect_content_type_from_string(body) {
-              trace!("Detected body body format is {}", ct);
-              if ct.is_json() {
-                // Process the intermediate JSON into XML
-                trace!("Body is in JSON format, processing the intermediate JSON into XML");
-                let category = reqres.request.matching_rules.add_category("body");
-                OptionalBody::Present(Bytes::from(process_xml(body.to_string(), category, &mut reqres.request.generators).unwrap_or(vec![])),
-                                      Some(XML.clone()), None)
-              } else {
-                // Assume raw XML
-                OptionalBody::from(body)
-              }
+    interaction
+        .with_interaction(&|_, mock_server_started, inner| {
+            if let Some(http) = inner.as_v4_http_mut() {
+                match part {
+                    InteractionPart::Request => {
+                        trace!("Processing HTTP request body");
+                        http.request.body = process_body(
+                            body,
+                            &content_type,
+                            &http.request.content_type(),
+                            &mut http.request.matching_rules,
+                            &mut http.request.generators,
+                        );
+                        if let Some(ct) = http.request.content_type() {
+                            trace!(
+                                "Setting request content type header to '{}' (if not already set)",
+                                ct
+                            );
+                            if let Some(headers) = http.request.headers.as_mut() {
+                                headers
+                                    .entry(content_type_header.to_string())
+                                    .or_insert_with(|| vec![ct.to_string()]);
+                            } else {
+                                http.request.headers = Some(hashmap! {
+                                    content_type_header.clone() => vec![ct.to_string()]
+                                });
+                            }
+                        }
+                    }
+                    InteractionPart::Response => {
+                        trace!("Processing HTTP response body");
+                        http.response.body = process_body(
+                            body,
+                            &content_type,
+                            &http.response.content_type(),
+                            &mut http.response.matching_rules,
+                            &mut http.response.generators,
+                        );
+                        if let Some(ct) = http.response.content_type() {
+                            trace!(
+                                "Setting response content type header to '{}' (if not already set)",
+                                ct
+                            );
+                            if let Some(headers) = http.response.headers.as_mut() {
+                                headers
+                                    .entry(content_type_header.to_string())
+                                    .or_insert_with(|| vec![ct.to_string()]);
+                            } else {
+                                http.response.headers = Some(hashmap! {
+                                    content_type_header.clone() => vec![ct.to_string()]
+                                });
+                            }
+                        }
+                    }
+                };
+                !mock_server_started
+            } else if let Some(message) = inner.as_v4_async_message_mut() {
+                trace!("Processing async message body");
+                message.contents.contents = process_body(
+                    body,
+                    &content_type,
+                    &None,
+                    &mut message.contents.matching_rules,
+                    &mut message.contents.generators,
+                );
+                if let Some(ct) = message.contents.content_type() {
+                    message
+                        .contents
+                        .metadata
+                        .entry("contentType".to_string())
+                        .or_insert(json!(ct.to_string()));
+                }
+                !mock_server_started
+            } else if let Some(message) = inner.as_v4_sync_message_mut() {
+                trace!("Processing sync message body");
+                let contents = match part {
+                    InteractionPart::Request => &mut message.request,
+                    InteractionPart::Response => {
+                        message.response.push(MessageContents::default());
+                        message.response.last_mut().unwrap()
+                    }
+                };
+                contents.contents = process_body(
+                    body,
+                    &content_type,
+                    &None,
+                    &mut contents.matching_rules,
+                    &mut contents.generators,
+                );
+                if let Some(ct) = contents.content_type() {
+                    contents
+                        .metadata
+                        .entry("contentType".to_string())
+                        .or_insert(json!(ct.to_string()));
+                }
+                !mock_server_started
             } else {
-              // Assume raw XML
-              OptionalBody::from(body)
+                error!("Interaction is an unknown type, is {}", inner.type_of());
+                false
             }
-          } else {
-            OptionalBody::from(body)
-          };
-          reqres.request.body = body;
-        },
-        InteractionPart::Response => {
-          trace!("Setting up the response body");
-          if !reqres.response.has_header(&content_type_header) {
-            match reqres.response.headers {
-              Some(ref mut headers) => {
-                headers.insert(content_type_header.clone(), vec![content_type.to_string()]);
-              },
-              None => {
-                reqres.response.headers = Some(hashmap! { content_type_header.clone() => vec![ content_type.to_string() ]});
-              }
-            }
-          }
-          let body = if reqres.response.content_type().unwrap_or_default().is_json() {
-            let category = reqres.response.matching_rules.add_category("body");
-            OptionalBody::Present(Bytes::from(process_json(body.to_string(), category, &mut reqres.response.generators)),
-                                  Some(JSON.clone()), None)
-          } else if reqres.response.content_type().unwrap_or_default().is_xml() {
-            trace!("Content type is XML, try sniff the provided body format");
-            // Try detect the intermediate JSON format
-            if let Some(ct) = detect_content_type_from_string(body) {
-              trace!("Detected body body format is {}", ct);
-              if ct.is_json() {
-                // Process the intermediate XML into JSON
-                trace!("Body is in JSON format, processing the intermediate JSON into XML");
-                let category = reqres.response.matching_rules.add_category("body");
-                OptionalBody::Present(Bytes::from(process_xml(body.to_string(), category, &mut reqres.response.generators).unwrap_or(vec![])),
-                                      Some(XML.clone()), None)
-              } else {
-                // Assume raw XML
-                OptionalBody::from(body)
-              }
-            } else {
-              // Assume raw XML
-              OptionalBody::from(body)
-            }
-          } else {
-            OptionalBody::from(body)
-          };
-          reqres.response.body = body;
-        }
-      };
-      !mock_server_started
-    } else if let Some(message) = inner.as_v4_async_message_mut() {
-      let ct = ContentType::parse(content_type).unwrap_or_else(|_| TEXT.clone());
-      let body = if ct.is_json() {
-        let category = message.contents.matching_rules.add_category("body");
-        OptionalBody::Present(Bytes::from(process_json(body.to_string(), category, &mut message.contents.generators)),
-                              Some(JSON.clone()), None)
-      } else if ct.is_xml() {
-        let category = message.contents.matching_rules.add_category("body");
-        OptionalBody::Present(Bytes::from(process_xml(body.to_string(), category, &mut message.contents.generators).unwrap_or(vec![])),
-                              Some(XML.clone()), None)
-      } else {
-        OptionalBody::from(body)
-      };
-      message.contents.contents = body;
-      message.contents.metadata.insert("contentType".to_string(), json!(content_type));
-      true
-    } else if let Some(message) = inner.as_v4_sync_message_mut() {
-      let ct = ContentType::parse(content_type).unwrap_or_else(|_| TEXT.clone());
-      match part {
-        InteractionPart::Request => {
-          let category = message.request.matching_rules.add_category("body");
-          let body = if ct.is_json() {
-            OptionalBody::Present(Bytes::from(process_json(body.to_string(), category, &mut message.request.generators)),
-                                  Some(JSON.clone()), None)
-          } else if ct.is_xml() {
-            OptionalBody::Present(Bytes::from(process_xml(body.to_string(), category, &mut message.request.generators).unwrap_or(vec![])),
-                                  Some(XML.clone()), None)
-          } else {
-            OptionalBody::from(body)
-          };
-          message.request.contents = body;
-          message.request.metadata.insert("contentType".to_string(), json!(content_type));
-        }
-        InteractionPart::Response => {
-          let mut response = MessageContents::default();
-          let category = response.matching_rules.add_category("body");
-          let body = if ct.is_json() {
-            OptionalBody::Present(Bytes::from(process_json(body.to_string(), category, &mut response.generators)),
-                                  Some(JSON.clone()), None)
-          } else if ct.is_xml() {
-            OptionalBody::Present(Bytes::from(process_xml(body.to_string(), category, &mut response.generators).unwrap_or(vec![])),
-                                  Some(XML.clone()), None)
-          } else {
-            OptionalBody::from(body)
-          };
-          response.contents = body;
-          response.metadata.insert("contentType".to_string(), json!(content_type));
-          message.response.push(response);
-        }
-      }
-      true
-    } else {
-      error!("Interaction is an unknown type, is {}", inner.type_of());
-      false
-    }
-  }).unwrap_or(false)
+        })
+        .unwrap_or(false)
 }
 
 /// Adds the body for the interaction. Returns false if the interaction or Pact can't be
@@ -3090,7 +3160,7 @@ mod tests {
   use either::Either;
   use expectest::prelude::*;
   use maplit::hashmap;
-  use pact_models::content_types::JSON;
+  use pact_models::content_types::{JSON, XML};
   use pact_models::{generators, matchingrules, HttpStatus};
   use pact_models::matchingrules::{Category, MatchingRule};
   use pact_models::path_exp::DocPath;
