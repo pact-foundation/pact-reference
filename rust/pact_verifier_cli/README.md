@@ -200,6 +200,9 @@ content-type: application/json
 
 If any parameters are configured for the provider state, they will be passed in the *"params"* attribute.
 
+The provider state callback can return a map (JSON object) of values that can then be used by things like the 
+Provider State Generator to inject values. The returned map of values will fall back to the provider state parameters.
+
 #### `-s, --state-change-url <state-change-url>`
 
 This sets the absolute URL that the POST requests will be made to before each actual request. If this value is not
@@ -215,7 +218,7 @@ option forces it to be sent as query parameters instead.
 This option will cause the verifier to also make a tear down request after the main request is made. It will receive a 
 field in the body or a query parameter named `action` with the value `teardown`.
 
-#### `--consumer-version-selectors`
+### `--consumer-version-selectors`
 
 Accepts a set of [Consumer Version Selectors](https://docs.pact.io/pact_broker/advanced_topics/consumer_version_selectors/) encoded as JSON.
 
