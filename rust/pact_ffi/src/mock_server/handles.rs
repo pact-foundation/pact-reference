@@ -1926,6 +1926,14 @@ pub extern fn pactffi_with_binary_body(
   }).unwrap_or(false)
 }
 
+/// <div class="warning">
+///
+/// This function is deprecated. Use [`pactffi_with_binary_body`] in order to
+/// set the binary body, and use [`pactffi_with_matching_rules`] to set the
+/// matching rules to ensure that only the content type is being matched.
+///
+/// </div>
+///
 /// Adds a binary file as the body with the expected content type and example contents. Will use
 /// a mime type matcher to match the body. Returns false if the interaction or Pact can't be
 /// modified (i.e. the mock server for it has already started)
@@ -1952,6 +1960,7 @@ pub extern fn pactffi_with_binary_body(
 /// Returns false if the interaction or Pact can't be modified (i.e. the mock server for it has
 /// already started) or an error has occurred.
 #[no_mangle]
+#[deprecated(note = "Use `pactffi_with_binary_body` and `pactffi_with_matching_rules` instead")]
 pub extern fn pactffi_with_binary_file(
   interaction: InteractionHandle,
   part: InteractionPart,
