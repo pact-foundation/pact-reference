@@ -19,7 +19,7 @@ tracing-subscriber = { git = "https://github.com/tokio-rs/tracing.git", tag = "t
 # version across all crates (i.e. mock server crate).
 pact_matching = { version = "~1.2.4", path = "./pact_matching" }
 # Issue 389 - Pull change into other crates
-pact_models = { version = "~1.2.1", path = "./pact_models" }
+pact_models = { version = "~1.2.2", path = "./pact_models" }
 
 [profile.release]
 strip = true

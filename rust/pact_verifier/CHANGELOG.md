@@ -1,5 +1,17 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.2.3 - Bugfix Release
+
+* bb9fc1be - chore: Upgrade pact_matching to 1.2.5 (Ronald Holshausen, Wed Jul 17 14:34:04 2024 +1000)
+* fd9ff70a - chore: Upgrade pact_models to 1.2.2 (Ronald Holshausen, Wed Jul 17 11:15:34 2024 +1000)
+* e8b62f98 - chore: Upgrade pact-plugin-driver to 0.7.0 (Ronald Holshausen, Wed Jul 17 10:45:34 2024 +1000)
+* f03cd0d3 - feat(pact_verifier_cli): Parse consumer version selector JSON when evaluating CLI args so errors are reported earlier (Ronald Holshausen, Wed Jul 10 12:13:11 2024 +1000)
+* efa1295a - feat(pact_verifier): Allow provider state generator to fall back to the provider state parameters #441 (Ronald Holshausen, Tue Jul 9 17:27:09 2024 +1000)
+* 42e2ba68 - fix(pact_verifier): Take context paths into account when fetching the root HAL resource #420 (Ronald Holshausen, Tue Jul 9 11:37:04 2024 +1000)
+* efc54d26 - fix(FFI): update_provider_info was not setting the transport scheme correctly (Ronald Holshausen, Mon Jun 24 11:35:57 2024 +1000)
+* 0e2e1b8a - chore: Cleanup compiler deprecation warnings (Ronald Holshausen, Fri Jun 14 11:25:56 2024 +1000)
+* 570b1425 - bump version to 1.2.3 (Ronald Holshausen, Fri Jun 14 11:17:36 2024 +1000)
+
 # 1.2.2 - Feature Release
 
 * 7f741c7e - chore(pact_verifier): Update dependencies (Ronald Holshausen, Fri Jun 14 10:50:11 2024 +1000)

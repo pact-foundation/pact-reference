@@ -13,11 +13,11 @@ futures = "0.3.29"
 itertools = "0.12.1"
 lazy_static = "1.4.0"
 maplit = "1.0.2"
-pact_models = { version = "~1.2.1" }
-pact_matching = { version = "1.2.4", path = "../rust/pact_matching" }
-pact_mock_server = { version = "1.2.8" }
-pact_verifier = { version = "1.2.2", path = "../rust/pact_verifier" }
-pact_consumer = { version = "1.2.2", path = "../rust/pact_consumer" }
+pact_models = { version = "~1.2.2" }
+pact_matching = { version = "1.2.5", path = "../rust/pact_matching" }
+pact_mock_server = { version = "1.2.9" }
+pact_verifier = { version = "1.2.3", path = "../rust/pact_verifier" }
+pact_consumer = { version = "1.2.3", path = "../rust/pact_consumer" }
 pretty_assertions = "1.4.0"
 regex = "1.10.2"
 reqwest = { version = "0.12.3", default-features = false, features = ["rustls-tls-native-roots", "json"] }

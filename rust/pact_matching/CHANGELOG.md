@@ -1,5 +1,14 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.2.5 - Bugfix Release
+
+* fd9ff70a - chore: Upgrade pact_models to 1.2.2 (Ronald Holshausen, Wed Jul 17 11:15:34 2024 +1000)
+* e8b62f98 - chore: Upgrade pact-plugin-driver to 0.7.0 (Ronald Holshausen, Wed Jul 17 10:45:34 2024 +1000)
+* efa1295a - feat(pact_verifier): Allow provider state generator to fall back to the provider state parameters #441 (Ronald Holshausen, Tue Jul 9 17:27:09 2024 +1000)
+* 42e2ba68 - fix(pact_verifier): Take context paths into account when fetching the root HAL resource #420 (Ronald Holshausen, Tue Jul 9 11:37:04 2024 +1000)
+* da869ddb - fix: reduce log level for matching to debug (Matt Fellows, Fri Jul 5 00:13:50 2024 +1000)
+* 2163476d - bump version to 1.2.5 (Ronald Holshausen, Fri Jun 14 10:07:48 2024 +1000)
+
 # 1.2.4 - Maintenance Release
 
 * 30998a95 - chore: Upgrade pact_models to 1.2.1 (Ronald Holshausen, Wed Jun 12 15:26:49 2024 +1000)

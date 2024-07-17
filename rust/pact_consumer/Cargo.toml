@@ -1,6 +1,6 @@
 [package]
 name = "pact_consumer"
-version = "1.2.3"
+version = "1.2.4"
 authors = ["Ronald Holshausen <ronald.holshausen@gmail.com>", "Eric Kidd <git@randomhacks.net>"]
 edition = "2021"
 description = "Pact-Rust module that provides support for writing consumer pact tests"
@@ -23,35 +23,35 @@ tls = ["pact_mock_server/tls"]
 colour = ["dep:yansi"]
 
 [dependencies]
-anyhow = "1.0.82"
-async-trait = "0.1.80"
-bytes = "1.6.0"
+anyhow = "1.0.86"
+async-trait = "0.1.81"
+bytes = "1.6.1"
 futures = "0.3.30"
 itertools = "0.13.0"
-lazy_static = "1.4.0"
+lazy_static = "1.5.0"
 maplit = "1.0.2"
-pact_matching = { version = "~1.2.4", path = "../pact_matching", default-features = false }
+pact_matching = { version = "~1.2.5", path = "../pact_matching", default-features = false }
 pact_mock_server = { version = "~2.0.0-beta.5", default-features = false }
-pact_models = { version = "~1.2.1", default-features = false }
+pact_models = { version = "~1.2.2", default-features = false }
 pact-plugin-driver = { version = "~0.7.0", optional = true, default-features = false }
-regex = "1.10.4"
-serde_json = "1.0.115"
+regex = "1.10.5"
+serde_json = "1.0.120"
 termsize = "0.1.8"
-tokio = { version = "1.37.0", features = ["full"] }
+tokio = { version = "1.38.0", features = ["full"] }
 tracing = "0.1.40"
 tracing-core = "0.1.32"
-url = "2.5.0"
-uuid = { version = "1.8.0", features = ["v4"] }
+url = "2.5.2"
+uuid = { version = "1.10.0", features = ["v4"] }
 yansi = { version = "1.0.1", optional = true }
 
 [dev-dependencies]
 quickcheck = "1.0.3"
 env_logger = "0.11.3"
 expectest = "0.12.0"
-reqwest = { version = "0.12.3", default-features = false, features = ["rustls-tls-native-roots", "blocking", "json"] }
-serde = { version = "^1.0", features = ["derive"] }
+reqwest = { version = "0.12.5", default-features = false, features = ["rustls-tls-native-roots", "blocking", "json"] }
+serde = { version = "1.0.204", features = ["derive"] }
 rand = "0.8.5"
 tokio-test = "0.4.4"
-test-log = { version = "0.2.15", features = ["trace"] }
+test-log = { version = "0.2.16", features = ["trace"] }
 tracing-subscriber = { version = "0.3.18", features = ["env-filter", "tracing-log", "fmt"] }
 pretty_assertions = "1.4.0"

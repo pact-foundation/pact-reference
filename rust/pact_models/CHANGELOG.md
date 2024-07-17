@@ -1,5 +1,11 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.2.2 - Maintenance Release
+
+* 2e2580f6 - feat(pact_consumer): Improve the mock server error output (Ronald Holshausen, Wed Jul 10 15:23:48 2024 +1000)
+* efa1295a - feat(pact_verifier): Allow provider state generator to fall back to the provider state parameters #441 (Ronald Holshausen, Tue Jul 9 17:27:09 2024 +1000)
+* 86704a82 - bump version to 1.2.2 (Ronald Holshausen, Wed Jun 12 15:17:57 2024 +1000)
+
 # 1.2.1 - Bugfix Release
 
 * ab80cd2b - fix: merge pact duplicates with diff desc/same prov state fix: merge message / sync pacts with no provider state (Yousaf Nabi, Sat Jun 8 23:48:30 2024 +0100)

@@ -1,5 +1,18 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.2.3 - Maintenance Release
+
+* 9659c982 - chore(pact_consumer): Update dependencies (Ronald Holshausen, Wed Jul 17 15:20:24 2024 +1000)
+* 3c96c31b - chore: Upgrade pact_mock_server to 1.2.9 (Ronald Holshausen, Wed Jul 17 14:54:40 2024 +1000)
+* bb9fc1be - chore: Upgrade pact_matching to 1.2.5 (Ronald Holshausen, Wed Jul 17 14:34:04 2024 +1000)
+* fd9ff70a - chore: Upgrade pact_models to 1.2.2 (Ronald Holshausen, Wed Jul 17 11:15:34 2024 +1000)
+* e8b62f98 - chore: Upgrade pact-plugin-driver to 0.7.0 (Ronald Holshausen, Wed Jul 17 10:45:34 2024 +1000)
+* 57c0bc85 - feat(pact_consumer): Improve output of mock server errors with ANSI colour (Ronald Holshausen, Thu Jul 11 10:34:14 2024 +1000)
+* dee42806 - fix(pact_consumer): Fix for attempt to subtract with overflow error (Ronald Holshausen, Wed Jul 10 15:45:23 2024 +1000)
+* 2e2580f6 - feat(pact_consumer): Improve the mock server error output (Ronald Holshausen, Wed Jul 10 15:23:48 2024 +1000)
+* c70c1072 - chore(pact_consumer): Update dependencies (Ronald Holshausen, Fri Jun 14 10:35:55 2024 +1000)
+* 55f584bf - bump version to 1.2.3 (Ronald Holshausen, Fri Jun 14 10:30:00 2024 +1000)
+
 # 1.2.2 - Maintenance Release
 
 * 29c3b5f0 - chore: Upgrade pact_matching to 1.2.4 (Ronald Holshausen, Fri Jun 14 10:18:26 2024 +1000)
