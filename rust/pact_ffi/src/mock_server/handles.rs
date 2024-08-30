@@ -1730,7 +1730,11 @@ fn process_body(
         _ => {
             // We either have no content type, or an unsupported content type.
             trace!("Raw body");
-            OptionalBody::from(body)
+            if body.is_empty() {
+                OptionalBody::Empty
+            } else {
+                OptionalBody::Present(Bytes::from(body.to_owned()), content_type, None)
+            }
         }
     }
 }
@@ -4305,5 +4309,41 @@ mod tests {
         "$.id" => Generator::RandomInt(0, 1000)
       }
     });
+    }
+
+    /// See https://github.com/pact-foundation/pact-php/pull/626
+    /// and https://github.com/pact-foundation/pact-reference/pull/461
+    #[test]
+    fn annotate_raw_body_branch() {
+        let pact_handle = PactHandle::new("Consumer", "Provider");
+        let description = CString::new("Generator Test").unwrap();
+        let i_handle = pactffi_new_interaction(pact_handle, description.as_ptr());
+
+        let body = CString::new("a=1&b=2&c=3").unwrap();
+        let content_type = CString::new("application/x-www-form-urlencoded").unwrap();
+        let result = pactffi_with_body(
+            i_handle,
+            InteractionPart::Request,
+            content_type.as_ptr(),
+            body.as_ptr(),
+        );
+        assert!(result);
+
+        let interaction = i_handle
+            .with_interaction(&|_, _, inner| inner.as_v4_http().unwrap())
+            .unwrap();
+
+        assert_eq!(
+            interaction
+                .request
+                .headers
+                .expect("no headers found")
+                .get("Content-Type"),
+            Some(&vec!["application/x-www-form-urlencoded".to_string()])
+        );
+        assert_eq!(
+            interaction.request.body.value(),
+            Some(Bytes::from("a=1&b=2&c=3"))
+        )
   }
 }
