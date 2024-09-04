@@ -1841,3 +1841,107 @@ fn returns_mock_server_logs() {
 
   assert_ne!(logs,"", "logs are empty");
 }
+
+#[test]
+#[allow(deprecated)]
+fn http_form_urlencoded_consumer_feature_test() {
+  let consumer_name = CString::new("http-consumer").unwrap();
+  let provider_name = CString::new("http-provider").unwrap();
+  let pact_handle = pactffi_new_pact(consumer_name.as_ptr(), provider_name.as_ptr());
+  let description = CString::new("form_urlencoded_request_with_matchers").unwrap();
+  let interaction = pactffi_new_interaction(pact_handle.clone(), description.as_ptr());
+  let accept_header = CString::new("Accept").unwrap();
+  let content_type_header = CString::new("Content-Type").unwrap();
+  let json = json!({
+    "number": {
+      "pact:matcher:type": "number",
+      "value": 23.45
+    },
+    "string": {
+      "pact:matcher:type": "type",
+      "value": "example text"
+    },
+    "array": {
+      "pact:matcher:type": "eachValue(matching(regex, 'value1|value2|value3|value4', 'value2'))",
+      "value": ["value1", "value4"]
+    }
+  });
+  let body = CString::new(json.to_string()).unwrap();
+  let response_json = json!({
+    "number": {
+      "pact:matcher:type": "number",
+      "value": 0,
+      "pact:generator:type": "RandomDecimal",
+      "digits": 2
+    },
+    "string": {
+      "pact:matcher:type": "type",
+      "value": "",
+      "pact:generator:type": "RandomString"
+    },
+    "array": [
+      {
+        "pact:matcher:type": "number",
+        "value": 0,
+        "pact:generator:type": "RandomInt",
+        "min": 0,
+        "max": 10
+      },
+      {
+        "pact:matcher:type": "type",
+        "value": "",
+        "pact:generator:type": "RandomString"
+      }
+    ]
+  });
+  let response_body = CString::new(response_json.to_string()).unwrap();
+  let address = CString::new("127.0.0.1:0").unwrap();
+  let description = CString::new("a request to test the form urlencoded body").unwrap();
+  let method = CString::new("POST").unwrap();
+  let path = CString::new("/form-urlencoded").unwrap();
+  let content_type = CString::new("application/x-www-form-urlencoded").unwrap();
+  let status = 201;
+
+  pactffi_upon_receiving(interaction.clone(), description.as_ptr());
+  // with request...
+  pactffi_with_request(interaction.clone(), method.as_ptr(), path.as_ptr());
+  pactffi_with_header(interaction.clone(), InteractionPart::Request, accept_header.as_ptr(), 0, content_type.as_ptr());
+  pactffi_with_header(interaction.clone(), InteractionPart::Request, content_type_header.as_ptr(), 0, content_type.as_ptr());
+  pactffi_with_body(interaction.clone(), InteractionPart::Request, content_type.as_ptr(), body.as_ptr());
+  // will respond with...
+  pactffi_with_header(interaction.clone(), InteractionPart::Response, content_type_header.as_ptr(), 0, content_type.as_ptr());
+  pactffi_with_body(interaction.clone(), InteractionPart::Response, content_type.as_ptr(), response_body.as_ptr());
+  pactffi_response_status(interaction.clone(), status);
+  let port = pactffi_create_mock_server_for_pact(pact_handle.clone(), address.as_ptr(), false);
+
+  expect!(port).to(be_greater_than(0));
+
+  // Mock server has started, we can't now modify the pact
+  expect!(pactffi_upon_receiving(interaction.clone(), description.as_ptr())).to(be_false());
+
+  let client = Client::default();
+  let result = client.post(format!("http://127.0.0.1:{}/form-urlencoded", port).as_str())
+    .header("Accept", "application/x-www-form-urlencoded")
+    .header("Content-Type", "application/x-www-form-urlencoded")
+    .body("number=999.99&string=any+text&array=value2&array=value3")
+    .send();
+
+  match result {
+    Ok(res) => {
+      expect!(res.status()).to(be_eq(status));
+      expect!(res.headers().get("Content-Type").unwrap()).to(be_eq("application/x-www-form-urlencoded"));
+      expect!(res.text().unwrap()).to_not(be_equal_to("number=0&string=&array=0&array=".to_string()));
+    },
+    Err(_) => {
+      panic!("expected {} response but request failed", status);
+    }
+  };
+
+  let mismatches = unsafe {
+    CStr::from_ptr(pactffi_mock_server_mismatches(port)).to_string_lossy().into_owned()
+  };
+
+  pactffi_cleanup_mock_server(port);
+
+  expect!(mismatches).to(be_equal_to("[]"));
+}

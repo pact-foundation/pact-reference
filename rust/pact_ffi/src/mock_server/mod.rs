@@ -78,6 +78,7 @@ use crate::string::optional_str;
 pub mod handles;
 pub mod bodies;
 mod xml;
+mod form_urlencoded;
 
 /// [DEPRECATED] External interface to create a HTTP mock server. A pointer to the pact JSON as a NULL-terminated C
 /// string is passed in, as well as the port for the mock server to run on. A value of 0 for the
