@@ -160,6 +160,10 @@ impl ContentType {
       self.main_type == *t && self.sub_type == *st
     }).is_some()
   }
+
+  pub fn is_form_urlencoded(&self) -> bool {
+    self.main_type == "application" && self.sub_type == "x-www-form-urlencoded"
+  }
 }
 
 impl Default for ContentType {
@@ -348,6 +352,7 @@ impl TryFrom<&str> for ContentTypeHint {
 mod tests {
   use expectest::prelude::*;
   use maplit::btreemap;
+  use rstest::rstest;
 
   use super::ContentType;
 
@@ -572,5 +577,14 @@ mod tests {
     expect!(content_type.is_equivalent_to(&content_type2)).to(be_false());
     expect!(content_type2.is_equivalent_to(&content_type3)).to(be_true());
     expect!(content_type2.is_equivalent_to(&content_type4)).to(be_false());
+  }
+
+  #[rstest]
+  #[case("text/plain", false)]
+  #[case("multipart/form-data", false)]
+  #[case("application/x-www-form-urlencoded", true)]
+  #[case("application/json", false)]
+  fn is_form_urlencoded_test(#[case] content_type: &str, #[case] result: bool) {
+    expect!(ContentType::parse(content_type).unwrap().is_form_urlencoded()).to(be_eq(result));
   }
 }
