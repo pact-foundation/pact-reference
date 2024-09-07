@@ -7,7 +7,7 @@ use bytes::{Bytes, BytesMut};
 use either::Either;
 use lazy_static::lazy_static;
 use regex::Regex;
-use serde_json::{Map, Value};
+use serde_json::{json, Map, Value};
 use tracing::{debug, error, trace};
 
 use pact_models::bodies::OptionalBody;
@@ -421,6 +421,51 @@ pub fn empty_multipart_body() -> Result<MultipartBody, String> {
 
 fn format_multipart_error(e: std::io::Error) -> String {
   format!("convert_ptr_to_mime_part_body: Failed to generate multipart body: {}", e)
+}
+
+/// Process a JSON body with embedded matching rules and generators
+pub fn process_form_urlencoded_json(body: String, matching_rules: &mut MatchingRuleCategory, generators: &mut Generators) -> String {
+  trace!("process_form_urlencoded_json");
+  let json = process_json(body, matching_rules, generators);
+  debug!("form_urlencoded json: {json}");
+  let values: Value = serde_json::from_str(json.as_str()).unwrap();
+  debug!("form_urlencoded values: {values}");
+  let params = convert_json_value_to_query_params(values);
+  debug!("form_urlencoded params: {:?}", params);
+  serde_urlencoded::to_string(params).expect("could not serialize body to form urlencoded string")
+}
+
+type QueryParams = Vec<(String, Option<Value>)>;
+
+fn convert_json_value_to_query_params(value: Value) -> QueryParams {
+  let mut params: QueryParams = vec![];
+  match value {
+    Value::Object(map) => {
+      for (key, val) in map.iter() {
+        match val {
+          Value::Null => params.push((key.clone(), None)),
+          Value::Bool(val) => panic!("Value '{}' of key '{}' is not supported: Bool is not supported in form urlencoded, use number or string instead", val, key),
+          Value::Number(val) => params.push((key.clone(), Some(json!(val)))),
+          Value::String(val) => params.push((key.clone(), Some(json!(val)))),
+          Value::Array(vec) => {
+            for val in vec.iter() {
+              match val {
+                Value::Null => params.push((key.clone(), None)),
+                Value::Bool(val) => panic!("Value '{}' of key '{}' is not supported: Bool is not supported in form urlencoded, use number or string instead", val, key),
+                Value::Number(val) => params.push((key.clone(), Some(json!(val)))),
+                Value::String(val) => params.push((key.clone(), Some(json!(val)))),
+                Value::Array(val) => panic!("Value '{:?}' of key '{}' is not supported: Array of arrays is not supported in form urlencoded", val, key),
+                Value::Object(val) => panic!("Value '{:?}' of key '{}' is not supported: Array of objects is not supported in form urlencoded", val, key),
+              }
+            }
+          },
+          Value::Object(val) => panic!("Value '{:?}' of key '{}' is not supported: Object is not supported in form urlencoded", val, key),
+        }
+      }
+    },
+    _ => ()
+  }
+  params
 }
 
 #[cfg(test)]
@@ -1008,5 +1053,78 @@ Content-Type: application/json\r\n\r\n{}\r\n--ABCD--\r\n",
 Content-Type: application/json\r\n\r\n{}\r\n--ABCD\r\nContent-Disposition: form-data; \
 name=\"part-2\"; filename=\"2.txt\"\r\nContent-Type: text/plain\r\n\r\nTEXT\r\n--ABCD--\r\n",
                response.body.value_as_string().unwrap());
+  }
+
+  #[rstest]
+  #[case(json!({ "null_value": null }), vec![("null_value".to_string(), None)])]
+  #[case(json!({ "number_value": 123 }), vec![("number_value".to_string(), Some(json!(123)))])]
+  #[case(json!({ "string_value": "hello world" }), vec![("string_value".to_string(), Some(json!("hello world")))])]
+  #[case(json!({ "array_values": [null, 234, "example text"] }), vec![
+    ("array_values".to_string(), None),
+    ("array_values".to_string(), Some(json!(234))),
+    ("array_values".to_string(), Some(json!("example text"))),
+  ])]
+  #[should_panic]
+  #[case(json!({ "bool_value": false }), vec![])]
+  #[should_panic]
+  #[case(json!({ "bool_value": true }), vec![])]
+  #[should_panic]
+  #[case(json!({ "array_values": [false] }), vec![])]
+  #[should_panic]
+  #[case(json!({ "array_values": [true] }), vec![])]
+  #[should_panic]
+  #[case(json!({ "array_of_objects": [{ "key": "value" }] }), vec![])]
+  #[should_panic]
+  #[case(json!({ "array_of_arrays": [["value 1", "value 2"]] }), vec![])]
+  #[should_panic]
+  #[case(json!({ "object_value": { "key": "value" } }), vec![])]
+  fn convert_json_value_to_query_params_test(#[case] json: Value, #[case] result: QueryParams) {
+    expect!(convert_json_value_to_query_params(json)).to(be_equal_to(result));
+  }
+
+  #[rstest]
+  #[case(json!({ "null_value": null }), "".to_string(), matchingrules_list!{"body"; "$" => []}, generators!{"BODY" => {}})]
+  #[case(json!({ "number_value": -123.45 }), "number_value=-123.45".to_string(), matchingrules_list!{"body"; "$" => []}, generators!{"BODY" => {}})]
+  #[case(json!({ "string_value": "hello world" }), "string_value=hello+world".to_string(), matchingrules_list!{"body"; "$" => []}, generators!{"BODY" => {}})]
+  #[case(json!({ "array_values": [null, 234, "example text"] }), "array_values=234&array_values=example+text".to_string(), matchingrules_list!{"body"; "$" => []}, generators!{"BODY" => {}})]
+  #[case(json!({ "null_value": { "pact:matcher:type": "null" } }), "".to_string(), matchingrules_list!{"body"; "$.null_value" => [MatchingRule::Null]}, generators!{"BODY" => {}})]
+  #[case(
+    json!({ "number_value": { "pact:matcher:type": "number", "pact:generator:type": "RandomInt", "min": 0, "max": 10 } }),
+    "".to_string(),
+    matchingrules_list!{"body"; "$.number_value" => [MatchingRule::Number]},
+    generators!{"BODY" => {"$.number_value" => Generator::RandomInt(0, 10)}}
+  )]
+  #[case(
+    json!({ "string_value": { "pact:matcher:type": "type", "value": "some string", "pact:generator:type": "RandomString", "size": 15 } }),
+    "string_value=some+string".to_string(),
+    matchingrules_list!{"body"; "$.string_value" => [MatchingRule::Type]},
+    generators!{"BODY" => {"$.string_value" => Generator::RandomString(15)}}
+  )]
+  #[case(
+    json!({ "array_values": { "pact:matcher:type": "eachValue", "value": ["string value"], "rules": [{ "pact:matcher:type": "type", "value": "string" }] } }),
+    "array_values=string+value".to_string(),
+    matchingrules_list!{"body"; "$.array_values" => [MatchingRule::EachValue(MatchingRuleDefinition::new("[\"string value\"]".to_string(), ValueType::Unknown, MatchingRule::Type, None))]},
+    generators!{"BODY" => {}}
+  )]
+  #[should_panic]
+  #[case(json!({ "bool_value": false }), "".to_string(), matchingrules_list!{"body"; "$" => []}, generators!{"BODY" => {}})]
+  #[should_panic]
+  #[case(json!({ "bool_value": true }), "".to_string(), matchingrules_list!{"body"; "$" => []}, generators!{"BODY" => {}})]
+  #[should_panic]
+  #[case(json!({ "array_values": [false] }), "".to_string(), matchingrules_list!{"body"; "$" => []}, generators!{"BODY" => {}})]
+  #[should_panic]
+  #[case(json!({ "array_values": [true] }), "".to_string(), matchingrules_list!{"body"; "$" => []}, generators!{"BODY" => {}})]
+  #[should_panic]
+  #[case(json!({ "array_of_objects": [{ "key": "value" }] }), "".to_string(), matchingrules_list!{"body"; "$" => []}, generators!{"BODY" => {}})]
+  #[should_panic]
+  #[case(json!({ "array_of_arrays": [["value 1", "value 2"]] }), "".to_string(), matchingrules_list!{"body"; "$" => []}, generators!{"BODY" => {}})]
+  #[should_panic]
+  #[case(json!({ "object_value": { "key": "value" } }), "".to_string(), matchingrules_list!{"body"; "$" => []}, generators!{"BODY" => {}})]
+  fn process_form_urlencoded_json_test(#[case] json: Value, #[case] result: String, #[case] expected_matching_rules: MatchingRuleCategory, #[case] expected_generators: Generators) {
+    let mut matching_rules = MatchingRuleCategory::empty("body");
+    let mut generators = Generators::default();
+    expect!(process_form_urlencoded_json(json.to_string(), &mut matching_rules, &mut generators)).to(be_equal_to(result));
+    expect!(matching_rules).to(be_equal_to(expected_matching_rules));
+    expect!(generators).to(be_equal_to(expected_generators));
   }
 }

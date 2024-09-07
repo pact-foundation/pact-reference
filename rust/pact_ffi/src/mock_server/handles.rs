@@ -158,7 +158,8 @@ use crate::mock_server::bodies::{
   request_multipart,
   response_multipart,
   get_content_type_hint,
-  part_body_replace_marker
+  part_body_replace_marker,
+  process_form_urlencoded_json
 };
 use crate::models::iterators::{PactAsyncMessageIterator, PactMessageIterator, PactSyncHttpIterator, PactSyncMessageIterator};
 use crate::ptr;
@@ -1723,6 +1724,27 @@ fn process_body(
                 }
                 _ => {
                     trace!("Raw XML body left as is");
+                    OptionalBody::from(body)
+                }
+            }
+        }
+        Some(ct) if ct.is_form_urlencoded() => {
+            // The Form UrlEncoded payload may contain one of two cases:
+            // 1. A raw Form UrlEncoded payload
+            // 2. A JSON payload describing the Form UrlEncoded payload, including any
+            //    embedded generators and matching rules.
+            match detected_type {
+                Some(detected_ct) if detected_ct.is_json() => {
+                    trace!("Processing JSON description for Form UrlEncoded body");
+                    let category = matching_rules.add_category("body");
+                    OptionalBody::Present(
+                        Bytes::from(process_form_urlencoded_json(body.to_string(), category, generators)),
+                        Some(ct), // Note to use the provided content type, not the detected one
+                        None,
+                    )
+                }
+                _ => {
+                    trace!("Raw Form UrlEncoded body left as is");
                     OptionalBody::from(body)
                 }
             }
