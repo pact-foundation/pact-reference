@@ -2523,7 +2523,8 @@ ffi_fn!{
   ///
   /// # Safety
   ///
-  /// The comments parameter must be a valid pointer to a NULL terminated UTF-8,
+  /// The key parameter must be a valid pointer to a NULL terminated UTF-8.
+  /// The value parameter must be a valid pointer to a NULL terminated UTF-8,
   /// or NULL if the comment is to be cleared.
   fn pactffi_set_comment(interaction: InteractionHandle, key: *const c_char, value: *const c_char) -> bool {
     let key = match convert_cstr("key", key) {
@@ -2578,8 +2579,7 @@ ffi_fn!{
   ///
   /// # Safety
   ///
-  /// The comments parameter must be a valid pointer to a NULL terminated UTF-8,
-  /// or NULL if the comment is to be cleared.
+  /// The comment parameter must be a valid pointer to a NULL terminated UTF-8.
   fn pactffi_add_text_comment(interaction: InteractionHandle, comment: *const c_char) -> bool {
     let comment = match convert_cstr("comment", comment) {
       Some(comment) => comment,
