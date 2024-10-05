@@ -164,6 +164,7 @@ mod tests {
   use expectest::prelude::*;
   use maplit::hashmap;
   use pact_models::matchingrules;
+  use rstest::rstest;
 
   use crate::{CoreMatchingContext, DiffConfig, MatchingRule};
 
@@ -182,5 +183,33 @@ mod tests {
 
     expect!(super::match_query_values("id", &expected, &actual, &context))
       .to(be_ok());
+  }
+
+  #[rstest]
+  #[case(["abc".to_string()], ["def".to_string()], MatchingRule::Number, false)]
+  #[case(["abc".to_string()], ["def".to_string()], MatchingRule::Integer, false)]
+  #[case(["abc".to_string()], ["def".to_string()], MatchingRule::Decimal, false)]
+  #[case(["100".to_string()], ["101".to_string()], MatchingRule::Number, true)]
+  #[case(["100".to_string()], ["101".to_string()], MatchingRule::Integer, true)]
+  #[case(["100".to_string()], ["101".to_string()], MatchingRule::Decimal, true)]
+  #[case(["100.01".to_string()], ["101.02".to_string()], MatchingRule::Number, true)]
+  #[case(["100.01".to_string()], ["101.02".to_string()], MatchingRule::Integer, false)]
+  #[case(["100.01".to_string()], ["101.02".to_string()], MatchingRule::Decimal, true)]
+  fn compare_values_with_number_matchers(#[case] expected: [String; 1], #[case] actual: [String; 1], #[case] matcher: MatchingRule, #[case] matched: bool) {
+    let rules = matchingrules! {
+      "query" => { "number" => [ matcher ] }
+    };
+    let context = CoreMatchingContext::new(
+      DiffConfig::AllowUnexpectedKeys,
+      &rules.rules_for_category("query").unwrap_or_default(),
+      &hashmap!{}
+    );
+
+    let result = super::match_query_values("number", &expected, &actual, &context);
+    if matched {
+      expect!(result).to(be_ok());
+    } else {
+      expect!(result).to(be_err());
+    }
   }
 }

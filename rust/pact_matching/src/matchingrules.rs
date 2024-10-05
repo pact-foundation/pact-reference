@@ -79,6 +79,7 @@ impl <T: Debug + Display + PartialEq + Clone> Matches<&[T]> for &[T] {
       MatchingRule::EachKey(_) => Ok(()),
       MatchingRule::EachValue(_) => Ok(()),
       MatchingRule::Values => Ok(()),
+      MatchingRule::Number | MatchingRule::Decimal | MatchingRule::Integer => Ok(()),
       _ => Err(anyhow!("Unable to match {} using {:?}", self.for_mismatch(), matcher))
     };
     debug!("Comparing '{:?}' to '{:?}' using {:?} -> {:?}", self, actual, matcher, result);
