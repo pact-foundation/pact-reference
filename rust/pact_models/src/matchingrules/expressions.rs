@@ -1676,7 +1676,7 @@ mod test {
         value_type: ValueType::Unknown,
         rules: vec![
           Either::Left(MatchingRule::EachKey(MatchingRuleDefinition { value: "$.test.one".to_string(), value_type: ValueType::String, rules: vec![Either::Left(MatchingRule::Regex("\\$(\\.\\w+)+".to_string()))], generator: None } )),
-          Either::Left(MatchingRule::EachValue(MatchingRuleDefinition { value: "".to_string(), value_type: ValueType::Unknown, rules: vec![Either::Left(MatchingRule::Type)], generator: None } ))
+          Either::Left(MatchingRule::EachValue(MatchingRuleDefinition { value: "".to_string(), value_type: ValueType::String, rules: vec![Either::Left(MatchingRule::Type)], generator: None } ))
         ],
         generator: None
       }));

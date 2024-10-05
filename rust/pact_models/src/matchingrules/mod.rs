@@ -537,6 +537,8 @@ impl PartialEq for MatchingRule {
       (MatchingRule::Include(str1), MatchingRule::Include(str2)) => str1 == str2,
       (MatchingRule::ContentType(str1), MatchingRule::ContentType(str2)) => str1 == str2,
       (MatchingRule::ArrayContains(variants1), MatchingRule::ArrayContains(variants2)) => variants1 == variants2,
+      (MatchingRule::EachKey(definition1), MatchingRule::EachKey(definition2)) => definition1 == definition2,
+      (MatchingRule::EachValue(definition1), MatchingRule::EachValue(definition2)) => definition1 == definition2,
       _ => mem::discriminant(self) == mem::discriminant(other)
     }
   }
@@ -2158,7 +2160,7 @@ mod tests {
       ]
     });
     expect!(MatchingRule::from_json(&json)).to(be_ok().value(
-      MatchingRule::EachValue(MatchingRuleDefinition::new("{\"price\": 1.23}".to_string(),
+      MatchingRule::EachValue(MatchingRuleDefinition::new("{\"price\":1.23}".to_string(),
         ValueType::Unknown, MatchingRule::Decimal, None)))
     );
   }
@@ -2631,6 +2633,24 @@ mod tests {
           "$.x-test" => [ MatchingRule::Regex(".*".to_owned()) ]
         }
       }
+    )
+  }
+
+  #[test]
+  #[should_panic]
+  fn each_value_matching_rule_comparation_test() {
+    assert_eq!(
+      matchingrules_list!{"body"; "$.array_values" => [MatchingRule::EachValue(MatchingRuleDefinition::new("[\"string value\"]".to_string(), ValueType::Unknown, MatchingRule::Type, None))]},
+      matchingrules_list!{"body"; "$.array_values" => [MatchingRule::EachValue(MatchingRuleDefinition::new("[\"something else\"]".to_string(), ValueType::Unknown, MatchingRule::Type, None))]}
+    )
+  }
+
+  #[test]
+  #[should_panic]
+  fn each_key_matching_rule_comparation_test() {
+    assert_eq!(
+      matchingrules_list!{"body"; "$.array_values" => [MatchingRule::EachKey(MatchingRuleDefinition::new("a_key".to_string(), ValueType::Unknown, MatchingRule::Type, None))]},
+      matchingrules_list!{"body"; "$.array_values" => [MatchingRule::EachKey(MatchingRuleDefinition::new("another_key".to_string(), ValueType::Unknown, MatchingRule::Type, None))]}
     )
   }
 }

@@ -567,7 +567,7 @@ fn object_matching_test() {
       MatchingRule::EachKey(MatchingRuleDefinition::new("key1".to_string(), ValueType::String,
         MatchingRule::Regex("[a-z]{3}[0-9]".to_string()), None)),
       MatchingRule::EachValue(MatchingRuleDefinition::new("\"value1\"".to_string(),
-        ValueType::Unknown, MatchingRule::Type, None))
+        ValueType::String, MatchingRule::Type, None))
     ]
   }, rules);
 }
@@ -786,7 +786,7 @@ fn each_value_is_pattern() {
   matchable.extract_matching_rules(DocPath::root(), &mut rules);
   expect!(rules).to(be_equal_to(matchingrules_list! {
     "body"; "$" => [
-      MatchingRule::EachValue(MatchingRuleDefinition::new("100".to_string(), ValueType::String,
+      MatchingRule::EachValue(MatchingRuleDefinition::new("\"100\"".to_string(), ValueType::String,
         MatchingRule::Regex("\\d+".to_string()), None))
     ]
   }));
@@ -820,7 +820,7 @@ fn each_value_test() {
   result.extract_matching_rules(DocPath::root(), &mut rules);
   expect!(rules).to(be_equal_to(matchingrules_list! {
     "body"; "$" => [
-      MatchingRule::EachValue(MatchingRuleDefinition::new("value1".to_string(), ValueType::Unknown,
+      MatchingRule::EachValue(MatchingRuleDefinition::new("\"value1\"".to_string(), ValueType::String,
         MatchingRule::Regex("[a-z]{5}[0-9]".to_string()), None))
     ]
   }));
