@@ -160,6 +160,7 @@ use crate::mock_server::bodies::{
   get_content_type_hint,
   part_body_replace_marker
 };
+use crate::mock_server::form_urlencoded::process_form_urlencoded_json;
 use crate::models::iterators::{PactAsyncMessageIterator, PactMessageIterator, PactSyncHttpIterator, PactSyncMessageIterator};
 use crate::ptr;
 
@@ -1700,6 +1701,11 @@ fn process_body(
         matching_rules,
         generators
     );
+
+    if body.is_empty() {
+      return OptionalBody::Empty;
+    }
+
     let detected_type = detect_content_type_from_string(body);
     let content_type = content_type
         .clone()
@@ -1744,18 +1750,35 @@ fn process_body(
                 }
                 _ => {
                     trace!("Raw XML body left as is");
-                    OptionalBody::from(body)
+                    OptionalBody::Present(Bytes::from(body.to_owned()), Some(ct), None)
+                }
+            }
+        }
+        Some(ct) if ct.is_form_urlencoded() => {
+            // The Form UrlEncoded payload may contain one of two cases:
+            // 1. A raw Form UrlEncoded payload
+            // 2. A JSON payload describing the Form UrlEncoded payload, including any
+            //    embedded generators and matching rules.
+            match detected_type {
+                Some(detected_ct) if detected_ct.is_json() => {
+                    trace!("Processing JSON description for Form UrlEncoded body");
+                    let category = matching_rules.add_category("body");
+                    OptionalBody::Present(
+                        Bytes::from(process_form_urlencoded_json(body.to_string(), category, generators)),
+                        Some(ct), // Note to use the provided content type, not the detected one
+                        None,
+                    )
+                }
+                _ => {
+                    trace!("Raw Form UrlEncoded body left as is");
+                    OptionalBody::Present(Bytes::from(body.to_owned()), Some(ct), None)
                 }
             }
         }
         _ => {
             // We either have no content type, or an unsupported content type.
             trace!("Raw body");
-            if body.is_empty() {
-                OptionalBody::Empty
-            } else {
-                OptionalBody::Present(Bytes::from(body.to_owned()), content_type, None)
-            }
+            OptionalBody::Present(Bytes::from(body.to_owned()), content_type, None)
         }
     }
 }
@@ -3203,6 +3226,7 @@ mod tests {
   use pact_models::path_exp::DocPath;
   use pact_models::prelude::{Generators, MatchingRules};
   use pretty_assertions::assert_eq;
+  use rstest::rstest;
 
   use crate::mock_server::handles::*;
 
@@ -4337,14 +4361,16 @@ mod tests {
 
     // See https://github.com/pact-foundation/pact-php/pull/626
     // and https://github.com/pact-foundation/pact-reference/pull/461
-    #[test]
-    fn annotate_raw_body_branch() {
+    #[rstest]
+    #[case("a=1&b=2&c=3", "application/x-www-form-urlencoded")]
+    #[case(r#"<?xml version="1.0" encoding="UTF-8"?><items><item>text</item></items>"#, "application/xml")]
+    fn pactffi_with_raw_body_test(#[case] raw: String, #[case] ct: String) {
         let pact_handle = PactHandle::new("Consumer", "Provider");
         let description = CString::new("Generator Test").unwrap();
         let i_handle = pactffi_new_interaction(pact_handle, description.as_ptr());
 
-        let body = CString::new("a=1&b=2&c=3").unwrap();
-        let content_type = CString::new("application/x-www-form-urlencoded").unwrap();
+        let body = CString::new(raw.clone()).unwrap();
+        let content_type = CString::new(ct.clone()).unwrap();
         let result = pactffi_with_body(
             i_handle,
             InteractionPart::Request,
@@ -4363,11 +4389,11 @@ mod tests {
                 .headers
                 .expect("no headers found")
                 .get("Content-Type"),
-            Some(&vec!["application/x-www-form-urlencoded".to_string()])
+            Some(&vec![ct])
         );
         assert_eq!(
             interaction.request.body.value(),
-            Some(Bytes::from("a=1&b=2&c=3"))
+            Some(Bytes::from(raw))
         )
   }
 
@@ -4422,5 +4448,36 @@ mod tests {
 
     expect!(result_1).to(be_false());
     expect!(result_2).to(be_false());
+  }
+
+  #[test]
+  fn pactffi_with_empty_body_test() {
+    let pact_handle = PactHandle::new("Consumer", "Provider");
+    let description = CString::new("Generator Test").unwrap();
+    let i_handle = pactffi_new_interaction(pact_handle, description.as_ptr());
+
+    let body = CString::new("").unwrap();
+    let content_type = CString::new("text/plain").unwrap();
+    let result = pactffi_with_body(
+      i_handle,
+      InteractionPart::Request,
+      content_type.as_ptr(),
+      body.as_ptr(),
+    );
+    assert!(result);
+
+    let interaction = i_handle
+      .with_interaction(&|_, _, inner| inner.as_v4_http().unwrap())
+      .unwrap();
+
+    expect!(
+      interaction
+        .request
+        .headers
+    ).to(be_none());
+    assert_eq!(
+      interaction.request.body.value(),
+      None
+    )
   }
 }

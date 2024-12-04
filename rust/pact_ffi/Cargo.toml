@@ -52,6 +52,7 @@ tracing-log = "0.2.0"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter", "tracing-log"] }
 uuid = { version = "1.10.0", features = ["v4"] }
 zeroize = "1.8.1"
+serde_urlencoded = "0.7.1"
 
 [dev-dependencies]
 expectest = "0.12.0"

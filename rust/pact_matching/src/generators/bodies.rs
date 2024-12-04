@@ -9,6 +9,7 @@ use tracing::{debug, error, warn};
 use pact_models::bodies::OptionalBody;
 use pact_models::content_types::ContentType;
 use pact_models::generators::{ContentTypeHandler, Generator, GeneratorTestMode, JsonHandler, VariantMatcher};
+use pact_models::generators::form_urlencoded::FormUrlEncodedHandler;
 use pact_models::path_exp::DocPath;
 use pact_models::plugins::PluginData;
 #[cfg(feature = "xml")] use pact_models::xml_utils::parse_bytes;
@@ -65,6 +66,30 @@ pub async fn generators_process_body(
       #[cfg(not(feature = "xml"))]
       {
         warn!("Generating XML documents requires the xml feature to be enabled");
+        Ok(body.clone())
+      }
+    } else if content_type.is_form_urlencoded() {
+      debug!("apply_body_generators: FORM URLENCODED content type");
+      #[cfg(feature = "form_urlencoded")]
+      {
+        let result: Result<Vec<(String, String)>, serde_urlencoded::de::Error> = serde_urlencoded::from_bytes(&body.value().unwrap_or_default());
+        match result {
+          Ok(val) => {
+            let mut handler = FormUrlEncodedHandler { params: val };
+            Ok(handler.process_body(generators, mode, context, &matcher.boxed()).unwrap_or_else(|err| {
+              error!("Failed to generate the body: {}", err);
+              body.clone()
+            }))
+          },
+          Err(err) => {
+            error!("Failed to parse the body, so not applying any generators: {}", err);
+            Ok(body.clone())
+          }
+        }
+      }
+      #[cfg(not(feature = "form_urlencoded"))]
+      {
+        warn!("Generating FORM URLENCODED query string requires the form_urlencoded feature to be enabled");
         Ok(body.clone())
       }
     }
