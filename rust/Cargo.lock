@@ -2221,6 +2221,7 @@ dependencies = [
  "rstest 0.22.0",
  "serde",
  "serde_json",
+ "serde_urlencoded",
  "sxd-document",
  "tempfile",
  "test-log",
