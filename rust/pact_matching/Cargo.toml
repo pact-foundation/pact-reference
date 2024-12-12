@@ -15,11 +15,12 @@ exclude = [
 ]
 
 [features]
-default = ["datetime", "xml", "plugins", "multipart"]
+default = ["datetime", "xml", "plugins", "multipart", "form_urlencoded"]
 datetime = ["pact_models/datetime", "pact-plugin-driver?/datetime", "dep:chrono"] # Support for date/time matchers and expressions
 xml = ["pact_models/xml", "pact-plugin-driver?/xml", "dep:sxd-document"] # support for matching XML documents
 plugins = ["dep:pact-plugin-driver"]
 multipart = ["dep:multer"] # suport for MIME multipart bodies
+form_urlencoded = ["pact_models/form_urlencoded"] # suport for matching form urlencoded
 
 [dependencies]
 ansi_term = "0.12.1"
