@@ -8,7 +8,7 @@ RUN gunzip pact_verifier_cli.gz
 RUN chmod +x pact_verifier_cli
 
 # Now, we need to build our _real_ Docker container, copying in the executable.
-FROM alpine:3.18
+FROM alpine:3.21.0
 RUN apk --no-cache add ca-certificates
 COPY --from=builder \
     /pact_verifier_cli \
