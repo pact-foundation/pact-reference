@@ -80,7 +80,7 @@ jobs:
         shell: bash
         working-directory: rust/pact_ffi
       - if: startsWith(github.ref, 'refs/tags/libpact_ffi') && runner.os == 'macOS'
-        run: ./release-osx.sh
+        run: ./release-macos.sh
         shell: bash
         working-directory: rust/pact_ffi
       - name: Upload Release Assets
