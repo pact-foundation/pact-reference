@@ -12,7 +12,7 @@ env:
 
 jobs:
   build-release:
-    name: build-release (${{ matrix.targets }})
+    name: build-release (${{ matrix.operating-system }})
     runs-on: ${{ matrix.operating-system }}
     strategy:
       matrix:
