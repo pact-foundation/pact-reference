@@ -2,21 +2,7 @@ name: Release workflow
 
 on:
   release:
-    types:
-      - published
-
-  pull_request:
-    branches:
-      - master
-
-  workflow_dispatch:
-
-  schedule:
-    - cron: 0 0 * * 4 # Midnight Wednesday
-
-concurrency:
-  group: release-${{ github.ref }}
-  cancel-in-progress: true
+    types: [published]
 
 env:
   RUST_BACKTRACE: "1"
@@ -30,119 +16,75 @@ jobs:
     runs-on: ${{ matrix.operating-system }}
     strategy:
       matrix:
-        include:
-          - operating-system: ubuntu-20.04
-            targets: x86_64-unknown-linux-gnu
-          - operating-system: ubuntu-20.04
-            targets: x86_64-unknown-linux-musl
-          - operating-system: ubuntu-20.04
-            targets: aarch64-unknown-linux-gnu
-          - operating-system: ubuntu-20.04
-            targets: aarch64-unknown-linux-musl
-          - operating-system: windows-2019
-            targets: x86_64-pc-windows-msvc
-          - operating-system: windows-2019
-            targets: aarch64-pc-windows-msvc
-          - operating-system: macos-13
-            targets: x86_64-apple-darwin
-          - operating-system: macos-14
-            targets: aarch64-apple-darwin
-      fail-fast: false
-
+        operating-system: [ubuntu-20.04, windows-latest, macos-13]
+    env:
+      pact_do_not_track: true
     steps:
       - uses: actions/checkout@v4
 
       - name: Install stable Rust toolchain
+        if: runner.os == 'Linux'
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-          targets: ${{ matrix.targets }}
-
-      - name: Rust caching
-        uses: Swatinem/rust-cache@v2
+          targets: aarch64-unknown-linux-gnu,x86_64-unknown-linux-musl
+      - name: Install stable Rust toolchain
+        if: runner.os == 'Windows'
+        uses: dtolnay/rust-toolchain@stable
         with:
-          workspaces: rust
-          shared-key: ${{ runner.os }}
-
+          toolchain: stable
+          targets: aarch64-pc-windows-msvc,x86_64-pc-windows-msvc
+      - name: Install stable Rust toolchain
+        if: runner.os == 'MacOS'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: 12.4
+        if: runner.os == 'MacOS'
       - name: Set up QEMU
-        if: runner.os == 'Linux' && startsWith(matrix.targets, 'aarch64')
+        if: runner.os == 'Linux'
         uses: docker/setup-qemu-action@v3
-
       - name: Set up Docker Buildx
         if: runner.os == 'Linux'
         uses: docker/setup-buildx-action@v3
-
-      - name: Platform abbreviation
-        id: platform-abbreviation
+      - if: startsWith(github.ref, 'refs/tags/pact_mock_server_cli') && runner.os == 'Linux'
+        run: ./release-linux.sh
+        working-directory: rust/pact_mock_server_cli
+      - if: startsWith(github.ref, 'refs/tags/pact_mock_server_cli') && runner.os == 'Windows'
+        run: ./release-win.sh
         shell: bash
-        run: |
-          if [[ "${{ runner.os }}" = "Linux" ]]; then
-            echo "platform=linux" >> "$GITHUB_OUTPUT"
-          elif [[ "${{ runner.os }}" = "Windows" ]]; then
-            echo "platform=win" >> "$GITHUB_OUTPUT"
-          elif [[ "${{ runner.os }}" = "macOS" ]]; then
-            echo "platform=macos" >> "$GITHUB_OUTPUT"
-          else
-            echo "Unknown platform"
-            exit 1
-          fi
-
-      - name: Cargo flags
-        id: cargo-flags
+        working-directory: rust/pact_mock_server_cli
+      - if: startsWith(github.ref, 'refs/tags/pact_mock_server_cli') && runner.os == 'macOS'
+        run: ./release-osx.sh
         shell: bash
-        run: |
-          echo "flags=--release" >> "$GITHUB_OUTPUT"
-
-      - name: Build verifier CLI
-        if: |
-          github.event_name == 'push' ||
-          github.event_name == 'pull_request' ||
-          github.event_name == 'workflow_dispatch' ||
-          startsWith(github.ref, 'refs/tags/pact_verifier_cli')
-        shell: bash
-        run: |
-          ./release-${{ steps.platform-abbreviation.outputs.platform }}.sh ${{ matrix.targets }} \
-            ${{ steps.cargo-flags.outputs.flags }}
+        working-directory: rust/pact_mock_server_cli
+      - if: startsWith(github.ref, 'refs/tags/pact_verifier_cli') && runner.os == 'Linux'
+        run: ./release-linux.sh
         working-directory: rust/pact_verifier_cli
-
-      - name: Build FFI library
-        if: |
-          github.event_name == 'push' ||
-          github.event_name == 'pull_request' ||
-          github.event_name == 'workflow_dispatch' ||
-          startsWith(github.ref, 'refs/tags/libpact_ffi')
+      - if: startsWith(github.ref, 'refs/tags/pact_verifier_cli') && runner.os == 'Windows'
+        run: ./release-win.sh
         shell: bash
-        run: |
-          ./release-${{ steps.platform-abbreviation.outputs.platform }}.sh ${{ matrix.targets }} \
-            ${{ steps.cargo-flags.outputs.flags }}
+        working-directory: rust/pact_verifier_cli
+      - if: startsWith(github.ref, 'refs/tags/pact_verifier_cli') && runner.os == 'macOS'
+        run: ./release-osx.sh
+        shell: bash
+        working-directory: rust/pact_verifier_cli
+      - if: startsWith(github.ref, 'refs/tags/libpact_ffi') && runner.os == 'Linux'
+        run: ./release-linux.sh
         working-directory: rust/pact_ffi
-
-      - name: Upload the artifacts
-        if: |
-          startsWith(github.ref, 'refs/tags/libpact_ffi')  ||
-          startsWith(github.ref, 'refs/tags/pact_verifier_cli')
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-artifacts-${{ matrix.targets }}
-          path: rust/release_artifacts
-          if-no-files-found: warn
-
-  publish:
-    runs-on: ubuntu-latest
-    if: |
-      startsWith(github.ref, 'refs/tags/libpact_ffi')  ||
-      startsWith(github.ref, 'refs/tags/pact_verifier_cli')
-    needs: build-release
-
-    steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: release-artifacts-*
-          path: rust/release_artifacts
-          merge-multiple: true
-
+      - if: startsWith(github.ref, 'refs/tags/libpact_ffi') && runner.os == 'Windows'
+        run: ./release-win.sh
+        shell: bash
+        working-directory: rust/pact_ffi
+      - if: startsWith(github.ref, 'refs/tags/libpact_ffi') && runner.os == 'macOS'
+        run: ./release-osx.sh
+        shell: bash
+        working-directory: rust/pact_ffi
       - name: Upload Release Assets
+        if: startsWith(github.ref, 'refs/tags/libpact_ffi')  || startsWith(github.ref, 'refs/tags/pact_verifier_cli') || startsWith(github.ref, 'refs/tags/pact_mock_server_cli')
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}

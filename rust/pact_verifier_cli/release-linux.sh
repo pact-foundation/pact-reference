@@ -1,87 +1,29 @@
-#!/bin/bash
+#!/bin/bash -xe
 
-set -e
-set -x
+cargo clean
 
-RUST_DIR="$(cd -- "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP_NAME=pact_verifier_cli
+mkdir -p ../release_artifacts
+cargo build --release
+gzip -c ../target/release/pact_verifier_cli > ../release_artifacts/pact_verifier_cli-linux-x86_64.gz
+openssl dgst -sha256 -r ../release_artifacts/pact_verifier_cli-linux-x86_64.gz > ../release_artifacts/pact_verifier_cli-linux-x86_64.gz.sha256
 
-source "$RUST_DIR/scripts/gzip-and-sum.sh"
-ARTIFACTS_DIR=${ARTIFACTS_DIR:-"$RUST_DIR/release_artifacts"}
-mkdir -p "$ARTIFACTS_DIR"
+echo -- Build the aarch64 release artifacts --
 
-CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-"$RUST_DIR/target"}
+cargo install cross@0.2.5
+cargo clean
+cross build --target aarch64-unknown-linux-gnu --release
+gzip -c ../target/aarch64-unknown-linux-gnu/release/pact_verifier_cli > ../release_artifacts/pact_verifier_cli-linux-aarch64.gz
+openssl dgst -sha256 -r ../release_artifacts/pact_verifier_cli-linux-aarch64.gz > ../release_artifacts/pact_verifier_cli-linux-aarch64.gz.sha256
 
-# All flags passed to this script are passed to cargo.
-case $1 in
-x86_64-unknown-linux-musl)
-    TARGET=$1
-    shift
-    ;;
-aarch64-unknown-linux-musl)
-    TARGET=$1
-    shift
-    ;;
-x86_64-unknown-linux-gnu)
-    echo build x86_64-unknown-linux-musl target for musl/glibc compat bins
-    exit 0
-    ;;
-aarch64-unknown-linux-gnu)
-    echo build aarch64-unknown-linux-musl target for musl/glibc compat bins
-    exit 0
-    ;;
-*) ;;
-esac
-cargo_flags=("$@")
+echo -- Build the musl release artifacts --
+sudo apt install musl-tools
+rustup target add x86_64-unknown-linux-musl
+cargo build --release --target=x86_64-unknown-linux-musl
+gzip -c ../target/x86_64-unknown-linux-musl/release/pact_verifier_cli > ../release_artifacts/pact_verifier_cli-linux-x86_64-musl.gz
+openssl dgst -sha256 -r ../release_artifacts/pact_verifier_cli-linux-x86_64-musl.gz > ../release_artifacts/pact_verifier_cli-linux-x86_64-musl.gz.sha256
 
-clean_cargo_release_build() {
-    rm -rf $CARGO_TARGET_DIR/release/build
-}
-
-build_target() {
-    TARGET=$1
-    cross build --target $TARGET "${cargo_flags[@]}"
-
-    case $TARGET in
-    x86_64-unknown-linux-musl)
-        FILE_SUFFIX=linux-x86_64
-        ;;
-    aarch64-unknown-linux-musl)
-        FILE_SUFFIX=linux-aarch64
-        ;;
-    *)
-        echo unknown target $TARGET
-        exit 1
-        ;;
-    esac
-
-    if [[ "${cargo_flags[*]}" =~ "--release" ]]; then
-        file "$CARGO_TARGET_DIR/$TARGET/release/$APP_NAME"
-        du -sh "$CARGO_TARGET_DIR/$TARGET/release/$APP_NAME"
-        gzip_and_sum "$CARGO_TARGET_DIR/$TARGET/release/$APP_NAME" \
-            "$ARTIFACTS_DIR/$APP_NAME-$FILE_SUFFIX.gz"
-    fi
-}
-
-install_cross() {
-    cargo install cross@0.2.5 --force
-}
-install_cross_latest() {
-    cargo install cross --git https://github.com/cross-rs/cross --force
-}
-
-install_cross
-if [ "$(uname -s)" == "Darwin" ]; then
-    install_cross_latest
-fi
-
-if [ ! -z "$TARGET" ]; then
-    echo building for target $TARGET
-    build_target $TARGET
-else
-    echo building for all targets
-    clean_cargo_release_build
-    build_target x86_64-unknown-linux-musl
-    clean_cargo_release_build
-    build_target aarch64-unknown-linux-musl
-fi
+echo -- Build the musl aarch64 release artifacts --
+cargo clean
+cross build --release --target=aarch64-unknown-linux-musl
+gzip -c ../target/aarch64-unknown-linux-musl/release/pact_verifier_cli > ../release_artifacts/pact_verifier_cli-linux-aarch64-musl.gz
+openssl dgst -sha256 -r ../release_artifacts/pact_verifier_cli-linux-aarch64-musl.gz > ../release_artifacts/pact_verifier_cli-linux-aarch64-musl.gz.sha256

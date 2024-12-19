@@ -1,119 +1,75 @@
-#!/bin/bash
+#!/bin/bash -x
 
 set -e
-set -x
 
-RUST_DIR="$(cd -- "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP_NAME=libpact_ffi
+echo -- Setup directories --
+cargo clean
+mkdir -p ../release_artifacts
 
-source "$RUST_DIR/scripts/gzip-and-sum.sh"
-ARTIFACTS_DIR=${ARTIFACTS_DIR:-"$RUST_DIR/release_artifacts"}
-mkdir -p "$ARTIFACTS_DIR"
-install_cross() {
-    cargo install cross@0.2.5 --force
-}
-install_cross_latest() {
-    cargo install cross --git https://github.com/cross-rs/cross --force
-}
-clean_cargo_release_build() {
-    rm -rf $CARGO_TARGET_DIR/release/build
-}
+echo -- Build the Docker build image --
+docker build -f Dockerfile.linux-build -t pact-ffi-build .
 
-export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-"$RUST_DIR/target"}
+echo -- Build the release artifacts --
+docker run -t --rm --user "$(id -u)":"$(id -g)" -v $(pwd)/..:/workspace -w /workspace/pact_ffi pact-ffi-build -c 'cargo build --release'
+gzip -c ../target/release/libpact_ffi.so > ../release_artifacts/libpact_ffi-linux-x86_64.so.gz
+openssl dgst -sha256 -r ../release_artifacts/libpact_ffi-linux-x86_64.so.gz > ../release_artifacts/libpact_ffi-linux-x86_64.so.gz.sha256
+gzip -c ../target/release/libpact_ffi.a > ../release_artifacts/libpact_ffi-linux-x86_64.a.gz
+openssl dgst -sha256 -r ../release_artifacts/libpact_ffi-linux-x86_64.a.gz > ../release_artifacts/libpact_ffi-linux-x86_64.a.gz.sha256
 
-# All flags passed to this script are passed to cargo.
-case $1 in
-x86_64-unknown-linux-musl)
-    TARGET=$1
-    shift
-    ;;
-aarch64-unknown-linux-musl)
-    TARGET=$1
-    shift
-    ;;
-x86_64-unknown-linux-gnu)
-    TARGET=$1
-    shift
-    ;;
-aarch64-unknown-linux-gnu)
-    TARGET=$1
-    shift
-    ;;
-*) ;;
-esac
-cargo_flags=("$@")
+echo -- Generate the header files --
+rustup toolchain install nightly
+rustup component add rustfmt --toolchain nightly
+rustup run nightly cbindgen \
+  --config cbindgen.toml \
+  --crate pact_ffi \
+  --output include/pact.h
+rustup run nightly cbindgen \
+  --config cbindgen-c++.toml \
+  --crate pact_ffi \
+  --output include/pact-cpp.h
+cp include/*.h ../release_artifacts
 
-build_target() {
-    TARGET=$1
+echo -- Build the musl release artifacts --
+cargo install cross@0.2.5
+cross build --release --target=x86_64-unknown-linux-musl
+gzip -c ../target/x86_64-unknown-linux-musl/release/libpact_ffi.a > ../release_artifacts/libpact_ffi-linux-x86_64-musl.a.gz
+openssl dgst -sha256 -r ../release_artifacts/libpact_ffi-linux-x86_64-musl.a.gz > ../release_artifacts/libpact_ffi-linux-x86_64-musl.a.gz.sha256
 
-    case $TARGET in
-    x86_64-unknown-linux-musl)
-        FILE_SUFFIX=linux-x86_64-musl
-        RUSTFLAGS="-C target-feature=-crt-static"
-        ;;
-    aarch64-unknown-linux-musl)
-        FILE_SUFFIX=linux-aarch64-musl
-        RUSTFLAGS="-C target-feature=-crt-static"
-        ;;
-    x86_64-unknown-linux-gnu)
-        FILE_SUFFIX=linux-x86_64
-        ;;
-    aarch64-unknown-linux-gnu)
-        FILE_SUFFIX=linux-aarch64
-        ;;
-    *)
-        echo unknown target $TARGET
-        exit 1
-        ;;
-    esac
-    RUSTFLAGS=${RUSTFLAGS:-""} cross build --target $TARGET "${cargo_flags[@]}"
+mkdir tmp 
+cp ../target/x86_64-unknown-linux-musl/release/libpact_ffi.a tmp/
+docker run --platform=linux/amd64 --rm -v $PWD/tmp:/scratch alpine /bin/sh -c 'apk add --no-cache musl-dev gcc && \ 
+cd /scratch && \
+    ar -x libpact_ffi.a && \
+    gcc -shared *.o -o libpact_ffi.so && \
+    rm -f *.o'
 
-    if [[ "${cargo_flags[*]}" =~ "--release" ]]; then
-        file "$CARGO_TARGET_DIR/$TARGET/release/$APP_NAME.a"
-        file "$CARGO_TARGET_DIR/$TARGET/release/$APP_NAME.so"
-        du -sh "$CARGO_TARGET_DIR/$TARGET/release/$APP_NAME.a"
-        du -sh "$CARGO_TARGET_DIR/$TARGET/release/$APP_NAME.so"
-        gzip_and_sum \
-            "$CARGO_TARGET_DIR/$TARGET/release/$APP_NAME.a" \
-            "$ARTIFACTS_DIR/$APP_NAME-$FILE_SUFFIX.a.gz"
-        gzip_and_sum \
-            "$CARGO_TARGET_DIR/$TARGET/release/$APP_NAME.so" \
-            "$ARTIFACTS_DIR/$APP_NAME-$FILE_SUFFIX.so.gz"
-    fi
-}
+gzip -c tmp/libpact_ffi.so > ../release_artifacts/libpact_ffi-linux-x86_64-musl.so.gz
+openssl dgst -sha256 -r ../release_artifacts/libpact_ffi-linux-x86_64-musl.so.gz > ../release_artifacts/libpact_ffi-linux-x86_64-musl.so.gz.sha256
+rm -rf tmp
 
-build_header() {
-    rustup toolchain install nightly
-    rustup run nightly cbindgen \
-        --config cbindgen.toml \
-        --crate pact_ffi \
-        --output "$ARTIFACTS_DIR/pact.h"
-    rustup run nightly cbindgen \
-        --config cbindgen-c++.toml \
-        --crate pact_ffi \
-        --output "$ARTIFACTS_DIR/pact-cpp.h"
-}
 
-install_cross
-if [ ! -z "$TARGET" ]; then
-    echo building for target $TARGET
-    build_target $TARGET
+echo -- Build the musl aarch64 release artifacts --
+cargo clean
+cross build --release --target=aarch64-unknown-linux-musl
+gzip -c ../target/aarch64-unknown-linux-musl/release/libpact_ffi.a > ../release_artifacts/libpact_ffi-linux-aarch64-musl.a.gz
+openssl dgst -sha256 -r ../release_artifacts/libpact_ffi-linux-aarch64-musl.a.gz > ../release_artifacts/libpact_ffi-linux-aarch64-musl.a.gz.sha256
 
-    # If we are building indiv targets, ensure we build the headers
-    # for at least 1 nominated target
-    if [ "$TARGET" == "x86_64-unknown-linux-gnu" ]; then
-        build_header
-    fi
-else
-    echo building for all targets
-    # clean release build to avoid conflicting symbols when building all targets 
-    clean_cargo_release_build
-    build_target x86_64-unknown-linux-gnu
-    clean_cargo_release_build
-    build_target aarch64-unknown-linux-gnu
-    clean_cargo_release_build
-    build_target x86_64-unknown-linux-musl
-    clean_cargo_release_build
-    build_target aarch64-unknown-linux-musl
-    build_header
-fi
+mkdir tmp 
+cp ../target/aarch64-unknown-linux-musl/release/libpact_ffi.a tmp/
+docker run --platform=linux/arm64 --rm -v $PWD/tmp:/scratch alpine /bin/sh -c 'apk add --no-cache musl-dev gcc && \ 
+cd /scratch && \
+    ar -x libpact_ffi.a && \
+    gcc -shared *.o -o libpact_ffi.so && \
+    rm -f *.o'
+
+gzip -c tmp/libpact_ffi.so > ../release_artifacts/libpact_ffi-linux-aarch64-musl.so.gz
+openssl dgst -sha256 -r ../release_artifacts/libpact_ffi-linux-aarch64-musl.so.gz > ../release_artifacts/libpact_ffi-linux-aarch64-musl.so.gz.sha256
+rm -rf tmp
+
+echo -- Build the aarch64 release artifacts --
+cargo clean
+cross build --target aarch64-unknown-linux-gnu --release
+gzip -c ../target/aarch64-unknown-linux-gnu/release/libpact_ffi.so > ../release_artifacts/libpact_ffi-linux-aarch64.so.gz
+openssl dgst -sha256 -r ../release_artifacts/libpact_ffi-linux-aarch64.so.gz > ../release_artifacts/libpact_ffi-linux-aarch64.so.gz.sha256
+gzip -c ../target/aarch64-unknown-linux-gnu/release/libpact_ffi.a > ../release_artifacts/libpact_ffi-linux-aarch64.a.gz
+openssl dgst -sha256 -r ../release_artifacts/libpact_ffi-linux-aarch64.a.gz > ../release_artifacts/libpact_ffi-linux-aarch64.a.gz.sha256
