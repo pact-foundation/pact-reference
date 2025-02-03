@@ -5,6 +5,7 @@ use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
 use std::ptr::null;
+use std::str::from_utf8;
 use std::time::Duration;
 
 use bytes::Bytes;
@@ -13,31 +14,29 @@ use itertools::Itertools;
 use libc::c_char;
 use log::LevelFilter;
 use maplit::*;
-use pact_ffi::log::pactffi_log_to_buffer;
-use pact_models::bodies::OptionalBody;
-use pact_models::PactSpecification;
+use multipart_2021 as multipart;
 use pretty_assertions::assert_eq;
+use regex::Regex;
 use reqwest::blocking::Client;
 use reqwest::header::CONTENT_TYPE;
-use tempfile::TempDir;
-use serde_json::{json, Value};
 use rstest::rstest;
-use regex::Regex;
+use serde_json::{json, Value};
+use tempfile::TempDir;
 
+use pact_ffi::log::pactffi_log_to_buffer;
 #[allow(deprecated)]
 use pact_ffi::mock_server::{
   pactffi_cleanup_mock_server,
   pactffi_create_mock_server,
   pactffi_create_mock_server_for_pact,
-  pactffi_mock_server_mismatches,
-  pactffi_write_pact_file,
+  pactffi_create_mock_server_for_transport,
   pactffi_mock_server_logs,
-  pactffi_create_mock_server_for_transport
+  pactffi_mock_server_mismatches,
+  pactffi_write_pact_file
 };
 #[allow(deprecated)]
 use pact_ffi::mock_server::handles::{
   InteractionPart,
-  PactHandle,
   pact_default_file_name,
   pactffi_add_text_comment,
   pactffi_free_pact_handle,
@@ -69,7 +68,9 @@ use pact_ffi::mock_server::handles::{
   pactffi_with_request,
   pactffi_with_specification,
   pactffi_write_message_pact_file,
+  PactHandle,
 };
+use pact_ffi::mock_server::handles::pactffi_with_matching_rules;
 use pact_ffi::verifier::{
   OptionsFlags,
   pactffi_verifier_add_directory_source,
@@ -81,6 +82,11 @@ use pact_ffi::verifier::{
   pactffi_verifier_set_provider_info,
   pactffi_verifier_shutdown
 };
+use pact_models::{matchingrules, PactSpecification};
+use pact_models::bodies::OptionalBody;
+use pact_models::matchingrules::{MatchingRule, RuleLogic};
+use pact_models::matchingrules::matchers_to_json;
+use pact_models::path_exp::DocPath;
 
 #[test]
 fn post_to_mock_server_with_mismatches() {
@@ -2090,4 +2096,65 @@ fn include_matcher_in_query_parameters() {
       panic!("expected 200 response but request failed");
     }
   };
+}
+
+// Issue #482
+#[test_log::test]
+fn mime_multipart() {
+  let consumer_name = CString::new("multipart-consumer").unwrap();
+  let provider_name = CString::new("multipart-provider").unwrap();
+  let pact_handle = pactffi_new_pact(consumer_name.as_ptr(), provider_name.as_ptr());
+
+  let description = CString::new("create_multipart_file").unwrap();
+  let method = CString::new("POST").unwrap();
+  let path = CString::new("/formpost").unwrap();
+  let interaction = pactffi_new_interaction(pact_handle, description.as_ptr());
+  pactffi_with_request(interaction, method.as_ptr(), path.as_ptr());
+
+  let mut multipart = multipart::client::Multipart::from_request(multipart::mock::ClientRequest::default()).unwrap();
+  multipart.write_text("baz", "bat").unwrap();
+  let result = multipart.send().unwrap();
+  let multipart = format!("multipart/form-data; boundary={}", result.boundary);
+  let content_type = CString::new(multipart).unwrap();
+  let body = CString::new(from_utf8(result.buf.as_slice()).unwrap()).unwrap();
+
+  pactffi_with_body(interaction, InteractionPart::Request, content_type.as_ptr(), body.as_ptr());
+
+  let matching_rules = matchingrules!{
+    "header" => { "Content-Type" => [
+      MatchingRule::Regex("multipart/form-data;(\\s*charset=[^;]*;)?\\s*boundary=.*".to_string())
+    ] }
+  };
+  let matching_rules_json = matchers_to_json(&matching_rules, &PactSpecification::V4);
+  let matching_rules_str = CString::new(matching_rules_json.to_string()).unwrap();
+  pactffi_with_matching_rules(interaction, InteractionPart::Request, matching_rules_str.as_ptr());
+
+  let address = CString::new("127.0.0.1").unwrap();
+  let port = pactffi_create_mock_server_for_transport(pact_handle.clone(), address.as_ptr(), 0, null(), null());
+  expect!(port).to(be_greater_than(0));
+
+  let client = Client::default();
+  let form = reqwest::blocking::multipart::Form::new().text("baz", "bat");
+  let result = client.post(format!("http://127.0.0.1:{}/formpost", port).as_str())
+    .multipart(form)
+    .send();
+
+  thread::sleep(Duration::from_millis(100)); // Give mock server some time to update events
+  let mismatches = unsafe {
+    CStr::from_ptr(pactffi_mock_server_mismatches(port)).to_string_lossy().into_owned()
+  };
+
+  match result {
+    Ok(res) => {
+      let status = res.status();
+      expect!(status).to(be_eq(200));
+    },
+    Err(err) => {
+      panic!("expected 200 response but request failed - {}", err);
+    }
+  };
+
+  pactffi_cleanup_mock_server(port);
+
+  expect!(mismatches).to(be_equal_to("[]"));
 }

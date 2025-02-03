@@ -1981,10 +1981,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "defc4c55412d89136f966bbb339008b474350e5e6e78d2714439c386b3137a03"
 
 [[package]]
-name = "multipart"
-version = "0.18.0"
+name = "multipart-2021"
+version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "00dec633863867f29cb39df64a397cdf4a6354708ddd7759f70c7fb51c5f9182"
+checksum = "bf11fce0e75b66bc703108deff7df5ea10f80b241b717a14814f5f2267955ebf"
 dependencies = [
  "log",
  "mime",
@@ -2316,7 +2316,7 @@ dependencies = [
  "libc",
  "log",
  "maplit",
- "multipart",
+ "multipart-2021",
  "onig",
  "os_info",
  "pact-plugin-driver",
@@ -3208,6 +3208,7 @@ dependencies = [
  "js-sys",
  "log",
  "mime",
+ "mime_guess",
  "once_cell",
  "percent-encoding",
  "pin-project-lite",

@@ -6,6 +6,7 @@ use anyhow::{anyhow, bail};
 use bytes::{Bytes, BytesMut};
 use either::Either;
 use lazy_static::lazy_static;
+use multipart_2021 as multipart;
 use regex::Regex;
 use serde_json::{Map, Value};
 use tracing::{debug, error, trace};
