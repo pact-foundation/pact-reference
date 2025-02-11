@@ -13,7 +13,7 @@ use pact_models::path_exp::DocPath;
 use pact_models::plugins::PluginData;
 #[cfg(feature = "xml")] use pact_models::xml_utils::parse_bytes;
 
-#[cfg(feature = "xml")] use crate::generators::XmlHandler;
+#[cfg(feature = "xml")] use pact_models::generators::xml::XmlHandler;
 
 #[cfg(feature = "form_urlencoded")] use pact_models::generators::form_urlencoded::FormUrlEncodedHandler;
 
@@ -168,10 +168,10 @@ mod tests {
   }
 
   #[tokio::test]
-  async fn do_not_apply_generator_to_xml_body_because_unimplemented() {
+  async fn apply_generator_to_xml_body_test() {
     let body = OptionalBody::Present("<a>100</a>".into(), None, None);
     expect!(generators_process_body(&GeneratorTestMode::Provider, &body, Some(XML.clone()),
-    &hashmap!{}, &hashmap!{DocPath::new_unwrap("$.name") => Generator::RandomInt(0, 10)}, &DefaultVariantMatcher{}, &vec![], &hashmap!{}).await.unwrap()).to(be_equal_to(body));
+    &hashmap!{}, &hashmap!{DocPath::new_unwrap("$.name") => Generator::RandomInt(0, 10)}, &DefaultVariantMatcher{}, &vec![], &hashmap!{}).await.unwrap()).to_not(be_equal_to(body));
   }
 
   #[tokio::test]

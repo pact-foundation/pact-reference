@@ -23,7 +23,6 @@ use pact_models::v4::async_message::AsynchronousMessage;
 use pact_models::v4::message_parts::MessageContents;
 use pact_models::v4::sync_message::SynchronousMessage;
 use serde_json::{self, Value};
-#[cfg(feature = "xml")] use sxd_document::dom::Document;
 use tracing::{debug, error, trace};
 
 use crate::{CoreMatchingContext, DiffConfig, MatchingContext};
@@ -31,36 +30,6 @@ use crate::json::compare_json;
 
 pub mod bodies;
 
-/// Implementation of a content type handler for XML (currently unimplemented).
-#[cfg(feature = "xml")]
-pub struct XmlHandler<'a> {
-  /// XML document to apply the generators to.
-  pub value: Document<'a>
-}
-
-#[cfg(feature = "xml")]
-impl <'a> pact_models::generators::ContentTypeHandler<Document<'a>> for XmlHandler<'a> {
-  fn process_body(
-    &mut self,
-    _generators: &HashMap<DocPath, Generator>,
-    _mode: &GeneratorTestMode,
-    _context: &HashMap<&str, Value>,
-    _matcher: &Box<dyn VariantMatcher + Send + Sync>
-  ) -> Result<OptionalBody, String> {
-    error!("UNIMPLEMENTED: Generators are not currently supported with XML");
-    Err("Generators are not supported with XML".to_string())
-  }
-
-  fn apply_key(
-    &mut self,
-    _key: &DocPath,
-    _generator: &dyn GenerateValue<Document<'a>>,
-    _context: &HashMap<&str, Value>,
-    _matcher: &Box<dyn VariantMatcher + Send + Sync>
-  ) {
-    error!("UNIMPLEMENTED: Generators are not currently supported with XML");
-  }
-}
 
 /// Apply the generators to the body, returning a new body
 #[deprecated(note = "moved to the generators::bodies module", since = "0.12.16")]
