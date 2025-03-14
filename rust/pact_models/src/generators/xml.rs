@@ -47,12 +47,9 @@ impl <'a> ContentTypeHandler<String> for XmlHandler<'a> {
     context: &HashMap<&str, Value>,
     matcher: &Box<dyn VariantMatcher + Send + Sync>
   ) {
-    let k = key.to_vec();
-    let k_vec = k.iter().map(|p| p.as_str()).collect_vec();
-    let k_slice = k_vec.as_slice();
     for child in self.value.root().children() {
       if let ChildOfRoot::Element(el) = child {
-        generate_values_for_xml_element(&el, k_slice, generator, context, matcher, DocPath::root())
+        generate_values_for_xml_element(&el, key, generator, context, matcher, vec!["$".to_string()])
       }
     }
   }
@@ -60,22 +57,21 @@ impl <'a> ContentTypeHandler<String> for XmlHandler<'a> {
 
 fn generate_values_for_xml_element<'a>(
   el: &Element<'a>,
-  key: &[&str],
+  key: &DocPath,
   generator: &dyn GenerateValue<String>,
   context: &HashMap<&str, Value>,
   matcher: &Box<dyn VariantMatcher + Send + Sync>,
-  parent_path: DocPath
+  parent_path: Vec<String>
 ) {
-  trace!("generate_values_for_xml_element(parent_path: '{}')", parent_path);
-  let path = parent_path.clone().join(xml_element_name(el));
-  if !path.matches_path(key) {
-    return
-  }
-  trace!("Generating xml values at '{}'", path);
+  trace!("generate_values_for_xml_element(parent_path: '{:?}')", parent_path);
+  let mut path = parent_path.clone();
+  path.push(xml_element_name(el));
+  trace!("Generating xml values at '{:?}'", path);
   for attr in el.attributes() {
-    let attr_path = path.clone().join(format!("@{}", xml_attribute_name(attr)));
-    if attr_path.matches_path_exactly(key) {
-      debug!("Generating xml attribute value at '{}'", attr_path);
+    let mut attr_path = path.clone();
+    attr_path.push(format!("@{}", xml_attribute_name(attr)));
+    if key.matches_path_exactly(attr_path.iter().map(|p| p.as_str()).collect_vec().as_slice()) {
+      debug!("Generating xml attribute value at '{:?}'", attr_path);
       match generator.generate_value(&attr.value().to_string(), context, matcher) {
         Ok(new_value) => {
           let new_attr = el.set_attribute_value(attr.name(), new_value.as_str());
@@ -90,13 +86,14 @@ fn generate_values_for_xml_element<'a>(
       }
     }
   }
-  let txt_path = path.clone().join("#text");
+  let mut txt_path = path.clone();
+  txt_path.push("#text".to_string());
   let mut has_txt = false;
   for child in el.children() {
     if let ChildOfElement::Text(txt) = child {
       has_txt = true;
-      if txt_path.matches_path_exactly(key) {
-        debug!("Generating xml text at '{}'", txt_path);
+      if key.matches_path_exactly(txt_path.iter().map(|p| p.as_str()).collect_vec().as_slice()) {
+        debug!("Generating xml text at '{:?}'", txt_path);
         match generator.generate_value(&txt.text().to_string(), context, matcher) {
           Ok(new_value) => {
             txt.set_text(new_value.as_str());
@@ -112,8 +109,8 @@ fn generate_values_for_xml_element<'a>(
       generate_values_for_xml_element(&child_el, key, generator, context, matcher, path.clone())
     }
   }
-  if txt_path.matches_path_exactly(key) && !has_txt {
-    debug!("Generating xml text at '{}'", txt_path);
+  if key.matches_path_exactly(txt_path.iter().map(|p| p.as_str()).collect_vec().as_slice()) && !has_txt {
+    debug!("Generating xml text at '{:?}'", txt_path);
     match generator.generate_value(&"".to_string(), context, matcher) {
       Ok(new_value) => {
         let text = el.document().create_text(new_value.as_str());
@@ -470,12 +467,12 @@ mod tests {
   fn applies_the_generator_to_text_and_attribute_of_nested_elements() {
     let p = Package::new();
     let d = p.as_document();
-    let e = d.create_element("a");
-    e.append_child(d.create_text("1"));
-    d.root().append_child(e);
-    let ne = d.create_element("b");
-    ne.set_attribute_value("attr", "2");
-    e.append_child(ne);
+    let ea = d.create_element("a");
+    ea.append_child(d.create_text("1"));
+    d.root().append_child(ea);
+    let eb = d.create_element("b");
+    eb.set_attribute_value("attr", "2");
+    ea.append_child(eb);
 
     let mut xml_handler = XmlHandler { value: d };
 
@@ -507,5 +504,77 @@ mod tests {
     }, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed());
 
     expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><root><a attr='999'/><a attr='999'/></root>".into(), Some("application/html".into()), None)));
+  }
+
+  #[test]
+  fn applies_the_generator_to_text_of_multiple_elements_in_different_path() {
+    let p = Package::new();
+    let d = p.as_document();
+    let r = d.create_element("root");
+    d.root().append_child(r);
+    let ea = d.create_element("a");
+    let ec = d.create_element("c");
+    let e = d.create_element("d");
+    e.append_child(d.create_text("1"));
+    ec.append_child(e);
+    let e = d.create_element("d");
+    e.append_child(d.create_text("2"));
+    ec.append_child(e);
+    ea.append_child(ec);
+    r.append_child(ea);
+    let eb = d.create_element("b");
+    let ec = d.create_element("c");
+    let e = d.create_element("e");
+    e.append_child(d.create_text("3"));
+    ec.append_child(e);
+    let e = d.create_element("e");
+    e.append_child(d.create_text("4"));
+    ec.append_child(e);
+    eb.append_child(ec);
+    r.append_child(eb);
+
+    let mut xml_handler = XmlHandler { value: d };
+
+    let result = xml_handler.process_body(&hashmap!{
+      DocPath::new_unwrap("$.root.*.c.*['#text']") => Generator::RandomInt(999, 999)
+    }, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed());
+
+    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><root><a><c><d>999</d><d>999</d></c></a><b><c><e>999</e><e>999</e></c></b></root>".into(), Some("application/html".into()), None)));
+  }
+
+  #[test]
+  fn applies_the_generator_to_attribute_of_multiple_elements_in_different_path() {
+    let p = Package::new();
+    let d = p.as_document();
+    let r = d.create_element("root");
+    d.root().append_child(r);
+    let ea = d.create_element("a");
+    let ec = d.create_element("c");
+    let e = d.create_element("d");
+    e.set_attribute_value("attr", "1");
+    ec.append_child(e);
+    let e = d.create_element("d");
+    e.set_attribute_value("attr", "2");
+    ec.append_child(e);
+    ea.append_child(ec);
+    r.append_child(ea);
+    let eb = d.create_element("b");
+    let ec = d.create_element("c");
+    let e = d.create_element("e");
+    e.set_attribute_value("attr", "3");
+    ec.append_child(e);
+    let e = d.create_element("e");
+    e.set_attribute_value("attr", "4");
+    ec.append_child(e);
+    eb.append_child(ec);
+    r.append_child(eb);
+
+    let mut xml_handler = XmlHandler { value: d };
+
+    let result = xml_handler.process_body(&hashmap!{
+      DocPath::new_unwrap("$.root.*.c.*['@attr']") => Generator::RandomInt(999, 999)
+    }, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed());
+
+    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><root><a><c><d attr='999'/><d attr='999'/></c></a><b><c><e attr='999'/><e attr='999'/></c></b></root>".into(), Some("application/html".into()), None)));
   }
 }
