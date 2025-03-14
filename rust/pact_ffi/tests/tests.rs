@@ -9,6 +9,7 @@ use std::str::from_utf8;
 use std::time::Duration;
 
 use bytes::Bytes;
+use chrono::Local;
 use expectest::prelude::*;
 use itertools::Itertools;
 use libc::c_char;
@@ -2157,4 +2158,153 @@ fn mime_multipart() {
   pactffi_cleanup_mock_server(port);
 
   expect!(mismatches).to(be_equal_to("[]"));
+}
+
+// Response returns current date in the provided format when pact:generator:type is present in date matcher
+#[test_log::test]
+fn date_matcher_in_response_body_with_generator_type() {
+    let consumer_name = CString::new("date-consumer").unwrap();
+    let provider_name = CString::new("date-provider").unwrap();
+    let pact_handle = pactffi_new_pact(consumer_name.as_ptr(), provider_name.as_ptr());
+    let description = CString::new("response_with_date_matchers").unwrap();
+    let interaction = pactffi_new_interaction(pact_handle.clone(), description.as_ptr());
+    let path = CString::new("/request").unwrap();
+    let response_body_with_matchers = CString::new("{\"date\": {\"value\":\"2016-02-11\", \"pact:generator:type\": \"Date\", \"pact:matcher:type\":\"date\", \"format\":\"yyyy-MM-dd\"}}").unwrap();
+    let address = CString::new("127.0.0.1").unwrap();
+    let description = CString::new("a request to test the FFI interface").unwrap();
+    let method = CString::new("GET").unwrap();
+    let header = CString::new("application/json").unwrap();
+
+    let tmp = TempDir::new().unwrap();
+    let tmp_path = tmp.path().to_string_lossy().to_string();
+    let file_path = CString::new(tmp_path.as_str()).unwrap();
+
+    pactffi_upon_receiving(interaction.clone(), description.as_ptr());
+    pactffi_with_request(interaction.clone(), method.as_ptr(), path.as_ptr());
+    // will respond with...
+    pactffi_with_body(
+        interaction.clone(),
+        InteractionPart::Response,
+        header.as_ptr(),
+        response_body_with_matchers.as_ptr(),
+    );
+    pactffi_response_status(interaction.clone(), 200);
+
+    let port = pactffi_create_mock_server_for_transport(
+        pact_handle.clone(),
+        address.as_ptr(),
+        0,
+        null(),
+        null(),
+    );
+    expect!(port).to(be_greater_than(0));
+
+    // Mock server has started, we can't now modify the pact
+    expect!(pactffi_upon_receiving(
+        interaction.clone(),
+        description.as_ptr()
+    ))
+    .to(be_false());
+
+    let client = Client::default();
+    let result = client
+        .get(format!("http://127.0.0.1:{}/request", port).as_str())
+        .send();
+    match result {
+        Ok(res) => {
+            expect!(res.status()).to(be_eq(200));
+            let json: serde_json::Value = res.json().unwrap_or_default();
+            let date = Local::now().format("%Y-%m-%d").to_string();
+            expect!(json.get("date").unwrap().as_str().unwrap()).to(be_eq(date.as_str()));
+        }
+        Err(_) => {
+            panic!("expected 200 response but request failed");
+        }
+    };
+
+    thread::sleep(Duration::from_millis(100)); // Give mock server some time to update events
+    let mismatches = unsafe {
+        CStr::from_ptr(pactffi_mock_server_mismatches(port))
+            .to_string_lossy()
+            .into_owned()
+    };
+
+    pactffi_write_pact_file(port, file_path.as_ptr(), true);
+    pactffi_cleanup_mock_server(port);
+
+    expect!(mismatches).to(be_equal_to("[]"));
+}
+
+// Response returns provided date value itself when pact:generator:type is not provided in date matcher
+#[test_log::test]
+fn date_matcher_in_response_body_without_generator_type() {
+    let consumer_name = CString::new("date-consumer").unwrap();
+    let provider_name = CString::new("date-provider").unwrap();
+    let pact_handle = pactffi_new_pact(consumer_name.as_ptr(), provider_name.as_ptr());
+    let description = CString::new("response_with_date_matchers").unwrap();
+    let interaction = pactffi_new_interaction(pact_handle.clone(), description.as_ptr());
+    let path = CString::new("/request").unwrap();
+    let response_body_with_matchers = CString::new("{\"date\": {\"value\":\"2016-02-11\", \"pact:matcher:type\":\"date\", \"format\":\"yyyy-MM-dd\"}}").unwrap();
+    let address = CString::new("127.0.0.1").unwrap();
+    let description = CString::new("a request to test the FFI interface").unwrap();
+    let method = CString::new("GET").unwrap();
+    let header = CString::new("application/json").unwrap();
+
+    let tmp = TempDir::new().unwrap();
+    let tmp_path = tmp.path().to_string_lossy().to_string();
+    let file_path = CString::new(tmp_path.as_str()).unwrap();
+
+    pactffi_upon_receiving(interaction.clone(), description.as_ptr());
+    pactffi_with_request(interaction.clone(), method.as_ptr(), path.as_ptr());
+    // will respond with...
+    pactffi_with_body(
+        interaction.clone(),
+        InteractionPart::Response,
+        header.as_ptr(),
+        response_body_with_matchers.as_ptr(),
+    );
+    pactffi_response_status(interaction.clone(), 200);
+
+    let port = pactffi_create_mock_server_for_transport(
+        pact_handle.clone(),
+        address.as_ptr(),
+        0,
+        null(),
+        null(),
+    );
+    expect!(port).to(be_greater_than(0));
+
+    // Mock server has started, we can't now modify the pact
+    expect!(pactffi_upon_receiving(
+        interaction.clone(),
+        description.as_ptr()
+    ))
+    .to(be_false());
+
+    let client = Client::default();
+    let result = client
+        .get(format!("http://127.0.0.1:{}/request", port).as_str())
+        .send();
+    match result {
+        Ok(res) => {
+            expect!(res.status()).to(be_eq(200));
+            let json: serde_json::Value = res.json().unwrap_or_default();
+            expect!(json.get("date").unwrap().as_str().unwrap()).to(be_eq("2016-02-11"));
+        }
+        Err(_) => {
+            panic!("expected 200 response but request failed");
+        }
+    };
+
+    thread::sleep(Duration::from_millis(100)); // Give mock server some time to update events
+    let mismatches = unsafe {
+        CStr::from_ptr(pactffi_mock_server_mismatches(port))
+            .to_string_lossy()
+            .into_owned()
+    };
+
+    pactffi_write_pact_file(port, file_path.as_ptr(), true);
+    pactffi_cleanup_mock_server(port);
+
+    expect!(mismatches).to(be_equal_to("[]"));
 }
