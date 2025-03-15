@@ -577,4 +577,38 @@ mod tests {
 
     expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><root><a><c><d attr='999'/><d attr='999'/></c></a><b><c><e attr='999'/><e attr='999'/></c></b></root>".into(), Some("application/xml".into()), None)));
   }
+
+  #[test]
+  fn applies_the_generator_to_text_of_unicode_element() {
+    let p = Package::new();
+    let d = p.as_document();
+    let e = d.create_element("俄语");
+    e.append_child(d.create_text("данные"));
+    d.root().append_child(e);
+
+    let mut xml_handler = XmlHandler { value: d };
+
+    let result = xml_handler.process_body(&hashmap!{
+      DocPath::new_unwrap("$.俄语['#text']") => Generator::Regex("语言".to_string()),
+    }, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed());
+
+    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><俄语>语言</俄语>".into(), Some("application/xml".into()), None)));
+  }
+
+  #[test]
+  fn applies_the_generator_to_attribute_of_unicode_element() {
+    let p = Package::new();
+    let d = p.as_document();
+    let e = d.create_element("俄语");
+    e.set_attribute_value("լեզու", "ռուսերեն");
+    d.root().append_child(e);
+
+    let mut xml_handler = XmlHandler { value: d };
+
+    let result = xml_handler.process_body(&hashmap!{
+      DocPath::new_unwrap("$.俄语['@լեզու']") => Generator::Regex("😊".to_string()),
+    }, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed());
+
+    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><俄语 լեզու='😊'/>".into(), Some("application/xml".into()), None)));
+  }
 }
