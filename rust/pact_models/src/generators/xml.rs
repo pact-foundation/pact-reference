@@ -167,7 +167,7 @@ mod tests {
       DocPath::new_unwrap("$.b['@att']") => Generator::RandomInt(0, 10)
     }, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed());
 
-    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><a/>".into(), Some("application/html".into()), None)));
+    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><a/>".into(), Some("application/xml".into()), None)));
   }
 
   #[test]
@@ -183,7 +183,7 @@ mod tests {
       DocPath::new_unwrap("$.a['#text']") => Generator::RandomInt(999, 999)
     }, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed());
 
-    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><a>999</a>".into(), Some("application/html".into()), None)));
+    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><a>999</a>".into(), Some("application/xml".into()), None)));
   }
 
   #[test]
@@ -200,7 +200,7 @@ mod tests {
       DocPath::new_unwrap("$.a['#text']") => Generator::RandomInt(999, 999)
     }, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed());
 
-    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><a><b/>999</a>".into(), Some("application/html".into()), None)));
+    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><a><b/>999</a>".into(), Some("application/xml".into()), None)));
   }
 
   #[test]
@@ -218,7 +218,7 @@ mod tests {
       DocPath::new_unwrap("$.a['#text']") => Generator::RandomInt(999, 999)
     }, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed());
 
-    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><a>999<b/></a>".into(), Some("application/html".into()), None)));
+    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><a>999<b/></a>".into(), Some("application/xml".into()), None)));
   }
 
   #[test]
@@ -236,7 +236,7 @@ mod tests {
       DocPath::new_unwrap("$.a['#text']") => Generator::RandomInt(999, 999)
     }, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed());
 
-    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><a><b/>999</a>".into(), Some("application/html".into()), None)));
+    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><a><b/>999</a>".into(), Some("application/xml".into()), None)));
   }
 
   #[test]
@@ -253,7 +253,7 @@ mod tests {
       DocPath::new_unwrap("$.a['#text']") => Generator::RandomInt(999, 999)
     }, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed());
 
-    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><a>999</a>".into(), Some("application/html".into()), None)));
+    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><a>999</a>".into(), Some("application/xml".into()), None)));
   }
 
   #[test]
@@ -272,7 +272,7 @@ mod tests {
       DocPath::new_unwrap("$.a['#text']") => Generator::RandomInt(999, 999)
     }, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed());
 
-    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><a>999<b/>999</a>".into(), Some("application/html".into()), None)));
+    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><a>999<b/>999</a>".into(), Some("application/xml".into()), None)));
   }
 
   #[test]
@@ -294,7 +294,7 @@ mod tests {
       DocPath::new_unwrap("$.root.a['#text']") => Generator::RandomInt(999, 999)
     }, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed());
 
-    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><root><a>999</a><a>999</a></root>".into(), Some("application/html".into()), None)));
+    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><root><a>999</a><a>999</a></root>".into(), Some("application/xml".into()), None)));
   }
 
   #[test]
@@ -312,7 +312,7 @@ mod tests {
       DocPath::new_unwrap("$.n:a['#text']") => Generator::RandomInt(999, 999)
     }, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed());
 
-    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><n:a xmlns:n='http://example.com/namespace'>999</n:a>".into(), Some("application/html".into()), None)));
+    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><n:a xmlns:n='http://example.com/namespace'>999</n:a>".into(), Some("application/xml".into()), None)));
   }
 
   #[test]
@@ -337,7 +337,7 @@ mod tests {
       DocPath::new_unwrap("$.root.n2:a['#text']") => Generator::RandomInt(222, 222)
     }, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed());
 
-    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><root><n1:a xmlns:n1='http://example.com/namespace1'>111</n1:a><n2:a xmlns:n2='http://example.com/namespace2'>222</n2:a></root>".into(), Some("application/html".into()), None)));
+    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><root><n1:a xmlns:n1='http://example.com/namespace1'>111</n1:a><n2:a xmlns:n2='http://example.com/namespace2'>222</n2:a></root>".into(), Some("application/xml".into()), None)));
   }
 
   #[test]
@@ -361,7 +361,7 @@ mod tests {
       DocPath::new_unwrap("$.root.a['#text']") => Generator::RandomInt(222, 222),
     }, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed());
 
-    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><root><n:a xmlns:n='http://example.com/namespace'>111</n:a><a>222</a></root>".into(), Some("application/html".into()), None)));
+    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><root><n:a xmlns:n='http://example.com/namespace'>111</n:a><a>222</a></root>".into(), Some("application/xml".into()), None)));
   }
 
   #[test]
@@ -378,7 +378,7 @@ mod tests {
       DocPath::new_unwrap("$.a['@attr']") => Generator::RandomInt(999, 999)
     }, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed());
 
-    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><a attr='999'/>".into(), Some("application/html".into()), None)));
+    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><a attr='999'/>".into(), Some("application/xml".into()), None)));
   }
 
   #[test]
@@ -460,7 +460,7 @@ mod tests {
       DocPath::new_unwrap("$.a['@attr']") => Generator::RandomInt(222, 222),
     }, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed());
 
-    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><a attr='222'>111</a>".into(), Some("application/html".into()), None)));
+    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><a attr='222'>111</a>".into(), Some("application/xml".into()), None)));
   }
 
   #[test]
@@ -481,7 +481,7 @@ mod tests {
       DocPath::new_unwrap("$.a.b['@attr']") => Generator::RandomInt(222, 222),
     }, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed());
 
-    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><a>111<b attr='222'/></a>".into(), Some("application/html".into()), None)));
+    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><a>111<b attr='222'/></a>".into(), Some("application/xml".into()), None)));
   }
 
   #[test]
@@ -503,7 +503,7 @@ mod tests {
       DocPath::new_unwrap("$.root.a['@attr']") => Generator::RandomInt(999, 999)
     }, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed());
 
-    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><root><a attr='999'/><a attr='999'/></root>".into(), Some("application/html".into()), None)));
+    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><root><a attr='999'/><a attr='999'/></root>".into(), Some("application/xml".into()), None)));
   }
 
   #[test]
@@ -539,7 +539,7 @@ mod tests {
       DocPath::new_unwrap("$.root.*.c.*['#text']") => Generator::RandomInt(999, 999)
     }, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed());
 
-    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><root><a><c><d>999</d><d>999</d></c></a><b><c><e>999</e><e>999</e></c></b></root>".into(), Some("application/html".into()), None)));
+    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><root><a><c><d>999</d><d>999</d></c></a><b><c><e>999</e><e>999</e></c></b></root>".into(), Some("application/xml".into()), None)));
   }
 
   #[test]
@@ -575,6 +575,6 @@ mod tests {
       DocPath::new_unwrap("$.root.*.c.*['@attr']") => Generator::RandomInt(999, 999)
     }, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed());
 
-    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><root><a><c><d attr='999'/><d attr='999'/></c></a><b><c><e attr='999'/><e attr='999'/></c></b></root>".into(), Some("application/html".into()), None)));
+    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><root><a><c><d attr='999'/><d attr='999'/></c></a><b><c><e attr='999'/><e attr='999'/></c></b></root>".into(), Some("application/xml".into()), None)));
   }
 }
