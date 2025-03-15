@@ -34,6 +34,7 @@ use crate::path_exp::DocPath;
 #[cfg(feature = "datetime")] mod date_expression_parser;
 #[cfg(feature = "datetime")] mod time_expression_parser;
 #[cfg(feature = "form_urlencoded")] pub mod form_urlencoded;
+#[cfg(feature = "xml")] pub mod xml;
 
 /// Trait to represent matching logic to find a matching variant for the Array Contains generator
 pub trait VariantMatcher: Debug {
