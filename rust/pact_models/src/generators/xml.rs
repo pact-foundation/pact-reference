@@ -629,4 +629,38 @@ mod tests {
 
     expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><a>999<!--some explanation--></a>".into(), Some("application/xml".into()), None)));
   }
+
+  #[test]
+  fn applies_the_generator_to_text_and_escaping() {
+    let p = Package::new();
+    let d = p.as_document();
+    let e = d.create_element("a");
+    e.append_child(d.create_text("1"));
+    d.root().append_child(e);
+
+    let mut xml_handler = XmlHandler { value: d };
+
+    let result = xml_handler.process_body(&hashmap!{
+      DocPath::new_unwrap("$.a['#text']") => Generator::Regex("<foo/>".to_string()),
+    }, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed());
+
+    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><a>&lt;foo/&gt;</a>".into(), Some("application/xml".into()), None)));
+  }
+
+  #[test]
+  fn applies_the_generator_to_attribute_and_escaping() {
+    let p = Package::new();
+    let d = p.as_document();
+    let e = d.create_element("a");
+    e.set_attribute_value("attr", "1");
+    d.root().append_child(e);
+
+    let mut xml_handler = XmlHandler { value: d };
+
+    let result = xml_handler.process_body(&hashmap!{
+      DocPath::new_unwrap("$.a['@attr']") => Generator::Regex("' new-attr='\"val".to_string()),
+    }, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed());
+
+    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><a attr='&apos; new-attr=&apos;&quot;val'/>".into(), Some("application/xml".into()), None)));
+  }
 }
