@@ -611,4 +611,22 @@ mod tests {
 
     expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><俄语 լեզու='😊'/>".into(), Some("application/xml".into()), None)));
   }
+
+  #[test]
+  fn applies_the_generator_to_text_beside_comment() {
+    let p = Package::new();
+    let d = p.as_document();
+    let e = d.create_element("a");
+    e.append_child(d.create_text("1"));
+    e.append_child(d.create_comment("some explanation"));
+    d.root().append_child(e);
+
+    let mut xml_handler = XmlHandler { value: d };
+
+    let result = xml_handler.process_body(&hashmap!{
+      DocPath::new_unwrap("$.a['#text']") => Generator::RandomInt(999, 999)
+    }, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed());
+
+    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><a>999<!--some explanation--></a>".into(), Some("application/xml".into()), None)));
+  }
 }
