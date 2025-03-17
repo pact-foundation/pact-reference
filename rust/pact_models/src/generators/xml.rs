@@ -789,4 +789,78 @@ mod tests {
 
     expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><root><a><c>999<d/></c></a><b><c>999<e/></c></b></root>".into(), Some("application/xml".into()), None)));
   }
+
+  #[test]
+  fn not_apply_generator_to_text_of_elements_located_too_deep() {
+    let p = Package::new();
+    let d = p.as_document();
+    let r = d.create_element("root");
+    d.root().append_child(r);
+    let ea = d.create_element("a");
+    let ec = d.create_element("c");
+    let e = d.create_element("d");
+    e.append_child(d.create_text("1"));
+    ec.append_child(e);
+    let e = d.create_element("d");
+    e.append_child(d.create_text("2"));
+    ec.append_child(e);
+    ea.append_child(ec);
+    r.append_child(ea);
+    let eb = d.create_element("b");
+    let ec = d.create_element("c");
+    let e = d.create_element("e");
+    e.append_child(d.create_text("3"));
+    ec.append_child(e);
+    let e = d.create_element("e");
+    e.append_child(d.create_text("4"));
+    ec.append_child(e);
+    eb.append_child(ec);
+    r.append_child(eb);
+
+    let mut xml_handler = XmlHandler { value: d };
+
+    let result = xml_handler.process_body(&hashmap!{
+      DocPath::new_unwrap("$.*.d['#text']") => Generator::RandomInt(999, 999),
+      DocPath::new_unwrap("$.*.e['#text']") => Generator::RandomInt(999, 999),
+    }, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed());
+
+    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><root><a><c><d>1</d><d>2</d></c></a><b><c><e>3</e><e>4</e></c></b></root>".into(), Some("application/xml".into()), None)));
+  }
+
+  #[test]
+  fn not_apply_generator_to_attribute_of_elements_located_too_deep() {
+    let p = Package::new();
+    let d = p.as_document();
+    let r = d.create_element("root");
+    d.root().append_child(r);
+    let ea = d.create_element("a");
+    let ec = d.create_element("c");
+    let e = d.create_element("d");
+    e.set_attribute_value("attr", "1");
+    ec.append_child(e);
+    let e = d.create_element("d");
+    e.set_attribute_value("attr", "2");
+    ec.append_child(e);
+    ea.append_child(ec);
+    r.append_child(ea);
+    let eb = d.create_element("b");
+    let ec = d.create_element("c");
+    let e = d.create_element("e");
+    e.set_attribute_value("attr", "3");
+    ec.append_child(e);
+    let e = d.create_element("e");
+    e.set_attribute_value("attr", "4");
+    ec.append_child(e);
+    eb.append_child(ec);
+    r.append_child(eb);
+
+    let mut xml_handler = XmlHandler { value: d };
+
+    let result = xml_handler.process_body(&hashmap!{
+      DocPath::new_unwrap("$.*.d['@attr']") => Generator::RandomInt(999, 999),
+      DocPath::new_unwrap("$.*.e['@attr']") => Generator::RandomInt(999, 999),
+    }, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed());
+
+    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><root><a><c><d attr='1'/><d attr='2'/></c></a><b><c><e attr='3'/><e attr='4'/></c></b></root>".into(), Some("application/xml".into()), None)));
+  }
 }
