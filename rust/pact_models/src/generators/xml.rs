@@ -729,4 +729,64 @@ mod tests {
 
     expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><a attr='&apos; new-attr=&apos;&quot;val'/>".into(), Some("application/xml".into()), None)));
   }
+
+  #[test]
+  fn applies_the_generator_to_attribute_of_elements_in_middle() {
+    let p = Package::new();
+    let d = p.as_document();
+    let r = d.create_element("root");
+    d.root().append_child(r);
+    let ea = d.create_element("a");
+    let ec = d.create_element("c");
+    ec.set_attribute_value("attr", "1");
+    let e = d.create_element("d");
+    ec.append_child(e);
+    ea.append_child(ec);
+    r.append_child(ea);
+    let eb = d.create_element("b");
+    let ec = d.create_element("c");
+    ec.set_attribute_value("attr", "2");
+    let e = d.create_element("e");
+    ec.append_child(e);
+    eb.append_child(ec);
+    r.append_child(eb);
+
+    let mut xml_handler = XmlHandler { value: d };
+
+    let result = xml_handler.process_body(&hashmap!{
+      DocPath::new_unwrap("$.root.*.c['@attr']") => Generator::RandomInt(999, 999)
+    }, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed());
+
+    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><root><a><c attr='999'><d/></c></a><b><c attr='999'><e/></c></b></root>".into(), Some("application/xml".into()), None)));
+  }
+
+  #[test]
+  fn applies_the_generator_to_text_of_elements_in_middle() {
+    let p = Package::new();
+    let d = p.as_document();
+    let r = d.create_element("root");
+    d.root().append_child(r);
+    let ea = d.create_element("a");
+    let ec = d.create_element("c");
+    ec.append_child(d.create_text("1"));
+    let e = d.create_element("d");
+    ec.append_child(e);
+    ea.append_child(ec);
+    r.append_child(ea);
+    let eb = d.create_element("b");
+    let ec = d.create_element("c");
+    ec.append_child(d.create_text("2"));
+    let e = d.create_element("e");
+    ec.append_child(e);
+    eb.append_child(ec);
+    r.append_child(eb);
+
+    let mut xml_handler = XmlHandler { value: d };
+
+    let result = xml_handler.process_body(&hashmap!{
+      DocPath::new_unwrap("$.root.*.c['#text']") => Generator::RandomInt(999, 999)
+    }, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed());
+
+    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><root><a><c>999<d/></c></a><b><c>999<e/></c></b></root>".into(), Some("application/xml".into()), None)));
+  }
 }
