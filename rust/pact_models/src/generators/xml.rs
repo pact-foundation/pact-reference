@@ -206,6 +206,20 @@ mod tests {
   use super::Generator;
 
   #[test]
+  fn applies_no_generator() {
+    let p = Package::new();
+    let d = p.as_document();
+    let e = d.create_element("a");
+    d.root().append_child(e);
+
+    let mut xml_handler = XmlHandler { value: d };
+
+    let result = xml_handler.process_body(&hashmap!{}, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed());
+
+    expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><a/>".into(), Some("application/xml".into()), None)));
+  }
+
+  #[test]
   fn applies_the_generator_to_non_existing_element() {
     let p = Package::new();
     let d = p.as_document();
