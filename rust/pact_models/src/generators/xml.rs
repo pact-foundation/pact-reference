@@ -64,52 +64,103 @@ fn generate_values_for_xml_element<'a>(
   parent_path: Vec<String>
 ) {
   trace!("generate_values_for_xml_element(parent_path: '{:?}')", parent_path);
+
+  if key.len() < parent_path.len() + 2 {
+    return
+  }
+
   let mut path = parent_path.clone();
   path.push(xml_element_name(el));
-  trace!("Generating xml values at '{:?}'", path);
-  for attr in el.attributes() {
-    let mut attr_path = path.clone();
-    attr_path.push(format!("@{}", xml_attribute_name(attr)));
-    if key.matches_path_exactly(attr_path.iter().map(|p| p.as_str()).collect_vec().as_slice()) {
-      debug!("Generating xml attribute value at '{:?}'", attr_path);
-      match generator.generate_value(&attr.value().to_string(), context, matcher) {
-        Ok(new_value) => {
-          let new_attr = el.set_attribute_value(attr.name(), new_value.as_str());
-          new_attr.set_preferred_prefix(attr.preferred_prefix());
-          debug!("Generated value for attribute '{}' of xml element '{}'", xml_attribute_name(attr), xml_element_name(el));
-          return
-        }
-        Err(err) => {
-          error!("Failed to generate the attribute, will use the original: {}", err);
-          return
-        }
-      }
-    }
+
+  if generate_values_for_xml_attribute(&el, key, generator, context, matcher, path.clone()) {
+    return
   }
-  let mut txt_path = path.clone();
-  txt_path.push("#text".to_string());
-  let mut has_txt = false;
+
+  if generate_values_for_xml_text(&el, key, generator, context, matcher, path.clone()) {
+    return
+  }
+
+  if key.len() < path.len() + 2 {
+    return
+  }
+
   for child in el.children() {
-    if let ChildOfElement::Text(txt) = child {
-      has_txt = true;
-      if key.matches_path_exactly(txt_path.iter().map(|p| p.as_str()).collect_vec().as_slice()) {
-        debug!("Generating xml text at '{:?}'", txt_path);
-        match generator.generate_value(&txt.text().to_string(), context, matcher) {
-          Ok(new_value) => {
-            txt.set_text(new_value.as_str());
-            debug!("Generated value for text of xml element '{}'", xml_element_name(el));
-          }
-          Err(err) => {
-            error!("Failed to generate the text, will use the original: {}", err);
-          }
-        }
-      }
-    }
     if let ChildOfElement::Element(child_el) = child {
       generate_values_for_xml_element(&child_el, key, generator, context, matcher, path.clone())
     }
   }
-  if key.matches_path_exactly(txt_path.iter().map(|p| p.as_str()).collect_vec().as_slice()) && !has_txt {
+}
+
+fn generate_values_for_xml_attribute<'a>(
+  el: &Element<'a>,
+  key: &DocPath,
+  generator: &dyn GenerateValue<String>,
+  context: &HashMap<&str, Value>,
+  matcher: &Box<dyn VariantMatcher + Send + Sync>,
+  path: Vec<String>
+) -> bool {
+  trace!("generate_values_for_xml_attribute(path: '{:?}')", path);
+
+  if let Some(v) = key.last_field() {
+    if v.starts_with("@") {
+      for attr in el.attributes() {
+        let mut attr_path = path.clone();
+        attr_path.push(format!("@{}", xml_attribute_name(attr)));
+        if key.matches_path_exactly(attr_path.iter().map(|p| p.as_str()).collect_vec().as_slice()) {
+          debug!("Generating xml attribute value at '{:?}'", attr_path);
+          match generator.generate_value(&attr.value().to_string(), context, matcher) {
+            Ok(new_value) => {
+              let new_attr = el.set_attribute_value(attr.name(), new_value.as_str());
+              new_attr.set_preferred_prefix(attr.preferred_prefix());
+              debug!("Generated value for attribute '{}' of xml element '{}'", xml_attribute_name(attr), xml_element_name(el));
+            }
+            Err(err) => {
+              error!("Failed to generate the attribute, will use the original: {}", err);
+            }
+          }
+          return true
+        }
+      }
+    }
+  };
+  false
+}
+
+
+fn generate_values_for_xml_text<'a>(
+  el: &Element<'a>,
+  key: &DocPath,
+  generator: &dyn GenerateValue<String>,
+  context: &HashMap<&str, Value>,
+  matcher: &Box<dyn VariantMatcher + Send + Sync>,
+  path: Vec<String>
+) -> bool {
+  trace!("generate_values_for_xml_text(path: '{:?}')", path);
+
+  let mut txt_path = path.clone();
+  txt_path.push("#text".to_string());
+
+  if !key.matches_path_exactly(txt_path.iter().map(|p| p.as_str()).collect_vec().as_slice()) {
+    return false
+  }
+
+  let mut has_txt = false;
+  for child in el.children() {
+    if let ChildOfElement::Text(txt) = child {
+      has_txt = true;
+      debug!("Generating xml text at '{:?}'", txt_path);
+      match generator.generate_value(&txt.text().to_string(), context, matcher) {
+        Ok(new_value) => {
+          txt.set_text(new_value.as_str());
+          debug!("Generated value for text of xml element '{}'", xml_element_name(el));
+        }
+        Err(err) => {
+          error!("Failed to generate the text, will use the original: {}", err);
+        }
+      }
+    }
+  }
+  if !has_txt {
     debug!("Generating xml text at '{:?}'", txt_path);
     match generator.generate_value(&"".to_string(), context, matcher) {
       Ok(new_value) => {
@@ -122,6 +173,7 @@ fn generate_values_for_xml_element<'a>(
       }
     }
   }
+  true
 }
 
 fn xml_element_name(el: &Element) -> String {
