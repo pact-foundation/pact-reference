@@ -1,5 +1,12 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.2.10 - Maintenance Release
+
+* bed6c5c7 - fix: Content type matcher was not being applied when dealing with multi-part bodies #482 (Ronald Holshausen, Mon Feb 3 17:38:49 2025 +1100)
+* 52f93e74 - fix: correct tests after cherry pick from master (Ronald Holshausen, Wed Mar 26 09:52:28 2025 +1100)
+* 25f50055 - chore: Upgrade pact-plugin-driver to 0.7.4 (Ronald Holshausen, Tue Mar 25 16:26:48 2025 +1100)
+* 72fb8305 - bump version to 1.2.10 (Ronald Holshausen, Fri Jan 31 09:25:29 2025 +1100)
+
 # 1.2.9 - Bugfix Release
 
 * e98a2183 - fix: Do not apply include matcher at the collection level #485 (Ronald Holshausen, Wed Jan 29 17:09:04 2025 +1100)
