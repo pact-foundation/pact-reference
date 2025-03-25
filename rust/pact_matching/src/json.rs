@@ -26,7 +26,7 @@ lazy_static! {
   static ref DEC_REGEX: Regex = Regex::new(r"\d+\.\d+").unwrap();
 }
 
-fn type_of(json: &Value) -> String {
+pub(crate) fn type_of(json: &Value) -> String {
   match json {
     Value::Object(_) => "Object",
     Value::Array(_) => "Array",
@@ -1096,8 +1096,13 @@ mod tests {
     "#);
 
     let rules = matchingrules! {
-      "body" => { "$" => [ MatchingRule::EachValue(MatchingRuleDefinition::new("100".to_string(), ValueType::String,
-        MatchingRule::Integer, None)) ] }
+      "body" => {
+        "$" => [
+          MatchingRule::EachValue(
+            MatchingRuleDefinition::new("100".to_string(), ValueType::String, MatchingRule::Integer, None, "".to_string())
+          )
+        ]
+      }
     };
     let context = CoreMatchingContext::new(
       DiffConfig::AllowUnexpectedKeys,
@@ -1119,8 +1124,12 @@ mod tests {
     "#);
 
     let rules = matchingrules! {
-      "body" => { "$" => [ MatchingRule::EachValue(MatchingRuleDefinition::new("100".to_string(), ValueType::String,
-        MatchingRule::Integer, None)) ] }
+      "body" => {
+        "$" => [
+          MatchingRule::EachValue(MatchingRuleDefinition::new("100".to_string(), ValueType::String,
+            MatchingRule::Integer, None, "".to_string()))
+        ]
+      }
     };
     let context = CoreMatchingContext::new(
       DiffConfig::AllowUnexpectedKeys,
@@ -1297,7 +1306,7 @@ mod tests {
     let matchingrules = matchingrules_list! {
        "body"; "$" => [
         MatchingRule::EachValue(MatchingRuleDefinition::new("{\"id1\":\"book1\"}".to_string(),
-          ValueType::Unknown, MatchingRule::Regex("\\w+\\d+".to_string()), None))
+          ValueType::Unknown, MatchingRule::Regex("\\w+\\d+".to_string()), None, "".to_string()))
       ]
     };
 

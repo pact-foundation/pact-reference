@@ -477,8 +477,8 @@ mod tests {
     let expected = hashmap! { "user_id".to_string() => vec!["1".to_string()] };
     let actual = hashmap! { "user_id".to_string() => vec!["2".to_string()] };
     let rules = matchingrules! {
-    "header" => { "user_id" => [ MatchingRule::Regex("^[0-9]+$".to_string()) ] }
-  };
+      "header" => { "user_id" => [ MatchingRule::Regex("^[0-9]+$".to_string()) ] }
+    };
     let context = CoreMatchingContext::new(
       DiffConfig::AllowUnexpectedKeys,
       &rules.rules_for_category("header").unwrap_or_default(), &hashmap!{}
@@ -803,7 +803,7 @@ mod tests {
         "header" => {
           "X-Id" => [
             MatchingRule::EachValue(MatchingRuleDefinition::new("100".to_string(), ValueType::String,
-              MatchingRule::Regex("\\d+".to_string()), None))
+              MatchingRule::Regex("\\d+".to_string()), None, "".to_string()))
           ]
         }
       }.rules_for_category("header").unwrap_or_default(), &hashmap!{}
@@ -822,7 +822,7 @@ mod tests {
         "header" => {
           "X-Id" => [
             MatchingRule::EachValue(MatchingRuleDefinition::new("100".to_string(), ValueType::String,
-              MatchingRule::Regex("\\d+".to_string()), None))
+              MatchingRule::Regex("\\d+".to_string()), None, "".to_string()))
           ]
         }
       }.rules_for_category("header").unwrap_or_default(), &hashmap!{}
