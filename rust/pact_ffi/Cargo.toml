@@ -32,9 +32,9 @@ multipart = { version = "0.18.0", default-features = false, features = ["client"
 onig = { version = "6.4.0", default-features = false }
 pact_matching = { version = "~1.2.8", path = "../pact_matching" }
 pact_mock_server = { version = "~1.2.11" }
-pact_models = { version = "~1.2.6" }
-pact-plugin-driver = { version = "~0.7.2" }
-pact_verifier = { version = "~1.2.4", path = "../pact_verifier" }
+pact_models = { version = "~1.3.0" }
+pact-plugin-driver = { version = "~0.7.4" }
+pact_verifier = { version = "~1.2.5", path = "../pact_verifier" }
 panic-message = "0.3.0"
 rand = "0.8.5"
 rand_regex = "0.15.1"
