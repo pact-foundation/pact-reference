@@ -1,24 +1,5 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
-# 1.3.0 - Update to pact_matching 2.0.0
-
-* 2b4536b1 - chore: Bump pact_verifier to 1.3.0 (Ronald Holshausen, Tue May 20 16:34:00 2025 +1000)
-* b0d763f0 - refactor: Add builder for HALClient (Ronald Holshausen, Tue May 20 16:15:40 2025 +1000)
-* 05c12d82 - chore(pact_verifier): Update to Rust 2024 edition (Ronald Holshausen, Tue May 20 15:02:09 2025 +1000)
-* 7d8e8f61 - chore: Upgrade pact_models to 1.3.1 (Ronald Holshausen, Tue May 20 14:53:42 2025 +1000)
-* 0383b9ac - chore: Remove the use of the deprecated pact_matching::logging::LOG_ID (Ronald Holshausen, Wed Mar 26 15:52:47 2025 +1100)
-* 12ca5283 - chore: Upgrade pact-plugin-driver to 0.7.4 (Ronald Holshausen, Tue Mar 25 16:26:48 2025 +1100)
-* 0ed75202 - chore(pact-models): Upgrade pact models crate to Rust 2024 edition (Ronald Holshausen, Tue Mar 25 16:02:47 2025 +1100)
-* 79b52714 - Merge branch 'master' into feat/matching-engine-v2 (Ronald Holshausen, Thu Mar 20 09:43:30 2025 +1100)
-* bd94810b - bump version to 1.2.6 (Ronald Holshausen, Wed Mar 19 14:02:45 2025 +1100)
-* b07d7aec - Merge remote-tracking branch 'origin/master' into feat/matching-engine-v2 (Ronald Holshausen, Wed Mar 19 11:22:43 2025 +1100)
-* ad9b555b - Merge remote-tracking branch 'origin/master' into feat/matching-engine-v2 (Ronald Holshausen, Fri Mar 14 11:42:13 2025 +1100)
-* c8f165b7 - fix: correct the build after last change (Ronald Holshausen, Thu Mar 6 09:52:03 2025 +1100)
-* 7b94a211 - Merge tag 'master' into feat/matching-engine-v2 (Ronald Holshausen, Thu Feb 20 15:16:16 2025 +1100)
-* 5db8db23 - Merge branch 'master' into feat/matching-engine-v2 (Ronald Holshausen, Wed Nov 13 14:16:31 2024 +1100)
-* 11cd9dc0 - Merge branch 'master' into feat/matching-engine-v2 (Ronald Holshausen, Fri Oct 25 10:01:15 2024 +1100)
-* 02e2ae13 - chore: Bump pact_matching to 2.0.0-beta.0 (Ronald Holshausen, Tue Jul 30 11:40:20 2024 +1000)
-
 # 1.2.5 - Bugfix Release
 
 * 5ad52f84 - chore(pact_verifier): Update dependencies (Ronald Holshausen, Wed Mar 19 13:47:29 2025 +1100)
