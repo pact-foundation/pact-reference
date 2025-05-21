@@ -1,5 +1,29 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.4.0 - Update to Rust 2024 and pact_matching 2.0.0-beta
+
+* 60afbe95 - chore(pact_consumer): Update crate to Rust 2024 edition (Ronald Holshausen, Wed May 21 14:49:18 2025 +1000)
+* 71b1b7ed - chore(pact_consumer): Update pact_mock_server to 2.1.0 (Ronald Holshausen, Wed May 21 14:44:21 2025 +1000)
+* 0649f61f - chore: Update pact_matching to 2.0.0-beta.1 (Ronald Holshausen, Wed May 21 12:04:10 2025 +1000)
+* 7d8e8f61 - chore: Upgrade pact_models to 1.3.1 (Ronald Holshausen, Tue May 20 14:53:42 2025 +1000)
+* 369dba85 - chore: Upgrade pact-mock-server to 2.0.3/1.2.12 (Ronald Holshausen, Wed Mar 26 11:00:31 2025 +1100)
+* 12ca5283 - chore: Upgrade pact-plugin-driver to 0.7.4 (Ronald Holshausen, Tue Mar 25 16:26:48 2025 +1100)
+* 0ed75202 - chore(pact-models): Upgrade pact models crate to Rust 2024 edition (Ronald Holshausen, Tue Mar 25 16:02:47 2025 +1100)
+* b07d7aec - Merge remote-tracking branch 'origin/master' into feat/matching-engine-v2 (Ronald Holshausen, Wed Mar 19 11:22:43 2025 +1100)
+* e32f0dbd - fix: Upgrade pact-plugin-driver to 0.7.3 (Ronald Holshausen, Wed Mar 19 11:20:39 2025 +1100)
+* ad9b555b - Merge remote-tracking branch 'origin/master' into feat/matching-engine-v2 (Ronald Holshausen, Fri Mar 14 11:42:13 2025 +1100)
+* d67db1a4 - chore: Update pact_models to 1.2.7 (Ronald Holshausen, Fri Mar 14 11:02:53 2025 +1100)
+* c57885d1 - feat: changes required to get spec tests passing (Ronald Holshausen, Tue Mar 11 11:27:19 2025 +1100)
+* c8f165b7 - fix: correct the build after last change (Ronald Holshausen, Thu Mar 6 09:52:03 2025 +1100)
+* ad9ee539 - fix: Matching rule definitions now take th expression they were parsed from (Ronald Holshausen, Tue Mar 4 09:18:51 2025 +1100)
+* 7b94a211 - Merge tag 'master' into feat/matching-engine-v2 (Ronald Holshausen, Thu Feb 20 15:16:16 2025 +1100)
+* 8fb0bcb9 - chore: Upgrade pact_matching to 1.2.9 (Ronald Holshausen, Fri Jan 31 09:44:14 2025 +1100)
+* 648ab1c9 - chore: Upgrade pact_matching to 1.2.8 (Ronald Holshausen, Thu Dec 19 16:14:10 2024 +1100)
+* a7303e61 - bump version to 1.3.4 (Ronald Holshausen, Fri Dec 13 14:05:32 2024 +1100)
+* 5db8db23 - Merge branch 'master' into feat/matching-engine-v2 (Ronald Holshausen, Wed Nov 13 14:16:31 2024 +1100)
+* 11cd9dc0 - Merge branch 'master' into feat/matching-engine-v2 (Ronald Holshausen, Fri Oct 25 10:01:15 2024 +1100)
+* 02e2ae13 - chore: Bump pact_matching to 2.0.0-beta.0 (Ronald Holshausen, Tue Jul 30 11:40:20 2024 +1000)
+
 # 1.3.3 - Maintenance Release
 
 * 6189c0cd - fix(pact_consumer): Pass the transport config to the plugin in the test context under the transport_config key (Ronald Holshausen, Fri Dec 13 12:00:05 2024 +1100)
