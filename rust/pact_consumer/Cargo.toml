@@ -2,7 +2,7 @@
 name = "pact_consumer"
 version = "1.4.0"
 authors = ["Ronald Holshausen <ronald.holshausen@gmail.com>", "Eric Kidd <git@randomhacks.net>"]
-edition = "2021"
+edition = "2024"
 description = "Pact-Rust module that provides support for writing consumer pact tests"
 homepage = "https://www.pact.io"
 repository = "https://github.com/pact-foundation/pact-reference/blob/master/rust/pact_consumer"

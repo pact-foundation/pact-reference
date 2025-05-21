@@ -33,7 +33,7 @@ use pact_models::v4::synch_http::SynchronousHttp;
 #[test_log::test(tokio::test)]
 async fn mock_server_passing_validation() -> anyhow::Result<()> {
     let output_dir = output_dir("target/pact_dir");
-    env::set_var("PACT_OUTPUT_DIR", &output_dir);
+    unsafe { env::set_var("PACT_OUTPUT_DIR", &output_dir); }
 
     // clean out any previous Pact file
     let path_file = Path::new("target/pact_dir/Consumer-Alice Service.json");
@@ -77,7 +77,7 @@ async fn mock_server_passing_validation() -> anyhow::Result<()> {
     // When your test has finished running, all verifications will be performed
     // automatically, and an error will be thrown if any have failed.
 
-    env::remove_var("PACT_OUTPUT_DIR");
+    unsafe { env::remove_var("PACT_OUTPUT_DIR"); }
 
     expect!(path_file.exists()).to(be_true());
     let pact = read_pact(path_file)?.as_v4_pact()?;
