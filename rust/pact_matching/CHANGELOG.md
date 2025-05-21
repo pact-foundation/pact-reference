@@ -1,5 +1,12 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 2.0.0-beta.1 - Bugfix Release
+
+* 7c10b6af - fix(pact_matching): All XML code must be behind the xml feature gate (Ronald Holshausen, Wed May 21 11:26:09 2025 +1000)
+* 7d8e8f61 - chore: Upgrade pact_models to 1.3.1 (Ronald Holshausen, Tue May 20 14:53:42 2025 +1000)
+* 0383b9ac - chore: Remove the use of the deprecated pact_matching::logging::LOG_ID (Ronald Holshausen, Wed Mar 26 15:52:47 2025 +1100)
+* 045df74e - chore: bump version to v2.0.0-beta.1 (Ronald Holshausen, Tue Mar 25 17:09:26 2025 +1100)
+
 # 2.0.0-beta.0 - V2 matching engine for requests
 
 * 90c5db04 - chore: Update readme with V2 engine details (Ronald Holshausen, Tue Mar 25 17:03:47 2025 +1100)
