@@ -4,8 +4,8 @@ use std::fmt::Debug;
 use std::sync::{Arc, LazyLock, RwLock};
 
 use bytes::Bytes;
-use itertools::Itertools;
-use kiss_xml::dom::Element;
+#[cfg(feature = "xml")] use itertools::Itertools;
+#[cfg(feature = "xml")] use kiss_xml::dom::Element;
 use nom::AsBytes;
 use serde_json::Value;
 use tracing::trace;
@@ -13,10 +13,10 @@ use tracing::trace;
 use pact_models::content_types::ContentType;
 use pact_models::matchingrules::{MatchingRule, RuleList};
 use pact_models::path_exp::{DocPath, PathToken};
-use pact_models::xml_utils::{group_children, text_nodes};
+#[cfg(feature = "xml")] use pact_models::xml_utils::{group_children, text_nodes};
 
 use crate::engine::{build_matching_rule_node, ExecutionPlanNode, NodeValue, PlanMatchingContext};
-use crate::engine::xml::name;
+#[cfg(feature = "xml")] use crate::engine::xml::name;
 
 /// Trait for implementations of builders for different types of bodies
 pub trait PlanBodyBuilder: Debug {
@@ -37,6 +37,7 @@ static BODY_PLAN_BUILDERS: LazyLock<RwLock<Vec<Arc<dyn PlanBodyBuilder + Send + 
 
   // TODO: Add default implementations here
   builders.push(Arc::new(JsonPlanBuilder::new()));
+  #[cfg(feature = "xml")]
   builders.push(Arc::new(XMLPlanBuilder::new()));
 
   RwLock::new(builders)
@@ -285,8 +286,10 @@ impl PlanBodyBuilder for JsonPlanBuilder {
 
 /// Plan builder for XML bodies
 #[derive(Clone, Debug)]
+#[cfg(feature = "xml")]
 pub struct XMLPlanBuilder;
 
+#[cfg(feature = "xml")]
 impl XMLPlanBuilder {
   /// Create a new instance
   pub fn new() -> Self {
@@ -538,6 +541,7 @@ fn drop_indices(path: &DocPath) -> DocPath {
     .cloned())
 }
 
+#[cfg(feature = "xml")]
 impl PlanBodyBuilder for XMLPlanBuilder {
   fn namespace(&self) -> Option<String> {
     Some("xml".to_string())
@@ -961,6 +965,7 @@ mod tests {
   }
 
   #[test]
+  #[cfg(feature = "xml")]
   fn xml_plan_builder_with_very_simple_xml() {
     let builder = XMLPlanBuilder::new();
     let context = PlanMatchingContext::default();
@@ -999,6 +1004,7 @@ mod tests {
   }
 
   #[test]
+  #[cfg(feature = "xml")]
   fn xml_plan_builder_with_allowed_unexpected_values() {
     let builder = XMLPlanBuilder::new();
     let context = PlanMatchingContext {
@@ -1040,6 +1046,7 @@ mod tests {
   }
 
   #[test]
+  #[cfg(feature = "xml")]
   fn xml_plan_builder_with_simple_xml() {
     let builder = XMLPlanBuilder::new();
     let context = PlanMatchingContext::default();

@@ -11,7 +11,7 @@ use anyhow::anyhow;
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use itertools::Itertools;
-use kiss_xml::dom::Element;
+#[cfg(feature = "xml")] use kiss_xml::dom::Element;
 use serde_json::Value;
 use serde_json::Value::Object;
 use snailquote::escape;
@@ -27,14 +27,14 @@ use crate::engine::bodies::{get_body_plan_builder, PlainTextBuilder, PlanBodyBui
 use crate::engine::context::PlanMatchingContext;
 use crate::engine::interpreter::ExecutionPlanInterpreter;
 use crate::engine::value_resolvers::HttpRequestValueResolver;
-use crate::engine::xml::XmlValue;
+#[cfg(feature = "xml")] use crate::engine::xml::XmlValue;
 use crate::headers::{parse_charset_parameters, strip_whitespace};
 use crate::matchers::Matches;
 
 mod bodies;
 mod value_resolvers;
 pub mod context;
-pub mod xml;
+#[cfg(feature = "xml")] pub mod xml;
 mod interpreter;
 
 /// Enum for the type of Plan Node
@@ -89,6 +89,7 @@ pub enum NodeValue {
   /// List of values
   LIST(Vec<NodeValue>),
   /// XML
+  #[cfg(feature = "xml")]
   XML(XmlValue)
 }
 
@@ -169,6 +170,7 @@ impl NodeValue {
         buffer.push(']');
         buffer
       }
+      #[cfg(feature = "xml")]
       NodeValue::XML(node) => match node {
         XmlValue::Element(element) => format!("xml:{}", escape(element.to_string().as_str())),
         XmlValue::Text(text) => format!("xml:text:{}", escape(text.as_str())),
@@ -201,6 +203,7 @@ impl NodeValue {
       NodeValue::JSON(_) => "JSON",
       NodeValue::ENTRY(_, _) => "Entry",
       NodeValue::LIST(_) => "List",
+      #[cfg(feature = "xml")]
       NodeValue::XML(_) => "XML"
     }
   }
@@ -214,6 +217,7 @@ impl NodeValue {
   }
 
   /// If this value is an XML value, returns it, otherwise returns None
+  #[cfg(feature = "xml")]
   pub fn as_xml(&self) -> Option<XmlValue> {
     match self {
       NodeValue::XML(xml) => Some(xml.clone()),
@@ -367,12 +371,14 @@ impl From<Vec<&String>> for NodeValue {
   }
 }
 
+#[cfg(feature = "xml")]
 impl From<Element> for NodeValue {
   fn from(value: Element) -> Self {
     NodeValue::XML(XmlValue::Element(value.clone()))
   }
 }
 
+#[cfg(feature = "xml")]
 impl From<&Element> for NodeValue {
   fn from(value: &Element) -> Self {
     NodeValue::XML(XmlValue::Element(value.clone()))
@@ -414,6 +420,7 @@ impl Matches<NodeValue> for NodeValue {
         };
         list.matches_with(&vec![actual_str], matcher, cascaded)
       }
+      #[cfg(feature = "xml")]
       NodeValue::XML(xml_value) => if let Some(actual) = actual.as_xml() {
         xml_value.matches_with(actual, matcher, cascaded)
       } else {
@@ -480,6 +487,7 @@ impl NodeResult {
         NodeValue::JSON(json) => Some(json.to_string()),
         NodeValue::ENTRY(k, v) => Some(format!("{} -> {}", k, v)),
         NodeValue::LIST(list) => Some(format!("{:?}", list)),
+        #[cfg(feature = "xml")]
         NodeValue::XML(node) => Some(node.to_string())
       }
       NodeResult::ERROR(_) => None

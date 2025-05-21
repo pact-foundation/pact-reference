@@ -7,16 +7,16 @@ use anyhow::anyhow;
 use itertools::Itertools;
 use maplit::hashset;
 use serde_json::{json, Value};
-use snailquote::unescape;
+#[cfg(feature = "xml")] use snailquote::unescape;
 use tracing::{debug, error, instrument, trace, Level};
 
 use pact_models::matchingrules::MatchingRule;
 use pact_models::path_exp::{DocPath, PathToken};
-use pact_models::xml_utils::resolve_matching_node;
+#[cfg(feature = "xml")] use pact_models::xml_utils::resolve_matching_node;
 use crate::engine::{ExecutionPlanNode, NodeResult, NodeValue, PlanNodeType};
 use crate::engine::context::PlanMatchingContext;
 use crate::engine::value_resolvers::ValueResolver;
-use crate::engine::xml::XmlValue;
+#[cfg(feature = "xml")] use crate::engine::xml::XmlValue;
 use crate::headers::{parse_charset_parameters, strip_whitespace};
 use crate::json::type_of;
 use crate::matchers::Matches;
@@ -97,6 +97,7 @@ impl ExecutionPlanInterpreter {
             "json" => serde_json::from_str(value.as_str())
               .map(|v| NodeValue::JSON(v))
               .map_err(|err| anyhow!(err)),
+            #[cfg(feature = "xml")]
             "xml" => kiss_xml::parse_str(unescape(value).unwrap_or_else(|_| value.clone()))
               .map(|doc| NodeValue::XML(XmlValue::Element(doc.root_element().clone())))
               .map_err(|err| anyhow!("Failed to parse XML value: {}", err)),
@@ -273,9 +274,13 @@ impl ExecutionPlanInterpreter {
         "push" => self.execute_push(node),
         "pop" => self.execute_pop(node),
         "json:parse" => self.execute_json_parse(action, value_resolver, node, &action_path),
+        #[cfg(feature = "xml")]
         "xml:parse" => self.execute_xml_parse(action, value_resolver, node, &action_path),
+        #[cfg(feature = "xml")]
         "xml:tag-name" => self.execute_xml_tag_name(action, value_resolver, node, &action_path),
+        #[cfg(feature = "xml")]
         "xml:value" => self.execute_xml_value(action, value_resolver, node, &action_path),
+        #[cfg(feature = "xml")]
         "xml:attributes" => self.execute_xml_attributes(action, value_resolver, node, &action_path),
         "json:expect:empty" => self.execute_json_expect_empty(action, value_resolver, node, &action_path),
         "json:match:length" => self.execute_json_match_length(action, value_resolver, node, &action_path),
@@ -633,6 +638,7 @@ impl ExecutionPlanInterpreter {
     }
   }
 
+  #[cfg(feature = "xml")]
   fn execute_xml_parse(
     &mut self,
     action: &str,
@@ -682,6 +688,7 @@ impl ExecutionPlanInterpreter {
     }
   }
 
+  #[cfg(feature = "xml")]
   fn execute_xml_tag_name(
     &mut self,
     action: &str,
@@ -724,6 +731,7 @@ impl ExecutionPlanInterpreter {
     }
   }
 
+  #[cfg(feature = "xml")]
   fn execute_xml_value(
     &mut self,
     action: &str,
@@ -766,6 +774,7 @@ impl ExecutionPlanInterpreter {
     }
   }
 
+  #[cfg(feature = "xml")]
   fn execute_xml_attributes(
     &mut self,
     action: &str,
@@ -1120,6 +1129,7 @@ impl ExecutionPlanInterpreter {
               } else {
                 Err(anyhow!("Expected {} to be empty", value))
               },
+              #[cfg(feature = "xml")]
               NodeValue::XML(xml) => match xml {
                 XmlValue::Element(element) => if element.child_elements().next().is_none() {
                   Ok(NodeResult::VALUE(NodeValue::BOOL(true)))
@@ -1384,6 +1394,7 @@ impl ExecutionPlanInterpreter {
             Value::String(s) => NodeValue::STRING(s.clone()),
             _ => NodeValue::STRING(json.to_string())
           }
+          #[cfg(feature = "xml")]
           NodeValue::XML(xml) => match xml {
             XmlValue::Element(element) => NodeValue::STRING(element.to_string()),
             XmlValue::Text(text) => NodeValue::STRING(text.clone()),
@@ -1431,6 +1442,7 @@ impl ExecutionPlanInterpreter {
             _ => NodeResult::ERROR(format!("'length' can't be used with a {:?} node", value))
           }
           NodeValue::LIST(l) => NodeResult::VALUE(NodeValue::UINT(l.len() as u64)),
+          #[cfg(feature = "xml")]
           NodeValue::XML(xml) => match xml {
             XmlValue::Element(_) => NodeResult::VALUE(NodeValue::UINT(1)),
             XmlValue::Text(text) => NodeResult::VALUE(NodeValue::UINT(text.len() as u64)),
@@ -1766,6 +1778,7 @@ impl ExecutionPlanInterpreter {
             }
             _ => Err((format!("'{}' can't be used with a {:?} node", action, second), None))
           }
+          #[cfg(feature = "xml")]
           NodeValue::XML(xml) => match xml {
             XmlValue::Element(element) => {
               let actual_keys = element.child_elements()
@@ -1901,6 +1914,7 @@ impl ExecutionPlanInterpreter {
             }
             _ => Err(format!("'{}' can't be used with a {:?} node", action, second))
           }
+          #[cfg(feature = "xml")]
           NodeValue::XML(xml) => match xml {
             XmlValue::Element(_) => {
               if expected_length == 1 {
@@ -2154,6 +2168,7 @@ impl ExecutionPlanInterpreter {
               }
             }
           }
+          #[cfg(feature = "xml")]
           NodeValue::XML(value) => {
             if path.is_root() {
               Ok(NodeValue::XML(value.clone()))
