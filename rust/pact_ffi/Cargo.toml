@@ -34,7 +34,7 @@ onig = "6.5.1"
 # version as the mock server crate
 pact_matching = { version = "~1.2.10" }
 pact_mock_server = { version = "~1.2.14" }
-pact_models = { version = "~1.3.1" }
+pact_models = { version = "~1.3.2" }
 pact-plugin-driver = { version = "~0.7.4" }
 pact_verifier = { version = "~1.3.0", path = "../pact_verifier" }
 panic-message = "0.3.0"
