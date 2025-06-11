@@ -23,36 +23,36 @@ tls = ["pact_mock_server/tls"]
 colour = ["dep:yansi"]
 
 [dependencies]
-anyhow = "1.0.86"
-async-trait = "0.1.82"
-bytes = "1.7.1"
-futures = "0.3.30"
-itertools = "0.13.0"
+anyhow = "1.0.98"
+async-trait = "0.1.88"
+bytes = "1.10.1"
+futures = "0.3.31"
+itertools = "0.14.0"
 lazy_static = "1.5.0"
 maplit = "1.0.2"
 pact_matching = { version = "~2.0.0-beta.3", path = "../pact_matching", default-features = false }
 pact_mock_server = { version = "~2.1.1", default-features = false }
 pact_models = { version = "~1.3.3", default-features = false }
 pact-plugin-driver = { version = "~0.7.4", optional = true, default-features = false }
-regex = "1.10.6"
-serde_json = "1.0.127"
+regex = "1.11.1"
+serde_json = "1.0.140"
 termsize = "0.1.9"
-tokio = { version = "1.40.0", features = ["full"] }
+tokio = { version = "1.45.1", features = ["full"] }
 tracing = "0.1.41"
-tracing-core = "0.1.33"
-url = "2.5.2"
-uuid = { version = "1.10.0", features = ["v4"] }
+tracing-core = "0.1.34"
+url = "2.5.4"
+uuid = { version = "1.17.0", features = ["v4"] }
 yansi = { version = "1.0.1", optional = true }
 
 [dev-dependencies]
 quickcheck = "1.0.3"
-env_logger = "0.11.5"
+env_logger = "0.11.8"
 expectest = "0.12.0"
-reqwest = { version = "0.12.7", default-features = false, features = ["rustls-tls-native-roots", "blocking", "json"] }
-serde = { version = "1.0.209", features = ["derive"] }
+reqwest = { version = "0.12.20", default-features = false, features = ["rustls-tls-native-roots", "blocking", "json"] }
+serde = { version = "1.0.219", features = ["derive"] }
 rand = "0.8.5"
-tempfile = "3.14.0"
+tempfile = "3.20.0"
 tokio-test = "0.4.4"
-test-log = { version = "0.2.16", features = ["trace"] }
-tracing-subscriber = { version = "0.3.18", features = ["env-filter", "tracing-log", "fmt"] }
-pretty_assertions = "1.4.0"
+test-log = { version = "0.2.17", features = ["trace"] }
+tracing-subscriber = { version = "0.3.19", features = ["env-filter", "tracing-log", "fmt"] }
+pretty_assertions = "1.4.1"
