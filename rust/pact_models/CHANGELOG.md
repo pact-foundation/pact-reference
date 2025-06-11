@@ -1,5 +1,10 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.3.2 - Maintenance Release
+
+* 82d078d9 - fix: Upgrade onig to 6.5.1 as the Match Whole String for is_match has been released (Ronald Holshausen, Wed Jun 11 10:00:52 2025 +1000)
+* 6a613889 - bump version to 1.3.2 (Ronald Holshausen, Tue May 20 14:48:26 2025 +1000)
+
 # 1.3.1 - Supports generators with XML
 
 * 84085856 - chore(pact-models): Update dependencies (Ronald Holshausen, Tue May 20 11:40:04 2025 +1000)
