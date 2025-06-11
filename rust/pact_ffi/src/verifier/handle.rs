@@ -377,6 +377,6 @@ mod tests {
     expect!(handle.verifier_output.result).to(be_false());
     let error: Value = handle.verifier_output.errors[0].clone().1.into();
     let message = error.as_object().unwrap()["message"].as_str().unwrap();
-    expect!(message).to(be_equal_to("error sending request for url (https://localhost:1234/)"));
+    expect!(message).to(be_equal_to("error sending request"));
   }
 }

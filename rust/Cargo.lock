@@ -1584,15 +1584,6 @@ dependencies = [
 
 [[package]]
 name = "infer"
-version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc150e5ce2330295b8616ce0e3f53250e53af31759a9dbedad1621ba29151847"
-dependencies = [
- "cfb",
-]
-
-[[package]]
-name = "infer"
 version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a588916bfdfd92e71cacef98a63d9b1f0d74d6599980d11894290e7ddefffcf7"
@@ -2311,8 +2302,8 @@ dependencies = [
  "onig",
  "os_info",
  "pact-plugin-driver",
- "pact_matching 1.2.10",
- "pact_mock_server 1.2.14",
+ "pact_matching 1.2.12",
+ "pact_mock_server 1.2.15",
  "pact_models",
  "pact_verifier",
  "panic-message",
@@ -2343,9 +2334,9 @@ dependencies = [
 
 [[package]]
 name = "pact_matching"
-version = "1.2.10"
+version = "1.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d8a63ef173ee082986dd7ebdb1ba469b57f45afe15e0a09ec60786ef635384d5"
+checksum = "90466a52b61bf5ffba2a3e17296e8efe5996d56b865a9fa85c44ed9f5a128b0b"
 dependencies = [
  "ansi_term",
  "anyhow",
@@ -2356,7 +2347,7 @@ dependencies = [
  "futures",
  "hex",
  "http 1.3.1",
- "infer 0.16.0",
+ "infer",
  "itertools 0.14.0",
  "lazy_static",
  "lenient_semver",
@@ -2397,7 +2388,7 @@ dependencies = [
  "futures",
  "hex",
  "http 1.3.1",
- "infer 0.19.0",
+ "infer",
  "itertools 0.14.0",
  "kiss_xml",
  "lazy_static",
@@ -2442,7 +2433,7 @@ dependencies = [
  "hamcrest2",
  "hex",
  "http 1.3.1",
- "infer 0.19.0",
+ "infer",
  "itertools 0.14.0",
  "kiss_xml",
  "lazy_static",
@@ -2478,9 +2469,9 @@ dependencies = [
 
 [[package]]
 name = "pact_mock_server"
-version = "1.2.14"
+version = "1.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3fb5a41527741ab7506946f9203baf19a835e1279ea1bd3b2ddf4ede87b0d007"
+checksum = "f9be47e9e66c8700f137391fc5e26c61b0b8f25c675a25b70d12dee2430807ee"
 dependencies = [
  "anyhow",
  "bytes",
@@ -2491,7 +2482,7 @@ dependencies = [
  "lazy_static",
  "maplit",
  "pact-plugin-driver",
- "pact_matching 1.2.10",
+ "pact_matching 1.2.12",
  "pact_models",
  "rustls 0.21.12",
  "rustls-pemfile 1.0.4",
