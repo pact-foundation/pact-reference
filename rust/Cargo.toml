@@ -9,12 +9,6 @@ exclude = [
 resolver = "2"
 
 [patch.crates-io]
-# Waiting on the next release of Onig crate
-onig = { git = "https://github.com/rust-onig/rust-onig", default-features = false, rev = "76bc1d29651bd17c7d5ecea9266bd2e0e83cb2e0" }
-# This needs to be the same version across all the libs (i.e. Pact FFI and plugin driver)
-tracing = { git = "https://github.com/tokio-rs/tracing.git", tag = "tracing-subscriber-0.3.19" }
-tracing-core = { git = "https://github.com/tokio-rs/tracing.git", tag = "tracing-subscriber-0.3.19" }
-tracing-subscriber = { git = "https://github.com/tokio-rs/tracing.git", tag = "tracing-subscriber-0.3.19" }
 # FFI Inmemory sink uses the global static `LOG_BUFFER` in the pact_matching crate. This is required to be the same
 # version across all crates (i.e. mock server crate).
 pact_matching = { version = "~1.2.8", path = "./pact_matching" }

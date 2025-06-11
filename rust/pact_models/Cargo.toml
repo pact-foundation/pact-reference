@@ -51,7 +51,7 @@ tracing = "0.1.41" # This needs to be the same version across all the libs (i.e.
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 fs2 = "0.4.3"
-onig = { version = "6.4.0", default-features = false }
+onig = "6.5.1"
 reqwest = { version = "0.12.5", default-features = false, features = ["rustls-tls-native-roots", "blocking", "json"] }
 uuid = { version = "1.3.3", features = ["v4"] }
 

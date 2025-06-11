@@ -41,7 +41,7 @@ md5 = "0.7.0"
 mime = "0.3.17"
 multer = { version = "3.0.0", features = ["all"], optional = true }
 nom = "7.1.3"
-onig = { version = "6.4.0", default-features = false }
+onig = "6.5.1"
 pact_models = { version = "~1.3.0", default-features = false }
 pact-plugin-driver = { version = "~0.7.4", optional = true, default-features = false }
 rand = "0.9.0"
@@ -61,6 +61,7 @@ uuid = { version = "1.8.0", features = ["v4"] }
 quickcheck = "1"
 expectest = "0.12.0"
 env_logger = "0.11.3"
+googletest = "0.13.0"
 hamcrest2 = "0.3.0"
 test-log = { version = "0.2.15", features = ["trace"] }
 tracing-subscriber = { version = "0.3.18", features = ["env-filter", "tracing-log", "fmt"] }
