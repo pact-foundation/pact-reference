@@ -1,6 +1,6 @@
 [package]
 name = "pact_ffi"
-version = "0.4.27"
+version = "0.4.28"
 authors = ["Ronald Holshausen <ronald.holshausen@gmail.com>", "Matt Fellows <matt.fellows@onegeek.com.au>", "Andrew Lilley Brinker <abrinker@mitre.org>", "Caleb Stepanian <cstepanian@mitre.org>"]
 edition = "2021"
 description = "Pact interface for foreign languages."
@@ -29,7 +29,7 @@ libc = "0.2.158"
 log = "0.4.22"
 maplit = "1.0.2"
 multipart-2021 = { version = "0.19.0", default-features = false, features = ["client", "mock"] }
-onig = { version = "6.4.0", default-features = false }
+onig = { version = "6.5.1", default-features = false }
 pact_matching = { version = "~1.2.8", path = "../pact_matching" }
 pact_mock_server = { version = "~1.2.11" }
 pact_models = { version = "~1.3.0" }
