@@ -1584,7 +1584,7 @@ impl ExecutionPlanInterpreter {
     if node.children.len() < required {
       Err(anyhow!("{} requires {} arguments, got {}", action, required, node.children.len()))
     } else if node.children.len() > required + optional {
-      Err(anyhow!("{} supports at most {} arguments, got {}", action, optional, node.children.len()))
+      Err(anyhow!("{} supports at most {} arguments, got {}", action, required + optional, node.children.len()))
     } else {
       let mut required_args = vec![];
       for child in node.children.iter().take(required) {

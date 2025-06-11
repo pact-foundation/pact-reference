@@ -2,7 +2,7 @@ use expectest::prelude::*;
 use maplit::hashmap;
 use pretty_assertions::assert_eq;
 use rstest::rstest;
-use serde_json::json;
+use serde_json::{json, Value};
 
 use pact_models::bodies::OptionalBody;
 use pact_models::content_types::TEXT;
@@ -10,6 +10,8 @@ use pact_models::matchingrules;
 use pact_models::v4::http_parts::HttpRequest;
 use pact_models::v4::interaction::V4Interaction;
 use pact_models::v4::synch_http::SynchronousHttp;
+
+use crate::{BodyMatchResult, MatchingRule, RequestMatchResult};
 use crate::engine::{
   build_request_plan,
   execute_request_plan,
@@ -17,8 +19,7 @@ use crate::engine::{
   NodeValue,
   PlanMatchingContext
 };
-use crate::{BodyMatchResult, MatchingRule, RequestMatchResult};
-use crate::Mismatch::{ MethodMismatch, BodyMismatch };
+use crate::Mismatch::{BodyMismatch, MethodMismatch};
 
 mod walk_tree_tests;
 mod query_tests;
@@ -35,6 +36,30 @@ mod header_tests;
 fn node_value_str_form_escapes_strings(#[case] input: &str, #[case] expected: &str) {
   let node = NodeValue::STRING(input.to_string());
   expect!(node.str_form()).to(be_equal_to(expected));
+}
+
+#[rstest(
+  case(NodeValue::NULL, "NULL"),
+  case(NodeValue::STRING("string".to_string()), "'string'"),
+  case(NodeValue::STRING("a string".to_string()), "'a string'"),
+  case(NodeValue::BOOL(true), "BOOL(true)"),
+  case(NodeValue::MMAP(hashmap!{}), "{}"),
+  case(NodeValue::MMAP(hashmap!{ "a".to_string() => vec!["A".to_string()] }), "{'a': 'A'}"),
+  case(NodeValue::MMAP(hashmap!{ "a".to_string() => vec!["".to_string()] }), "{'a': ''}"),
+  case(NodeValue::MMAP(hashmap!{ "a".to_string() => vec!["A".to_string()], "b".to_string() => vec!["B 1".to_string(), "B2".to_string()] }), "{'a': 'A', 'b': ['B 1', 'B2']}"),
+  case(NodeValue::SLIST(vec!["A".to_string(), "B 1".to_string(), "B2".to_string()]), "['A', 'B 1', 'B2']"),
+  case(NodeValue::SLIST(vec![]), "[]"),
+  case(NodeValue::LIST(vec![NodeValue::STRING("A".to_string()), NodeValue::BOOL(true)]), "['A', BOOL(true)]"),
+  case(NodeValue::LIST(vec![]), "[]"),
+  case(NodeValue::BARRAY(vec![1, 2, 3, 65]), "BYTES(4, AQIDQQ==)"),
+  case(NodeValue::NAMESPACED("stuff".to_string(), "*&^%$ %^&*&^".to_string()), "stuff:*&^%$ %^&*&^"),
+  case(NodeValue::UINT(1234), "UINT(1234)"),
+  case(NodeValue::JSON(Value::String("this is a string".to_string())), "json:\"this is a string\""),
+  case(NodeValue::ENTRY("key".to_string(), Box::new(NodeValue::STRING("A".to_string()))), "'key' -> 'A'"),
+  case(NodeValue::ENTRY("a key".to_string(), Box::new(NodeValue::BOOL(false))), "'a key' -> BOOL(false)")
+)]
+fn str_form_test(#[case] input: NodeValue, #[case] expected: &str) {
+  expect!(input.str_form()).to(be_equal_to(expected));
 }
 
 #[rstest(
