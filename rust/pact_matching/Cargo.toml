@@ -1,6 +1,6 @@
 [package]
 name = "pact_matching"
-version = "1.2.12"
+version = "1.2.13"
 authors = ["Ronald Holshausen <ronald.holshausen@gmail.com>"]
 edition = "2021"
 description = "Pact-Rust support library that implements request and response matching logic"
