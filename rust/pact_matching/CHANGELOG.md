@@ -1,5 +1,15 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 2.0.0-beta.2 - Maintenance Release
+
+* 31010256 - chore(pact_matching): Update dependencies (Ronald Holshausen, Wed Jun 11 10:29:42 2025 +1000)
+* 18e53fbd - chore: Update pact_models to 1.3.2 (Ronald Holshausen, Wed Jun 11 10:16:03 2025 +1000)
+* 57a6fb5c - chore(pact_matching): Fix typo and added test for str_form (Ronald Holshausen, Wed Jun 11 10:02:54 2025 +1000)
+* 82d078d9 - fix: Upgrade onig to 6.5.1 as the Match Whole String for is_match has been released (Ronald Holshausen, Wed Jun 11 10:00:52 2025 +1000)
+* cb729b65 - Merge pull request #487 from tienvx/use-new-xml-generator (Ronald Holshausen, Mon May 26 11:08:07 2025 +1000)
+* d1fb1f35 - bump version to 2.0.0-beta.2 (Ronald Holshausen, Wed May 21 12:00:21 2025 +1000)
+* e798b1cf - feat: Use new XML generator (tien.xuan.vo, Tue Feb 11 08:07:43 2025 +0700)
+
 # 2.0.0-beta.1 - Bugfix Release
 
 * 7c10b6af - fix(pact_matching): All XML code must be behind the xml feature gate (Ronald Holshausen, Wed May 21 11:26:09 2025 +1000)
