@@ -31,7 +31,7 @@
 //!
 //! ```toml
 //! [dev-dependencies]
-//! pact_consumer = "~1.3.0"
+//! pact_consumer = "~1.4.0"
 //! ```
 //!
 //! Once this is done, you can then write the following inside a function marked

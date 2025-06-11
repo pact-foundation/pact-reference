@@ -57,7 +57,7 @@ crate-type = ["cdylib", "rlib"]
 quickcheck = "1.0.3"
 expectest = "0.12.0"
 env_logger = "0.11.3"
-pact_consumer = { version = "~1.4.0", path = "../pact_consumer" }
+pact_consumer = { version = "~1.4.1", path = "../pact_consumer" }
 test-log = { version = "0.2.15", features = ["trace"] }
 tracing-subscriber = { version = "0.3.19", features = ["env-filter", "tracing-log", "fmt"] }
 chrono = "0.4.38"
