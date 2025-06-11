@@ -1,5 +1,11 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.2.12 - Alpine fix
+
+* 703fd476 - fix(Alpine): Updae pact_models to 1.3.3 (Ronald Holshausen, Wed Jun 11 13:23:10 2025 +1000)
+* 2dc87f23 - fix: Onig crate needs default-features = false so it compiles on Alpine (Ronald Holshausen, Wed Jun 11 12:35:06 2025 +1000)
+* 6dd52cc0 - bump version to 1.2.12 (Ronald Holshausen, Wed Jun 11 11:09:19 2025 +1000)
+
 # 1.2.11 - Maintenance Release
 
 * d27d38c7 - chore(pact_matching): Update dependencies (Ronald Holshausen, Wed Jun 11 10:29:42 2025 +1000)
