@@ -2621,7 +2621,7 @@ dependencies = [
  "lazy_static",
  "log",
  "maplit",
- "pact_models 1.2.7",
+ "pact_models 1.3.3",
  "pact_verifier",
  "regex",
  "reqwest",
