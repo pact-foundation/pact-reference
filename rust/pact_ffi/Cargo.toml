@@ -29,7 +29,7 @@ libc = "0.2.158"
 log = "0.4.22"
 maplit = "1.0.2"
 multipart-2021 = { version = "0.19.0", default-features = false, features = ["client", "mock"] }
-onig = { version = "6.4.0", default-features = false }
+onig = "6.5.1"
 # FFI Inmemory sink uses the global static `LOG_BUFFER` in the pact_matching crate. This is required to be the same
 # version as the mock server crate
 pact_matching = { version = "~1.2.10" }
