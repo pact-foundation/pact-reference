@@ -1624,15 +1624,6 @@ dependencies = [
 
 [[package]]
 name = "infer"
-version = "0.16.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc150e5ce2330295b8616ce0e3f53250e53af31759a9dbedad1621ba29151847"
-dependencies = [
- "cfb",
-]
-
-[[package]]
-name = "infer"
 version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a588916bfdfd92e71cacef98a63d9b1f0d74d6599980d11894290e7ddefffcf7"
@@ -2315,7 +2306,7 @@ dependencies = [
  "lazy_static",
  "maplit",
  "pact-plugin-driver",
- "pact_matching 2.0.0-beta.2",
+ "pact_matching 2.0.0-beta.3",
  "pact_mock_server 2.1.0",
  "pact_models",
  "pretty_assertions",
@@ -2362,7 +2353,7 @@ dependencies = [
  "onig",
  "os_info",
  "pact-plugin-driver",
- "pact_matching 1.2.10",
+ "pact_matching 1.2.11",
  "pact_mock_server 1.2.14",
  "pact_models",
  "pact_verifier",
@@ -2394,9 +2385,9 @@ dependencies = [
 
 [[package]]
 name = "pact_matching"
-version = "1.2.10"
+version = "1.2.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d8a63ef173ee082986dd7ebdb1ba469b57f45afe15e0a09ec60786ef635384d5"
+checksum = "3699e6acfba8cb0f3ab88b4be5a397ca2ec949b87ecd37ed9095eb069a5cd6ed"
 dependencies = [
  "ansi_term",
  "anyhow",
@@ -2407,7 +2398,7 @@ dependencies = [
  "futures",
  "hex",
  "http 1.3.1",
- "infer 0.16.0",
+ "infer",
  "itertools 0.14.0",
  "lazy_static",
  "lenient_semver",
@@ -2435,9 +2426,9 @@ dependencies = [
 
 [[package]]
 name = "pact_matching"
-version = "2.0.0-beta.1"
+version = "2.0.0-beta.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9fb7056d9f060df24290009baaaeb77311ff73eea22bd176882b42ca5403ae8a"
+checksum = "334c1b92eb7f9701f614a4e59d4e640e39eca075d14f9471ed0fd61dc0e29ae6"
 dependencies = [
  "ansi_term",
  "anyhow",
@@ -2448,7 +2439,7 @@ dependencies = [
  "futures",
  "hex",
  "http 1.3.1",
- "infer 0.16.0",
+ "infer",
  "itertools 0.14.0",
  "kiss_xml",
  "lazy_static",
@@ -2478,7 +2469,7 @@ dependencies = [
 
 [[package]]
 name = "pact_matching"
-version = "2.0.0-beta.2"
+version = "2.0.0-beta.3"
 dependencies = [
  "ansi_term",
  "anyhow",
@@ -2493,7 +2484,7 @@ dependencies = [
  "hamcrest2",
  "hex",
  "http 1.3.1",
- "infer 0.19.0",
+ "infer",
  "itertools 0.14.0",
  "kiss_xml",
  "lazy_static",
@@ -2542,7 +2533,7 @@ dependencies = [
  "lazy_static",
  "maplit",
  "pact-plugin-driver",
- "pact_matching 1.2.10",
+ "pact_matching 1.2.11",
  "pact_models",
  "rustls 0.21.12",
  "rustls-pemfile 1.0.4",
@@ -2574,7 +2565,7 @@ dependencies = [
  "lazy_static",
  "maplit",
  "pact-plugin-driver",
- "pact_matching 2.0.0-beta.1",
+ "pact_matching 2.0.0-beta.2",
  "pact_models",
  "rcgen",
  "rustls 0.23.27",
@@ -2662,7 +2653,7 @@ dependencies = [
  "mime",
  "pact-plugin-driver",
  "pact_consumer",
- "pact_matching 2.0.0-beta.2",
+ "pact_matching 2.0.0-beta.3",
  "pact_models",
  "pretty_assertions",
  "quickcheck",
