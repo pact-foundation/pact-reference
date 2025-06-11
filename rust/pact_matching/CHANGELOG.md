@@ -1,5 +1,11 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.2.11 - Maintenance Release
+
+* d27d38c7 - chore(pact_matching): Update dependencies (Ronald Holshausen, Wed Jun 11 10:29:42 2025 +1000)
+* 1d6be971 - fix: Upgrade onig to 6.5.1 as the Match Whole String for is_match has been released (Ronald Holshausen, Wed Jun 11 10:00:52 2025 +1000)
+* 81d2d444 - bump version to 1.2.11 (Ronald Holshausen, Wed Mar 26 10:06:28 2025 +1100)
+
 # 1.2.10 - Maintenance Release
 
 * bed6c5c7 - fix: Content type matcher was not being applied when dealing with multi-part bodies #482 (Ronald Holshausen, Mon Feb 3 17:38:49 2025 +1100)
