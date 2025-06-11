@@ -1,5 +1,14 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.3.1 - Maintenance Release
+
+* 5371ee6f - chore(pact_verifier): Update pact_consumer to 1.4.1 (Ronald Holshausen, Wed Jun 11 16:29:07 2025 +1000)
+* 3f883a8d - fix(Alpine): Update pact_matching to 2.0.0-beta.3 (Ronald Holshausen, Wed Jun 11 13:46:00 2025 +1000)
+* 6e8167c4 - fix(Alpine): Updae pact_models to 1.3.3 (Ronald Holshausen, Wed Jun 11 13:23:10 2025 +1000)
+* 588f1fe2 - chore: Update pact_matching to 2.0.0-beta.2 (Ronald Holshausen, Wed Jun 11 11:24:09 2025 +1000)
+* 18e53fbd - chore: Update pact_models to 1.3.2 (Ronald Holshausen, Wed Jun 11 10:16:03 2025 +1000)
+* e2027e97 - bump version to 1.3.1 (Ronald Holshausen, Wed May 21 15:07:33 2025 +1000)
+
 # 1.3.0 - Update to Rust 2024 and pact_matching 2.0.0-beta
 
 * 71b1b7ed - chore(pact_consumer): Update pact_mock_server to 2.1.0 (Ronald Holshausen, Wed May 21 14:44:21 2025 +1000)
