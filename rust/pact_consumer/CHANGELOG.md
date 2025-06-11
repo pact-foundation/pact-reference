@@ -1,5 +1,16 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.4.1 - Maintenance Release
+
+* 76530c4a - chore(pact_consumer): Update dependencies (Ronald Holshausen, Wed Jun 11 16:22:05 2025 +1000)
+* 8dd1502a - chore(pact_consumer): Update pact_mock_server to 2.1.1 (Ronald Holshausen, Wed Jun 11 16:16:06 2025 +1000)
+* 3f883a8d - fix(Alpine): Update pact_matching to 2.0.0-beta.3 (Ronald Holshausen, Wed Jun 11 13:46:00 2025 +1000)
+* 6e8167c4 - fix(Alpine): Updae pact_models to 1.3.3 (Ronald Holshausen, Wed Jun 11 13:23:10 2025 +1000)
+* 588f1fe2 - chore: Update pact_matching to 2.0.0-beta.2 (Ronald Holshausen, Wed Jun 11 11:24:09 2025 +1000)
+* 18e53fbd - chore: Update pact_models to 1.3.2 (Ronald Holshausen, Wed Jun 11 10:16:03 2025 +1000)
+* 372ee77c - chore: correct release script (Ronald Holshausen, Wed May 21 14:55:20 2025 +1000)
+* 720bd04a - bump version to 1.4.1 (Ronald Holshausen, Wed May 21 14:54:53 2025 +1000)
+
 # 1.4.0 - Update to Rust 2024 and pact_matching 2.0.0-beta
 
 * 60afbe95 - chore(pact_consumer): Update crate to Rust 2024 edition (Ronald Holshausen, Wed May 21 14:49:18 2025 +1000)
