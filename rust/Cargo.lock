@@ -1882,9 +1882,9 @@ checksum = "490cc448043f947bae3cbee9c203358d62dbee0db12107a74be5c30ccfd09771"
 
 [[package]]
 name = "memchr"
-version = "2.7.4"
+version = "2.7.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
+checksum = "32a282da65faaf38286cf3be983213fcf1d2e2a58700e808f83f4ea9a4804bc0"
 
 [[package]]
 name = "mime"
@@ -2256,7 +2256,7 @@ dependencies = [
  "maplit",
  "pact-plugin-driver",
  "pact_matching 2.0.0-beta.4",
- "pact_mock_server 2.1.1",
+ "pact_mock_server 2.1.2",
  "pact_models",
  "pretty_assertions",
  "quickcheck",
@@ -2499,9 +2499,9 @@ dependencies = [
 
 [[package]]
 name = "pact_mock_server"
-version = "2.1.1"
+version = "2.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb7927cd8e8ed625522e826bff26858dbaea6058d55bb8282e61703df7e8f911"
+checksum = "9b1aadace7b42e052bb6bed4826b114c22fb0b88a538c41252037b357792a9d1"
 dependencies = [
  "anyhow",
  "bytes",
@@ -2581,7 +2581,7 @@ dependencies = [
 
 [[package]]
 name = "pact_verifier"
-version = "1.3.1"
+version = "1.3.2"
 dependencies = [
  "ansi_term",
  "anyhow",
@@ -2818,13 +2818,13 @@ checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
 
 [[package]]
 name = "plist"
-version = "1.7.1"
+version = "1.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eac26e981c03a6e53e0aee43c113e3202f5581d5360dae7bd2c70e800dd0451d"
+checksum = "3d77244ce2d584cd84f6a15f86195b8c9b2a0dfbfd817c09e0464244091a58ed"
 dependencies = [
  "base64 0.22.1",
  "indexmap 2.9.0",
- "quick-xml 0.32.0",
+ "quick-xml 0.37.5",
  "serde",
  "time",
 ]
@@ -2978,9 +2978,9 @@ dependencies = [
 
 [[package]]
 name = "quick-xml"
-version = "0.32.0"
+version = "0.37.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d3a6e5838b60e0e8fa7a43f22ade549a37d61f8bdbe636d0d7816191de969c2"
+checksum = "331e97a1af0bf59823e6eadffe373d7b27f485be8748f71471c662c1f269b7fb"
 dependencies = [
  "memchr",
 ]
@@ -4826,9 +4826,9 @@ dependencies = [
 
 [[package]]
 name = "windows-link"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "76840935b766e1b0a05c0066835fb9ec80071d4c09a16f6bd5f7e655e3c14c38"
+checksum = "d3bfe459f85da17560875b8bf1423d6f113b7a87a5d942e7da0ac71be7c61f8b"
 
 [[package]]
 name = "windows-result"
