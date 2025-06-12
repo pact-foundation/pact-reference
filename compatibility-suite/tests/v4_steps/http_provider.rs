@@ -8,7 +8,7 @@ use cucumber::{given, then, when};
 use cucumber::gherkin::Step;
 use maplit::hashmap;
 use pact_mock_server::builder::MockServerBuilder;
-use pact_mock_server::mock_server::{MockServer, MockServerConfig};
+use pact_mock_server::mock_server::MockServerConfig;
 use pact_models::{Consumer, PactSpecification, Provider};
 use pact_models::headers::parse_header;
 use pact_models::http_parts::HttpPart;

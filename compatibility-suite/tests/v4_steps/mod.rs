@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::panic::RefUnwindSafe;
-use std::sync::{Arc, Mutex};
 use anyhow::anyhow;
 
 use cucumber::{then, when, World};

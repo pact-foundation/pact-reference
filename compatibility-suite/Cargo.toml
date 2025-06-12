@@ -15,7 +15,7 @@ lazy_static = "1.4.0"
 maplit = "1.0.2"
 pact_models = { version = "~1.3.3" }
 pact_matching = { version = "~2.0.0-beta.3" }
-pact_mock_server = { version = "~2.1.1" }
+pact_mock_server = { version = "~2.1.2" }
 pact_verifier = { version = "~1.3.1" }
 pact_consumer = { version = "~1.4.1" }
 pretty_assertions = "1.4.0"
