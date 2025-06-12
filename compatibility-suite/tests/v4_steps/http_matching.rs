@@ -161,7 +161,7 @@ async fn the_request_is_compared_to_the_expected_one(world: &mut V4World) {
       world.expected_request.clone(),
       world.received_requests.first().unwrap().clone(),
       &world.pact.boxed(), &SynchronousHttp::default().boxed()
-    ).await
+    ).await.unwrap()
   );
 }
 

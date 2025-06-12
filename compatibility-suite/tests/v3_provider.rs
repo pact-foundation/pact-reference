@@ -22,13 +22,9 @@ async fn main() {
     }))
     .after(|_feature, _, _scenario, _status, world| Box::pin(async move {
       if let Some(world) = world {
-        {
-          let mut ms = world.provider_server.lock().unwrap();
-          let _ = ms.shutdown();
-        }
-        for broker in &world.mock_brokers {
-          let mut ms = broker.lock().unwrap();
-          let _ = ms.shutdown();
+        let _ = world.provider_server.shutdown();
+        for broker in &mut world.mock_brokers {
+          let _ = broker.shutdown();
         }
       }
     }))

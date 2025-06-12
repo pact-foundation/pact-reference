@@ -7,6 +7,8 @@ use async_trait::async_trait;
 use cucumber::{given, then, when};
 use cucumber::gherkin::Step;
 use maplit::hashmap;
+use pact_mock_server::builder::MockServerBuilder;
+use pact_mock_server::mock_server::{MockServer, MockServerConfig};
 use pact_models::{Consumer, PactSpecification, Provider};
 use pact_models::headers::parse_header;
 use pact_models::http_parts::HttpPart;
@@ -18,9 +20,8 @@ use pact_models::v4::interaction::V4Interaction;
 use reqwest::Client;
 use serde_json::{json, Value};
 use uuid::Uuid;
-use pact_matching::Mismatch;
 
-use pact_mock_server::mock_server::{MockServer, MockServerConfig};
+use pact_matching::Mismatch;
 use pact_verifier::{
   FilterInfo,
   PactSource,
@@ -58,23 +59,32 @@ async fn a_provider_is_started_that_returns_the_response_from_interaction(world:
     pact_specification: PactSpecification::V4,
     .. MockServerConfig::default()
   };
-  let (mock_server, future) = MockServer::new(
-    world.provider_key.clone(), pact.boxed(), "[::1]:0".parse()?, config
-  ).await.map_err(|err| anyhow!(err))?;
-  tokio::spawn(future);
-  world.provider_server = mock_server;
 
-  let ms = world.provider_server.lock().unwrap();
+  // let (mock_server, future) = MockServer::new(
+  //   world.provider_key.clone(), pact.boxed(), "[::1]:0".parse()?, config
+  // ).await.map_err(|err| anyhow!(err))?;
+  // tokio::spawn(future);
+  let mock_server = MockServerBuilder::new()
+    .with_v4_pact(pact.as_v4_pact().unwrap())
+    .with_id(world.provider_key.clone())
+    .with_config(config)
+    .bind_to("[::1]:0")
+    .with_transport("http")?
+    .start()
+    .await?;
+
+  // let ms = world.provider_server.lock().unwrap();
   world.provider_info = ProviderInfo {
     name: "p".to_string(),
     host: "[::1]".to_string(),
-    port: ms.port,
+    port: Some(mock_server.port()),
     transports: vec![ProviderTransport {
-      port: ms.port,
+      port: Some(mock_server.port()),
       .. ProviderTransport::default()
     }],
     .. ProviderInfo::default()
   };
+  world.provider_server = mock_server;
 
   Ok(())
 }
@@ -136,23 +146,32 @@ async fn a_provider_is_started_that_returns_the_response_from_interaction_with_t
     pact_specification: PactSpecification::V4,
     .. MockServerConfig::default()
   };
-  let (mock_server, future) = MockServer::new(
-    world.provider_key.clone(), pact.boxed(), "[::1]:0".parse()?, config
-  ).await.map_err(|err| anyhow!(err))?;
-  tokio::spawn(future);
-  world.provider_server = mock_server;
 
-  let ms = world.provider_server.lock().unwrap();
+  // let (mock_server, future) = MockServer::new(
+  //   world.provider_key.clone(), pact.boxed(), "[::1]:0".parse()?, config
+  // ).await.map_err(|err| anyhow!(err))?;
+  // tokio::spawn(future);
+  let mock_server = MockServerBuilder::new()
+    .with_v4_pact(pact.as_v4_pact().unwrap())
+    .with_id(world.provider_key.clone())
+    .with_config(config)
+    .bind_to("[::1]:0")
+    .with_transport("http")?
+    .start()
+    .await?;
+
   world.provider_info = ProviderInfo {
     name: "p".to_string(),
     host: "[::1]".to_string(),
-    port: ms.port,
+    port: Some(mock_server.port()),
     transports: vec![ProviderTransport {
-      port: ms.port,
+      port: Some(mock_server.port()),
       .. ProviderTransport::default()
     }],
     .. ProviderInfo::default()
   };
+
+  world.provider_server = mock_server;
 
   Ok(())
 }

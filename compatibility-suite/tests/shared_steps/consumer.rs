@@ -25,6 +25,7 @@ use uuid::Uuid;
 use pact_matching::Mismatch;
 use pact_mock_server::matching::MatchResult;
 use pact_mock_server::mock_server::{MockServer, MockServerConfig};
+use pact_mock_server::builder::MockServerBuilder;
 use pact_verifier::{NullRequestFilterExecutor, ProviderInfo, ProviderTransport, VerificationOptions};
 use pact_verifier::provider_client::make_provider_request;
 
@@ -34,7 +35,7 @@ use crate::shared_steps::{IndexType, setup_body, setup_common_interactions};
 pub struct ConsumerWorld {
   pub interactions: Vec<RequestResponseInteraction>,
   pub mock_server_key: String,
-  pub mock_server: Arc<Mutex<MockServer>>,
+  pub mock_server: MockServer,
   pub response: HttpResponse,
   pub scenario_id: String,
   pub pact: Box<dyn Pact>
@@ -45,7 +46,7 @@ impl Default for ConsumerWorld {
     ConsumerWorld {
       interactions: vec![],
       mock_server_key: "".to_string(),
-      mock_server: Arc::new(Mutex::new(Default::default())),
+      mock_server: Default::default(),
       response: Default::default(),
       scenario_id: "".to_string(),
       pact: RequestResponsePact::default().boxed()
@@ -75,10 +76,20 @@ async fn the_mock_server_is_started_with_interaction(world: &mut ConsumerWorld, 
     pact_specification: PactSpecification::V1,
     .. MockServerConfig::default()
   };
-  let (mock_server, future) = MockServer::new(
-    world.mock_server_key.clone(), pact.boxed(), "[::1]:0".parse()?, config
-  ).await.map_err(|err| anyhow!(err))?;
-  tokio::spawn(future);
+
+  // let (mock_server, future) = MockServer::new(
+  //   world.mock_server_key.clone(), pact.boxed(), "[::1]:0".parse()?, config
+  // ).await.map_err(|err| anyhow!(err))?;
+  // tokio::spawn(future);
+  let mock_server = MockServerBuilder::new()
+    .with_v4_pact(pact.as_v4_pact().unwrap())
+    .with_id(world.mock_server_key.clone())
+    .with_config(config)
+    .bind_to("[::1]:0")
+    .with_transport("http")?
+    .start()
+    .await?;
+
   world.mock_server = mock_server;
   Ok(())
 }
@@ -131,10 +142,20 @@ async fn the_mock_server_is_started_with_interaction_but_with_the_following_chan
     pact_specification: PactSpecification::V1,
     .. MockServerConfig::default()
   };
-  let (mock_server, future) = MockServer::new(
-    world.mock_server_key.clone(), pact.boxed(), "[::1]:0".parse()?, config
-  ).await.map_err(|err| anyhow!(err))?;
-  tokio::spawn(future);
+
+  // let (mock_server, future) = MockServer::new(
+  //   world.mock_server_key.clone(), pact.boxed(), "[::1]:0".parse()?, config
+  // ).await.map_err(|err| anyhow!(err))?;
+  // tokio::spawn(future);
+  let mock_server = MockServerBuilder::new()
+    .with_v4_pact(pact.as_v4_pact().unwrap())
+    .with_id(world.mock_server_key.clone())
+    .with_config(config)
+    .bind_to("[::1]:0")
+    .with_transport("http")?
+    .start()
+    .await?;
+
   world.mock_server = mock_server;
   Ok(())
 }
@@ -157,10 +178,20 @@ async fn the_mock_server_is_started_with_interactions(world: &mut ConsumerWorld,
     pact_specification: PactSpecification::V1,
     .. MockServerConfig::default()
   };
-  let (mock_server, future) = MockServer::new(
-    world.mock_server_key.clone(), pact.boxed(), "[::1]:0".parse()?, config
-  ).await.map_err(|err| anyhow!(err))?;
-  tokio::spawn(future);
+
+  // let (mock_server, future) = MockServer::new(
+  //   world.mock_server_key.clone(), pact.boxed(), "[::1]:0".parse()?, config
+  // ).await.map_err(|err| anyhow!(err))?;
+  // tokio::spawn(future);
+  let mock_server = MockServerBuilder::new()
+    .with_v4_pact(pact.as_v4_pact().unwrap())
+    .with_id(world.mock_server_key.clone())
+    .with_config(config)
+    .bind_to("[::1]:0")
+    .with_transport("http")?
+    .start()
+    .await?;
+
   world.mock_server = mock_server;
   Ok(())
 }
@@ -169,12 +200,13 @@ async fn the_mock_server_is_started_with_interactions(world: &mut ConsumerWorld,
 async fn request_is_made_to_the_mock_server(world: &mut ConsumerWorld, num: usize) -> anyhow::Result<()> {
   let request = world.interactions.get(num - 1).unwrap()
     .request.as_v4_request();
-  let port = {
-    let guard = world.mock_server.lock().unwrap();
-    guard.port
-  };
+  // let port = {
+  //   let guard = world.mock_server.lock().unwrap();
+  //   guard.port
+  // };
+  let port = world.mock_server.port();
   let transport = ProviderTransport {
-    port,
+    port: Some(port),
     ..ProviderTransport::default()
   };
   let provider_info = ProviderInfo {
@@ -241,12 +273,13 @@ async fn request_is_made_to_the_mock_server_with_the_following_changes(
     }
   }
 
-  let port = {
-    let guard = world.mock_server.lock().unwrap();
-    guard.port
-  };
+  // let port = {
+  //   let guard = world.mock_server.lock().unwrap();
+  //   guard.port
+  // };
+  let port = world.mock_server.port();
   let transport = ProviderTransport {
-    port,
+    port: Some(port),
     ..ProviderTransport::default()
   };
   let provider_info = ProviderInfo {
@@ -326,14 +359,13 @@ fn the_content_type_will_be_set_as(world: &mut ConsumerWorld, string: String) ->
 
 #[when("the pact test is done")]
 fn the_pact_test_is_done(world: &mut ConsumerWorld) -> anyhow::Result<()> {
-  let mut mockserver = world.mock_server.lock().unwrap();
-  mockserver.shutdown().map_err(|err| anyhow!(err))?;
+  world.mock_server.shutdown().map_err(|err| anyhow!(err))?;
 
-  let mismatches = mockserver.mismatches();
+  let mismatches = world.mock_server.mismatches();
   if mismatches.is_empty() {
     let dir = PathBuf::from("target/compatibility-suite/v1").join(&world.scenario_id);
     fs::create_dir_all(&dir)?;
-    mockserver.write_pact(&Some(dir.to_string_lossy().to_string()), true)?;
+    world.mock_server.write_pact(&Some(dir.to_string_lossy().to_string()), true)?;
   }
 
   Ok(())
@@ -369,18 +401,16 @@ fn the_mock_server_will_not_write_out_a_pact_file_for_the_interaction_when_done(
 
 #[then("the mock server status will be OK")]
 fn the_mock_server_status_will_be_ok(world: &mut ConsumerWorld) -> anyhow::Result<()> {
-  let mock_server = world.mock_server.lock().unwrap();
-  if mock_server.mismatches().is_empty() {
+  if world.mock_server.mismatches().is_empty() {
     Ok(())
   } else {
-    Err(anyhow!("Mock server has {} mismatches", mock_server.mismatches().len()))
+    Err(anyhow!("Mock server has {} mismatches", world.mock_server.mismatches().len()))
   }
 }
 
 #[then("the mock server status will NOT be OK")]
 fn the_mock_server_status_will_be_error(world: &mut ConsumerWorld) -> anyhow::Result<()> {
-  let mock_server = world.mock_server.lock().unwrap();
-  if mock_server.mismatches().is_empty() {
+  if world.mock_server.mismatches().is_empty() {
     Err(anyhow!("Mock server has no mismatches"))
   } else {
     Ok(())
@@ -451,9 +481,8 @@ fn the_mock_server_status_will_be_an_expected_but_not_received_error_for_interac
   world: &mut ConsumerWorld,
   num: usize
 ) -> anyhow::Result<()> {
-  let mock_server = { world.mock_server.lock().unwrap().clone() };
   if let Some(interaction) = world.interactions.get(num - 1) {
-    if let Some(_) = mock_server.mismatches().iter().find(|mismatch| {
+    if let Some(_) = world.mock_server.mismatches().iter().find(|mismatch| {
       match mismatch {
         MatchResult::MissingRequest(request) => request == &interaction.request.as_v4_request(),
         _ => false
@@ -491,8 +520,7 @@ fn the_interaction_request_query_parameters_will_be(
 
 #[then("the mock server status will be mismatches")]
 fn the_mock_server_status_will_be_mismatches(world: &mut ConsumerWorld) -> anyhow::Result<()> {
-  let mock_server = world.mock_server.lock().unwrap();
-  if mock_server.mismatches().is_empty() {
+  if world.mock_server.mismatches().is_empty() {
     Err(anyhow!("Mock server has no mismatches"))
   } else {
     Ok(())
@@ -505,8 +533,7 @@ fn the_mismatches_will_contain_a_mismatch_with_error(
   mismatch_type: String,
   error: String
 ) -> anyhow::Result<()> {
-  let mock_server = world.mock_server.lock().unwrap();
-  let mismatches: Vec<_> = mock_server.mismatches().iter()
+  let mismatches: Vec<_> = world.mock_server.mismatches().iter()
     .flat_map(|m| match m {
       MatchResult::RequestMismatch(_, _, mismatches) => mismatches.clone(),
       _ => vec![]
@@ -531,9 +558,8 @@ fn the_mock_server_status_will_be_an_unexpected_request_received_error_for_inter
   method: String,
   num: usize
 ) -> anyhow::Result<()> {
-  let mock_server = { world.mock_server.lock().unwrap().clone() };
   if let Some(interaction) = world.interactions.get(num - 1) {
-    if let Some(_) = mock_server.mismatches().iter().find(|mismatch| {
+    if let Some(_) = world.mock_server.mismatches().iter().find(|mismatch| {
       match mismatch {
         MatchResult::RequestNotFound(request) => request.method == method &&
           request.path == interaction.request.path && request.query == interaction.request.query,
@@ -555,8 +581,7 @@ fn the_mock_server_status_will_be_an_unexpected_request_received_error(
   method: String,
   path: String
 ) -> anyhow::Result<()> {
-  let mock_server = { world.mock_server.lock().unwrap().clone() };
-  if let Some(_) = mock_server.mismatches().iter().find(|mismatch| {
+  if let Some(_) = world.mock_server.mismatches().iter().find(|mismatch| {
     match mismatch {
       MatchResult::RequestNotFound(request) => request.method == method &&
         request.path == path,
@@ -663,8 +688,7 @@ fn the_mismatches_will_contain_a_mismatch_with_path_with_error(
   error_path: String,
   error: String
 ) -> anyhow::Result<()> {
-  let mock_server = world.mock_server.lock().unwrap();
-  let mismatches: Vec<_> = mock_server.mismatches().iter()
+  let mismatches: Vec<_> = world.mock_server.mismatches().iter()
     .flat_map(|m| match m {
       MatchResult::RequestMismatch(_, _, mismatches) => mismatches.clone(),
       _ => vec![]

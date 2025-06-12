@@ -156,10 +156,10 @@ async fn the_request_is_compared_to_the_expected_one(world: &mut V3World) {
   world.match_result.push(
     match_request(
       world.expected_request.as_v4_request(),
-    world.received_requests.first().unwrap().as_v4_request(),
+      world.received_requests.first().unwrap().as_v4_request(),
       &RequestResponsePact::default().boxed(),
       &RequestResponseInteraction::default().boxed()
-    ).await
+    ).await.unwrap()
   );
 }
 
@@ -172,7 +172,7 @@ async fn the_requests_are_compared_to_the_expected_one(world: &mut V3World) {
         request.as_v4_request(),
         &RequestResponsePact::default().boxed(),
         &RequestResponseInteraction::default().boxed()
-      ).await
+      ).await.unwrap()
     );
   }
 }

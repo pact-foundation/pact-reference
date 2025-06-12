@@ -13,6 +13,9 @@ use cucumber::{given, then, when, World};
 use cucumber::gherkin::Step;
 use itertools::{Either, Itertools};
 use maplit::hashmap;
+use pact_mock_server::builder::MockServerBuilder;
+use pact_mock_server::matching::MatchResult;
+use pact_mock_server::mock_server::{MockServer, MockServerConfig};
 use pact_models::{Consumer, generators, matchingrules, PactSpecification, Provider};
 use pact_models::bodies::OptionalBody;
 use pact_models::content_types::{ContentType, JSON, XML};
@@ -33,8 +36,6 @@ use serde_json::{json, Value};
 use uuid::Uuid;
 
 use pact_matching::Mismatch;
-use pact_mock_server::matching::MatchResult;
-use pact_mock_server::mock_server::{MockServer, MockServerConfig};
 use pact_verifier::{
   FilterInfo,
   PactSource,
@@ -54,12 +55,12 @@ pub struct ProviderWorld {
   pub spec_version: PactSpecification,
   pub interactions: Vec<RequestResponseInteraction>,
   pub provider_key: String,
-  pub provider_server: Arc<Mutex<MockServer>>,
+  pub provider_server: MockServer,
   pub provider_info: ProviderInfo,
   pub sources: Vec<PactSource>,
   pub publish_options: Option<PublishOptions>,
   pub verification_results: VerificationExecutionResult,
-  pub mock_brokers: Vec<Arc<Mutex<MockServer>>>,
+  pub mock_brokers: Vec<MockServer>,
   pub provider_state_executor: Arc<MockProviderStateExecutor>,
   pub request_filter_data: HashMap<String, String>
 }
@@ -262,23 +263,32 @@ async fn a_provider_is_started_that_returns_the_response_from_interaction(world:
     pact_specification: world.spec_version,
     .. MockServerConfig::default()
   };
-  let (mock_server, future) = MockServer::new(
-    world.provider_key.clone(), pact.boxed(), "[::1]:0".parse()?, config
-  ).await.map_err(|err| anyhow!(err))?;
-  tokio::spawn(future);
-  world.provider_server = mock_server;
 
-  let ms = world.provider_server.lock().unwrap();
+  // let (mock_server, future) = MockServer::new(
+  //   world.provider_key.clone(), pact.boxed(), "[::1]:0".parse()?, config
+  // ).await.map_err(|err| anyhow!(err))?;
+  // tokio::spawn(future);
+  let mock_server = MockServerBuilder::new()
+    .with_v4_pact(pact.as_v4_pact().unwrap())
+    .with_id(world.provider_key.clone())
+    .with_config(config)
+    .bind_to("[::1]:0")
+    .with_transport("http")?
+    .start()
+    .await?;
+
+  // let ms = world.provider_server.lock().unwrap();
   world.provider_info = ProviderInfo {
     name: "p".to_string(),
     host: "[::1]".to_string(),
-    port: ms.port,
+    port: Some(mock_server.port()),
     transports: vec![ProviderTransport {
-      port: ms.port,
+      port: Some(mock_server.port()),
       .. ProviderTransport::default()
     }],
     .. ProviderInfo::default()
   };
+  world.provider_server = mock_server;
 
   Ok(())
 }
@@ -340,23 +350,32 @@ async fn a_provider_is_started_that_returns_the_response_from_interaction_with_t
     pact_specification: world.spec_version,
     .. MockServerConfig::default()
   };
-  let (mock_server, future) = MockServer::new(
-    world.provider_key.clone(), pact.boxed(), "[::1]:0".parse()?, config
-  ).await.map_err(|err| anyhow!(err))?;
-  tokio::spawn(future);
-  world.provider_server = mock_server;
 
-  let ms = world.provider_server.lock().unwrap();
+  // let (mock_server, future) = MockServer::new(
+  //   world.provider_key.clone(), pact.boxed(), "[::1]:0".parse()?, config
+  // ).await.map_err(|err| anyhow!(err))?;
+  // tokio::spawn(future);
+  let mock_server = MockServerBuilder::new()
+    .with_v4_pact(pact.as_v4_pact().unwrap())
+    .with_id(world.provider_key.clone())
+    .with_config(config)
+    .bind_to("[::1]:0")
+    .with_transport("http")?
+    .start()
+    .await?;
+
+  // let ms = world.provider_server.lock().unwrap();
   world.provider_info = ProviderInfo {
     name: "p".to_string(),
     host: "[::1]".to_string(),
-    port: ms.port,
+    port: Some(mock_server.port()),
     transports: vec![ProviderTransport {
-      port: ms.port,
+      port: Some(mock_server.port()),
       .. ProviderTransport::default()
     }],
     .. ProviderInfo::default()
   };
+  world.provider_server = mock_server;
 
   Ok(())
 }
@@ -488,23 +507,34 @@ async fn a_provider_is_started_that_returns_the_responses_from_interactions(
     pact_specification: world.spec_version,
     .. MockServerConfig::default()
   };
-  let (mock_server, future) = MockServer::new(
-    world.provider_key.clone(), pact.boxed(), "[::1]:0".parse()?, config
-  ).await.map_err(|err| anyhow!(err))?;
-  tokio::spawn(future);
-  world.provider_server = mock_server;
 
-  let ms = world.provider_server.lock().unwrap();
+  // let (mock_server, future) = MockServer::new(
+  //   world.provider_key.clone(), pact.boxed(), "[::1]:0".parse()?, config
+  // ).await.map_err(|err| anyhow!(err))?;
+  // tokio::spawn(future);
+
+  let mock_server = MockServerBuilder::new()
+    .with_v4_pact(pact.as_v4_pact().unwrap())
+    .with_id(world.provider_key.clone())
+    .with_config(config)
+    .bind_to("[::1]:0")
+    .with_transport("http")?
+    .start()
+    .await?;
+
+  // let ms = world.provider_server.lock().unwrap();
   world.provider_info = ProviderInfo {
     name: "p".to_string(),
     host: "[::1]".to_string(),
-    port: ms.port,
+    port: Some(mock_server.port()),
     transports: vec![ProviderTransport {
-      port: ms.port,
+      port: Some(mock_server.port()),
       .. ProviderTransport::default()
     }],
     .. ProviderInfo::default()
   };
+  world.provider_server = mock_server;
+
   Ok(())
 }
 
@@ -613,19 +643,29 @@ async fn a_pact_file_for_interaction_is_to_be_verified_from_a_pact_broker(
   let config = MockServerConfig {
     .. MockServerConfig::default()
   };
-  let (mock_server, future) = MockServer::new(
-    Uuid::new_v4().to_string(), broker_pact.boxed(), "127.0.0.1:0".parse()?, config
-  ).await.map_err(|err| anyhow!(err))?;
-  tokio::spawn(future);
-  let broker_port = {
-    let ms = mock_server.lock().unwrap();
-    ms.port
-  };
+
+  // let (mock_server, future) = MockServer::new(
+  //   Uuid::new_v4().to_string(), broker_pact.boxed(), "127.0.0.1:0".parse()?, config
+  // ).await.map_err(|err| anyhow!(err))?;
+  // tokio::spawn(future);
+  // let broker_port = {
+  //   let ms = mock_server.lock().unwrap();
+  //   ms.port
+  // };
+  let mock_server = MockServerBuilder::new()
+    .with_v4_pact(broker_pact.as_v4_pact().unwrap())
+    .with_id(Uuid::new_v4().to_string())
+    .with_config(config)
+    .bind_to("127.0.0.1:0")
+    .with_transport("http")?
+    .start()
+    .await?;
+  let broker_port = mock_server.port();
   world.mock_brokers.push(mock_server);
 
   world.sources.push(PactSource::BrokerWithDynamicConfiguration {
     provider_name: "p".to_string(),
-    broker_url: format!("http://localhost:{}", broker_port.unwrap()),
+    broker_url: format!("http://localhost:{}", broker_port),
     enable_pending: false,
     include_wip_pacts_since: None,
     provider_tags: vec![],
@@ -640,8 +680,8 @@ async fn a_pact_file_for_interaction_is_to_be_verified_from_a_pact_broker(
 #[then("a verification result will NOT be published back")]
 fn a_verification_result_will_not_be_published_back(world: &mut ProviderWorld) -> anyhow::Result<()> {
   let verification_results = world.mock_brokers.iter().any(|broker| {
-    let ms = broker.lock().unwrap();
-    let verification_requests = ms.metrics.requests_by_path.iter()
+    let metrics = broker.metrics.lock().unwrap();
+    let verification_requests = metrics.requests_by_path.iter()
       .find(|(path, _)| {
         path.ends_with("/verification-results")
       })
@@ -669,8 +709,7 @@ fn publishing_of_verification_results_is_enabled(world: &mut ProviderWorld) {
 #[then(expr = "a successful verification result will be published back for interaction \\{{int}}")]
 fn a_successful_verification_result_will_be_published_back_for_interaction(world: &mut ProviderWorld, num: usize) -> anyhow::Result<()>  {
   let verification_results = world.mock_brokers.iter().any(|broker| {
-    let ms = broker.lock().unwrap();
-    let vec = ms.matches();
+    let vec = broker.matches();
     let verification_request = vec.iter()
       .find(|result| {
         let expected_path = format!("/pacts/provider/p/consumer/c_{}/verification-results", num);
@@ -715,8 +754,7 @@ fn a_successful_verification_result_will_be_published_back_for_interaction(world
 #[then(expr = "a failed verification result will be published back for the interaction \\{{int}}")]
 fn a_failed_verification_result_will_be_published_back_for_the_interaction(world: &mut ProviderWorld, num: usize) -> anyhow::Result<()>  {
   let verification_results = world.mock_brokers.iter().any(|broker| {
-    let ms = broker.lock().unwrap();
-    let vec = ms.matches();
+    let vec = broker.matches();
     let verification_request = vec.iter()
       .find(|result| {
         let expected_path = format!("/pacts/provider/p/consumer/c_{}/verification-results", num);
@@ -908,10 +946,7 @@ fn the_request_to_the_provider_will_contain_the_header(
   let header = header.splitn(2, ':')
     .map(|s| s.trim())
     .collect_vec();
-  let matches = {
-    let guard = world.provider_server.lock().unwrap();
-    guard.matches()
-  };
+  let matches = world.provider_server.matches();
   if matches.iter().all(|m| {
     let req = match m {
       MatchResult::RequestMatch(_, _, req) => req,
