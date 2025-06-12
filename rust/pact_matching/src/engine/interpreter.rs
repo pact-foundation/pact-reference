@@ -7,7 +7,6 @@ use anyhow::anyhow;
 use itertools::Itertools;
 use maplit::hashset;
 use serde_json::{json, Value};
-#[cfg(feature = "xml")] use snailquote::unescape;
 use tracing::{debug, error, instrument, trace, Level};
 
 use pact_models::matchingrules::MatchingRule;
@@ -98,7 +97,7 @@ impl ExecutionPlanInterpreter {
               .map(|v| NodeValue::JSON(v))
               .map_err(|err| anyhow!(err)),
             #[cfg(feature = "xml")]
-            "xml" => kiss_xml::parse_str(unescape(value).unwrap_or_else(|_| value.clone()))
+            "xml" => kiss_xml::parse_str(value)
               .map(|doc| NodeValue::XML(XmlValue::Element(doc.root_element().clone())))
               .map_err(|err| anyhow!("Failed to parse XML value: {}", err)),
             _ => Err(anyhow!("'{}' is not a known namespace", namespace))

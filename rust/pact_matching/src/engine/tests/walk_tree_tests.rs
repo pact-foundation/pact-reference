@@ -475,7 +475,7 @@ fn very_simple_xml() {
             %match:equality (
               'test' => 'test',
               %to-string (
-                ~>$.foo['#text'] => xml:text:test
+                ~>$.foo['#text'] => xml:text:'test'
               ) => 'test',
               NULL => NULL
             ) => BOOL(true)
@@ -594,11 +594,11 @@ fn simple_xml() {
   assert_eq!(r#"  %tee (
     %xml:parse (
       $.body => BYTES(239, PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KICAgICAgPGNvbmZpZz4KICAgICAgICA8bmFtZT5NeSBTZXR0aW5nczwvbmFtZT4KICAgICAgICA8c291bmQ+CiAgICAgICAgICA8cHJvcGVydHkgbmFtZT0idm9sdW1lIiB2YWx1ZT0iMTEiIC8+CiAgICAgICAgICA8cHJvcGVydHkgbmFtZT0ibWl4ZXIiIHZhbHVlPSJzdGFuZGFyZCIgLz4KICAgICAgICA8L3NvdW5kPgogICAgICA8L2NvbmZpZz4KICA=)
-    ) => xml:"<config>\n  <name>My Settings</name>\n  <sound>\n    <property name=\"volume\" value=\"11\"/>\n    <property name=\"mixer\" value=\"standard\"/>\n  </sound>\n</config>",
+    ) => xml:'<config>\n  <name>My Settings</name>\n  <sound>\n    <property name="volume" value="11"/>\n    <property name="mixer" value="standard"/>\n  </sound>\n</config>',
     :$ (
       %if (
         %check:exists (
-          ~>$.config => xml:"<config>\n  <name>My Settings</name>\n  <sound>\n    <property name=\"volume\" value=\"11\"/>\n    <property name=\"mixer\" value=\"standard\"/>\n  </sound>\n</config>"
+          ~>$.config => xml:'<config>\n  <name>My Settings</name>\n  <sound>\n    <property name="volume" value="11"/>\n    <property name="mixer" value="standard"/>\n  </sound>\n</config>'
         ) => BOOL(true),
         :$.config (
           :#text (
@@ -610,7 +610,7 @@ fn simple_xml() {
           ) => BOOL(true),
           %expect:only-entries (
             ['name', 'sound'] => ['name', 'sound'],
-            ~>$.config => xml:"<config>\n  <name>My Settings</name>\n  <sound>\n    <property name=\"volume\" value=\"11\"/>\n    <property name=\"mixer\" value=\"standard\"/>\n  </sound>\n</config>"
+            ~>$.config => xml:'<config>\n  <name>My Settings</name>\n  <sound>\n    <property name="volume" value="11"/>\n    <property name="mixer" value="standard"/>\n  </sound>\n</config>'
           ) => OK,
           %expect:count (
             UINT(1) => UINT(1),
@@ -646,7 +646,7 @@ fn simple_xml() {
           ) => BOOL(true),
           %expect:count (
             UINT(1) => UINT(1),
-            ~>$.config.sound => xml:"<sound>\n  <property name=\"volume\" value=\"11\"/>\n  <property name=\"mixer\" value=\"standard\"/>\n</sound>",
+            ~>$.config.sound => xml:'<sound>\n  <property name="volume" value="11"/>\n  <property name="mixer" value="standard"/>\n</sound>',
             %join (
               'Expected 1 <sound> child element but there were ',
               %length (
@@ -656,7 +656,7 @@ fn simple_xml() {
           ) => OK,
           %if (
             %check:exists (
-              ~>$.config.sound[0] => xml:"<sound>\n  <property name=\"volume\" value=\"11\"/>\n  <property name=\"mixer\" value=\"standard\"/>\n</sound>"
+              ~>$.config.sound[0] => xml:'<sound>\n  <property name="volume" value="11"/>\n  <property name="mixer" value="standard"/>\n</sound>'
             ) => BOOL(true),
             :$.config.sound[0] (
               :#text (
@@ -668,7 +668,7 @@ fn simple_xml() {
               ) => BOOL(true),
               %expect:only-entries (
                 ['property'] => ['property'],
-                ~>$.config.sound[0] => xml:"<sound>\n  <property name=\"volume\" value=\"11\"/>\n  <property name=\"mixer\" value=\"standard\"/>\n</sound>"
+                ~>$.config.sound[0] => xml:'<sound>\n  <property name="volume" value="11"/>\n  <property name="mixer" value="standard"/>\n</sound>'
               ) => OK,
               %expect:count (
                 UINT(2) => UINT(2),
@@ -687,30 +687,30 @@ fn simple_xml() {
                 :$.config.sound[0].property[0] (
                   :attributes (
                     :$.config.sound[0].property[0]['@name'] (
-                      #{"@name='volume'"},
+                      #{'@name=\'volume\''},
                       %if (
                         %check:exists (
-                          ~>$.config.sound[0].property[0]['@name'] => xml:attribute:name=volume
+                          ~>$.config.sound[0].property[0]['@name'] => xml:attribute:'name'='volume'
                         ) => BOOL(true),
                         %match:equality (
                           'volume' => 'volume',
                           %xml:value (
-                            ~>$.config.sound[0].property[0]['@name'] => xml:attribute:name=volume
+                            ~>$.config.sound[0].property[0]['@name'] => xml:attribute:'name'='volume'
                           ) => 'volume',
                           NULL => NULL
                         ) => BOOL(true)
                       ) => BOOL(true)
                     ) => BOOL(true),
                     :$.config.sound[0].property[0]['@value'] (
-                      #{"@value='11'"},
+                      #{'@value=\'11\''},
                       %if (
                         %check:exists (
-                          ~>$.config.sound[0].property[0]['@value'] => xml:attribute:value=11
+                          ~>$.config.sound[0].property[0]['@value'] => xml:attribute:'value'='11'
                         ) => BOOL(true),
                         %match:equality (
                           '11' => '11',
                           %xml:value (
-                            ~>$.config.sound[0].property[0]['@value'] => xml:attribute:value=11
+                            ~>$.config.sound[0].property[0]['@value'] => xml:attribute:'value'='11'
                           ) => '11',
                           NULL => NULL
                         ) => BOOL(true)
@@ -760,30 +760,30 @@ fn simple_xml() {
                 :$.config.sound[0].property[1] (
                   :attributes (
                     :$.config.sound[0].property[1]['@name'] (
-                      #{"@name='mixer'"},
+                      #{'@name=\'mixer\''},
                       %if (
                         %check:exists (
-                          ~>$.config.sound[0].property[1]['@name'] => xml:attribute:name=mixer
+                          ~>$.config.sound[0].property[1]['@name'] => xml:attribute:'name'='mixer'
                         ) => BOOL(true),
                         %match:equality (
                           'mixer' => 'mixer',
                           %xml:value (
-                            ~>$.config.sound[0].property[1]['@name'] => xml:attribute:name=mixer
+                            ~>$.config.sound[0].property[1]['@name'] => xml:attribute:'name'='mixer'
                           ) => 'mixer',
                           NULL => NULL
                         ) => BOOL(true)
                       ) => BOOL(true)
                     ) => BOOL(true),
                     :$.config.sound[0].property[1]['@value'] (
-                      #{"@value='standard'"},
+                      #{'@value=\'standard\''},
                       %if (
                         %check:exists (
-                          ~>$.config.sound[0].property[1]['@value'] => xml:attribute:value=standard
+                          ~>$.config.sound[0].property[1]['@value'] => xml:attribute:'value'='standard'
                         ) => BOOL(true),
                         %match:equality (
                           'standard' => 'standard',
                           %xml:value (
-                            ~>$.config.sound[0].property[1]['@value'] => xml:attribute:value=standard
+                            ~>$.config.sound[0].property[1]['@value'] => xml:attribute:'value'='standard'
                           ) => 'standard',
                           NULL => NULL
                         ) => BOOL(true)
@@ -857,11 +857,11 @@ fn simple_xml() {
   assert_eq!(r#"  %tee (
     %xml:parse (
       $.body => BYTES(174, PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KICAgICAgPGNvbmZpZz4KICAgICAgICA8bmFtZS8+CiAgICAgICAgPHNvdW5kPgogICAgICAgICAgPHByb3BlcnR5IG5hbWU9Im1peGVyIiB2YWx1ZT0ic3RhbmRhcmQiIC8+CiAgICAgICAgPC9zb3VuZD4KICAgICAgPC9jb25maWc+CiAg)
-    ) => xml:"<config>\n  <name/>\n  <sound>\n    <property name=\"mixer\" value=\"standard\"/>\n  </sound>\n</config>",
+    ) => xml:'<config>\n  <name/>\n  <sound>\n    <property name="mixer" value="standard"/>\n  </sound>\n</config>',
     :$ (
       %if (
         %check:exists (
-          ~>$.config => xml:"<config>\n  <name/>\n  <sound>\n    <property name=\"mixer\" value=\"standard\"/>\n  </sound>\n</config>"
+          ~>$.config => xml:'<config>\n  <name/>\n  <sound>\n    <property name="mixer" value="standard"/>\n  </sound>\n</config>'
         ) => BOOL(true),
         :$.config (
           :#text (
@@ -873,7 +873,7 @@ fn simple_xml() {
           ) => BOOL(true),
           %expect:only-entries (
             ['name', 'sound'] => ['name', 'sound'],
-            ~>$.config => xml:"<config>\n  <name/>\n  <sound>\n    <property name=\"mixer\" value=\"standard\"/>\n  </sound>\n</config>"
+            ~>$.config => xml:'<config>\n  <name/>\n  <sound>\n    <property name="mixer" value="standard"/>\n  </sound>\n</config>'
           ) => OK,
           %expect:count (
             UINT(1) => UINT(1),
@@ -909,7 +909,7 @@ fn simple_xml() {
           ) => BOOL(false),
           %expect:count (
             UINT(1) => UINT(1),
-            ~>$.config.sound => xml:"<sound>\n  <property name=\"mixer\" value=\"standard\"/>\n</sound>",
+            ~>$.config.sound => xml:'<sound>\n  <property name="mixer" value="standard"/>\n</sound>',
             %join (
               'Expected 1 <sound> child element but there were ',
               %length (
@@ -919,7 +919,7 @@ fn simple_xml() {
           ) => OK,
           %if (
             %check:exists (
-              ~>$.config.sound[0] => xml:"<sound>\n  <property name=\"mixer\" value=\"standard\"/>\n</sound>"
+              ~>$.config.sound[0] => xml:'<sound>\n  <property name="mixer" value="standard"/>\n</sound>'
             ) => BOOL(true),
             :$.config.sound[0] (
               :#text (
@@ -931,7 +931,7 @@ fn simple_xml() {
               ) => BOOL(true),
               %expect:only-entries (
                 ['property'] => ['property'],
-                ~>$.config.sound[0] => xml:"<sound>\n  <property name=\"mixer\" value=\"standard\"/>\n</sound>"
+                ~>$.config.sound[0] => xml:'<sound>\n  <property name="mixer" value="standard"/>\n</sound>'
               ) => OK,
               %expect:count (
                 UINT(2) => UINT(2),
@@ -950,30 +950,30 @@ fn simple_xml() {
                 :$.config.sound[0].property[0] (
                   :attributes (
                     :$.config.sound[0].property[0]['@name'] (
-                      #{"@name='volume'"},
+                      #{'@name=\'volume\''},
                       %if (
                         %check:exists (
-                          ~>$.config.sound[0].property[0]['@name'] => xml:attribute:name=mixer
+                          ~>$.config.sound[0].property[0]['@name'] => xml:attribute:'name'='mixer'
                         ) => BOOL(true),
                         %match:equality (
                           'volume' => 'volume',
                           %xml:value (
-                            ~>$.config.sound[0].property[0]['@name'] => xml:attribute:name=mixer
+                            ~>$.config.sound[0].property[0]['@name'] => xml:attribute:'name'='mixer'
                           ) => 'mixer',
                           NULL => NULL
                         ) => ERROR(Expected 'mixer' to be equal to 'volume')
                       ) => BOOL(false)
                     ) => BOOL(false),
                     :$.config.sound[0].property[0]['@value'] (
-                      #{"@value='11'"},
+                      #{'@value=\'11\''},
                       %if (
                         %check:exists (
-                          ~>$.config.sound[0].property[0]['@value'] => xml:attribute:value=standard
+                          ~>$.config.sound[0].property[0]['@value'] => xml:attribute:'value'='standard'
                         ) => BOOL(true),
                         %match:equality (
                           '11' => '11',
                           %xml:value (
-                            ~>$.config.sound[0].property[0]['@value'] => xml:attribute:value=standard
+                            ~>$.config.sound[0].property[0]['@value'] => xml:attribute:'value'='standard'
                           ) => 'standard',
                           NULL => NULL
                         ) => ERROR(Expected 'standard' to be equal to '11')
@@ -1023,7 +1023,7 @@ fn simple_xml() {
                 :$.config.sound[0].property[1] (
                   :attributes (
                     :$.config.sound[0].property[1]['@name'] (
-                      #{"@name='mixer'"},
+                      #{'@name=\'mixer\''},
                       %if (
                         %check:exists (
                           ~>$.config.sound[0].property[1]['@name']
@@ -1038,7 +1038,7 @@ fn simple_xml() {
                       )
                     ),
                     :$.config.sound[0].property[1]['@value'] (
-                      #{"@value='standard'"},
+                      #{'@value=\'standard\''},
                       %if (
                         %check:exists (
                           ~>$.config.sound[0].property[1]['@value']
@@ -1121,11 +1121,11 @@ fn missing_xml_value() {
   assert_eq!(r#"  %tee (
     %xml:parse (
       $.body => BYTES(49, PHZhbHVlcz48dmFsdWU+QTwvdmFsdWU+PHZhbHVlPkI8L3ZhbHVlPjwvdmFsdWVzPg==)
-    ) => xml:"<values>\n  <value>A</value>\n  <value>B</value>\n</values>",
+    ) => xml:'<values>\n  <value>A</value>\n  <value>B</value>\n</values>',
     :$ (
       %if (
         %check:exists (
-          ~>$.values => xml:"<values>\n  <value>A</value>\n  <value>B</value>\n</values>"
+          ~>$.values => xml:'<values>\n  <value>A</value>\n  <value>B</value>\n</values>'
         ) => BOOL(true),
         :$.values (
           :#text (
@@ -1137,7 +1137,7 @@ fn missing_xml_value() {
           ) => BOOL(true),
           %expect:only-entries (
             ['value'] => ['value'],
-            ~>$.values => xml:"<values>\n  <value>A</value>\n  <value>B</value>\n</values>"
+            ~>$.values => xml:'<values>\n  <value>A</value>\n  <value>B</value>\n</values>'
           ) => OK,
           %expect:count (
             UINT(2) => UINT(2),
@@ -1158,7 +1158,7 @@ fn missing_xml_value() {
                 %match:equality (
                   'A' => 'A',
                   %to-string (
-                    ~>$.values.value[0]['#text'] => xml:text:A
+                    ~>$.values.value[0]['#text'] => xml:text:'A'
                   ) => 'A',
                   NULL => NULL
                 ) => BOOL(true)
@@ -1180,7 +1180,7 @@ fn missing_xml_value() {
                 %match:equality (
                   'B' => 'B',
                   %to-string (
-                    ~>$.values.value[1]['#text'] => xml:text:B
+                    ~>$.values.value[1]['#text'] => xml:text:'B'
                   ) => 'B',
                   NULL => NULL
                 ) => BOOL(true)
@@ -1303,11 +1303,11 @@ fn missing_xml_value() {
   assert_eq!(r#"  %tee (
     %xml:parse (
       $.body => BYTES(33, PHZhbHVlcz48dmFsdWU+QTwvdmFsdWU+PC92YWx1ZXM+)
-    ) => xml:"<values>\n  <value>A</value>\n</values>",
+    ) => xml:'<values>\n  <value>A</value>\n</values>',
     :$ (
       %if (
         %check:exists (
-          ~>$.values => xml:"<values>\n  <value>A</value>\n</values>"
+          ~>$.values => xml:'<values>\n  <value>A</value>\n</values>'
         ) => BOOL(true),
         :$.values (
           :#text (
@@ -1319,7 +1319,7 @@ fn missing_xml_value() {
           ) => BOOL(true),
           %expect:only-entries (
             ['value'] => ['value'],
-            ~>$.values => xml:"<values>\n  <value>A</value>\n</values>"
+            ~>$.values => xml:'<values>\n  <value>A</value>\n</values>'
           ) => OK,
           %expect:count (
             UINT(2) => UINT(2),
@@ -1340,7 +1340,7 @@ fn missing_xml_value() {
                 %match:equality (
                   'A' => 'A',
                   %to-string (
-                    ~>$.values.value[0]['#text'] => xml:text:A
+                    ~>$.values.value[0]['#text'] => xml:text:'A'
                   ) => 'A',
                   NULL => NULL
                 ) => BOOL(true)
@@ -1503,11 +1503,11 @@ fn unexpected_xml_value() {
   assert_eq!(r#"  %tee (
     %xml:parse (
       $.body => BYTES(65, PHZhbHVlcz48dmFsdWU+QTwvdmFsdWU+PHZhbHVlPkI8L3ZhbHVlPjx2YWx1ZT5DPC92YWx1ZT48L3ZhbHVlcz4=)
-    ) => xml:"<values>\n  <value>A</value>\n  <value>B</value>\n  <value>C</value>\n</values>",
+    ) => xml:'<values>\n  <value>A</value>\n  <value>B</value>\n  <value>C</value>\n</values>',
     :$ (
       %if (
         %check:exists (
-          ~>$.values => xml:"<values>\n  <value>A</value>\n  <value>B</value>\n  <value>C</value>\n</values>"
+          ~>$.values => xml:'<values>\n  <value>A</value>\n  <value>B</value>\n  <value>C</value>\n</values>'
         ) => BOOL(true),
         :$.values (
           :#text (
@@ -1519,7 +1519,7 @@ fn unexpected_xml_value() {
           ) => BOOL(true),
           %expect:only-entries (
             ['value'] => ['value'],
-            ~>$.values => xml:"<values>\n  <value>A</value>\n  <value>B</value>\n  <value>C</value>\n</values>"
+            ~>$.values => xml:'<values>\n  <value>A</value>\n  <value>B</value>\n  <value>C</value>\n</values>'
           ) => OK,
           %expect:count (
             UINT(2) => UINT(2),
@@ -1540,7 +1540,7 @@ fn unexpected_xml_value() {
                 %match:equality (
                   'A' => 'A',
                   %to-string (
-                    ~>$.values.value[0]['#text'] => xml:text:A
+                    ~>$.values.value[0]['#text'] => xml:text:'A'
                   ) => 'A',
                   NULL => NULL
                 ) => BOOL(true)
@@ -1562,7 +1562,7 @@ fn unexpected_xml_value() {
                 %match:equality (
                   'B' => 'B',
                   %to-string (
-                    ~>$.values.value[1]['#text'] => xml:text:B
+                    ~>$.values.value[1]['#text'] => xml:text:'B'
                   ) => 'B',
                   NULL => NULL
                 ) => BOOL(true)

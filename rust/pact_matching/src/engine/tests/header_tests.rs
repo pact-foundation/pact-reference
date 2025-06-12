@@ -57,7 +57,7 @@ fn match_headers_with_expected_headers() {
   :header-test (
     :headers (
       :HEADER-X (
-        #{"HEADER-X='b'"},
+        #{'HEADER-X=\'b\''},
         %if (
           %check:exists (
             $.headers['HEADER-X']
@@ -95,7 +95,7 @@ fn match_headers_with_expected_headers() {
   :header-test (
     :headers (
       :HEADER-X (
-        #{"HEADER-X='b'"},
+        #{'HEADER-X=\'b\''},
         %if (
           %check:exists (
             $.headers['HEADER-X'] => NULL
@@ -138,7 +138,7 @@ fn match_headers_with_expected_headers() {
   :header-test (
     :headers (
       :HEADER-X (
-        #{"HEADER-X='b'"},
+        #{'HEADER-X=\'b\''},
         %if (
           %check:exists (
             $.headers['HEADER-X'] => 'b'
@@ -181,7 +181,7 @@ fn match_headers_with_expected_headers() {
   :header-test (
     :headers (
       :HEADER-X (
-        #{"HEADER-X='b'"},
+        #{'HEADER-X=\'b\''},
         %if (
           %check:exists (
             $.headers['HEADER-X'] => 'C'
@@ -225,7 +225,7 @@ fn match_headers_with_expected_headers() {
   :header-test (
     :headers (
       :HEADER-X (
-        #{"HEADER-X='b'"},
+        #{'HEADER-X=\'b\''},
         %if (
           %check:exists (
             $.headers['HEADER-X'] => 'b'
@@ -268,7 +268,7 @@ fn match_headers_with_expected_headers() {
   :header-test (
     :headers (
       :HEADER-X (
-        #{"HEADER-X='b'"},
+        #{'HEADER-X=\'b\''},
         %if (
           %check:exists (
             $.headers['HEADER-X'] => NULL
@@ -330,7 +330,7 @@ fn match_headers_with_matching_rule() {
   :header-test (
     :headers (
       :REF-CODE (
-        #{"REF-CODE='test'"},
+        #{'REF-CODE=\'test\''},
         %if (
           %check:exists (
             $.headers['REF-CODE']
@@ -387,7 +387,7 @@ fn match_headers_with_matching_rule() {
   :header-test (
     :headers (
       :REF-CODE (
-        #{"REF-CODE='test'"},
+        #{'REF-CODE=\'test\''},
         %if (
           %check:exists (
             $.headers['REF-CODE'] => 'test'
@@ -444,7 +444,7 @@ fn match_headers_with_matching_rule() {
   :header-test (
     :headers (
       :REF-CODE (
-        #{"REF-CODE='test'"},
+        #{'REF-CODE=\'test\''},
         %if (
           %check:exists (
             $.headers['REF-CODE'] => 'test'
@@ -515,7 +515,7 @@ fn match_headers_with_values_having_different_lengths() {
   :header-test (
     :headers (
       :REF-CODE (
-        #{"REF-CODE=['test', 'test2']"},
+        #{'REF-CODE=[\'test\', \'test2\']'},
         %if (
           %check:exists (
             $.headers['REF-CODE']
@@ -528,7 +528,7 @@ fn match_headers_with_values_having_different_lengths() {
         )
       ),
       :REF-ID (
-        #{"REF-ID='1234'"},
+        #{'REF-ID=\'1234\''},
         %if (
           %check:exists (
             $.headers['REF-ID']
@@ -572,7 +572,7 @@ fn match_headers_with_values_having_different_lengths() {
   :header-test (
     :headers (
       :REF-CODE (
-        #{"REF-CODE=['test', 'test2']"},
+        #{'REF-CODE=[\'test\', \'test2\']'},
         %if (
           %check:exists (
             $.headers['REF-CODE'] => ['test', 'test2']
@@ -585,7 +585,7 @@ fn match_headers_with_values_having_different_lengths() {
         ) => BOOL(true)
       ) => BOOL(true),
       :REF-ID (
-        #{"REF-ID='1234'"},
+        #{'REF-ID=\'1234\''},
         %if (
           %check:exists (
             $.headers['REF-ID'] => '1234'
@@ -629,7 +629,7 @@ fn match_headers_with_values_having_different_lengths() {
   :header-test (
     :headers (
       :REF-CODE (
-        #{"REF-CODE=['test', 'test2']"},
+        #{'REF-CODE=[\'test\', \'test2\']'},
         %if (
           %check:exists (
             $.headers['REF-CODE'] => 'test'
@@ -642,7 +642,7 @@ fn match_headers_with_values_having_different_lengths() {
         ) => BOOL(false)
       ) => BOOL(false),
       :REF-ID (
-        #{"REF-ID='1234'"},
+        #{'REF-ID=\'1234\''},
         %if (
           %check:exists (
             $.headers['REF-ID'] => ['1234', '1234', '4567']
@@ -704,7 +704,7 @@ fn match_headers_with_number_type_matching_rule() {
   :header-test (
     :headers (
       :REF-CODE (
-        #{"REF-CODE='test'"},
+        #{'REF-CODE=\'test\''},
         %if (
           %check:exists (
             $.headers['REF-CODE']
@@ -761,7 +761,7 @@ fn match_headers_with_number_type_matching_rule() {
   :header-test (
     :headers (
       :REF-CODE (
-        #{"REF-CODE='test'"},
+        #{'REF-CODE=\'test\''},
         %if (
           %check:exists (
             $.headers['REF-CODE'] => 'test'
@@ -818,7 +818,7 @@ fn match_headers_with_number_type_matching_rule() {
   :header-test (
     :headers (
       :REF-CODE (
-        #{"REF-CODE='test'"},
+        #{'REF-CODE=\'test\''},
         %if (
           %check:exists (
             $.headers['REF-CODE'] => 'test'
@@ -875,7 +875,7 @@ fn match_headers_with_number_type_matching_rule() {
   :header-test (
     :headers (
       :REF-CODE (
-        #{"REF-CODE='test'"},
+        #{'REF-CODE=\'test\''},
         %if (
           %check:exists (
             $.headers['REF-CODE'] => 'test'
@@ -932,7 +932,7 @@ fn match_headers_with_number_type_matching_rule() {
   :header-test (
     :headers (
       :REF-CODE (
-        #{"REF-CODE='test'"},
+        #{'REF-CODE=\'test\''},
         %if (
           %check:exists (
             $.headers['REF-CODE'] => 'test'
@@ -1007,7 +1007,7 @@ fn match_headers_with_min_type_matching_rules() {
   :header-test (
     :headers (
       :REF-CODE (
-        #{"REF-CODE='test'"},
+        #{'REF-CODE=\'test\''},
         %if (
           %check:exists (
             $.headers['REF-CODE']
@@ -1064,7 +1064,7 @@ fn match_headers_with_min_type_matching_rules() {
   :header-test (
     :headers (
       :REF-CODE (
-        #{"REF-CODE='test'"},
+        #{'REF-CODE=\'test\''},
         %if (
           %check:exists (
             $.headers['REF-CODE'] => 'test'
@@ -1121,7 +1121,7 @@ fn match_headers_with_min_type_matching_rules() {
   :header-test (
     :headers (
       :REF-CODE (
-        #{"REF-CODE='test'"},
+        #{'REF-CODE=\'test\''},
         %if (
           %check:exists (
             $.headers['REF-CODE'] => 'test'
@@ -1185,7 +1185,7 @@ fn match_content_type_header() {
   :header-test (
     :headers (
       :Content-Type (
-        #{"Content-Type='application/hal+json'"},
+        #{'Content-Type=\'application/hal+json\''},
         %if (
           %check:exists (
             $.headers['Content-Type']
@@ -1235,7 +1235,7 @@ fn match_content_type_header() {
   :header-test (
     :headers (
       :Content-Type (
-        #{"Content-Type='application/hal+json'"},
+        #{'Content-Type=\'application/hal+json\''},
         %if (
           %check:exists (
             $.headers['Content-Type'] => 'application/hal+json;charset=UTF-8'
@@ -1288,7 +1288,7 @@ fn match_content_type_header() {
   :header-test (
     :headers (
       :Content-Type (
-        #{"Content-Type='application/json;charset=UTF-8'"},
+        #{'Content-Type=\'application/json;charset=UTF-8\''},
         %if (
           %check:exists (
             $.headers['Content-Type']
@@ -1317,7 +1317,7 @@ fn match_content_type_header() {
                   NULL
                 ),
                 %error (
-                  "Expected a charset value of 'UTF-8' but it was missing"
+                  'Expected a charset value of \'UTF-8\' but it was missing'
                 )
               )
             )
@@ -1355,7 +1355,7 @@ fn match_content_type_header() {
   :header-test (
     :headers (
       :Content-Type (
-        #{"Content-Type='application/json;charset=UTF-8'"},
+        #{'Content-Type=\'application/json;charset=UTF-8\''},
         %if (
           %check:exists (
             $.headers['Content-Type'] => 'application/json; charset=UTF-8'
@@ -1384,7 +1384,7 @@ fn match_content_type_header() {
                   NULL => NULL
                 ) => BOOL(true),
                 %error (
-                  "Expected a charset value of 'UTF-8' but it was missing"
+                  'Expected a charset value of \'UTF-8\' but it was missing'
                 )
               ) => BOOL(true)
             ) => BOOL(true)
@@ -1422,7 +1422,7 @@ fn match_content_type_header() {
   :header-test (
     :headers (
       :Content-Type (
-        #{"Content-Type='application/json;charset=UTF-8'"},
+        #{'Content-Type=\'application/json;charset=UTF-8\''},
         %if (
           %check:exists (
             $.headers['Content-Type'] => 'application/json'
@@ -1451,7 +1451,7 @@ fn match_content_type_header() {
                   NULL
                 ),
                 %error (
-                  "Expected a charset value of 'UTF-8' but it was missing" => "Expected a charset value of 'UTF-8' but it was missing"
+                  'Expected a charset value of \'UTF-8\' but it was missing' => 'Expected a charset value of \'UTF-8\' but it was missing'
                 ) => ERROR(Expected a charset value of 'UTF-8' but it was missing)
               ) => ERROR(Expected a charset value of 'UTF-8' but it was missing)
             ) => BOOL(false)
@@ -1489,7 +1489,7 @@ fn match_content_type_header() {
   :header-test (
     :headers (
       :Content-Type (
-        #{"Content-Type='application/json;charset=UTF-8'"},
+        #{'Content-Type=\'application/json;charset=UTF-8\''},
         %if (
           %check:exists (
             $.headers['Content-Type'] => 'application/json;charset=UTF-16;other=stuff'
@@ -1518,7 +1518,7 @@ fn match_content_type_header() {
                   NULL => NULL
                 ) => ERROR(Expected 'utf-16' to be equal to 'utf-8'),
                 %error (
-                  "Expected a charset value of 'UTF-8' but it was missing"
+                  'Expected a charset value of \'UTF-8\' but it was missing'
                 )
               ) => BOOL(false)
             ) => BOOL(false)

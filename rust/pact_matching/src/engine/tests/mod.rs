@@ -30,8 +30,8 @@ mod header_tests;
   case("simple", "'simple'"),
   case("simple sentence", "'simple sentence'"),
   case("\"quoted sentence\"", "'\"quoted sentence\"'"),
-  case("'quoted sentence'", "\"'quoted sentence'\""),
-  case("new\nline", "\"new\\nline\""),
+  case("'quoted sentence'", "'\\'quoted sentence\\''"),
+  case("new\nline", "'new\\nline'"),
 )]
 fn node_value_str_form_escapes_strings(#[case] input: &str, #[case] expected: &str) {
   let node = NodeValue::STRING(input.to_string());
@@ -116,7 +116,7 @@ fn simple_match_request_test() -> anyhow::Result<()> {
       )
     ),
     :path (
-      #{"path == '/test'"},
+      #{'path == \'/test\''},
       %match:equality (
         '/test',
         $.path,
@@ -170,7 +170,7 @@ fn simple_match_request_test() -> anyhow::Result<()> {
       ) => ERROR(Expected 'PUT' to be equal to 'POST')
     ) => BOOL(false),
     :path (
-      #{"path == '/test'"},
+      #{'path == \'/test\''},
       %match:equality (
         '/test' => '/test',
         $.path => '/test',
@@ -274,7 +274,7 @@ fn simple_json_match_request_test() -> anyhow::Result<()> {
       )
     ),
     :path (
-      #{"path == '/test'"},
+      #{'path == \'/test\''},
       %match:equality (
         '/test',
         $.path,
@@ -351,7 +351,7 @@ fn simple_json_match_request_test() -> anyhow::Result<()> {
       ) => BOOL(true)
     ) => BOOL(true),
     :path (
-      #{"path == '/test'"},
+      #{'path == \'/test\''},
       %match:equality (
         '/test' => '/test',
         $.path => '/test',
@@ -487,8 +487,7 @@ fn match_path_with_matching_rule() -> anyhow::Result<()> {
   };
   let plan = build_request_plan(&expected_request, &context)?;
 
-  assert_eq!(
-r#"(
+  assert_eq!(r#"(
   :request (
     :method (
       #{'method == GET'},
@@ -501,7 +500,7 @@ r#"(
       )
     ),
     :path (
-      #{"path must match the regular expression /\\/test[0-9]+/"},
+      #{'path must match the regular expression /\\/test[0-9]+/'},
       %match:regex (
         '/test',
         $.path,
@@ -535,7 +534,7 @@ r#"(
       ) => BOOL(true)
     ) => BOOL(true),
     :path (
-      #{"path must match the regular expression /\\/test[0-9]+/"},
+      #{'path must match the regular expression /\\/test[0-9]+/'},
       %match:regex (
         '/test' => '/test',
         $.path => '/test12345',
@@ -574,7 +573,7 @@ r#"(
       ) => BOOL(true)
     ) => BOOL(true),
     :path (
-      #{"path must match the regular expression /\\/test[0-9]+/"},
+      #{'path must match the regular expression /\\/test[0-9]+/'},
       %match:regex (
         '/test' => '/test',
         $.path => '/test12345X',

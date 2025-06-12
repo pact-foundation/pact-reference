@@ -63,7 +63,7 @@ fn match_query_with_no_query_strings() {
         %join (
           'Expected no query parameters but got ' => 'Expected no query parameters but got ',
           $.query => {'a': 'b'}
-        ) => "Expected no query parameters but got {'a': 'b'}"
+        ) => 'Expected no query parameters but got {\'a\': \'b\'}'
       ) => ERROR(Expected no query parameters but got {'a': 'b'})
     ) => BOOL(false)
   ) => BOOL(false)
@@ -87,7 +87,7 @@ fn match_query_with_expected_query_string() {
   :query-test (
     :"query parameters" (
       :a (
-        #{"a='b'"},
+        #{'a=\'b\''},
         %if (
           %check:exists (
             $.query.a
@@ -136,7 +136,7 @@ fn match_query_with_expected_query_string() {
   :query-test (
     :"query parameters" (
       :a (
-        #{"a='b'"},
+        #{'a=\'b\''},
         %if (
           %check:exists (
             $.query.a => NULL
@@ -190,7 +190,7 @@ fn match_query_with_expected_query_string() {
   :query-test (
     :"query parameters" (
       :a (
-        #{"a='b'"},
+        #{'a=\'b\''},
         %if (
           %check:exists (
             $.query.a => 'b'
@@ -244,7 +244,7 @@ fn match_query_with_expected_query_string() {
   :query-test (
     :"query parameters" (
       :a (
-        #{"a='b'"},
+        #{'a=\'b\''},
         %if (
           %check:exists (
             $.query.a => 'c'
@@ -299,7 +299,7 @@ fn match_query_with_expected_query_string() {
   :query-test (
     :"query parameters" (
       :a (
-        #{"a='b'"},
+        #{'a=\'b\''},
         %if (
           %check:exists (
             $.query.a => 'b'
@@ -353,7 +353,7 @@ fn match_query_with_expected_query_string() {
   :query-test (
     :"query parameters" (
       :a (
-        #{"a='b'"},
+        #{'a=\'b\''},
         %if (
           %check:exists (
             $.query.a => NULL
@@ -426,7 +426,7 @@ fn match_query_with_matching_rule() {
   :query-test (
     :"query parameters" (
       :field (
-        #{"field='test'"},
+        #{'field=\'test\''},
         %if (
           %check:exists (
             $.query.field
@@ -494,7 +494,7 @@ fn match_query_with_matching_rule() {
   :query-test (
     :"query parameters" (
       :field (
-        #{"field='test'"},
+        #{'field=\'test\''},
         %if (
           %check:exists (
             $.query.field => 'test'
@@ -562,7 +562,7 @@ fn match_query_with_matching_rule() {
   :query-test (
     :"query parameters" (
       :field (
-        #{"field='test'"},
+        #{'field=\'test\''},
         %if (
           %check:exists (
             $.query.field => 'test'
@@ -644,7 +644,7 @@ fn match_query_with_query_values_having_different_lengths() {
   :query-test (
     :"query parameters" (
       :a (
-        #{"a='b'"},
+        #{'a=\'b\''},
         %if (
           %check:exists (
             $.query.a => 'b'
@@ -657,7 +657,7 @@ fn match_query_with_query_values_having_different_lengths() {
         ) => BOOL(true)
       ) => BOOL(true),
       :c (
-        #{"c=['d', 'e']"},
+        #{'c=[\'d\', \'e\']'},
         %if (
           %check:exists (
             $.query.c => ['d', 'e']
@@ -712,7 +712,7 @@ fn match_query_with_query_values_having_different_lengths() {
   :query-test (
     :"query parameters" (
       :a (
-        #{"a='b'"},
+        #{'a=\'b\''},
         %if (
           %check:exists (
             $.query.a => ['b', 'e']
@@ -725,7 +725,7 @@ fn match_query_with_query_values_having_different_lengths() {
         ) => BOOL(false)
       ) => BOOL(false),
       :c (
-        #{"c=['d', 'e']"},
+        #{'c=[\'d\', \'e\']'},
         %if (
           %check:exists (
             $.query.c => 'd'

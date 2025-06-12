@@ -1159,7 +1159,7 @@ mod tests {
               :$.config.sound[0].property[0] (
                 :attributes (
                   :$.config.sound[0].property[0]['@name'] (
-                    #{"@name='volume'"},
+                    #{'@name=\'volume\''},
                     %if (
                       %check:exists (
                         ~>$.config.sound[0].property[0]['@name']
@@ -1174,7 +1174,7 @@ mod tests {
                     )
                   ),
                   :$.config.sound[0].property[0]['@value'] (
-                    #{"@value='11'"},
+                    #{'@value=\'11\''},
                     %if (
                       %check:exists (
                         ~>$.config.sound[0].property[0]['@value']
@@ -1232,7 +1232,7 @@ mod tests {
               :$.config.sound[0].property[1] (
                 :attributes (
                   :$.config.sound[0].property[1]['@name'] (
-                    #{"@name='mixer'"},
+                    #{'@name=\'mixer\''},
                     %if (
                       %check:exists (
                         ~>$.config.sound[0].property[1]['@name']
@@ -1247,7 +1247,7 @@ mod tests {
                     )
                   ),
                   :$.config.sound[0].property[1]['@value'] (
-                    #{"@value='standard'"},
+                    #{'@value=\'standard\''},
                     %if (
                       %check:exists (
                         ~>$.config.sound[0].property[1]['@value']

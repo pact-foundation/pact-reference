@@ -1,6 +1,5 @@
 //! Structs and traits to support a general matching engine
 
-use std::borrow::Cow;
 use std::cell::Cell;
 use std::cmp::PartialEq;
 use std::collections::HashMap;
@@ -14,7 +13,6 @@ use itertools::Itertools;
 #[cfg(feature = "xml")] use kiss_xml::dom::Element;
 use serde_json::Value;
 use serde_json::Value::Object;
-use snailquote::escape;
 
 use pact_models::bodies::OptionalBody;
 use pact_models::content_types::TEXT;
@@ -99,7 +97,7 @@ impl NodeValue {
     match self {
       NodeValue::NULL => "NULL".to_string(),
       NodeValue::STRING(str) => {
-        Self::escape_string(str)
+        escape(str.as_str())
       }
       NodeValue::BOOL(b) => {
         format!("BOOL({})", b)
@@ -115,15 +113,15 @@ impl NodeValue {
           } else {
             buffer.push_str(", ");
           }
-          buffer.push_str(Self::escape_string(key).as_str());
+          buffer.push_str(escape(key.as_str()).as_str());
           if values.is_empty() {
             buffer.push_str(": []");
           } else if values.len() == 1 {
             buffer.push_str(": ");
-            buffer.push_str(Self::escape_string(&values[0]).as_str());
+            buffer.push_str(escape(&values[0]).as_str());
           } else {
             buffer.push_str(": [");
-            buffer.push_str(values.iter().map(|v| Self::escape_string(v)).join(", ").as_str());
+            buffer.push_str(values.iter().map(|v| escape(v)).join(", ").as_str());
             buffer.push(']');
           }
         }
@@ -134,7 +132,7 @@ impl NodeValue {
       NodeValue::SLIST(list) => {
         let mut buffer = String::new();
         buffer.push('[');
-        buffer.push_str(list.iter().map(|v| Self::escape_string(v)).join(", ").as_str());
+        buffer.push_str(list.iter().map(|v| escape(v)).join(", ").as_str());
         buffer.push(']');
         buffer
       }
@@ -158,7 +156,7 @@ impl NodeValue {
       NodeValue::JSON(json) => format!("json:{}", json),
       NodeValue::ENTRY(key, value) => {
         let mut buffer = String::new();
-        buffer.push_str(Self::escape_string(key).as_str());
+        buffer.push_str(escape(key.as_str()).as_str());
         buffer.push_str(" -> ");
         buffer.push_str(value.str_form().as_str());
         buffer
@@ -177,15 +175,6 @@ impl NodeValue {
         XmlValue::Attribute(name, value) => format!("xml:attribute:{}={}",
           escape(name.as_str()), escape(value.as_str()))
       }
-    }
-  }
-
-  fn escape_string(str: &String) -> String {
-    let escaped_str = escape(str);
-    if let Cow::Borrowed(_) = &escaped_str {
-      format!("'{}'", escaped_str)
-    } else {
-      escaped_str.to_string()
     }
   }
 
@@ -1680,6 +1669,72 @@ pub fn execute_request_plan(
   Ok(ExecutionPlan {
     plan_root: executed_tree
   })
+}
+
+pub(crate) fn escape(s: &str) -> String {
+  if s.is_empty() {
+    "''".to_string()
+  } else {
+    let mut buffer = String::with_capacity(s.len() + 2);
+    buffer.push('\'');
+
+    for c in s.chars() {
+      match c {
+        '\'' | '\\' => {
+          buffer.push('\\');
+          buffer.push(c);
+        }
+        '\n' => {
+          buffer.push('\\');
+          buffer.push('n');
+        }
+        '\t' => {
+          buffer.push('\\');
+          buffer.push('t');
+        }
+        '\r' => {
+          buffer.push('\\');
+          buffer.push('r');
+        }
+        _ => buffer.push(c)
+      }
+    }
+
+    buffer.push('\'');
+    buffer
+  }
+}
+
+pub(crate) fn unescape(s: &str) -> String {
+  if s.is_empty() || s == "''" {
+    "".to_string()
+  } else {
+    let mut buffer = String::with_capacity(s.len() - 2);
+
+    let mut chars = s.chars().dropping(1).dropping_back(1);
+    while let Some(c) = chars.next() {
+      match c {
+        '\\' => {
+          if let Some(c1) = chars.next() {
+            match c1 {
+              '\n' => buffer.push('\n'),
+              '\t' => buffer.push('\t'),
+              '\r' => buffer.push('\r'),
+              _ => {
+                buffer.push(c);
+                buffer.push(c1);
+              }
+            }
+          } else {
+            buffer.push(c);
+          }
+        }
+        _ => buffer.push(c)
+      }
+    }
+
+    buffer
+  }
 }
 
 #[cfg(test)]

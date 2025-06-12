@@ -5,12 +5,12 @@ use std::fmt::{Display, Formatter};
 use anyhow::anyhow;
 use kiss_xml::dom::Element;
 use onig::Regex;
-use snailquote::escape;
 use tracing::debug;
 
 use pact_models::matchingrules::MatchingRule;
 use pact_models::xml_utils::XmlResult;
 
+use crate::engine::escape;
 use crate::matchers::Matches;
 
 /// Enum to store different XML nodes
