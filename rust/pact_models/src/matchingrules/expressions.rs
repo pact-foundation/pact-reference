@@ -1787,6 +1787,32 @@ mod test {
         generator: None,
         expression: exp.to_string()
       });
+    let exp = "atLeast(1), atMost(2), eachKey(matching(type, 'test')), eachValue(matching(type, 1))";
+    assert_eq!(super::parse_matcher_def(exp).unwrap(),
+      MatchingRuleDefinition {
+        value: "".to_string(),
+        value_type: ValueType::Unknown,
+        rules: vec![
+          Either::Left(MatchingRule::MinType(1)),
+          Either::Left(MatchingRule::MaxType(2)),
+          Either::Left(MatchingRule::EachKey(MatchingRuleDefinition {
+            value: "test".to_string(),
+            value_type: ValueType::String,
+            rules: vec![Either::Left(MatchingRule::Type)],
+            generator: None,
+            expression: exp.to_string()
+          })),
+          Either::Left(MatchingRule::EachValue(MatchingRuleDefinition {
+            value: "1".to_string(),
+            value_type: ValueType::Integer,
+            rules: vec![Either::Left(MatchingRule::Type)],
+            generator: None,
+            expression: exp.to_string()
+          }))
+        ],
+        generator: None,
+        expression: exp.to_string()
+      });
   }
 
   #[test_log::test]
