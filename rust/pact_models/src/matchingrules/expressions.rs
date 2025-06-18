@@ -108,6 +108,7 @@
 //! There is a grammar for the definitions in [ANTLR4 format](https://github.com/pact-foundation/pact-plugins/blob/main/docs/matching-rule-definition.g4).
 //!
 
+use std::fmt::{Display, Formatter};
 use std::char::REPLACEMENT_CHARACTER;
 use std::str::from_utf8;
 
@@ -167,6 +168,19 @@ impl ValueType {
       (ValueType::Boolean, ValueType::Boolean) => ValueType::Boolean,
       (ValueType::String, _) => ValueType::String,
       (_, _) => other
+    }
+  }
+}
+
+impl Display for ValueType {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    match self {
+      ValueType::Unknown => write!(f, "Unknown"),
+      ValueType::String => write!(f, "String"),
+      ValueType::Number => write!(f, "Number"),
+      ValueType::Integer => write!(f, "Integer"),
+      ValueType::Decimal => write!(f, "Decimal"),
+      ValueType::Boolean => write!(f, "Boolean")
     }
   }
 }
@@ -692,13 +706,21 @@ fn parse_equality(
   Ok((value, value_type, Some(MatchingRule::Equality), generator, None))
 }
 
-// COMMA r=string COMMA s=string { $rule = new RegexMatcher($r.contents); $value = $s.contents; $type = ValueType.String; }
+// COMMA r=string COMMA s=(string { $rule = new RegexMatcher($r.contents); $value = $s.contents; $type = ValueType.String; } | 'fromProviderState' fromProviderState)
 fn parse_regex(lex: &mut Lexer<MatcherDefinitionToken>, v: &str) -> anyhow::Result<(String, ValueType, Option<MatchingRule>, Option<Generator>, Option<MatchingReference>)> {
   parse_comma(lex, v)?;
   let regex = parse_string(lex, v)?;
   parse_comma(lex, v)?;
-  let value = parse_string(lex, v)?;
-  Ok((value, ValueType::String, Some(MatchingRule::Regex(regex)), None, None))
+
+  let remainder = lex.remainder().trim_start();
+  let (value, value_type, generator) = if remainder.starts_with("fromProviderState") {
+    lex.next();
+    from_provider_state(lex, v)?
+  } else {
+    (parse_string(lex, v)?, ValueType::String, None)
+  };
+
+  Ok((value, value_type, Some(MatchingRule::Regex(regex)), generator, None))
 }
 
 // COMMA v=primitiveValue { $value = $v.value; $type = $v.type; } )
@@ -1196,6 +1218,10 @@ mod test {
                                               ValueType::String,
                                               MatchingRule::Regex("\\w+".to_string()),
                                               None, exp.to_string())));
+    let exp = "matching(regex, '\\d+', fromProviderState('exp', 123))";
+    expect!(parse_matcher_def(exp).unwrap()).to(
+      be_equal_to(MatchingRuleDefinition::new("123".to_string(), ValueType::Integer, MatchingRule::Regex("\\d+".to_string()),
+        Some(ProviderStateGenerator("exp".to_string(), Some(DataType::INTEGER))), exp.to_string())));
   }
 
   #[test]
