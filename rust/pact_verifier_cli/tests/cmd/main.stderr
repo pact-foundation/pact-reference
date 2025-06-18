@@ -96,4 +96,4 @@ Pact Broker options:
 
 Development options:
       --exit-first   Stops the verifier at the first failure
-      --last-failed  Only re-runs the interactions that failed on the previous verifier run
+      --last-failed  Only runs the interactions that failed on the previous verifier run
