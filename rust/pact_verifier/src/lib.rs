@@ -1088,6 +1088,11 @@ pub async fn verify_provider_async<F: RequestFilterExecutor, S: ProviderStateExe
             total_results += results.len();
             verification_result.interaction_results.extend_from_slice(results.as_slice());
 
+            if verification_options.exit_on_first_failure && !errors.is_empty() {
+              warn!("Executing verification on first failure (--exit-first is set)");
+              break;
+            }
+
             if let Some(publish) = publish_options {
               publish_result(results.as_slice(), &pact_source, &publish, metrics_data.as_ref()).await;
 
