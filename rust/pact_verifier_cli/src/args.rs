@@ -344,6 +344,19 @@ pub(crate) fn setup_app() -> Command {
       .value_parser(NonEmptyStringValueParser::new())
       .requires("broker-url")
       .help("Allow pacts that don't match given consumer selectors (or tags) to  be verified, without causing the overall task to fail. For more information, see https://pact.io/wip"))
+
+    .group(ArgGroup::new("development").multiple(true))
+    .next_help_heading("Development options")
+    .arg(Arg::new("exit-first")
+      .long("exit-first")
+      .action(ArgAction::SetTrue)
+      .conflicts_with("publish")
+      .help("Stops the verifier at the first failure"))
+    .arg(Arg::new("last-failed")
+      .long("last-failed")
+      .action(ArgAction::SetTrue)
+      .conflicts_with("publish")
+      .help("Only runs the interactions that failed on the previous verifier run"))
 }
 
 #[cfg(test)]

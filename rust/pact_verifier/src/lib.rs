@@ -918,7 +918,11 @@ pub struct VerificationOptions<F> where F: RequestFilterExecutor {
   /// If coloured output should be used (using ANSI escape codes)
   pub coloured_output: bool,
   /// If no pacts are found to verify, then this should be an error
-  pub no_pacts_is_error: bool
+  pub no_pacts_is_error: bool,
+  /// Exit verification run on first failure
+  pub exit_on_first_failure: bool,
+  /// Only execute the interactions that failed on the previous verifier run
+  pub run_last_failed_only: bool
 }
 
 impl <F: RequestFilterExecutor> Default for VerificationOptions<F> {
@@ -929,7 +933,9 @@ impl <F: RequestFilterExecutor> Default for VerificationOptions<F> {
       request_timeout: 5000,
       custom_headers: Default::default(),
       coloured_output: true,
-      no_pacts_is_error: true
+      no_pacts_is_error: true,
+      exit_on_first_failure: false,
+      run_last_failed_only: false
     }
   }
 }

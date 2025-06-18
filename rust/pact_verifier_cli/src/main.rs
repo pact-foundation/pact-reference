@@ -388,9 +388,6 @@
 
 #![warn(missing_docs)]
 
-// Due to large generated future for async fns
-#![type_length_limit="100000000"]
-
 use std::env;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -484,6 +481,8 @@ async fn handle_matches(matches: &ArgMatches) -> Result<(), i32> {
     custom_headers,
     coloured_output,
     no_pacts_is_error: !matches.get_flag("ignore-no-pacts-error"),
+    exit_on_first_failure: matches.get_flag("exit-first"),
+    run_last_failed_only: matches.get_flag("last-failed"),
     .. VerificationOptions::default()
   };
 
@@ -753,7 +752,7 @@ fn main() {
     let result = handle_cli(clap::crate_version!()).await;
 
     // Add a small delay to let asynchronous tasks to complete
-    sleep(Duration::from_millis(500)).await;
+    sleep(Duration::from_millis(200)).await;
 
     result
   });

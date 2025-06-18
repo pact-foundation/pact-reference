@@ -28,6 +28,7 @@ pub struct VerificationInteractionResult {
 }
 
 /// Result of verifying a Pact
+#[derive(Clone, Debug)]
 pub struct VerificationResult {
   /// Results that occurred
   pub results: Vec<VerificationInteractionResult>,
