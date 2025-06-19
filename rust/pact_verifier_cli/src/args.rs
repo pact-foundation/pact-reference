@@ -356,7 +356,8 @@ pub(crate) fn setup_app() -> Command {
       .long("last-failed")
       .action(ArgAction::SetTrue)
       .conflicts_with("publish")
-      .help("Only runs the interactions that failed on the previous verifier run"))
+      .requires("json-file")
+      .help("Only runs the interactions that failed on the previous verifier run. Requires --json-file to have been set"))
 }
 
 #[cfg(test)]

@@ -96,4 +96,4 @@ Pact Broker options:
 
 Development options:
       --exit-on-first-error  Stops the verifier at the first failure
-      --last-failed          Only runs the interactions that failed on the previous verifier run
+      --last-failed          Only runs the interactions that failed on the previous verifier run. Requires --json-file to have been set
