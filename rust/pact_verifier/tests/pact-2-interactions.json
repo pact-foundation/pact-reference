@@ -1,0 +1,55 @@
+{
+  "provider": {
+    "name": "test_provider"
+  },
+  "consumer": {
+    "name": "test_consumer"
+  },
+  "interactions": [
+    {
+      "type": "Synchronous/HTTP",
+      "description": "first pact interaction",
+      "pending": false,
+      "request": {
+        "method": "GET",
+        "path": "/"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": ["application/json"]
+        },
+        "body": {
+          "contentType": "application/json",
+          "encoded": false,
+          "content": "First pact"
+        }
+      }
+    },
+    {
+      "type": "Synchronous/HTTP",
+      "description": "second pact interaction",
+      "pending": false,
+      "request": {
+        "method": "GET",
+        "path": "/"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": ["application/json"]
+        },
+        "body": {
+          "contentType": "application/json",
+          "encoded": false,
+          "content": "Second pact"
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "pactSpecification": {
+      "version": "4.0"
+    }
+  }
+}

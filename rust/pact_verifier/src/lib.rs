@@ -1416,19 +1416,21 @@ pub async fn verify_pact_internal<'a, F: RequestFilterExecutor, S: ProviderState
   pending: bool,
   pact_source_duration: Duration
 ) -> anyhow::Result<VerificationResult> {
-  let interactions = pact.interactions();
   let mut output = vec![];
-
-  let results: Vec<(Box<dyn Interaction + Send + Sync + RefUnwindSafe>, Result<(Option<String>, Vec<String>, Duration), (MismatchResult, Vec<String>, Duration)>)> =
-    futures::stream::iter(interactions.iter().map(|i| (&pact, i)))
-    .filter(|(_, interaction)| futures::future::ready(filter_interaction(interaction.as_ref(), filter)))
-    .then( |(pact, interaction)| async move {
+  let mut results = vec![];
+  for interaction in pact.interactions() {
+    if filter_interaction(interaction.as_ref(), filter) {
       let interaction_desc = interaction.description();
-      (interaction.boxed(), verify_interaction(provider_info, interaction.as_ref(), &pact.boxed(), options, provider_state_executor)
-        .instrument(debug_span!("verify_interaction", interaction = interaction_desc.as_str())).await)
-    })
-    .collect()
-    .await;
+      let result = verify_interaction(provider_info, interaction.as_ref(), &pact.boxed(), options, provider_state_executor)
+        .instrument(debug_span!("verify_interaction", interaction = interaction_desc.as_str())).await;
+
+      let is_err = result.is_err();
+      results.push((interaction, result));
+      if options.exit_on_first_failure && is_err {
+        break;
+      }
+    }
+  }
 
   let mut errors: Vec<VerificationInteractionResult> = vec![];
   for (interaction, match_result) in results {

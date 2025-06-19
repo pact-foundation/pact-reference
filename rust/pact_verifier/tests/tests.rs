@@ -1177,3 +1177,36 @@ async fn verify_multiple_pacts_with_exit_first_set() {
     .collect_vec();
   expect!(interaction_ids).to(be_equal_to(vec!["pact-one"]));
 }
+
+#[test_log::test(tokio::test)]
+async fn verifying_a_pact_with_exit_first_set() {
+  let provider = ProviderInfo {
+    name: "PendingProvider".to_string(),
+    host: "127.0.0.1".to_string(),
+    .. ProviderInfo::default()
+  };
+
+  let pact_file = fixture_path("pact-2-interactions.json");
+  let pact = read_pact(pact_file.as_path()).unwrap();
+  let options: VerificationOptions<NullRequestFilterExecutor> = VerificationOptions {
+    exit_on_first_failure: true,
+    .. VerificationOptions::default()
+  };
+  let provider_states = Arc::new(DummyProviderStateExecutor{});
+
+  let result = verify_pact_internal(
+    &provider,
+    &FilterInfo::None,
+    pact,
+    &options,
+    &provider_states,
+    false,
+    Duration::default()
+  ).await.unwrap();
+
+  expect!(result.results.get(0).as_ref().unwrap().result.as_ref()).to(be_err());
+  expect!(result.results.iter()
+    .map(|r| r.interaction_description.as_str())
+    .collect_vec()
+  ).to(be_equal_to(vec!["first pact interaction"]));
+}
