@@ -348,7 +348,7 @@ pub(crate) fn setup_app() -> Command {
     .group(ArgGroup::new("development").multiple(true))
     .next_help_heading("Development options")
     .arg(Arg::new("exit-first")
-      .long("exit-first")
+      .long("exit-on-first-error")
       .action(ArgAction::SetTrue)
       .conflicts_with("publish")
       .help("Stops the verifier at the first failure"))
