@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use itertools::Itertools;
-use serde_json::{json, Value};
+use serde_json::{json, Map, Value};
 
 use pact_matching::Mismatch;
 
@@ -37,7 +37,7 @@ pub struct VerificationResult {
 }
 
 /// Main struct for returning the total verification execution result
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct VerificationExecutionResult {
   /// Overall pass/fail result
   pub result: bool,
@@ -88,6 +88,22 @@ impl Into<Value> for &VerificationExecutionResult {
           "interaction": e,
           "mismatch": err
         })
+      }).collect_vec(),
+      "interactionResults": self.interaction_results.iter().map(|r| {
+        let mut attributes = Map::new();
+        if let Some(interaction_id) = &r.interaction_id {
+          attributes.insert("interactionId".to_string(), Value::String(interaction_id.clone()));
+        }
+        if let Some(interaction_key) = &r.interaction_key {
+          attributes.insert("interactionKey".to_string(), Value::String(interaction_key.clone()));
+        }
+        attributes.insert("description".to_string(), Value::String(r.interaction_description.clone()));
+        match r.result {
+          Ok(_) => attributes.insert("result".to_string(), Value::String("OK".to_string())),
+          Err(_) => attributes.insert("result".to_string(), Value::String("Error".to_string()))
+        };
+        attributes.insert("duration".to_string(), Value::String(format!("{:?}", r.duration)));
+        Value::Object(attributes)
       }).collect_vec()
     })
   }
@@ -169,12 +185,13 @@ impl Into<Value> for VerificationMismatchResult {
 mod tests {
   use expectest::prelude::*;
   use maplit::hashmap;
+  use pretty_assertions::assert_eq;
   use serde_json::{json, Value};
 
   use pact_matching::Mismatch;
 
-  use crate::VerificationExecutionResult;
-  use crate::verification_result::VerificationMismatchResult;
+  use crate::{MismatchResult, VerificationExecutionResult};
+  use crate::verification_result::{VerificationInteractionResult, VerificationMismatchResult};
 
   #[test]
   fn match_result_to_json() {
@@ -251,8 +268,10 @@ mod tests {
       ],
       interaction_results: vec![],
     };
+
     let json: Value = result.into();
-    expect!(json).to(be_equal_to(json!({
+
+    assert_eq!(json, json!({
       "errors": [
         {
           "interaction": "interaction 2".to_string(),
@@ -263,6 +282,7 @@ mod tests {
           }
         }
       ],
+      "interactionResults": [],
       "notices": [
         {
           "comment": "This is a comment".to_string()
@@ -285,6 +305,85 @@ mod tests {
         }
       ],
       "result": false
-    })));
+    }));
+  }
+
+  #[test]
+  fn verification_execution_result_to_json_includes_interaction_details() {
+    let result = VerificationExecutionResult {
+      interaction_results: vec![
+        VerificationInteractionResult {
+          interaction_id: None,
+          interaction_key: None,
+          description: "".to_string(),
+          interaction_description: "result-1".to_string(),
+          result: Ok(()),
+          pending: false,
+          duration: Default::default(),
+        },
+        VerificationInteractionResult {
+          interaction_id: None,
+          interaction_key: None,
+          description: "".to_string(),
+          interaction_description: "result-2".to_string(),
+          result: Err(MismatchResult::Error("test".to_string(), None)),
+          pending: false,
+          duration: Default::default(),
+        },
+        VerificationInteractionResult {
+          interaction_id: Some("test-id".to_string()),
+          interaction_key: None,
+          description: "".to_string(),
+          interaction_description: "result-3".to_string(),
+          result: Ok(()),
+          pending: false,
+          duration: Default::default(),
+        },
+        VerificationInteractionResult {
+          interaction_id: None,
+          interaction_key: Some("test-key".to_string()),
+          description: "".to_string(),
+          interaction_description: "result-4".to_string(),
+          result: Ok(()),
+          pending: false,
+          duration: Default::default(),
+        }
+      ],
+      .. VerificationExecutionResult::default()
+    };
+
+    let json: Value = result.into();
+
+    assert_eq!(json!({
+      "errors": [],
+      "interactionResults": [
+        {
+          "description": "result-1",
+          "duration": "0ns",
+          "result": "OK",
+        },
+        {
+          "description": "result-2",
+          "duration": "0ns",
+          "result": "Error",
+        },
+        {
+          "description": "result-3",
+          "duration": "0ns",
+          "interactionId": "test-id",
+          "result": "OK",
+        },
+        {
+          "description": "result-4",
+          "duration": "0ns",
+          "interactionKey": "test-key",
+          "result": "OK",
+        }
+      ],
+      "notices": [],
+      "output": [],
+      "pendingErrors": [],
+      "result": false
+    }), json);
   }
 }
