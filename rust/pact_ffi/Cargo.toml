@@ -36,7 +36,7 @@ pact_matching = { version = "1.2.12" }
 pact_mock_server = { version = "~1.2.16" }
 pact_models = { version = "~1.3.3" }
 pact-plugin-driver = { version = "~0.7.4" }
-pact_verifier = { version = "~1.3.0", path = "../pact_verifier" }
+pact_verifier = { version = "~1.3.2", path = "../pact_verifier" }
 panic-message = "0.3.0"
 rand = "0.8.5"
 rand_regex = "0.15.1"
