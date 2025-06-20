@@ -1,6 +1,6 @@
 [package]
 name = "pact_verifier_cli"
-version = "1.2.0"
+version = "1.2.1"
 authors = ["Ronald Holshausen <ronald.holshausen@gmail.com>"]
 edition = "2024"
 description = "Standalone pact verifier for provider pact verification"
