@@ -31,7 +31,7 @@ Logging options:
       --compact-log          Emit logs optimized for short line lengths.
   -j, --json <json-file>     Generate a JSON report of the verification [env: PACT_VERIFIER_JSON_REPORT=]
   -x, --junit <junit-file>   Generate a JUnit XML report of the verification (requires the junit feature) [env: PACT_VERIFIER_JUNIT_REPORT=]
-      --no-colour            Disables ANSI escape codes in the output [aliases: no-color]
+      --no-colour            Disables ANSI escape codes in the output [aliases: --no-color]
 
 Loading pacts options:
   -f, --file <file>
@@ -111,6 +111,11 @@ Pact Broker options:
           Enables Pending Pacts
       --include-wip-pacts-since <include-wip-pacts-since>
           Allow pacts that don't match given consumer selectors (or tags) to  be verified, without causing the overall task to fail. For more information, see https://pact.io/wip
+
+Development options:
+      --exit-on-first-error  Stops the verifier at the first failure
+      --last-failed          Only runs the interactions that failed on the previous verifier run. Requires --json-file to have been set
+
 ```
 
 ## Options
@@ -218,7 +223,7 @@ option forces it to be sent as query parameters instead.
 This option will cause the verifier to also make a tear down request after the main request is made. It will receive a 
 field in the body or a query parameter named `action` with the value `teardown`.
 
-### `--consumer-version-selectors`
+### Consumer Version Selectors (`--consumer-version-selectors`)
 
 Accepts a set of [Consumer Version Selectors](https://docs.pact.io/pact_broker/advanced_topics/consumer_version_selectors/) encoded as JSON.
 
@@ -227,6 +232,21 @@ An example of a well-formed argument value might be:
 ```sh
 --consumer-version-selectors '{"branch": "master"}'
 ```
+
+### Development options
+
+There are two options that support filtering interactions to help with setting up your Pact tests. For instance, setting
+up provider state can be quite involved.
+
+#### Exit on first error
+
+The `--exit-on-first-error` option will terminate the verification run on the first error, and will skip all remaining interactions 
+and Pact files.
+
+### Only run previously failed interactions
+
+The `--last-failed` option will only execute interactions that have previously failed. It requires the `--json` option
+(the previous state will be loaded from this file).
 
 ## Example run
 
