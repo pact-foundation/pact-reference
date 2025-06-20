@@ -10,16 +10,19 @@ use async_trait::async_trait;
 use expectest::prelude::*;
 use maplit::hashmap;
 use reqwest::Client;
+use rstest::rstest;
 use serde_json::{json, Value};
-
 use pact_consumer::prelude::*;
 use pact_models::Consumer;
+use pact_models::interaction::Interaction;
 use pact_models::pact::Pact;
+use pact_models::prelude::v4::SynchronousHttp;
 use pact_models::provider_states::*;
 use pact_models::sync_interaction::RequestResponseInteraction;
 use pact_models::sync_pact::RequestResponsePact;
 
 use crate::{
+  FilterById,
   NullRequestFilterExecutor,
   PactSource,
   ProviderInfo,
@@ -112,6 +115,30 @@ fn if_the_state_filter_and_interaction_filter_is_defined_is_false_if_the_descrip
 fn if_the_state_filter_and_interaction_filter_is_defined_is_false_if_both_do_not_match() {
   let interaction = RequestResponseInteraction { description: "joe".to_string(), provider_states: vec![ ProviderState::default(&"author".to_string()) ], .. RequestResponseInteraction::default() };
   expect!(filter_interaction(&interaction, &FilterInfo::DescriptionAndState(".*ddy".to_string(), "bob.*".to_string()))).to(be_false());
+}
+
+#[rstest(
+  case(RequestResponseInteraction::default().boxed(), false),
+  case(RequestResponseInteraction { description: "interaction1".to_string(), .. RequestResponseInteraction::default() }.boxed(), true),
+  case(RequestResponseInteraction { description: "interaction2".to_string(), .. RequestResponseInteraction::default() }.boxed(), false),
+  case(RequestResponseInteraction { id: Some("id-3".to_string()), .. RequestResponseInteraction::default() }.boxed(), true),
+  case(RequestResponseInteraction { id: Some("id-1".to_string()), .. RequestResponseInteraction::default() }.boxed(), false),
+  case(RequestResponseInteraction { id: Some("id-3".to_string()), description: "interaction2".to_string(), .. RequestResponseInteraction::default() }.boxed(), true),
+  case(RequestResponseInteraction { id: Some("id-1".to_string()), description: "interaction2".to_string(), .. RequestResponseInteraction::default() }.boxed(), false),
+  case(SynchronousHttp { id: Some("id-3".to_string()), description: "interaction2".to_string(), .. SynchronousHttp::default() }.boxed(), true),
+  case(SynchronousHttp { id: Some("id-1".to_string()), description: "interaction2".to_string(), .. SynchronousHttp::default() }.boxed(), false),
+  case(SynchronousHttp { key: Some("key-2".to_string()), description: "interaction2".to_string(), .. SynchronousHttp::default() }.boxed(), true),
+  case(SynchronousHttp { key: Some("key-1".to_string()), description: "interaction2".to_string(), .. SynchronousHttp::default() }.boxed(), false),
+  case(SynchronousHttp { id: Some("id-3".to_string()), key: Some("key-1".to_string()), description: "interaction2".to_string(), .. SynchronousHttp::default() }.boxed(), true),
+  case(SynchronousHttp { id: Some("id-3".to_string()), key: Some("key-2".to_string()), description: "interaction1".to_string(), .. SynchronousHttp::default() }.boxed(), true),
+)]
+fn if_the_id_filter_is_defined_filters_on_the_interaction_ids(#[case] interaction: Box<dyn Interaction>, #[case] result: bool) {
+  let ids = vec![
+    FilterById::InteractionKey("key-2".to_string()),
+    FilterById::InteractionId("id-3".to_string()),
+    FilterById::InteractionDesc("interaction1".to_string())
+  ];
+  expect!(filter_interaction(interaction.as_ref(), &FilterInfo::InteractionIds(ids))).to(be_equal_to(result));
 }
 
 #[test]

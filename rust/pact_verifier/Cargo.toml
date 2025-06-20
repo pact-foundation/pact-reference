@@ -54,12 +54,13 @@ urlencoding = "2.1.3"
 crate-type = ["cdylib", "rlib"]
 
 [dev-dependencies]
-quickcheck = "1.0.3"
-expectest = "0.12.0"
-env_logger = "0.11.8"
-pact_consumer = { version = "~1.4.1", path = "../pact_consumer" }
-test-log = { version = "0.2.17", features = ["trace"] }
-tracing-subscriber = { version = "0.3.19", features = ["env-filter", "tracing-log", "fmt"] }
 chrono = "0.4.41"
 chrono-tz = "0.10.3"
+env_logger = "0.11.8"
+expectest = "0.12.0"
+pact_consumer = { version = "~1.4.1", path = "../pact_consumer" }
 pretty_assertions = "1.4.1"
+quickcheck = "1.0.3"
+rstest = "0.24.0"
+test-log = { version = "0.2.17", features = ["trace"] }
+tracing-subscriber = { version = "0.3.19", features = ["env-filter", "tracing-log", "fmt"] }

@@ -389,35 +389,29 @@
 #![warn(missing_docs)]
 
 use std::env;
+use std::fs::File;
+use std::io::Read;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
+use anyhow::anyhow;
 use clap::ArgMatches;
 use clap::error::ErrorKind;
-use log::{LevelFilter};
+use log::LevelFilter;
 use maplit::hashmap;
 use serde_json::Value;
-use pact_models::{PACT_RUST_VERSION, PactSpecification};
-use pact_models::prelude::HttpAuth;
 use tokio::time::sleep;
 use tracing::{debug, debug_span, error, Instrument, warn};
+use tracing_log::LogTracer;
 use tracing_subscriber::FmtSubscriber;
 
-use pact_verifier::{
-  FilterInfo,
-  NullRequestFilterExecutor,
-  PactSource,
-  ProviderInfo,
-  PublishOptions,
-  VerificationOptions,
-  verify_provider_async,
-  ProviderTransport
-};
+use pact_models::{PACT_RUST_VERSION, PactSpecification};
+use pact_models::prelude::HttpAuth;
+use pact_verifier::{FilterById, FilterInfo, NullRequestFilterExecutor, PactSource, ProviderInfo, ProviderTransport, PublishOptions, VerificationOptions, verify_provider_async};
 use pact_verifier::callback_executors::HttpRequestProviderStateExecutor;
 use pact_verifier::metrics::VerificationMetrics;
 use pact_verifier::selectors::{consumer_tags_to_selectors, json_to_selectors};
-use tracing_log::LogTracer;
 
 mod args;
 mod reports;
@@ -542,6 +536,42 @@ async fn handle_matches(matches: &ArgMatches) -> Result<(), i32> {
 
       if result.result { Ok(()) } else { Err(1) }
     })
+}
+
+fn load_last_failed_filter(file_name: &String) -> anyhow::Result<Vec<FilterById>> {
+  let mut f = File::open(file_name)?;
+  let mut buffer = vec![];
+  f.read_to_end(&mut buffer)?;
+  let json: Value = serde_json::from_slice(buffer.as_slice())?;
+  if let Some(interaction_details) = json.get("interactionResults") {
+    if let Some(interaction_details) = interaction_details.as_array() {
+      Ok(interaction_details.iter()
+        .flat_map(|interaction| {
+          if let Some(result) = interaction.get("result") {
+            if result.as_str().unwrap_or_default() == "Error" {
+              if let Some(interaction_key) = interaction.get("interactionKey") {
+                interaction_key.as_str().map(|key| FilterById::InteractionKey(key.to_string()))
+              } else if let Some(interaction_id) = interaction.get("interactionId") {
+                interaction_id.as_str().map(|key| FilterById::InteractionId(key.to_string()))
+              } else if let Some(interaction_desc) = interaction.get("description") {
+                interaction_desc.as_str().map(|key| FilterById::InteractionKey(key.to_string()))
+              } else {
+                None
+              }
+            } else {
+              None
+            }
+          } else {
+            None
+          }
+        })
+        .collect())
+    } else {
+      Err(anyhow!("No interaction details found in JSON output"))
+    }
+  } else {
+    Err(anyhow!("No interaction details found in JSON output"))
+  }
 }
 
 fn setup_output(matches: &ArgMatches) -> bool {
@@ -720,7 +750,27 @@ fn pact_source(matches: &ArgMatches) -> Vec<PactSource> {
 }
 
 fn interaction_filter(matches: &ArgMatches) -> FilterInfo {
-  if matches.contains_id("filter-description") &&
+  if matches.get_flag("last-failed") {
+    warn!("--last-failed is set, so will only validation interactions that previously failed");
+    if let Some(json_file) = matches.get_one::<String>("json-file") {
+      load_last_failed_filter(json_file)
+        .map(|ids| {
+          if ids.is_empty() {
+            warn!("There are no interactions that previously failed, disabling --last-failed filter and verifying all interactions");
+            FilterInfo::None
+          } else {
+            FilterInfo::InteractionIds(ids)
+          }
+        })
+        .unwrap_or_else(|err| {
+          warn!("--last-failed is ignored as there was an error loading the previous output: {}", err);
+          FilterInfo::None
+        })
+    } else {
+      warn!("--last-failed is ignored as --json-file is not set");
+      FilterInfo::None
+    }
+  } else if matches.contains_id("filter-description") &&
     (matches.contains_id("filter-state") || matches.get_flag("filter-no-state")) {
     if let Some(state) = matches.get_one::<String>("filter-state") {
       FilterInfo::DescriptionAndState(matches.get_one::<String>("filter-description").unwrap().clone(),
@@ -776,7 +826,15 @@ fn init_windows() { }
 
 #[cfg(test)]
 mod tests {
+  use std::fs::File;
+  use std::io::Write;
+
   use expectest::prelude::*;
+
+  use rstest::rstest;
+  use serde_json::json;
+  use tempfile::TempDir;
+  use pact_verifier::{FilterInfo, FilterById};
 
   use crate::{args, configure_provider};
 
@@ -821,5 +879,74 @@ mod tests {
     let provider = configure_provider(&matches);
 
     expect!(provider.protocol).to(be_equal_to("https"));
+  }
+
+  #[rstest(
+    case(&[], FilterInfo::None),
+    case(&["--filter-no-state"], FilterInfo::State("".to_string())),
+    case(&["--filter-state", "state1"], FilterInfo::State("state1".to_string())),
+    case(&["--filter-description", "desc1"], FilterInfo::Description("desc1".to_string())),
+    case(&["--filter-description", "desc1", "--filter-state", "state1"], FilterInfo::DescriptionAndState("desc1".to_string(), "state1".to_string())),
+    case(&["--filter-description", "desc1", "--filter-no-state"], FilterInfo::DescriptionAndState("desc1".to_string(), "".to_string())),
+    case(&["--last-failed", "--json", "no-file"], FilterInfo::None),
+    case(&["--last-failed", "--json", "run1"], FilterInfo::InteractionIds(vec![FilterById::InteractionId("int-1".to_string())])),
+    case(&["--last-failed", "--json", "run2"], FilterInfo::None)
+  )]
+  fn interaction_filter_test(#[case] options: &[&str], #[case] result: FilterInfo) {
+    let app = args::setup_app();
+    let mut args = vec!["test", "-f", "test"];
+    args.extend_from_slice(options);
+
+    let tmp_dir = TempDir::new().unwrap();
+    let file_path1 = tmp_dir.path().join("run1.json");
+    let mut tmp_file = File::create(&file_path1).unwrap();
+    let json_contents = json!({
+      "interactionResults": [
+        {
+          "description": "Get a product by ID",
+          "duration": "20ms",
+          "interactionId": "int-1",
+          "result": "Error"
+        },
+        {
+          "description": "Get a product that does not exist",
+          "duration": "11ms",
+          "interactionId": "int-2",
+          "result": "OK"
+        }
+      ]
+    });
+    tmp_file.write_all(json_contents.to_string().as_bytes()).unwrap();
+
+    let file_path2 = tmp_dir.path().join("run2.json");
+    let mut tmp_file = File::create(&file_path2).unwrap();
+    let json_contents = json!({
+      "interactionResults": [
+        {
+          "description": "Get a product by ID",
+          "duration": "20ms",
+          "interactionId": "int-1",
+          "result": "Ok"
+        },
+        {
+          "description": "Get a product that does not exist",
+          "duration": "11ms",
+          "interactionId": "int-2",
+          "result": "OK"
+        }
+      ]
+    });
+    tmp_file.write_all(json_contents.to_string().as_bytes()).unwrap();
+
+    let len = args.len();
+    if args[len - 1] == "run1" {
+      args[len - 1] = file_path1.to_str().unwrap()
+    }
+    if args[len - 1] == "run2" {
+      args[len - 1] = file_path2.to_str().unwrap()
+    }
+
+    let matches = app.get_matches_from(args);
+    expect!(super::interaction_filter(&matches)).to(be_equal_to(result));
   }
 }

@@ -48,7 +48,12 @@ use pact_matching::{match_response, Mismatch};
 use pact_matching::metrics::{MetricEvent, send_metrics_async};
 
 use crate::callback_executors::{ProviderStateError, ProviderStateExecutor};
-use crate::messages::{process_message_result, process_sync_message_result, verify_message_from_provider, verify_sync_message_from_provider};
+use crate::messages::{
+  process_message_result,
+  process_sync_message_result,
+  verify_message_from_provider,
+  verify_sync_message_from_provider
+};
 use crate::metrics::VerificationMetrics;
 use crate::pact_broker::{
   Link,
@@ -67,15 +72,15 @@ use crate::verification_result::{
   VerificationResult
 };
 
-pub mod provider_client;
-pub mod pact_broker;
 pub mod callback_executors;
-mod request_response;
 mod messages;
-pub mod selectors;
 pub mod metrics;
-pub mod verification_result;
+pub mod pact_broker;
+pub mod provider_client;
+mod request_response;
+pub mod selectors;
 mod utils;
+pub mod verification_result;
 
 const VERIFIER_VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -782,17 +787,30 @@ fn display_body_mismatch(
   }
 }
 
+/// Filter information used to filter the interactions that are verified by ID
+#[derive(Debug, Clone, PartialEq)]
+pub enum FilterById {
+  /// Filter by matching interaction ID
+  InteractionId(String),
+  /// Filter by matching interaction key
+  InteractionKey(String),
+  /// Filter by matching interaction description
+  InteractionDesc(String)
+}
+
 /// Filter information used to filter the interactions that are verified
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum FilterInfo {
-    /// No filter, all interactions will be verified
-    None,
-    /// Filter on the interaction description
-    Description(String),
-    /// Filter on the interaction provider state
-    State(String),
-    /// Filter on both the interaction description and provider state
-    DescriptionAndState(String, String)
+  /// No filter, all interactions will be verified
+  None,
+  /// Filter on the interaction description
+  Description(String),
+  /// Filter on the interaction provider state
+  State(String),
+  /// Filter on both the interaction description and provider state
+  DescriptionAndState(String, String),
+  /// Filter on the list of interaction IDs
+  InteractionIds(Vec<FilterById>)
 }
 
 impl FilterInfo {
@@ -859,10 +877,52 @@ impl FilterInfo {
       let re = Regex::new(&self.description()).unwrap();
       re.is_match(&interaction.description())
     }
+
+  /// If this filter is filtering on interaction IDs
+  pub fn is_for_interaction_ids(&self) -> bool {
+    match self {
+      FilterInfo::InteractionIds(_) => true,
+      _ => false
+    }
+  }
+
+  /// If the filter matches the interaction ids (key, ID or description)
+  pub fn match_ids(&self, interaction: &dyn Interaction) -> bool {
+    match self {
+      FilterInfo::InteractionIds(filters) => {
+        filters.iter().any(|filter| match filter {
+          FilterById::InteractionId(id) => {
+            if let Some(interaction_id)  = interaction.id() {
+              interaction_id == id.as_str()
+            } else {
+              false
+            }
+          }
+          FilterById::InteractionKey(key) => {
+            if let Some(v4_interaction)  = interaction.as_v4() {
+              if let Some(interaction_key) = v4_interaction.key() {
+                interaction_key == key.as_str()
+              } else {
+                false
+              }
+            } else {
+              false
+            }
+          }
+          FilterById::InteractionDesc(desc) => {
+            interaction.description() == desc.as_str()
+          }
+        })
+      }
+      _ => false
+    }
+  }
 }
 
 fn filter_interaction(interaction: &dyn Interaction, filter: &FilterInfo) -> bool {
-  if filter.has_description() && filter.has_state() {
+  if filter.is_for_interaction_ids() {
+    filter.match_ids(interaction)
+  } else if filter.has_description() && filter.has_state() {
     filter.match_description(interaction) && filter.match_state(interaction)
   } else if filter.has_description() {
     filter.match_description(interaction)
