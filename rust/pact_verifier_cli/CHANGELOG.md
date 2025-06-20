@@ -1,5 +1,25 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.2.0 - Add Exit on first error and Only run previously failed interactions CLI options
+
+* ce3c5d9e - feat(pact_verifier_cli): Update the docs on the new options flag #494 (Ronald Holshausen, Fri Jun 20 11:56:43 2025 +1000)
+* 4fc0136c - chore: Upgrade pact_verifier to 1.3.2 (Ronald Holshausen, Fri Jun 20 11:33:58 2025 +1000)
+* 31113440 - feat(pact_verifier_cli): Implement the --last-failed CLI flag #494 (Ronald Holshausen, Fri Jun 20 11:03:44 2025 +1000)
+* e30beba4 - feat(pact_verifier): Update requires for the --last-failed option #494 (Ronald Holshausen, Thu Jun 19 14:36:25 2025 +1000)
+* 45005bc7 - feat(pact_verifier_cli): Rename exit-first to exit-on-first-error #494 (Ronald Holshausen, Thu Jun 19 10:53:34 2025 +1000)
+* bbf9dfea - chore(pact_verifier_cli): Update the CLI test fixtures #494 (Ronald Holshausen, Wed Jun 18 16:29:48 2025 +1000)
+* 1f734dd8 - feat(pact_verifier_cli): Add the exit-first and last-failed CLI flags #494 (Ronald Holshausen, Wed Jun 18 16:06:17 2025 +1000)
+* 7afa3849 - chore(pact_verifier): Update crate to 2024 edition and bump minor version (Ronald Holshausen, Wed Jun 18 14:52:11 2025 +1000)
+* 6e8167c4 - fix(Alpine): Updae pact_models to 1.3.3 (Ronald Holshausen, Wed Jun 11 13:23:10 2025 +1000)
+* 18e53fbd - chore: Update pact_models to 1.3.2 (Ronald Holshausen, Wed Jun 11 10:16:03 2025 +1000)
+* 2b4536b1 - chore: Bump pact_verifier to 1.3.0 (Ronald Holshausen, Tue May 20 16:34:00 2025 +1000)
+* 7d8e8f61 - chore: Upgrade pact_models to 1.3.1 (Ronald Holshausen, Tue May 20 14:53:42 2025 +1000)
+* 673dacab - chore: Fix CLI test after upgrade to dependencies (Ronald Holshausen, Tue May 20 11:06:20 2025 +1000)
+* 0ed75202 - chore(pact-models): Upgrade pact models crate to Rust 2024 edition (Ronald Holshausen, Tue Mar 25 16:02:47 2025 +1100)
+* cff9a7f6 - chore(pact_verifier_cli): Correct the docker build for multiplatform (Ronald Holshausen, Wed Mar 19 15:59:19 2025 +1100)
+* d76d7e2d - chore(pact_verifier_cli): Update docker base to Alpine 3.21 (Ronald Holshausen, Wed Mar 19 15:30:16 2025 +1100)
+* eab8d1ab - bump version to 1.1.6 (Ronald Holshausen, Wed Mar 19 15:22:15 2025 +1100)
+
 # 1.1.5 - Bugfix Release
 
 * e1a7c0f0 - chore(pact_verifier_cli): Update dependencies (Ronald Holshausen, Wed Mar 19 15:11:20 2025 +1100)
