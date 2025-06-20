@@ -1,5 +1,16 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.3.2 - Support exit-on-first-error and last-failed options
+
+* 31113440 - feat(pact_verifier_cli): Implement the --last-failed CLI flag #494 (Ronald Holshausen, Fri Jun 20 11:03:44 2025 +1000)
+* a8c50d56 - feat(pact_verifier): Adds details of the verified interactions to the JSON output #494 (Ronald Holshausen, Thu Jun 19 14:51:50 2025 +1000)
+* a54a7d55 - feat(pact_verifier): Correct warning when exit-on-first-error is set #494 (Ronald Holshausen, Thu Jun 19 10:56:38 2025 +1000)
+* 74e34bec - feat(pact_verifier): Skip any unverified interactions if exit-first is set and there is a failure #494 (Ronald Holshausen, Thu Jun 19 10:47:18 2025 +1000)
+* f02641ac - feat(pact_verifier): Skip any unverified Pact files if exit-first is set and there is a failure #494 (Ronald Holshausen, Wed Jun 18 16:27:27 2025 +1000)
+* 1f734dd8 - feat(pact_verifier_cli): Add the exit-first and last-failed CLI flags #494 (Ronald Holshausen, Wed Jun 18 16:06:17 2025 +1000)
+* 68d55bf9 - chore(pact_verifier): Update dependencies (Ronald Holshausen, Wed Jun 18 14:44:43 2025 +1000)
+* 1f0f1c4f - bump version to 1.3.2 (Ronald Holshausen, Thu Jun 12 09:25:22 2025 +1000)
+
 # 1.3.1 - Maintenance Release
 
 * 5371ee6f - chore(pact_verifier): Update pact_consumer to 1.4.1 (Ronald Holshausen, Wed Jun 11 16:29:07 2025 +1000)
