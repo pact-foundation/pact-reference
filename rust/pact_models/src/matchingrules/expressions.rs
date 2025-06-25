@@ -341,7 +341,7 @@ pub fn parse_matcher_def(v: &str) -> anyhow::Result<MatchingRuleDefinition> {
   }
 }
 
-/// Determines if a sting starts with a valid matching rule definition. This is used in the case
+/// Determines if a string starts with a valid matching rule definition. This is used in the case
 /// where a value can be a matching rule definition or a plain string value
 pub fn is_matcher_def(v: &str) -> bool {
   if v.is_empty() {
@@ -351,7 +351,8 @@ pub fn is_matcher_def(v: &str) -> bool {
     let next = lex.next();
     if let Some(Ok(token)) = next {
       if token == MatcherDefinitionToken::Matching || token == MatcherDefinitionToken::NotEmpty ||
-        token == MatcherDefinitionToken::EachKey || token == MatcherDefinitionToken::EachValue {
+        token == MatcherDefinitionToken::EachKey || token == MatcherDefinitionToken::EachValue ||
+        token == MatcherDefinitionToken::AtLeast || token == MatcherDefinitionToken::AtMost {
         true
       } else {
         false
@@ -2099,5 +2100,21 @@ mod test {
         |───╯
         |
         ".trim_margin().unwrap());
+  }
+
+  #[rstest]
+  //     expression,                                                                                       expected
+  #[case("a, b, c",                                                                                        false)]
+  #[case("matching(type,'Name')",                                                                          true)]
+  #[case("notEmpty('Value')",                                                                              true)]
+  #[case("matching($'bob')",                                                                               true)]
+  #[case("eachKey(matching(regex, '.*', 'aaabbb'))",                                                       true)]
+  #[case("eachValue(matching(regex, '.*', 'aaabbb'))",                                                     true)]
+  #[case("atLeast(12)",                                                                                    true)]
+  #[case("atMost(100)",                                                                                    true)]
+  #[case("atLeast(1), atMost(10), eachValue(matching(regex, '\\w{3}-\\d+', 'BAF-88654'))",                 true)]
+  #[case("eachKey(matching(regex, '\\d+', '')), eachValue(matching(regex, '(\\w|\\s)+', '')), atLeast(1)", true)]
+  fn is_matcher_def_test(#[case] expression: &str, #[case] expected: bool) {
+    expect!(is_matcher_def(expression)).to(be_equal_to(expected));
   }
 }
