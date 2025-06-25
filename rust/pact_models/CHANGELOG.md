@@ -1,5 +1,13 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.3.4 - Bugfix Release
+
+* 72da979e - feat: Allow atLeast and atMost first in expression (tien.xuan.vo, Wed Jun 25 01:22:58 2025 +0700)
+* de9ec164 - Merge pull request #496 from tienvx/add-test-case-for-atLeast-atMost-at-beginning (Ronald Holshausen, Thu Jun 19 09:50:28 2025 +1000)
+* bde2c24b - test: Add test for atLeast, atMost at the beginning of the matching expression (tien.xuan.vo, Thu Jun 19 06:11:18 2025 +0700)
+* 262fbe8e - feat: Support fromProviderState generator in regex matching expression (tien.xuan.vo, Wed Jun 18 23:49:26 2025 +0700)
+* 61667972 - bump version to 1.3.4 (Ronald Holshausen, Wed Jun 11 13:12:52 2025 +1000)
+
 # 1.3.3 - Fix for Alpine
 
 * 1d18d3f5 - fix: Onig crate needs default-features = false so it compiles on Alpine (Ronald Holshausen, Wed Jun 11 12:35:06 2025 +1000)
