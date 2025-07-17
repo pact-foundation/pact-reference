@@ -1,5 +1,32 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 0.4.28 - Maintenace Release
+
+* 4fc0136c - chore: Upgrade pact_verifier to 1.3.2 (Ronald Holshausen, Fri Jun 20 11:33:58 2025 +1000)
+* 42b0b285 - chore(pact-ffi): Update pact_mock_server to 1.2.16 (Ronald Holshausen, Wed Jun 11 15:33:46 2025 +1000)
+* 92c4db5e - chore(pact_ffi): Update pact_matching to 1.2.12 (Ronald Holshausen, Wed Jun 11 13:52:19 2025 +1000)
+* 6e8167c4 - fix(Alpine): Updae pact_models to 1.3.3 (Ronald Holshausen, Wed Jun 11 13:23:10 2025 +1000)
+* 1d18d3f5 - fix: Onig crate needs default-features = false so it compiles on Alpine (Ronald Holshausen, Wed Jun 11 12:35:06 2025 +1000)
+* 588f1fe2 - chore: Update pact_matching to 2.0.0-beta.2 (Ronald Holshausen, Wed Jun 11 11:24:09 2025 +1000)
+* 18e53fbd - chore: Update pact_models to 1.3.2 (Ronald Holshausen, Wed Jun 11 10:16:03 2025 +1000)
+* 82d078d9 - fix: Upgrade onig to 6.5.1 as the Match Whole String for is_match has been released (Ronald Holshausen, Wed Jun 11 10:00:52 2025 +1000)
+* 2b4536b1 - chore: Bump pact_verifier to 1.3.0 (Ronald Holshausen, Tue May 20 16:34:00 2025 +1000)
+* 7d8e8f61 - chore: Upgrade pact_models to 1.3.1 (Ronald Holshausen, Tue May 20 14:53:42 2025 +1000)
+* e1d1b5e3 - chore: Use the tasklocal LOG_ID from the mock server crate (Ronald Holshausen, Wed Mar 26 15:45:56 2025 +1100)
+* 9afae5a5 - fix(pact-ffi): FFI needs to use the same version of pact-matching as the mock server crate (Ronald Holshausen, Wed Mar 26 11:27:01 2025 +1100)
+* 369dba85 - chore: Upgrade pact-mock-server to 2.0.3/1.2.12 (Ronald Holshausen, Wed Mar 26 11:00:31 2025 +1100)
+* 12ca5283 - chore: Upgrade pact-plugin-driver to 0.7.4 (Ronald Holshausen, Tue Mar 25 16:26:48 2025 +1100)
+* 0ed75202 - chore(pact-models): Upgrade pact models crate to Rust 2024 edition (Ronald Holshausen, Tue Mar 25 16:02:47 2025 +1100)
+* 79b52714 - Merge branch 'master' into feat/matching-engine-v2 (Ronald Holshausen, Thu Mar 20 09:43:30 2025 +1100)
+* 70b366f4 - bump version to 0.4.28 (Ronald Holshausen, Thu Mar 20 09:19:53 2025 +1100)
+* b07d7aec - Merge remote-tracking branch 'origin/master' into feat/matching-engine-v2 (Ronald Holshausen, Wed Mar 19 11:22:43 2025 +1100)
+* ad9b555b - Merge remote-tracking branch 'origin/master' into feat/matching-engine-v2 (Ronald Holshausen, Fri Mar 14 11:42:13 2025 +1100)
+* ad9ee539 - fix: Matching rule definitions now take th expression they were parsed from (Ronald Holshausen, Tue Mar 4 09:18:51 2025 +1100)
+* 7b94a211 - Merge tag 'master' into feat/matching-engine-v2 (Ronald Holshausen, Thu Feb 20 15:16:16 2025 +1100)
+* 5db8db23 - Merge branch 'master' into feat/matching-engine-v2 (Ronald Holshausen, Wed Nov 13 14:16:31 2024 +1100)
+* 11cd9dc0 - Merge branch 'master' into feat/matching-engine-v2 (Ronald Holshausen, Fri Oct 25 10:01:15 2024 +1100)
+* 02e2ae13 - chore: Bump pact_matching to 2.0.0-beta.0 (Ronald Holshausen, Tue Jul 30 11:40:20 2024 +1000)
+
 # 0.4.27 - Bugfix Release
 
 * df9beec3 - chore: Upgrade pact_verifier to 1.2.5 (Ronald Holshausen, Wed Mar 19 14:08:12 2025 +1100)
