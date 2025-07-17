@@ -1,6 +1,6 @@
 [package]
 name = "pact_ffi"
-version = "0.4.28"
+version = "0.4.29"
 authors = ["Ronald Holshausen <ronald.holshausen@gmail.com>", "Matt Fellows <matt.fellows@onegeek.com.au>", "Andrew Lilley Brinker <abrinker@mitre.org>", "Caleb Stepanian <cstepanian@mitre.org>"]
 edition = "2021"
 description = "Pact interface for foreign languages."
