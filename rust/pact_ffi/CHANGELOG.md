@@ -1,6 +1,6 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
-# 0.4.28 - Maintenace Release
+# 0.4.28 - Maintenance Release
 
 * 4fc0136c - chore: Upgrade pact_verifier to 1.3.2 (Ronald Holshausen, Fri Jun 20 11:33:58 2025 +1000)
 * 42b0b285 - chore(pact-ffi): Update pact_mock_server to 1.2.16 (Ronald Holshausen, Wed Jun 11 15:33:46 2025 +1000)
