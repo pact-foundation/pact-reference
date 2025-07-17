@@ -26,9 +26,9 @@ jobs:
             targets: aarch64-unknown-linux-gnu
           - operating-system: ubuntu-22.04
             targets: aarch64-unknown-linux-musl
-          - operating-system: windows-2019
+          - operating-system: windows-2022
             targets: x86_64-pc-windows-msvc
-          - operating-system: windows-2019
+          - operating-system: windows-2022
             targets: aarch64-pc-windows-msvc
           - operating-system: macos-13
             targets: x86_64-apple-darwin
