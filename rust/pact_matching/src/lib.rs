@@ -1884,7 +1884,7 @@ pub async fn match_request<'a>(
   };
   trace!("plugin_data = {:?}", plugin_data);
 
-  let use_v2_engine = std::env::var("MATCHING_ENGINE")
+  let use_v2_engine = std::env::var("PACT_MATCHING_ENGINE")
     .map(|val| val.to_lowercase() == "v2")
     .unwrap_or(false);
   if use_v2_engine {

@@ -51,8 +51,8 @@ jobs:
         env:
           RUST_LOG: debug
           RUST_BACKTRACE: 1
-          MATCHING_ENGINE: v2
-          V2_MATCHING_LOG_EXECUTED_PLAN: 1
+          PACT_MATCHING_ENGINE: v2
+          PACT_V2_MATCHING_LOG_EXECUTED_PLAN: 1
 
   musl-build:
     runs-on: ubuntu-latest

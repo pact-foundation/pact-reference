@@ -645,13 +645,13 @@ WS : [ \t\n\r] + -> skip ;
 
 ## V2 matching engine
 
-Version 2.0+ has a redesigned matching engine. To enable it, set the `MATCHING_ENGINE` environment variable to `v2`.
+Version 2.0+ has a redesigned matching engine. To enable it, set the `PACT_MATCHING_ENGINE` environment variable to `v2`.
 
-The machine engine now has two phases. The first phase builds a matching plan from the expected interaction as an 
-abstract syntax tree (AST), and then the second phase executes the AST against the actual request or response.
+The machine engine now has two phases. The first phase builds a matching plan from the expected interaction as a 
+tree (AST), and then the second phase executes the AST against the actual request or response.
 
 The following environment variables control the matching:
-* `MATCHING_ENGINE` - Engine to use: `v1` or `v2`.
-* `V2_MATCHING_COLOURED_OUTPUT` - Enables coloured output with the V2 engine.
-* `V2_MATCHING_LOG_PLAN_SUMMARY` - Displays a summary of the executed plan. Enabled by default.
-* `V2_MATCHING_LOG_EXECUTED_PLAN` - Logs the executed plan details (AST).
+* `PACT_MATCHING_ENGINE` - Engine to use: `v1` or `v2`.
+* `PACT_V2_MATCHING_COLOURED_OUTPUT` - Enables coloured output with the V2 engine.
+* `PACT_V2_MATCHING_LOG_PLAN_SUMMARY` - Displays a summary of the executed plan. Enabled by default.
+* `PACT_V2_MATCHING_LOG_EXECUTED_PLAN` - Logs the executed plan details (AST).

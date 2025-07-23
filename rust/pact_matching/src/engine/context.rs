@@ -24,19 +24,19 @@ pub struct MatchingConfiguration {
 
 impl MatchingConfiguration {
   /// Configures the matching engine configuration from environment variables:
-  /// * `V2_MATCHING_LOG_EXECUTED_PLAN` - Enable to log the executed plan.
-  /// * `V2_MATCHING_LOG_PLAN_SUMMARY` - Enable to log a summary of the executed plan.
-  /// * `V2_MATCHING_COLOURED_OUTPUT` - Enables coloured output.
+  /// * `PACT_V2_MATCHING_LOG_EXECUTED_PLAN` - Enable to log the executed plan.
+  /// * `PACT_V2_MATCHING_LOG_PLAN_SUMMARY` - Enable to log a summary of the executed plan.
+  /// * `PACT_V2_MATCHING_COLOURED_OUTPUT` - Enables coloured output.
   pub fn init_from_env() -> Self {
     let mut config = MatchingConfiguration::default();
 
-    if let Some(val) = env_var_set("V2_MATCHING_LOG_EXECUTED_PLAN") {
+    if let Some(val) = env_var_set("PACT_V2_MATCHING_LOG_EXECUTED_PLAN") {
       config.log_executed_plan = val;
     }
-    if let Some(val) = env_var_set("V2_MATCHING_LOG_PLAN_SUMMARY") {
+    if let Some(val) = env_var_set("PACT_V2_MATCHING_LOG_PLAN_SUMMARY") {
       config.log_plan_summary = val;
     }
-    if let Some(val) = env_var_set("V2_MATCHING_COLOURED_OUTPUT") {
+    if let Some(val) = env_var_set("PACT_V2_MATCHING_COLOURED_OUTPUT") {
       config.coloured_output = val;
     }
 
