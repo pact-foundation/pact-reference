@@ -440,23 +440,32 @@ pub enum NodeResult {
 
 impl NodeResult {
   /// Return the AND of this result with the given one
-  pub fn and(&self, option: &Option<NodeResult>) -> NodeResult {
-    if let Some(result) = option {
-      match self {
-        NodeResult::OK => match result {
-          NodeResult::OK => NodeResult::OK,
-          NodeResult::VALUE(_) => result.clone(),
-          NodeResult::ERROR(_) => result.clone()
-        }
-        NodeResult::VALUE(v1) => match result {
-          NodeResult::OK => self.clone(),
-          NodeResult::VALUE(v2) => NodeResult::VALUE(v1.and(v2)),
-          NodeResult::ERROR(_) => result.clone()
-        }
+  pub fn and(&self, option: &NodeResult) -> NodeResult {
+    match self {
+      NodeResult::OK => match option {
+        NodeResult::OK => NodeResult::OK,
+        NodeResult::VALUE(_) => option.clone(),
+        NodeResult::ERROR(_) => option.clone()
+      }
+      NodeResult::VALUE(v1) => match option {
+        NodeResult::OK => self.clone(),
+        NodeResult::VALUE(v2) => NodeResult::VALUE(v1.and(v2)),
+        NodeResult::ERROR(_) => option.clone()
+      }
+      NodeResult::ERROR(_) => self.clone()
+    }
+  }
+
+  /// Return the OR of this result with the given one
+  pub fn or(&self, option: &NodeResult) -> NodeResult {
+    match self {
+      NodeResult::OK => NodeResult::OK,
+      NodeResult::VALUE(v1) => match option {
+        NodeResult::OK => self.clone(),
+        NodeResult::VALUE(v2) => NodeResult::VALUE(v1.or(v2)),
         NodeResult::ERROR(_) => self.clone()
       }
-    } else {
-      self.clone()
+      NodeResult::ERROR(_) => option.clone()
     }
   }
 

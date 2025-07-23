@@ -70,7 +70,7 @@ impl ExecutionPlanInterpreter {
         while !loop_items.is_empty() {
           let child = loop_items.pop_front().unwrap();
           let child_result = self.walk_tree(&child_path, &child, value_resolver)?;
-          status = status.and(&child_result.result);
+          status = status.and(&child_result.result.clone().unwrap_or_default());
           result.push(child_result.clone());
           if child_result.is_splat() {
             for item in child_result.children.iter().rev() {
@@ -982,12 +982,12 @@ impl ExecutionPlanInterpreter {
             for child in node.children.iter().dropping(1) {
               match self.walk_tree(&action_path, &child, value_resolver) {
                 Ok(value) => {
-                  result = result.and(&value.result);
+                  result = result.and(&value.result.clone().unwrap_or_default());
                   child_results.push(value.clone());
                 }
                 Err(err) => {
                   let node_result = NodeResult::ERROR(err.to_string());
-                  result = result.and(&Some(node_result.clone()));
+                  result = result.and(&node_result);
                   child_results.push(child.clone_with_result(node_result));
                 }
               }
@@ -1329,13 +1329,14 @@ impl ExecutionPlanInterpreter {
     action_path: &Vec<String>,
     upper_case: bool
   ) -> ExecutionPlanNode {
-    let (children, values) = match self.evaluate_children(value_resolver, node, action_path) {
+    let (children, values) = match self.evaluate_children(value_resolver, node, action_path, true) {
       Ok(value) => value,
       Err(value) => return value
     };
 
     let results = values.iter()
       .map(|v| {
+        let v = v.as_value().unwrap_or_default();
         if upper_case {
           match v {
             NodeValue::STRING(s) => NodeValue::STRING(s.to_uppercase()),
@@ -1378,17 +1379,18 @@ impl ExecutionPlanInterpreter {
     node: &ExecutionPlanNode,
     action_path: &Vec<String>
   ) -> ExecutionPlanNode {
-    let (children, values) = match self.evaluate_children(value_resolver, node, action_path) {
+    let (children, values) = match self.evaluate_children(value_resolver, node, action_path, true) {
       Ok(value) => value,
       Err(value) => return value
     };
 
     let results = values.iter()
       .map(|v| {
-        match v {
+        let node_value = v.as_value().unwrap_or_default();
+        match node_value {
           NodeValue::NULL => NodeValue::STRING(String::default()),
-          NodeValue::STRING(_) => v.clone(),
-          NodeValue::SLIST(_) => v.clone(),
+          NodeValue::STRING(s) => NodeValue::STRING(s),
+          NodeValue::SLIST(l) => NodeValue::SLIST(l),
           NodeValue::JSON(json) => match json {
             Value::String(s) => NodeValue::STRING(s.clone()),
             _ => NodeValue::STRING(json.to_string())
@@ -1399,7 +1401,7 @@ impl ExecutionPlanInterpreter {
             XmlValue::Text(text) => NodeValue::STRING(text.clone()),
             XmlValue::Attribute(name, value) => NodeValue::STRING(format!("@{}='{}'", name, value))
           }
-          _ => NodeValue::STRING(v.str_form())
+          _ => NodeValue::STRING(node_value.str_form())
         }
       })
       .collect_vec();
@@ -1601,9 +1603,10 @@ impl ExecutionPlanInterpreter {
     node: &ExecutionPlanNode,
     path: &Vec<String>
   ) -> ExecutionPlanNode {
-    let (children, str_values) = match self.evaluate_children(value_resolver, node, path) {
+    let (children, str_values) = match self.evaluate_children(value_resolver, node, path, true) {
       Ok((children, values)) => {
         (children, values.iter().flat_map(|v| {
+          let v = v.as_value().unwrap_or_default();
           match v {
             NodeValue::STRING(s) => vec![s.clone()],
             NodeValue::BOOL(b) => vec![b.to_string()],
@@ -1641,9 +1644,10 @@ impl ExecutionPlanInterpreter {
     node: &ExecutionPlanNode,
     path: &Vec<String>
   ) -> ExecutionPlanNode {
-    let (children, str_values) = match self.evaluate_children(value_resolver, node, path) {
+    let (children, str_values) = match self.evaluate_children(value_resolver, node, path, true) {
       Ok((children, values)) => {
         (children, values.iter().flat_map(|v| {
+          let v = v.as_value().unwrap_or_default();
           match v {
             NodeValue::STRING(s) => vec![s.clone()],
             NodeValue::BOOL(b) => vec![b.to_string()],
@@ -1672,8 +1676,9 @@ impl ExecutionPlanInterpreter {
     &mut self,
     value_resolver: &dyn ValueResolver,
     node: &ExecutionPlanNode,
-    path: &Vec<String>
-  ) -> Result<(Vec<ExecutionPlanNode>, Vec<NodeValue>), ExecutionPlanNode> {
+    path: &Vec<String>,
+    short_circuit: bool
+  ) -> Result<(Vec<ExecutionPlanNode>, Vec<NodeResult>), ExecutionPlanNode> {
     let mut children = vec![];
     let mut values = vec![];
     let mut loop_items = VecDeque::from(node.children.clone());
@@ -1684,15 +1689,25 @@ impl ExecutionPlanInterpreter {
         child_value
       } else {
         match &self.walk_tree(path.as_slice(), &child, value_resolver) {
-          Ok(value) => if value.is_splat() {
-            children.push(value.clone());
-            for splat_child in value.children.iter().rev() {
-              loop_items.push_front(splat_child.clone());
+          Ok(value) => {
+            if let Some(NodeResult::ERROR(_)) = &value.result && short_circuit {
+              children.push(value.clone());
+              children.extend(loop_items);
+              return Err(ExecutionPlanNode {
+                node_type: node.node_type.clone(),
+                result: value.result.clone(),
+                children: children.clone()
+              })
+            } else if value.is_splat() {
+              children.push(value.clone());
+              for splat_child in value.children.iter().rev() {
+                loop_items.push_front(splat_child.clone());
+              }
+              NodeResult::OK
+            } else {
+              children.push(value.clone());
+              value.value().unwrap_or_default()
             }
-            NodeResult::OK
-          } else {
-            children.push(value.clone());
-            value.value().unwrap_or_default()
           },
           Err(err) => {
             return Err(ExecutionPlanNode {
@@ -1704,21 +1719,7 @@ impl ExecutionPlanInterpreter {
         }
       };
 
-      match value {
-        NodeResult::OK => {
-          // no-op
-        }
-        NodeResult::VALUE(value) => {
-          values.push(value);
-        }
-        NodeResult::ERROR(err) => {
-          return Err(ExecutionPlanNode {
-            node_type: node.node_type.clone(),
-            result: Some(NodeResult::ERROR(err.to_string())),
-            children: children.clone()
-          })
-        }
-      }
+      values.push(value);
     }
     Ok((children, values))
   }
@@ -1980,13 +1981,13 @@ impl ExecutionPlanInterpreter {
     node: &ExecutionPlanNode,
     path: &Vec<String>
   ) -> ExecutionPlanNode {
-    match self.evaluate_children(value_resolver, node, path) {
+    match self.evaluate_children(value_resolver, node, path, true) {
       Ok((children, values)) => {
         ExecutionPlanNode {
           node_type: node.node_type.clone(),
-          result: Some(NodeResult::VALUE(values.iter().fold(NodeValue::NULL, |result, value| {
+          result: Some(values.iter().fold(NodeResult::OK, |result, value| {
             result.and(value)
-          }))),
+          })),
           children
         }
       }
@@ -2000,13 +2001,13 @@ impl ExecutionPlanInterpreter {
     node: &ExecutionPlanNode,
     path: &Vec<String>
   ) -> ExecutionPlanNode {
-    match self.evaluate_children(value_resolver, node, path) {
+    match self.evaluate_children(value_resolver, node, path, false) {
       Ok((children, values)) => {
         ExecutionPlanNode {
           node_type: node.node_type.clone(),
-          result: Some(NodeResult::VALUE(values.iter().fold(NodeValue::NULL, |result, value| {
+          result: Some(values.iter().fold(NodeResult::OK, |result, value| {
             result.or(value)
-          }))),
+          })),
           children
         }
       }
@@ -2086,35 +2087,47 @@ impl ExecutionPlanInterpreter {
     node: &ExecutionPlanNode,
     action_path: &Vec<String>
   ) -> ExecutionPlanNode {
-    if let Some(first_node) = node.children.first() {
-      match self.walk_tree(action_path.as_slice(), first_node, value_resolver) {
-        Ok(first) => {
-          let first_result = first.value().unwrap_or_default();
-          if first_result.is_err() {
+    match self.validate_args(2, 1, node, "for-each", value_resolver, &action_path) {
+      Ok((values, optional)) => {
+        let marker_result = &values[0];
+        let loop_items = &values[1];
+        let marker = marker_result.value()
+          .unwrap_or_default()
+          .as_string()
+          .unwrap_or_else(|| "[*]".to_string());
+        match loop_items.value().unwrap_or_default() {
+          NodeResult::ERROR(err) => {
             ExecutionPlanNode {
               node_type: node.node_type.clone(),
-              result: Some(first_result),
-              children: once(first.clone()).chain(node.children.iter().dropping(1).cloned()).collect()
+              result: Some(NodeResult::ERROR(err)),
+              children: [marker_result.clone(), loop_items.clone()]
+                .iter()
+                .chain(node.children.iter().dropping(2))
+                .cloned()
+                .collect()
             }
-          } else {
+          }
+          _ => {
             let mut result = NodeResult::OK;
-            let mut child_results = vec![first.clone()];
+            let mut child_results = vec![marker_result.clone(), loop_items.clone()];
 
-            let loop_items = first_result
-              .as_value()
-              .unwrap_or_default()
-              .to_list();
-            for (index, _) in loop_items.iter().enumerate() {
-              for child in node.children.iter().dropping(1) {
-                let updated_child = inject_index(child, index);
+            if let Some(template) = optional.first() {
+              let loop_items = loop_items
+                .value()
+                .unwrap_or_default()
+                .as_value()
+                .unwrap_or_default()
+                .to_list();
+              for (index, _) in loop_items.iter().enumerate() {
+                let updated_child = inject_index(template, marker.as_str(), index);
                 match self.walk_tree(&action_path, &updated_child, value_resolver) {
                   Ok(value) => {
-                    result = result.and(&value.result);
+                    result = result.and(&value.result.clone().unwrap_or_default());
                     child_results.push(value.clone());
                   }
                   Err(err) => {
                     let node_result = NodeResult::ERROR(err.to_string());
-                    result = result.and(&Some(node_result.clone()));
+                    result = result.and(&node_result);
                     child_results.push(updated_child.clone_with_result(node_result));
                   }
                 }
@@ -2128,12 +2141,10 @@ impl ExecutionPlanInterpreter {
             }
           }
         }
-        Err(err) => {
-          node.clone_with_result(NodeResult::ERROR(err.to_string()))
-        }
       }
-    } else {
-      node.clone_with_result(NodeResult::OK)
+      Err(err) => {
+        node.clone_with_result(NodeResult::ERROR(err.to_string()))
+      }
     }
   }
 
@@ -2209,48 +2220,65 @@ impl ExecutionPlanInterpreter {
   }
 }
 
-fn inject_index(node: &ExecutionPlanNode, index: usize) -> ExecutionPlanNode {
+fn inject_index(node: &ExecutionPlanNode, marker: &str, index: usize) -> ExecutionPlanNode {
   match &node.node_type {
     PlanNodeType::CONTAINER(label) => {
       if let Ok(path) = DocPath::new(label) {
         ExecutionPlanNode {
-          node_type: PlanNodeType::CONTAINER(inject_index_in_path(&path, index).to_string()),
+          node_type: PlanNodeType::CONTAINER(inject_index_in_path(&path, marker, index).to_string()),
           result: node.result.clone(),
           children: node.children.iter()
-            .map(|child| inject_index(child, index))
+            .map(|child| inject_index(child, marker, index))
             .collect()
         }
       } else {
         node.clone_with_children(node.children.iter()
-          .map(|child| inject_index(child, index)))
+          .map(|child| inject_index(child, marker, index)))
       }
     }
     PlanNodeType::ACTION(_) => node.clone_with_children(node.children.iter()
-      .map(|child| inject_index(child, index))),
+      .map(|child| inject_index(child, marker, index))),
     PlanNodeType::PIPELINE => node.clone_with_children(node.children.iter()
-      .map(|child| inject_index(child, index))),
+      .map(|child| inject_index(child, marker, index))),
     PlanNodeType::RESOLVE_CURRENT(exp) => {
       ExecutionPlanNode {
-        node_type: PlanNodeType::RESOLVE_CURRENT(inject_index_in_path(exp, index)),
+        node_type: PlanNodeType::RESOLVE_CURRENT(inject_index_in_path(exp, marker, index)),
         result: node.result.clone(),
         children: vec![]
       }
     }
     PlanNodeType::SPLAT => node.clone_with_children(node.children.iter()
-      .map(|child| inject_index(child, index))),
+      .map(|child| inject_index(child, marker, index))),
     _ => node.clone()
   }
 }
 
-fn inject_index_in_path(path: &DocPath, index: usize) -> DocPath {
-  let mut tokens = path.tokens().clone();
-  for token in &mut tokens {
-    if *token == PathToken::StarIndex {
-      *token = PathToken::Index(index);
-      break;
-    }
+fn inject_index_in_path(path: &DocPath, marker: &str, index: usize) -> DocPath {
+  if path.starts_with("$['$*']") {
+    // Special case where for-each is applied at the root
+    let tokens = [PathToken::Root, PathToken::Index(index)].iter()
+      .chain(path.tokens().iter().dropping(2))
+      .flat_map(|token| {
+        if let PathToken::Field(name) = token && name == marker {
+          vec![PathToken::Field(name.trim_end_matches('*').to_string()), PathToken::Index(index)]
+        } else {
+          vec![token.clone()]
+        }
+      })
+      .collect_vec();
+    DocPath::from_tokens(tokens)
+  } else {
+    let tokens = path.tokens().iter()
+      .flat_map(|token| {
+        if let PathToken::Field(name) = token && name == marker {
+          vec![PathToken::Field(name.trim_end_matches('*').to_string()), PathToken::Index(index)]
+        } else {
+          vec![token.clone()]
+        }
+      })
+      .collect_vec();
+    DocPath::from_tokens(tokens)
   }
-  DocPath::from_tokens(tokens)
 }
 
 fn json_check_length(length: usize, json: &Value) -> anyhow::Result<()> {

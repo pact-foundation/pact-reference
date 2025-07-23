@@ -244,7 +244,10 @@ fn json_with_array() {
             json:1 => json:1,
             ~>$[0] => json:1,
             NULL => NULL
-          ) => BOOL(true)
+          ) => BOOL(true),
+          %error (
+            'Expected a value for \\'/0\\' but it was missing'
+          )
         ) => BOOL(true)
       ) => BOOL(true),
       :$[1] (
@@ -256,7 +259,10 @@ fn json_with_array() {
             json:2 => json:2,
             ~>$[1] => json:2,
             NULL => NULL
-          ) => BOOL(true)
+          ) => BOOL(true),
+          %error (
+            'Expected a value for \\'/1\\' but it was missing'
+          )
         ) => BOOL(true)
       ) => BOOL(true),
       :$[2] (
@@ -268,7 +274,10 @@ fn json_with_array() {
             json:3 => json:3,
             ~>$[2] => json:3,
             NULL => NULL
-          ) => BOOL(true)
+          ) => BOOL(true),
+          %error (
+            'Expected a value for \\'/2\\' but it was missing'
+          )
         ) => BOOL(true)
       ) => BOOL(true)
     ) => BOOL(true)
@@ -301,8 +310,11 @@ fn json_with_array() {
             json:1,
             ~>$[0],
             NULL
-          )
-        ) => BOOL(false)
+          ),
+          %error (
+            'Expected a value for \\'/0\\' but it was missing' => 'Expected a value for \\'/0\\' but it was missing'
+          ) => ERROR(Expected a value for '/0' but it was missing)
+        ) => ERROR(Expected a value for '/0' but it was missing)
       ) => BOOL(false),
       :$[1] (
         %if (
@@ -313,8 +325,11 @@ fn json_with_array() {
             json:2,
             ~>$[1],
             NULL
-          )
-        ) => BOOL(false)
+          ),
+          %error (
+            'Expected a value for \\'/1\\' but it was missing' => 'Expected a value for \\'/1\\' but it was missing'
+          ) => ERROR(Expected a value for '/1' but it was missing)
+        ) => ERROR(Expected a value for '/1' but it was missing)
       ) => BOOL(false),
       :$[2] (
         %if (
@@ -325,8 +340,11 @@ fn json_with_array() {
             json:3,
             ~>$[2],
             NULL
-          )
-        ) => BOOL(false)
+          ),
+          %error (
+            'Expected a value for \\'/2\\' but it was missing' => 'Expected a value for \\'/2\\' but it was missing'
+          ) => ERROR(Expected a value for '/2' but it was missing)
+        ) => ERROR(Expected a value for '/2' but it was missing)
       ) => BOOL(false)
     ) => BOOL(false)
   ) => BOOL(false)", buffer);
@@ -358,7 +376,10 @@ fn json_with_array() {
             json:1 => json:1,
             ~>$[0] => json:true,
             NULL => NULL
-          ) => ERROR(Expected true (Boolean) to be equal to 1 (Integer))
+          ) => ERROR(Expected true (Boolean) to be equal to 1 (Integer)),
+          %error (
+            'Expected a value for \\'/0\\' but it was missing'
+          )
         ) => BOOL(false)
       ) => BOOL(false),
       :$[1] (
@@ -370,8 +391,11 @@ fn json_with_array() {
             json:2,
             ~>$[1],
             NULL
-          )
-        ) => BOOL(false)
+          ),
+          %error (
+            'Expected a value for \\'/1\\' but it was missing' => 'Expected a value for \\'/1\\' but it was missing'
+          ) => ERROR(Expected a value for '/1' but it was missing)
+        ) => ERROR(Expected a value for '/1' but it was missing)
       ) => BOOL(false),
       :$[2] (
         %if (
@@ -382,8 +406,11 @@ fn json_with_array() {
             json:3,
             ~>$[2],
             NULL
-          )
-        ) => BOOL(false)
+          ),
+          %error (
+            'Expected a value for \\'/2\\' but it was missing' => 'Expected a value for \\'/2\\' but it was missing'
+          ) => ERROR(Expected a value for '/2' but it was missing)
+        ) => ERROR(Expected a value for '/2' but it was missing)
       ) => BOOL(false)
     ) => BOOL(false)
   ) => BOOL(false)", buffer);
@@ -415,7 +442,10 @@ fn json_with_array() {
             json:1 => json:1,
             ~>$[0] => json:1,
             NULL => NULL
-          ) => BOOL(true)
+          ) => BOOL(true),
+          %error (
+            'Expected a value for \\'/0\\' but it was missing'
+          )
         ) => BOOL(true)
       ) => BOOL(true),
       :$[1] (
@@ -427,7 +457,10 @@ fn json_with_array() {
             json:2 => json:2,
             ~>$[1] => json:3,
             NULL => NULL
-          ) => ERROR(Expected 3 (Integer) to be equal to 2 (Integer))
+          ) => ERROR(Expected 3 (Integer) to be equal to 2 (Integer)),
+          %error (
+            'Expected a value for \\'/1\\' but it was missing'
+          )
         ) => BOOL(false)
       ) => BOOL(false),
       :$[2] (
@@ -439,7 +472,10 @@ fn json_with_array() {
             json:3 => json:3,
             ~>$[2] => json:3,
             NULL => NULL
-          ) => BOOL(true)
+          ) => BOOL(true),
+          %error (
+            'Expected a value for \\'/2\\' but it was missing'
+          )
         ) => BOOL(true)
       ) => BOOL(true)
     ) => BOOL(false)

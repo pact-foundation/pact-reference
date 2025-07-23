@@ -427,6 +427,11 @@ impl DocPath {
     self.expr.ends_with(suffix)
   }
 
+  /// If this path (as a string) starts with the given string
+  pub fn starts_with(&self, prefix: &str) -> bool {
+    self.expr.starts_with(prefix)
+  }
+
   /// Creates a new path with the last `n` parts removed.
   pub fn drop(&self, n: usize) -> Self {
     let vec = self.path_tokens.iter()

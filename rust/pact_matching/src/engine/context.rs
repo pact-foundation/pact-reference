@@ -100,6 +100,34 @@ impl PlanMatchingContext {
     self.matching_rules.select_best_matcher(path_slice.as_slice())
   }
 
+  /// Select the best matcher taking into account two paths
+  pub fn select_best_matcher_from(&self, path1: &DocPath, path2: &DocPath) -> RuleList {
+    let path1_tokens = path1.to_vec();
+    let path1_list = path1_tokens.iter()
+      .map(|s| s.as_str())
+      .collect_vec();
+    let mut result1 = self.matching_rules.rules.iter()
+      .map(|(k, v)| (k, v, k.path_weight(&path1_list)))
+      .filter(|&(_, _, (w, _))| w > 0)
+      .collect_vec();
+
+    let path2_tokens = path2.to_vec();
+    let path2_list = path2_tokens
+      .iter()
+      .map(|s| s.as_str())
+      .collect_vec();
+    let result2 = self.matching_rules.rules.iter()
+      .map(|(k, v)| (k, v, k.path_weight(&path2_list)))
+      .filter(|&(_, _, (w, _))| w > 0)
+      .collect_vec();
+
+    result1.extend_from_slice(&result2);
+    result1.iter()
+      .max_by_key(|&(_, _, (w, t))| w * t)
+      .map(|(_, v, (_, t))| v.as_cascaded(*t != path1_list.len()))
+      .unwrap_or_default()
+  }
+
   /// If there is a type matcher defined at the path in this context
   pub fn type_matcher_defined(&self, path: &DocPath) -> bool {
     let path = path.to_vec();

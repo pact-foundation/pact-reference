@@ -63,24 +63,21 @@ fn str_form_test(#[case] input: NodeValue, #[case] expected: &str) {
 }
 
 #[rstest(
-  case(NodeResult::OK, None, NodeResult::OK),
-  case(NodeResult::VALUE(NodeValue::NULL), None, NodeResult::VALUE(NodeValue::NULL)),
-  case(NodeResult::ERROR("".to_string()), None, NodeResult::ERROR("".to_string())),
-  case(NodeResult::OK, Some(NodeResult::OK), NodeResult::OK),
-  case(NodeResult::OK, Some(NodeResult::VALUE(NodeValue::NULL)), NodeResult::VALUE(NodeValue::NULL)),
-  case(NodeResult::OK, Some(NodeResult::ERROR("error".to_string())), NodeResult::ERROR("error".to_string())),
-  case(NodeResult::VALUE(NodeValue::NULL), Some(NodeResult::OK), NodeResult::VALUE(NodeValue::NULL)),
-  case(NodeResult::VALUE(NodeValue::NULL), Some(NodeResult::VALUE(NodeValue::NULL)), NodeResult::VALUE(NodeValue::NULL)),
-  case(NodeResult::VALUE(NodeValue::NULL), Some(NodeResult::VALUE(NodeValue::UINT(100))), NodeResult::VALUE(NodeValue::UINT(100))),
-  case(NodeResult::VALUE(NodeValue::BOOL(false)), Some(NodeResult::VALUE(NodeValue::UINT(100))), NodeResult::VALUE(NodeValue::BOOL(false))),
-  case(NodeResult::VALUE(NodeValue::BOOL(true)), Some(NodeResult::VALUE(NodeValue::NULL)), NodeResult::VALUE(NodeValue::BOOL(false))),
-  case(NodeResult::VALUE(NodeValue::BOOL(true)), Some(NodeResult::VALUE(NodeValue::BOOL(false))), NodeResult::VALUE(NodeValue::BOOL(false))),
-  case(NodeResult::VALUE(NodeValue::NULL), Some(NodeResult::ERROR("error".to_string())), NodeResult::ERROR("error".to_string())),
-  case(NodeResult::ERROR("error".to_string()), Some(NodeResult::OK), NodeResult::ERROR("error".to_string())),
-  case(NodeResult::ERROR("error".to_string()), Some(NodeResult::VALUE(NodeValue::NULL)), NodeResult::ERROR("error".to_string())),
-  case(NodeResult::ERROR("error".to_string()), Some(NodeResult::ERROR("error2".to_string())), NodeResult::ERROR("error".to_string())),
+  case(NodeResult::OK, NodeResult::OK, NodeResult::OK),
+  case(NodeResult::OK, NodeResult::VALUE(NodeValue::NULL), NodeResult::VALUE(NodeValue::NULL)),
+  case(NodeResult::OK, NodeResult::ERROR("error".to_string()), NodeResult::ERROR("error".to_string())),
+  case(NodeResult::VALUE(NodeValue::NULL), NodeResult::OK, NodeResult::VALUE(NodeValue::NULL)),
+  case(NodeResult::VALUE(NodeValue::NULL), NodeResult::VALUE(NodeValue::NULL), NodeResult::VALUE(NodeValue::NULL)),
+  case(NodeResult::VALUE(NodeValue::NULL), NodeResult::VALUE(NodeValue::UINT(100)), NodeResult::VALUE(NodeValue::UINT(100))),
+  case(NodeResult::VALUE(NodeValue::BOOL(false)), NodeResult::VALUE(NodeValue::UINT(100)), NodeResult::VALUE(NodeValue::BOOL(false))),
+  case(NodeResult::VALUE(NodeValue::BOOL(true)), NodeResult::VALUE(NodeValue::NULL), NodeResult::VALUE(NodeValue::BOOL(false))),
+  case(NodeResult::VALUE(NodeValue::BOOL(true)), NodeResult::VALUE(NodeValue::BOOL(false)), NodeResult::VALUE(NodeValue::BOOL(false))),
+  case(NodeResult::VALUE(NodeValue::NULL), NodeResult::ERROR("error".to_string()), NodeResult::ERROR("error".to_string())),
+  case(NodeResult::ERROR("error".to_string()), NodeResult::OK, NodeResult::ERROR("error".to_string())),
+  case(NodeResult::ERROR("error".to_string()), NodeResult::VALUE(NodeValue::NULL), NodeResult::ERROR("error".to_string())),
+  case(NodeResult::ERROR("error".to_string()), NodeResult::ERROR("error2".to_string()), NodeResult::ERROR("error".to_string())),
 )]
-fn node_result_and(#[case] a: NodeResult, #[case] b: Option<NodeResult>, #[case] result: NodeResult) {
+fn node_result_and(#[case] a: NodeResult, #[case] b: NodeResult, #[case] result: NodeResult) {
   expect!(a.and(&b)).to(be_equal_to(result));
 }
 

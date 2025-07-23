@@ -95,6 +95,9 @@ impl JsonPlanBuilder {
     root_node: &mut ExecutionPlanNode
   ) {
     trace!(%json, %path, ">>> process_body_node");
+
+    let rewritten_path = remove_marker(&path);
+
     match &json {
       Value::Array(items) => {
         if context.matcher_is_defined(path) {
@@ -107,7 +110,11 @@ impl JsonPlanBuilder {
 
           if let Some(template) = items.first() {
             let mut for_each_node = ExecutionPlanNode::action("for-each");
-            let item_path = path.join("[*]");
+            let marker = format!("{}*", path.last_field().unwrap_or_default());
+            for_each_node.add(ExecutionPlanNode::value_node(marker.as_str()));
+            let item_path = path.parent()
+              .unwrap_or_else(|| path.clone())
+              .join_field(marker);
             for_each_node.add(ExecutionPlanNode::resolve_current_value(path));
             let mut item_node = ExecutionPlanNode::container(&item_path);
             match template {
@@ -120,7 +127,11 @@ impl JsonPlanBuilder {
                     ExecutionPlanNode::action("check:exists")
                       .add(ExecutionPlanNode::resolve_current_value(&item_path))
                   );
-                if context.matcher_is_defined(&item_path) {
+
+                let matchers = context.select_best_matcher(&item_path)
+                  .and_rules(&context.select_best_matcher(&rewritten_path))
+                  .remove_duplicates();
+                if !matchers.is_empty() {
                   let matchers = context.select_best_matcher(&item_path);
                   presence_check.add(ExecutionPlanNode::annotation(format!("[*] {}", matchers.generate_description(false))));
                   presence_check.add(build_matching_rule_node(&ExecutionPlanNode::value_node(template),
@@ -166,7 +177,10 @@ impl JsonPlanBuilder {
                     ExecutionPlanNode::action("check:exists")
                       .add(ExecutionPlanNode::resolve_current_value(&item_path))
                   );
-                if context.matcher_is_defined(&item_path) {
+                let matchers = context.select_best_matcher(&item_path)
+                  .and_rules(&context.select_best_matcher(&rewritten_path))
+                  .remove_duplicates();
+                if !matchers.is_empty() {
                   let matchers = context.select_best_matcher(&item_path);
                   presence_check.add(ExecutionPlanNode::annotation(format!("[{}] {}", index, matchers.generate_description(false))));
                   presence_check.add(build_matching_rule_node(&ExecutionPlanNode::value_node(item),
@@ -179,6 +193,11 @@ impl JsonPlanBuilder {
                       .add(ExecutionPlanNode::value_node(NodeValue::NULL))
                   );
                 }
+                presence_check.add(
+                  ExecutionPlanNode::action("error")
+                    .add(ExecutionPlanNode::value_node(format!("Expected a value for '{}' but it was missing",
+                      item_path.as_json_pointer().unwrap())))
+                );
                 item_node.add(presence_check);
                 root_node.add(item_node);
               }
@@ -187,7 +206,9 @@ impl JsonPlanBuilder {
         }
       }
       Value::Object(entries) => {
-        let rules = context.select_best_matcher(path);
+        let rules = context.select_best_matcher(&path)
+          .and_rules(&context.select_best_matcher(&rewritten_path))
+          .remove_duplicates();
         if !rules.is_empty() && should_apply_to_map_entries(&rules) {
           root_node.add(ExecutionPlanNode::annotation(rules.generate_description(true)));
           root_node.add(build_matching_rule_node(&ExecutionPlanNode::value_node(json.clone()),
@@ -230,8 +251,10 @@ impl JsonPlanBuilder {
         }
       }
       _ => {
-        if context.matcher_is_defined(path) {
-          let matchers = context.select_best_matcher(path);
+        let matchers = context.select_best_matcher(&path)
+          .and_rules(&context.select_best_matcher(&rewritten_path))
+          .remove_duplicates();
+        if !matchers.is_empty() {
           root_node.add(ExecutionPlanNode::annotation(format!("{} {}", path.last_field().unwrap_or_default(), matchers.generate_description(false))));
           root_node.add(build_matching_rule_node(&ExecutionPlanNode::value_node(json),
             &ExecutionPlanNode::resolve_current_value(path), &matchers, false));
@@ -305,7 +328,7 @@ impl XMLPlanBuilder {
     node: &mut ExecutionPlanNode
   ) {
     let name = name(element);
-    let element_path = if path.ends_with(format!("{}[*]", name).as_str()) {
+    let element_path = if path.ends_with(format!("['{}*']", name).as_str()) {
       path.clone()
     } else if let Some(index) = index {
       path.join_field(&name).join_index(index)
@@ -397,13 +420,14 @@ impl XMLPlanBuilder {
           .filter(|m| m.is_length_type_matcher());
         if !rules.is_empty() {
           parent_node.add(ExecutionPlanNode::annotation(format!("{} {}",
-            path.last_field().unwrap_or_default(),
+            p.last_field().unwrap_or_default(),
             rules.generate_description(true))));
           parent_node.add(build_matching_rule_node(&ExecutionPlanNode::value_node(elements[0]),
-            &ExecutionPlanNode::resolve_current_value(path), &rules, true));
+            &ExecutionPlanNode::resolve_current_value(&p), &rules, true));
         }
 
         let mut for_each_node = ExecutionPlanNode::action("for-each");
+        for_each_node.add(ExecutionPlanNode::value_node(format!("{}*", child_name)));
         for_each_node.add(ExecutionPlanNode::resolve_current_value(&p));
         let item_path = p.join("[*]");
 
@@ -423,12 +447,11 @@ impl XMLPlanBuilder {
   ) {
     let text_nodes = text_nodes(element);
     let p = path.join("#text");
+    let no_markers = remove_marker(&p);
     let no_indices = drop_indices(&p);
-    let matchers = context.select_best_matcher(&p)
+    let matchers = context.select_best_matcher_from(&no_markers, &no_indices)
       .filter(|matcher| !matcher.is_type_matcher())
-      .and_rules(&context.select_best_matcher(&no_indices)
-        .filter(|matcher| !matcher.is_type_matcher())
-      ).remove_duplicates();
+      .remove_duplicates();
     if !matchers.is_empty() {
       node.add(ExecutionPlanNode::annotation(format!("{} {}", p.last_field().unwrap_or_default(),
         matchers.generate_description(false))));
@@ -538,7 +561,33 @@ fn drop_indices(path: &DocPath) -> DocPath {
       PathToken::Index(_) | PathToken::StarIndex => false,
       _ => true
     })
-    .cloned())
+    .map(|token| {
+      if let PathToken::Field(name) = token {
+        if name.ends_with('*') {
+          PathToken::Field(name.trim_end_matches('*').to_string())
+        } else {
+          token.clone()
+        }
+      } else {
+        token.clone()
+      }
+    }))
+}
+
+fn remove_marker(path: &DocPath) -> DocPath {
+  DocPath::from_tokens(path.tokens()
+    .iter()
+    .flat_map(|token| {
+      if let PathToken::Field(name) = token {
+        if name.ends_with('*') {
+          vec![PathToken::Field(name.trim_end_matches('*').to_string()), PathToken::Index(0)]
+        } else {
+          vec![token.clone()]
+        }
+      } else {
+        vec![token.clone()]
+      }
+    }))
 }
 
 #[cfg(feature = "xml")]
@@ -739,6 +788,9 @@ mod tests {
           json:100,
           ~>$[0],
           NULL
+        ),
+        %error (
+          'Expected a value for \'/0\' but it was missing'
         )
       )
     ),
@@ -751,6 +803,9 @@ mod tests {
           json:200,
           ~>$[1],
           NULL
+        ),
+        %error (
+          'Expected a value for \'/1\' but it was missing'
         )
       )
     ),
@@ -763,6 +818,9 @@ mod tests {
           json:300,
           ~>$[2],
           NULL
+        ),
+        %error (
+          'Expected a value for \'/2\' but it was missing'
         )
       )
     )
@@ -938,22 +996,23 @@ mod tests {
         json:{"min":2}
       ),
       %for-each (
+        'item*',
         ~>$.item,
-        :$.item[*] (
+        :$['item*'] (
           %json:expect:entries (
             'OBJECT',
             ['a'],
-            ~>$.item[*]
+            ~>$['item*']
           ),
           %expect:only-entries (
             ['a'],
-            ~>$.item[*]
+            ~>$['item*']
           ),
-          :$.item[*].a (
+          :$['item*'].a (
             #{'a must match by type'},
             %match:type (
               json:100,
-              ~>$.item[*].a,
+              ~>$['item*'].a,
               json:{}
             )
           )
