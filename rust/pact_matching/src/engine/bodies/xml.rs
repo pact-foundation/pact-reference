@@ -96,7 +96,12 @@ impl XMLPlanBuilder {
     for (child_name, elements) in children {
       let p = path.join(child_name.as_str());
 
-      if !context.type_matcher_defined(&p) {
+      let no_markers = remove_marker(&p);
+      let no_indices = drop_indices(&no_markers);
+      let matchers = context.select_best_matcher_from(&no_markers, &no_indices)
+        .filter(|matcher| matcher.is_type_matcher())
+        .remove_duplicates();
+      if matchers.is_empty() {
         parent_node.add(
           ExecutionPlanNode::action("expect:count")
             .add(ExecutionPlanNode::value_node(NodeValue::UINT(elements.len() as u64)))
@@ -119,7 +124,7 @@ impl XMLPlanBuilder {
           }
         }
       } else {
-        let rules = context.select_best_matcher(&p)
+        let rules = matchers
           .filter(|m| m.is_length_type_matcher());
         if !rules.is_empty() {
           parent_node.add(ExecutionPlanNode::annotation(format!("{} {}",

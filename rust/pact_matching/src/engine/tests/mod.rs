@@ -6,8 +6,8 @@ use serde_json::{json, Value};
 
 use pact_models::bodies::OptionalBody;
 use pact_models::content_types::TEXT;
-use pact_models::matchingrules;
-use pact_models::v4::http_parts::HttpRequest;
+use pact_models::{HttpStatus, matchingrules};
+use pact_models::v4::http_parts::{HttpRequest, HttpResponse};
 use pact_models::v4::interaction::V4Interaction;
 use pact_models::v4::synch_http::SynchronousHttp;
 
@@ -15,11 +15,13 @@ use crate::{BodyMatchResult, MatchingRule, RequestMatchResult};
 use crate::engine::{
   build_request_plan,
   execute_request_plan,
+  build_response_plan,
+  execute_response_plan,
   NodeResult,
   NodeValue,
   PlanMatchingContext
 };
-use crate::Mismatch::{BodyMismatch, MethodMismatch};
+use crate::Mismatch::{self, BodyMismatch, MethodMismatch};
 
 mod walk_tree_tests;
 mod query_tests;
@@ -226,6 +228,102 @@ fn simple_match_request_test() -> anyhow::Result<()> {
     query: hashmap!{},
     body: BodyMatchResult::Ok,
   }, mismatches);
+
+  Ok(())
+}
+
+#[test_log::test]
+fn simple_match_response_test() -> anyhow::Result<()> {
+  let response = HttpResponse {
+    status: 204,
+    body: OptionalBody::Present("Some nice bit of text".into(), Some(TEXT.clone()), None),
+    .. Default::default()
+  };
+  let expected_response = HttpResponse {
+    status: 200,
+    headers: None,
+    body: OptionalBody::Present("Some nice bit of text".into(), Some(TEXT.clone()), None),
+    .. Default::default()
+  };
+  let mut context = PlanMatchingContext::default();
+  let plan = build_response_plan(&expected_response, &context)?;
+
+  assert_eq!(r#"(
+  :response (
+    :status (
+      #{'status == 200'},
+      %match:equality (
+        UINT(200),
+        $.status,
+        NULL
+      )
+    ),
+    :body (
+      %if (
+        %match:equality (
+          'text/plain',
+          $.content-type,
+          NULL,
+          %error (
+            'Body type error - ',
+            %apply ()
+          )
+        ),
+        %match:equality (
+          'Some nice bit of text',
+          %convert:UTF8 (
+            $.body
+          ),
+          NULL
+        )
+      )
+    )
+  )
+)
+"#, plan.pretty_form());
+
+  let executed_plan = execute_response_plan(&plan, &response, &mut context)?;
+  assert_eq!(r#"(
+  :response (
+    :status (
+      #{'status == 200'},
+      %match:equality (
+        UINT(200) => UINT(200),
+        $.status => UINT(204),
+        NULL => NULL
+      ) => ERROR(Expected 204 to be equal to 200)
+    ) => BOOL(false),
+    :body (
+      %if (
+        %match:equality (
+          'text/plain' => 'text/plain',
+          $.content-type => 'text/plain',
+          NULL => NULL,
+          %error (
+            'Body type error - ',
+            %apply ()
+          )
+        ) => BOOL(true),
+        %match:equality (
+          'Some nice bit of text' => 'Some nice bit of text',
+          %convert:UTF8 (
+            $.body => BYTES(21, U29tZSBuaWNlIGJpdCBvZiB0ZXh0)
+          ) => 'Some nice bit of text',
+          NULL => NULL
+        ) => BOOL(true)
+      ) => BOOL(true)
+    ) => BOOL(true)
+  ) => BOOL(false)
+)
+"#, executed_plan.pretty_form());
+
+  assert_eq!(r#"response:
+  status: status == 200 - ERROR Expected 204 to be equal to 200
+  body: - OK
+"#, executed_plan.generate_summary(false));
+
+  let mismatches: Vec<Mismatch> = executed_plan.into();
+  assert_eq!(vec![Mismatch::StatusMismatch { expected: 0, actual: 0, mismatch: "".to_string() }], mismatches);
 
   Ok(())
 }
@@ -586,6 +684,81 @@ fn match_path_with_matching_rule() -> anyhow::Result<()> {
         )
       ) => BOOL(true)
     ) => BOOL(true)
+  ) => BOOL(false)
+)
+"#, executed_plan.pretty_form());
+
+  Ok(())
+}
+
+#[test_log::test]
+fn match_status_with_matching_rule() -> anyhow::Result<()> {
+  let response = HttpResponse {
+    status: 204,
+    .. Default::default()
+  };
+  let matching_rules = matchingrules! {
+    "status" => { "" => [ MatchingRule::StatusCode(HttpStatus::Success) ] }
+  };
+  let expected_response = HttpResponse {
+    status: 200,
+    matching_rules: matching_rules.clone(),
+    .. Default::default()
+  };
+  let expected_interaction = SynchronousHttp {
+    response: expected_response.clone(),
+    .. SynchronousHttp::default()
+  };
+  let mut context = PlanMatchingContext {
+    interaction: expected_interaction.boxed_v4(),
+    .. PlanMatchingContext::default()
+  };
+  let plan = build_response_plan(&expected_response, &context)?;
+
+  assert_eq!(r#"(
+  :response (
+    :status (
+      #{'status must be a Success (20x) status'},
+      %match:status-code (
+        UINT(200),
+        $.status,
+        json:{"status":"success"}
+      )
+    )
+  )
+)
+"#, plan.pretty_form());
+
+  let executed_plan = execute_response_plan(&plan, &response, &mut context)?;
+  assert_eq!(r#"(
+  :response (
+    :status (
+      #{'status must be a Success (20x) status'},
+      %match:status-code (
+        UINT(200) => UINT(200),
+        $.status => UINT(204),
+        json:{"status":"success"} => json:{"status":"success"}
+      ) => BOOL(true)
+    ) => BOOL(true)
+  ) => BOOL(true)
+)
+"#, executed_plan.pretty_form());
+
+  let response = HttpResponse {
+    status: 404,
+    .. Default::default()
+  };
+  let executed_plan = execute_response_plan(&plan, &response, &mut context)?;
+  assert_eq!(r#"(
+  :response (
+    :status (
+      #{'status must be a Success (20x) status'},
+      %match:status-code (
+        UINT(200) => UINT(200),
+        $.status => UINT(404),
+        json:{"status":"success"} => json:{"status":"success"}
+      ) => ERROR(Expected status code 404 to be a Successful response (200–299))
+    ) => BOOL(false)
   ) => BOOL(false)
 )
 "#, executed_plan.pretty_form());

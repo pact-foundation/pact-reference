@@ -7,7 +7,7 @@ use tracing::trace;
 use pact_models::content_types::ContentType;
 use pact_models::path_exp::DocPath;
 
-use crate::engine::bodies::{drop_indices, PlanBodyBuilder, remove_marker, should_apply_to_map_entries};
+use crate::engine::bodies::{PlanBodyBuilder, remove_marker, should_apply_to_map_entries};
 use crate::engine::context::PlanMatchingContext;
 use crate::engine::{build_matching_rule_node, ExecutionPlanNode, NodeValue};
 

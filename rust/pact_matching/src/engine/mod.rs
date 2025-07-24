@@ -11,23 +11,27 @@ use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use itertools::Itertools;
 #[cfg(feature = "xml")] use kiss_xml::dom::Element;
+use maplit::hashmap;
 use serde_json::Value;
 use serde_json::Value::Object;
 
 use pact_models::bodies::OptionalBody;
 use pact_models::content_types::TEXT;
 use pact_models::headers::PARAMETERISED_HEADERS;
+use pact_models::http_parts::HttpPart;
 use pact_models::matchingrules::{MatchingRule, RuleList, RuleLogic};
 use pact_models::path_exp::DocPath;
-use pact_models::v4::http_parts::HttpRequest;
+use pact_models::v4::http_parts::{HttpRequest, HttpResponse};
 
 use crate::engine::bodies::{get_body_plan_builder, PlainTextBuilder, PlanBodyBuilder};
 use crate::engine::context::PlanMatchingContext;
 use crate::engine::interpreter::ExecutionPlanInterpreter;
-use crate::engine::value_resolvers::HttpRequestValueResolver;
+use crate::engine::value_resolvers::{HttpRequestValueResolver, HttpResponseValueResolver};
 #[cfg(feature = "xml")] use crate::engine::xml::XmlValue;
 use crate::headers::{parse_charset_parameters, strip_whitespace};
 use crate::matchers::Matches;
+use crate::{BodyMatchResult, Mismatch};
+use crate::Mismatch::{BodyMismatch, HeaderMismatch, QueryMismatch};
 
 mod bodies;
 mod value_resolvers;
@@ -326,6 +330,12 @@ impl From<usize> for NodeValue {
 impl From<u64> for NodeValue {
   fn from(value: u64) -> Self {
     NodeValue::UINT(value)
+  }
+}
+
+impl From<u16> for NodeValue {
+  fn from(value: u16) -> Self {
+    NodeValue::UINT(value as u64)
   }
 }
 
@@ -1165,7 +1175,7 @@ impl ExecutionPlanNode {
     errors
   }
 
-  /// Walks the tree to return any node that matches the given path
+  /// Walks the tree to return any node that matches the given path starting from this node
   pub fn fetch_node(&self, path: &[&str]) -> Option<ExecutionPlanNode> {
     if path.is_empty() {
       None
@@ -1178,6 +1188,11 @@ impl ExecutionPlanNode {
     } else {
       None
     }
+  }
+
+  /// Walks the tree to return any node that matches the given path starting from this nodes children
+  pub fn fetch_child_node(&self, path: &[&str]) -> Option<ExecutionPlanNode> {
+    self.children.iter().find_map(|child| child.fetch_node(&path))
   }
 
   fn matches(&self, identifier: &str) -> bool {
@@ -1281,6 +1296,225 @@ impl ExecutionPlan {
   pub fn fetch_node(&self, path: &[&str]) -> Option<ExecutionPlanNode> {
     self.plan_root.fetch_node(path)
   }
+}
+
+impl Into<Vec<Mismatch>> for ExecutionPlan {
+  fn into(self) -> Vec<Mismatch> {
+    let mut result = vec![];
+
+    if let Some(request) = self.fetch_node(&[":request"]) {
+      if let Some(mismatch) = method_mismatch(&request) {
+        result.push(mismatch);
+      }
+      if let Some(mismatches) = path_mismatch(&request) {
+        result.extend(mismatches);
+      }
+      let query = query_mismatches(&request);
+      for mismatches in query.values() {
+        result.extend(mismatches.clone());
+      }
+      let headers = header_mismatches(&request);
+      for mismatches in headers.values() {
+        result.extend(mismatches.clone());
+      }
+      let body = body_mismatches(&request);
+      result.extend(body.mismatches());
+    }
+
+    if let Some(response) = self.fetch_node(&[":response"]) {
+      if let Some(mismatch) = status_mismatch(&response) {
+        result.push(mismatch);
+      }
+      let headers = header_mismatches(&response);
+      for mismatches in headers.values() {
+        result.extend(mismatches.clone());
+      }
+      let body = body_mismatches(&response);
+      result.extend(body.mismatches());
+    }
+
+    result
+  }
+}
+
+pub(crate) fn method_mismatch(plan: &ExecutionPlanNode) -> Option<Mismatch> {
+  let method_node = plan.fetch_node(&[":request", ":method"]).unwrap_or_default();
+  let method = method_node.error()
+    .map(|err| Mismatch::MethodMismatch {
+      expected: "".to_string(),
+      actual: "".to_string(),
+      mismatch: err
+    });
+  method
+}
+
+pub(crate) fn status_mismatch(plan: &ExecutionPlanNode) -> Option<Mismatch> {
+  let node = plan.fetch_node(&[":response", ":status"]).unwrap_or_default();
+  node.error()
+    .map(|err| Mismatch::StatusMismatch {
+      expected: 0,
+      actual: 0,
+      mismatch: err
+    })
+}
+
+pub(crate) fn path_mismatch(plan: &ExecutionPlanNode) -> Option<Vec<Mismatch>> {
+  let path_node = plan.fetch_node(&[":request", ":path"]).unwrap_or_default();
+  let path_errors = path_node.errors().iter()
+    .map(|err| Mismatch::PathMismatch {
+      expected: "".to_string(),
+      actual: "".to_string(),
+      mismatch: err.clone()
+    }).collect_vec();
+  let path = if path_errors.is_empty() {
+    None
+  } else {
+    Some(path_errors)
+  };
+  path
+}
+
+pub(crate) fn query_mismatches(plan: &ExecutionPlanNode) -> HashMap<String, Vec<Mismatch>> {
+  let query_node = plan.fetch_node(&[":request", ":query parameters"]).unwrap_or_default();
+  let mut query = query_node.children.iter()
+    .fold(hashmap! {}, |mut acc, child| {
+      if let PlanNodeType::CONTAINER(label) = &child.node_type {
+        let mismatches = child.errors().iter().map(|err| QueryMismatch {
+          parameter: label.clone(),
+          expected: "".to_string(),
+          actual: "".to_string(),
+          mismatch: err.clone(),
+        }).collect_vec();
+        acc.insert(label.clone(), mismatches);
+      } else {
+        let mismatches = child.errors().iter().map(|err| QueryMismatch {
+          parameter: "".to_string(),
+          expected: "".to_string(),
+          actual: "".to_string(),
+          mismatch: err.clone(),
+        }).collect_vec();
+        if !mismatches.is_empty() {
+          acc.entry("".to_string())
+            .and_modify(|entry| entry.extend_from_slice(&mismatches))
+            .or_insert(vec![]);
+        }
+      };
+      acc
+    });
+  let errors = query_node.child_errors(Terminator::CONTAINERS);
+  if !errors.is_empty() {
+    let mismatches = errors.iter()
+      .map(|err| BodyMismatch {
+        path: "".to_string(),
+        expected: None,
+        actual: None,
+        mismatch: err.clone(),
+      })
+      .collect_vec();
+    query.insert("".to_string(), mismatches);
+  }
+  query
+}
+
+pub(crate) fn header_mismatches(plan: &ExecutionPlanNode) -> HashMap<String, Vec<Mismatch>> {
+  let headers_node = plan.fetch_child_node(&[":headers"]).unwrap_or_default();
+  let mut headers = headers_node.children.iter()
+    .fold(hashmap! {}, |mut acc, child| {
+      if let PlanNodeType::CONTAINER(label) = &child.node_type {
+        let mismatches = child.errors().iter().map(|err| HeaderMismatch {
+          key: label.clone(),
+          expected: "".to_string(),
+          actual: "".to_string(),
+          mismatch: err.clone(),
+        }).collect_vec();
+        acc.insert(label.clone(), mismatches);
+      } else {
+        let mismatches = child.errors().iter().map(|err| HeaderMismatch {
+          key: "".to_string(),
+          expected: "".to_string(),
+          actual: "".to_string(),
+          mismatch: err.clone(),
+        }).collect_vec();
+        if !mismatches.is_empty() {
+          acc.entry("".to_string())
+            .and_modify(|entry| entry.extend_from_slice(&mismatches))
+            .or_insert(vec![]);
+        }
+      };
+      acc
+    });
+  let errors = headers_node.child_errors(Terminator::CONTAINERS);
+  if !errors.is_empty() {
+    let mismatches = errors.iter()
+      .map(|err| BodyMismatch {
+        path: "".to_string(),
+        expected: None,
+        actual: None,
+        mismatch: err.clone(),
+      })
+      .collect_vec();
+    headers.insert("".to_string(), mismatches);
+  }
+  headers
+}
+
+pub(crate) fn body_mismatches(plan: &ExecutionPlanNode) -> BodyMatchResult {
+  let body_node = plan.fetch_child_node(&[":body"]).unwrap_or_default();
+  let body = if body_node.clone().result.unwrap_or_default().is_truthy() {
+    BodyMatchResult::Ok
+  } else if body_node.is_empty() {
+    match &body_node.clone().result {
+      Some(NodeResult::ERROR(err)) => {
+        let mismatch = BodyMismatch {
+          path: "".to_string(),
+          expected: None,
+          actual: None,
+          mismatch: err.clone()
+        };
+        BodyMatchResult::BodyMismatches(hashmap!{"".to_string() => vec![mismatch]})
+      }
+      _ => BodyMatchResult::Ok
+    }
+  } else {
+    let first_error = body_node.error().unwrap_or_default();
+    if first_error.to_lowercase().starts_with("body type error") {
+      BodyMatchResult::BodyTypeMismatch {
+        expected_type: "".to_string(),
+        actual_type: "".to_string(),
+        message: first_error.clone(),
+        expected: None,
+        actual: None,
+      }
+    } else {
+      let mut body_mismatches = body_node.traverse_containers(hashmap! {}, |mut acc, label, node| {
+        let errors = node.child_errors(Terminator::CONTAINERS);
+        if !errors.is_empty() {
+          let mismatches = errors.iter()
+            .map(|err| BodyMismatch {
+              path: label.clone(),
+              expected: None,
+              actual: None,
+              mismatch: err.clone(),
+            })
+            .collect_vec();
+          acc.insert(label.clone(), mismatches);
+        }
+        acc
+      });
+      if !first_error.is_empty() {
+        let mismatches = body_mismatches.entry("".to_string())
+          .or_insert_with(|| vec![]);
+        mismatches.push(BodyMismatch {
+          path: "".to_string(),
+          expected: None,
+          actual: None,
+          mismatch: first_error.clone()
+        });
+      }
+      BodyMatchResult::BodyMismatches(body_mismatches)
+    }
+  };
+  body
 }
 
 /// Constructs an execution plan for the HTTP request part.
@@ -1494,14 +1728,14 @@ fn setup_query_plan(
   Ok(plan_node)
 }
 
-fn setup_header_plan(
-  expected: &HttpRequest,
+fn setup_header_plan<T: HttpPart>(
+  expected: &T,
   context: &PlanMatchingContext
 ) -> anyhow::Result<ExecutionPlanNode> {
   let mut plan_node = ExecutionPlanNode::container("headers");
   let doc_path = DocPath::new("$.headers")?;
 
-  if let Some(headers) = &expected.headers {
+  if let Some(headers) = &expected.headers() {
     if !headers.is_empty() {
       let keys = headers.keys().cloned().sorted().collect_vec();
       for key in &keys {
@@ -1622,14 +1856,14 @@ fn build_parameterised_header_plan(doc_path: &DocPath, val: &str) -> ExecutionPl
   apply_node
 }
 
-fn setup_body_plan(
-  expected: &HttpRequest,
+fn setup_body_plan<T: HttpPart>(
+  expected: &T,
   context: &PlanMatchingContext
 ) -> anyhow::Result<ExecutionPlanNode> {
   // TODO: Look at the matching rules and generators here
   let mut plan_node = ExecutionPlanNode::container("body");
 
-  match &expected.body {
+  match &expected.body() {
     OptionalBody::Missing => {}
     OptionalBody::Empty | OptionalBody::Null => {
       plan_node.add(ExecutionPlanNode::action("expect:empty")
@@ -1671,6 +1905,62 @@ pub fn execute_request_plan(
 ) -> anyhow::Result<ExecutionPlan> {
   let value_resolver = HttpRequestValueResolver {
     request: actual.clone()
+  };
+  let mut interpreter = ExecutionPlanInterpreter::new_with_context(context);
+  let path = vec![];
+  let executed_tree = interpreter.walk_tree(&path, &plan.plan_root, &value_resolver)?;
+  Ok(ExecutionPlan {
+    plan_root: executed_tree
+  })
+}
+
+/// Constructs an execution plan for the HTTP response part.
+pub fn build_response_plan(
+  expected: &HttpResponse,
+  context: &PlanMatchingContext
+) -> anyhow::Result<ExecutionPlan> {
+  let mut plan = ExecutionPlan::new("response");
+
+  plan.add(setup_status_plan(expected, &context.for_status())?);
+  plan.add(setup_header_plan(expected, &context.for_resp_headers())?);
+  plan.add(setup_body_plan(expected, &context.for_resp_body())?);
+
+  Ok(plan)
+}
+
+fn setup_status_plan(
+  expected: &HttpResponse,
+  context: &PlanMatchingContext
+) -> anyhow::Result<ExecutionPlanNode> {
+  let mut plan_node = ExecutionPlanNode::container("status");
+  let expected_node = ExecutionPlanNode::value_node(expected.status);
+  let doc_path = DocPath::new("$.status")?;
+  let actual_node = ExecutionPlanNode::resolve_value(doc_path.clone());
+  if context.matcher_is_defined(&doc_path) {
+    let matchers = context.select_best_matcher(&doc_path);
+    plan_node.add(ExecutionPlanNode::annotation(format!("status {}", matchers.generate_description(false))));
+    plan_node.add(build_matching_rule_node(&expected_node, &actual_node, &matchers, false));
+  } else {
+    plan_node.add(ExecutionPlanNode::annotation(format!("status == {}", expected.status)));
+    plan_node
+      .add(
+        ExecutionPlanNode::action("match:equality")
+          .add(expected_node)
+          .add(ExecutionPlanNode::resolve_value(doc_path))
+          .add(ExecutionPlanNode::value_node(NodeValue::NULL))
+      );
+  }
+  Ok(plan_node)
+}
+
+/// Executes the response plan against the actual response.
+pub fn execute_response_plan(
+  plan: &ExecutionPlan,
+  actual: &HttpResponse,
+  context: &PlanMatchingContext
+) -> anyhow::Result<ExecutionPlan> {
+  let value_resolver = HttpResponseValueResolver {
+    response: actual.clone()
   };
   let mut interpreter = ExecutionPlanInterpreter::new_with_context(context);
   let path = vec![];

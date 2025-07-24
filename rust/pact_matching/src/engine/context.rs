@@ -214,4 +214,52 @@ impl PlanMatchingContext {
       config: self.config
     }
   }
+
+  /// Creates a clone of this context, but with the matching rules set for the Response Status
+  pub fn for_status(&self) -> Self {
+    let matching_rules = if let Some(req_res) = self.interaction.as_v4_http() {
+      req_res.response.matching_rules.rules_for_category("status").unwrap_or_default()
+    } else {
+      MatchingRuleCategory::default()
+    };
+
+    PlanMatchingContext {
+      pact: self.pact.clone(),
+      interaction: self.interaction.boxed_v4(),
+      matching_rules,
+      config: self.config
+    }
+  }
+
+  /// Creates a clone of this context, but with the matching rules set for the Response Headers
+  pub fn for_resp_headers(&self) -> Self {
+    let matching_rules = if let Some(req_res) = self.interaction.as_v4_http() {
+      req_res.response.matching_rules.rules_for_category("header").unwrap_or_default()
+    } else {
+      MatchingRuleCategory::default()
+    };
+
+    PlanMatchingContext {
+      pact: self.pact.clone(),
+      interaction: self.interaction.boxed_v4(),
+      matching_rules,
+      config: self.config
+    }
+  }
+
+  /// Creates a clone of this context, but with the matching rules set for the Response Body
+  pub fn for_resp_body(&self) -> Self {
+    let matching_rules = if let Some(req_res) = self.interaction.as_v4_http() {
+      req_res.response.matching_rules.rules_for_category("body").unwrap_or_default()
+    } else {
+      MatchingRuleCategory::default()
+    };
+
+    PlanMatchingContext {
+      pact: self.pact.clone(),
+      interaction: self.interaction.boxed_v4(),
+      matching_rules,
+      config: self.config
+    }
+  }
 }
