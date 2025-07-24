@@ -82,7 +82,7 @@ pact files.
 ### Building
 
 To build the libraries in this project, you need a working Rust environment. Refer to the [Rust Guide](https://www.rust-lang.org/learn/get-started). Requires
-Rust 1.71.0 or later.
+Rust 2024 edition (1.88.0 or later).
 
 The build tool used is `cargo`.
 
