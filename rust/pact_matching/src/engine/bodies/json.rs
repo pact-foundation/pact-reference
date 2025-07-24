@@ -1,13 +1,13 @@
 //! Builder for JSON bodies
 
 use bytes::Bytes;
-use serde_json::Value;
+use serde_json::{Map, Value};
 use tracing::trace;
 
 use pact_models::content_types::ContentType;
 use pact_models::path_exp::DocPath;
 
-use crate::engine::bodies::{PlanBodyBuilder, remove_marker, should_apply_to_map_entries};
+use crate::engine::bodies::{drop_indices, PlanBodyBuilder, remove_marker, should_apply_to_map_entries};
 use crate::engine::context::PlanMatchingContext;
 use crate::engine::{build_matching_rule_node, ExecutionPlanNode, NodeValue};
 
@@ -33,155 +33,10 @@ impl JsonPlanBuilder {
 
     match &json {
       Value::Array(items) => {
-        if context.matcher_is_defined(path) {
-          let matchers = context.select_best_matcher(&path);
-          root_node.add(ExecutionPlanNode::annotation(format!("{} {}",
-            path.last_field().unwrap_or_default(),
-            matchers.generate_description(true))));
-          root_node.add(build_matching_rule_node(&ExecutionPlanNode::value_node(json.clone()),
-            &ExecutionPlanNode::resolve_current_value(path), &matchers, true));
-
-          if let Some(template) = items.first() {
-            let mut for_each_node = ExecutionPlanNode::action("for-each");
-            let marker = format!("{}*", path.last_field().unwrap_or_default());
-            for_each_node.add(ExecutionPlanNode::value_node(marker.as_str()));
-            let item_path = path.parent()
-              .unwrap_or_else(|| path.clone())
-              .join_field(marker);
-            for_each_node.add(ExecutionPlanNode::resolve_current_value(path));
-            let mut item_node = ExecutionPlanNode::container(&item_path);
-            match template {
-              Value::Array(_) => Self::process_body_node(context, template, &item_path, &mut item_node),
-              Value::Object(_) => Self::process_body_node(context, template, &item_path, &mut item_node),
-              _ => {
-                let mut presence_check = ExecutionPlanNode::action("if");
-                presence_check
-                  .add(
-                    ExecutionPlanNode::action("check:exists")
-                      .add(ExecutionPlanNode::resolve_current_value(&item_path))
-                  );
-
-                let matchers = context.select_best_matcher(&item_path)
-                  .and_rules(&context.select_best_matcher(&rewritten_path))
-                  .remove_duplicates();
-                if !matchers.is_empty() {
-                  let matchers = context.select_best_matcher(&item_path);
-                  presence_check.add(ExecutionPlanNode::annotation(format!("[*] {}", matchers.generate_description(false))));
-                  presence_check.add(build_matching_rule_node(&ExecutionPlanNode::value_node(template),
-                                                              &ExecutionPlanNode::resolve_current_value(&item_path), &matchers, false));
-                } else {
-                  presence_check.add(
-                    ExecutionPlanNode::action("match:equality")
-                      .add(ExecutionPlanNode::value_node(NodeValue::NAMESPACED("json".to_string(), template.to_string())))
-                      .add(ExecutionPlanNode::resolve_current_value(&item_path))
-                      .add(ExecutionPlanNode::value_node(NodeValue::NULL))
-                  );
-                }
-                item_node.add(presence_check);
-              }
-            }
-            for_each_node.add(item_node);
-            root_node.add(for_each_node);
-          }
-        } else if items.is_empty() {
-          root_node.add(
-            ExecutionPlanNode::action("json:expect:empty")
-              .add(ExecutionPlanNode::value_node("ARRAY"))
-              .add(ExecutionPlanNode::resolve_current_value(path))
-          );
-        } else {
-          root_node.add(
-            ExecutionPlanNode::action("json:match:length")
-              .add(ExecutionPlanNode::value_node("ARRAY"))
-              .add(ExecutionPlanNode::value_node(items.len()))
-              .add(ExecutionPlanNode::resolve_current_value(path))
-          );
-
-          for (index, item) in items.iter().enumerate() {
-            let item_path = path.join_index(index);
-            let mut item_node = ExecutionPlanNode::container(&item_path);
-            match item {
-              Value::Array(_) => Self::process_body_node(context, item, &item_path, &mut item_node),
-              Value::Object(_) => Self::process_body_node(context, item, &item_path, &mut item_node),
-              _ => {
-                let mut presence_check = ExecutionPlanNode::action("if");
-                presence_check
-                  .add(
-                    ExecutionPlanNode::action("check:exists")
-                      .add(ExecutionPlanNode::resolve_current_value(&item_path))
-                  );
-                let matchers = context.select_best_matcher(&item_path)
-                  .and_rules(&context.select_best_matcher(&rewritten_path))
-                  .remove_duplicates();
-                if !matchers.is_empty() {
-                  let matchers = context.select_best_matcher(&item_path);
-                  presence_check.add(ExecutionPlanNode::annotation(format!("[{}] {}", index, matchers.generate_description(false))));
-                  presence_check.add(build_matching_rule_node(&ExecutionPlanNode::value_node(item),
-                                                              &ExecutionPlanNode::resolve_current_value(&item_path), &matchers, false));
-                } else {
-                  presence_check.add(
-                    ExecutionPlanNode::action("match:equality")
-                      .add(ExecutionPlanNode::value_node(NodeValue::NAMESPACED("json".to_string(), item.to_string())))
-                      .add(ExecutionPlanNode::resolve_current_value(&item_path))
-                      .add(ExecutionPlanNode::value_node(NodeValue::NULL))
-                  );
-                }
-                presence_check.add(
-                  ExecutionPlanNode::action("error")
-                    .add(ExecutionPlanNode::value_node(format!("Expected a value for '{}' but it was missing",
-                                                               item_path.as_json_pointer().unwrap())))
-                );
-                item_node.add(presence_check);
-                root_node.add(item_node);
-              }
-            }
-          }
-        }
+        Self::process_array(context, json, path, root_node, &rewritten_path, items);
       }
       Value::Object(entries) => {
-        let rules = context.select_best_matcher(&path)
-          .and_rules(&context.select_best_matcher(&rewritten_path))
-          .remove_duplicates();
-        if !rules.is_empty() && should_apply_to_map_entries(&rules) {
-          root_node.add(ExecutionPlanNode::annotation(rules.generate_description(true)));
-          root_node.add(build_matching_rule_node(&ExecutionPlanNode::value_node(json.clone()),
-                                                 &ExecutionPlanNode::resolve_current_value(path), &rules, true));
-        } else if entries.is_empty() {
-          root_node.add(
-            ExecutionPlanNode::action("json:expect:empty")
-              .add(ExecutionPlanNode::value_node("OBJECT"))
-              .add(ExecutionPlanNode::resolve_current_value(path))
-          );
-        } else {
-          let keys = NodeValue::SLIST(entries.keys().map(|key| key.clone()).collect());
-          root_node.add(
-            ExecutionPlanNode::action("json:expect:entries")
-              .add(ExecutionPlanNode::value_node("OBJECT"))
-              .add(ExecutionPlanNode::value_node(keys.clone()))
-              .add(ExecutionPlanNode::resolve_current_value(path))
-          );
-          if !context.config.allow_unexpected_entries {
-            root_node.add(
-              ExecutionPlanNode::action("expect:only-entries")
-                .add(ExecutionPlanNode::value_node(keys.clone()))
-                .add(ExecutionPlanNode::resolve_current_value(path))
-            );
-          } else {
-            root_node.add(
-              ExecutionPlanNode::action("json:expect:not-empty")
-                .add(ExecutionPlanNode::value_node("OBJECT"))
-                .add(ExecutionPlanNode::resolve_current_value(path))
-            );
-          }
-        }
-
-        for (key, value) in entries {
-          let mut item_path = path.clone();
-          item_path.push_field(key);
-          let mut item_node = ExecutionPlanNode::container(&item_path);
-          Self::process_body_node(context, value, &item_path, &mut item_node);
-          root_node.add(item_node);
-        }
+        Self::process_object(context, json, path, root_node, &rewritten_path, entries);
       }
       _ => {
         let matchers = context.select_best_matcher(&path)
@@ -198,6 +53,174 @@ impl JsonPlanBuilder {
             .add(ExecutionPlanNode::resolve_current_value(path))
             .add(ExecutionPlanNode::value_node(NodeValue::NULL));
           root_node.add(match_node);
+        }
+      }
+    }
+  }
+
+  fn process_object(
+    context: &PlanMatchingContext,
+    json: &Value,
+    path: &DocPath,
+    root_node: &mut ExecutionPlanNode,
+    rewritten_path: &DocPath,
+    entries: &Map<String, Value>
+  ) {
+    let rules = context.select_best_matcher(&path)
+      .and_rules(&context.select_best_matcher(&rewritten_path))
+      .remove_duplicates();
+    if !rules.is_empty() && should_apply_to_map_entries(&rules) {
+      root_node.add(ExecutionPlanNode::annotation(rules.generate_description(true)));
+      root_node.add(build_matching_rule_node(&ExecutionPlanNode::value_node(json.clone()),
+        &ExecutionPlanNode::resolve_current_value(path), &rules, true));
+    } else if entries.is_empty() {
+      root_node.add(
+        ExecutionPlanNode::action("json:expect:empty")
+          .add(ExecutionPlanNode::value_node("OBJECT"))
+          .add(ExecutionPlanNode::resolve_current_value(path))
+      );
+    } else {
+      let keys = NodeValue::SLIST(entries.keys().map(|key| key.clone()).collect());
+      root_node.add(
+        ExecutionPlanNode::action("json:expect:entries")
+          .add(ExecutionPlanNode::value_node("OBJECT"))
+          .add(ExecutionPlanNode::value_node(keys.clone()))
+          .add(ExecutionPlanNode::resolve_current_value(path))
+      );
+      if !context.config.allow_unexpected_entries {
+        root_node.add(
+          ExecutionPlanNode::action("expect:only-entries")
+            .add(ExecutionPlanNode::value_node(keys.clone()))
+            .add(ExecutionPlanNode::resolve_current_value(path))
+        );
+      } else {
+        root_node.add(
+          ExecutionPlanNode::action("json:expect:not-empty")
+            .add(ExecutionPlanNode::value_node("OBJECT"))
+            .add(ExecutionPlanNode::resolve_current_value(path))
+        );
+      }
+    }
+
+    for (key, value) in entries {
+      let mut item_path = path.clone();
+      item_path.push_field(key);
+      let mut item_node = ExecutionPlanNode::container(&item_path);
+      Self::process_body_node(context, value, &item_path, &mut item_node);
+      root_node.add(item_node);
+    }
+  }
+
+  fn process_array(
+    context: &PlanMatchingContext,
+    json: &Value,
+    path: &DocPath,
+    root_node: &mut ExecutionPlanNode,
+    rewritten_path: &DocPath,
+    items: &Vec<Value>
+  ) {
+    let filtered_path = remove_marker(path);
+    if context.matcher_is_defined(&filtered_path) {
+      let matchers = context.select_best_matcher(&filtered_path);
+      root_node.add(ExecutionPlanNode::annotation(format!("{} {}",
+        path.last_field().unwrap_or_default(),
+        matchers.generate_description(true))));
+      root_node.add(build_matching_rule_node(&ExecutionPlanNode::value_node(json.clone()),
+        &ExecutionPlanNode::resolve_current_value(path), &matchers, true));
+
+      if let Some(template) = items.first() {
+        let mut for_each_node = ExecutionPlanNode::action("for-each");
+        let marker = format!("{}*", path.last_field().unwrap_or_default());
+        for_each_node.add(ExecutionPlanNode::value_node(marker.as_str()));
+        let item_path = path.parent()
+          .unwrap_or_else(|| path.clone())
+          .join_field(marker);
+        for_each_node.add(ExecutionPlanNode::resolve_current_value(path));
+        let mut item_node = ExecutionPlanNode::container(&item_path);
+        match template {
+          Value::Array(_) => Self::process_body_node(context, template, &item_path, &mut item_node),
+          Value::Object(_) => Self::process_body_node(context, template, &item_path, &mut item_node),
+          _ => {
+            let mut presence_check = ExecutionPlanNode::action("if");
+            presence_check
+              .add(
+                ExecutionPlanNode::action("check:exists")
+                  .add(ExecutionPlanNode::resolve_current_value(&item_path))
+              );
+
+            let matchers = context.select_best_matcher(&item_path)
+              .and_rules(&context.select_best_matcher(&rewritten_path))
+              .remove_duplicates();
+            if !matchers.is_empty() {
+              let matchers = context.select_best_matcher(&item_path);
+              presence_check.add(ExecutionPlanNode::annotation(format!("[*] {}", matchers.generate_description(false))));
+              presence_check.add(build_matching_rule_node(&ExecutionPlanNode::value_node(template),
+                                                          &ExecutionPlanNode::resolve_current_value(&item_path), &matchers, false));
+            } else {
+              presence_check.add(
+                ExecutionPlanNode::action("match:equality")
+                  .add(ExecutionPlanNode::value_node(NodeValue::NAMESPACED("json".to_string(), template.to_string())))
+                  .add(ExecutionPlanNode::resolve_current_value(&item_path))
+                  .add(ExecutionPlanNode::value_node(NodeValue::NULL))
+              );
+            }
+            item_node.add(presence_check);
+          }
+        }
+        for_each_node.add(item_node);
+        root_node.add(for_each_node);
+      }
+    } else if items.is_empty() {
+      root_node.add(
+        ExecutionPlanNode::action("json:expect:empty")
+          .add(ExecutionPlanNode::value_node("ARRAY"))
+          .add(ExecutionPlanNode::resolve_current_value(path))
+      );
+    } else {
+      root_node.add(
+        ExecutionPlanNode::action("json:match:length")
+          .add(ExecutionPlanNode::value_node("ARRAY"))
+          .add(ExecutionPlanNode::value_node(items.len()))
+          .add(ExecutionPlanNode::resolve_current_value(path))
+      );
+
+      for (index, item) in items.iter().enumerate() {
+        let item_path = path.join_index(index);
+        let mut item_node = ExecutionPlanNode::container(&item_path);
+        match item {
+          Value::Array(_) => Self::process_body_node(context, item, &item_path, &mut item_node),
+          Value::Object(_) => Self::process_body_node(context, item, &item_path, &mut item_node),
+          _ => {
+            let mut presence_check = ExecutionPlanNode::action("if");
+            presence_check
+              .add(
+                ExecutionPlanNode::action("check:exists")
+                  .add(ExecutionPlanNode::resolve_current_value(&item_path))
+              );
+            let matchers = context.select_best_matcher(&item_path)
+              .and_rules(&context.select_best_matcher(&rewritten_path))
+              .remove_duplicates();
+            if !matchers.is_empty() {
+              let matchers = context.select_best_matcher(&item_path);
+              presence_check.add(ExecutionPlanNode::annotation(format!("[{}] {}", index, matchers.generate_description(false))));
+              presence_check.add(build_matching_rule_node(&ExecutionPlanNode::value_node(item),
+                                                          &ExecutionPlanNode::resolve_current_value(&item_path), &matchers, false));
+            } else {
+              presence_check.add(
+                ExecutionPlanNode::action("match:equality")
+                  .add(ExecutionPlanNode::value_node(NodeValue::NAMESPACED("json".to_string(), item.to_string())))
+                  .add(ExecutionPlanNode::resolve_current_value(&item_path))
+                  .add(ExecutionPlanNode::value_node(NodeValue::NULL))
+              );
+            }
+            presence_check.add(
+              ExecutionPlanNode::action("error")
+                .add(ExecutionPlanNode::value_node(format!("Expected a value for '{}' but it was missing",
+                                                           item_path.as_json_pointer().unwrap())))
+            );
+            item_node.add(presence_check);
+            root_node.add(item_node);
+          }
         }
       }
     }
