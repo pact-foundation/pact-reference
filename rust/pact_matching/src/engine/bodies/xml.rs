@@ -130,9 +130,10 @@ impl XMLPlanBuilder {
         }
 
         let mut for_each_node = ExecutionPlanNode::action("for-each");
-        for_each_node.add(ExecutionPlanNode::value_node(format!("{}*", child_name)));
+        let marker = format!("{}*", child_name);
+        for_each_node.add(ExecutionPlanNode::value_node(marker.as_str()));
         for_each_node.add(ExecutionPlanNode::resolve_current_value(&p));
-        let item_path = p.join("[*]");
+        let item_path = path.join(marker.as_str());
 
         self.process_element(context, elements[0], Some(0), &item_path, &mut for_each_node);
 
@@ -151,7 +152,7 @@ impl XMLPlanBuilder {
     let text_nodes = text_nodes(element);
     let p = path.join("#text");
     let no_markers = remove_marker(&p);
-    let no_indices = drop_indices(&p);
+    let no_indices = drop_indices(&no_markers);
     let matchers = context.select_best_matcher_from(&no_markers, &no_indices)
       .filter(|matcher| !matcher.is_type_matcher())
       .remove_duplicates();
@@ -288,12 +289,12 @@ impl PlanBodyBuilder for XMLPlanBuilder {
 mod tests {
   use bytes::Bytes;
   use pretty_assertions::assert_eq;
-
+  use pact_models::matchingrules;
+  use pact_models::matchingrules::MatchingRule;
   use crate::engine::bodies::{PlanBodyBuilder, XMLPlanBuilder};
   use crate::engine::context::{MatchingConfiguration, PlanMatchingContext};
 
-  #[test]
-  #[cfg(feature = "xml")]
+  #[test_log::test]
   fn xml_plan_builder_with_very_simple_xml() {
     let builder = XMLPlanBuilder::new();
     let context = PlanMatchingContext::default();
@@ -331,8 +332,7 @@ mod tests {
 )"#, buffer);
   }
 
-  #[test]
-  #[cfg(feature = "xml")]
+  #[test_log::test]
   fn xml_plan_builder_with_allowed_unexpected_values() {
     let builder = XMLPlanBuilder::new();
     let context = PlanMatchingContext {
@@ -373,8 +373,7 @@ mod tests {
 )"#, buffer);
   }
 
-  #[test]
-  #[cfg(feature = "xml")]
+  #[test_log::test]
   fn xml_plan_builder_with_simple_xml() {
     let builder = XMLPlanBuilder::new();
     let context = PlanMatchingContext::default();
@@ -634,6 +633,246 @@ mod tests {
       ),
       %error (
         'Was expecting an XML element /config but it was missing'
+      )
+    )
+  )
+)"#, buffer);
+  }
+
+  #[test_log::test]
+  fn matching_rule_on_element_text() {
+    let builder = XMLPlanBuilder::new();
+    let matching_rules = matchingrules! {
+      "body" => { "$.values.value" => [ MatchingRule::Regex("\\d+".to_string()) ] }
+    };
+    let context = PlanMatchingContext {
+      matching_rules: matching_rules.rules_for_category("body").unwrap_or_default(),
+      .. PlanMatchingContext::default()
+    };
+    let xml = r#"<?xml version="1.0" encoding="UTF-8"?> <values><value>100</value></values>"#;
+    let content = Bytes::copy_from_slice(xml.as_bytes());
+    let node = builder.build_plan(&content, &context).unwrap();
+    let mut buffer = String::new();
+    node.pretty_form(&mut buffer, 0);
+
+    assert_eq!(r#"%tee (
+  %xml:parse (
+    $.body
+  ),
+  :$ (
+    %if (
+      %check:exists (
+        ~>$.values
+      ),
+      :$.values (
+        :#text (
+          %expect:empty (
+            %to-string (
+              ~>$.values['#text']
+            )
+          )
+        ),
+        %expect:only-entries (
+          ['value'],
+          ~>$.values
+        ),
+        %expect:count (
+          UINT(1),
+          ~>$.values.value,
+          %join (
+            'Expected 1 <value> child element but there were ',
+            %length (
+              ~>$.values.value
+            )
+          )
+        ),
+        %if (
+          %check:exists (
+            ~>$.values.value[0]
+          ),
+          :$.values.value[0] (
+            :#text (
+              #{'#text must match the regular expression /\\d+/'},
+              %match:regex (
+                '100',
+                %to-string (
+                  ~>$.values.value[0]['#text']
+                ),
+                json:{"regex":"\\d+"}
+              )
+            ),
+            %expect:empty (
+              ~>$.values.value[0]
+            )
+          ),
+          %error (
+            'Was expecting an XML element /values/value/0 but it was missing'
+          )
+        )
+      ),
+      %error (
+        'Was expecting an XML element /values but it was missing'
+      )
+    )
+  )
+)"#, buffer);
+  }
+
+  #[test_log::test]
+  fn matching_rule_on_attribute() {
+    let builder = XMLPlanBuilder::new();
+    let matching_rules = matchingrules! {
+      "body" => { "$.value.@id" => [ MatchingRule::Regex("\\d+".to_string()) ] }
+    };
+    let context = PlanMatchingContext {
+      matching_rules: matching_rules.rules_for_category("body").unwrap_or_default(),
+      .. PlanMatchingContext::default()
+    };
+    let xml = r#"<?xml version="1.0" encoding="UTF-8"?> <value id="100"/>"#;
+    let content = Bytes::copy_from_slice(xml.as_bytes());
+    let node = builder.build_plan(&content, &context).unwrap();
+    let mut buffer = String::new();
+    node.pretty_form(&mut buffer, 0);
+
+    assert_eq!(r#"%tee (
+  %xml:parse (
+    $.body
+  ),
+  :$ (
+    %if (
+      %check:exists (
+        ~>$.value
+      ),
+      :$.value (
+        :attributes (
+          :$.value['@id'] (
+            #{'@id must match the regular expression /\\d+/'},
+            %if (
+              %check:exists (
+                ~>$.value['@id']
+              ),
+              %match:regex (
+                '100',
+                %xml:value (
+                  ~>$.value['@id']
+                ),
+                json:{"regex":"\\d+"}
+              )
+            )
+          ),
+          %expect:entries (
+            ['id'],
+            %xml:attributes (
+              ~>$.value
+            ),
+            %join (
+              'The following expected attributes were missing: ',
+              %join-with (
+                ', ',
+                ** (
+                  %apply ()
+                )
+              )
+            )
+          ),
+          %expect:only-entries (
+            ['id'],
+            %xml:attributes (
+              ~>$.value
+            )
+          )
+        ),
+        :#text (
+          %expect:empty (
+            %to-string (
+              ~>$.value['#text']
+            )
+          )
+        ),
+        %expect:empty (
+          ~>$.value
+        )
+      ),
+      %error (
+        'Was expecting an XML element /value but it was missing'
+      )
+    )
+  )
+)"#, buffer);
+  }
+
+  #[test_log::test]
+  fn type_matching_rule_on_element() {
+    let builder = XMLPlanBuilder::new();
+    let matching_rules = matchingrules! {
+      "body" => { "$.values" => [ MatchingRule::MinType(2) ] }
+    };
+    let context = PlanMatchingContext {
+      matching_rules: matching_rules.rules_for_category("body").unwrap_or_default(),
+      .. PlanMatchingContext::default()
+    };
+    let xml = r#"<?xml version="1.0" encoding="UTF-8"?> <values><value>100</value><value>300</value></values>"#;
+    let content = Bytes::copy_from_slice(xml.as_bytes());
+    let node = builder.build_plan(&content, &context).unwrap();
+    let mut buffer = String::new();
+    node.pretty_form(&mut buffer, 0);
+
+    assert_eq!(r#"%tee (
+  %xml:parse (
+    $.body
+  ),
+  :$ (
+    %if (
+      %check:exists (
+        ~>$.values
+      ),
+      :$.values (
+        :#text (
+          %expect:empty (
+            %to-string (
+              ~>$.values['#text']
+            )
+          )
+        ),
+        %expect:only-entries (
+          ['value'],
+          ~>$.values
+        ),
+        #{'value must match by type and have at least 2 items'},
+        %match:min-type (
+          xml:'<value>100</value>',
+          ~>$.values.value,
+          json:{"min":2}
+        ),
+        %for-each (
+          'value*',
+          ~>$.values.value,
+          %if (
+            %check:exists (
+              ~>$.values['value*']
+            ),
+            :$.values['value*'] (
+              :#text (
+                %match:equality (
+                  '100',
+                  %to-string (
+                    ~>$.values['value*']['#text']
+                  ),
+                  NULL
+                )
+              ),
+              %expect:empty (
+                ~>$.values['value*']
+              )
+            ),
+            %error (
+              'Was expecting an XML element /values/value* but it was missing'
+            )
+          )
+        )
+      ),
+      %error (
+        'Was expecting an XML element /values but it was missing'
       )
     )
   )
