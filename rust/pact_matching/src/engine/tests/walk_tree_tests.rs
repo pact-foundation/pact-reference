@@ -4,7 +4,9 @@ use tracing::trace;
 use pact_models::path_exp::DocPath;
 use pretty_assertions::assert_eq;
 
-use crate::engine::bodies::{JsonPlanBuilder, PlanBodyBuilder, XMLPlanBuilder};
+use crate::engine::bodies::PlanBodyBuilder;
+use crate::engine::bodies::json::JsonPlanBuilder;
+use crate::engine::bodies::xml::XMLPlanBuilder;
 use crate::engine::context::PlanMatchingContext;
 use crate::engine::NodeValue;
 use crate::engine::value_resolvers::ValueResolver;
