@@ -373,16 +373,22 @@ async fn verify_response_from_provider<F: RequestFilterExecutor>(
   });
   match make_provider_request(provider, &request, options, client, transport).await {
     Ok(ref actual_response) => {
-      let mismatches = match_response(expected_response.clone(), actual_response.clone(), pact, &interaction.boxed()).await;
-      if mismatches.is_empty() {
-        Ok(interaction.id.clone())
-      } else {
-        Err(MismatchResult::Mismatches {
-          mismatches,
-          expected: Box::new(interaction.clone()),
-          actual: Box::new(SynchronousHttp { response: actual_response.clone(), .. SynchronousHttp::default() }),
-          interaction_id: interaction.id.clone()
-        })
+      match match_response(expected_response.clone(), actual_response.clone(), pact, &interaction.boxed()).await {
+        Ok(mismatches) => {
+          if mismatches.is_empty() {
+            Ok(interaction.id.clone())
+          } else {
+            Err(MismatchResult::Mismatches {
+              mismatches,
+              expected: Box::new(interaction.clone()),
+              actual: Box::new(SynchronousHttp { response: actual_response.clone(), .. SynchronousHttp::default() }),
+              interaction_id: interaction.id.clone()
+            })
+          }
+        }
+        Err(err) => {
+          Err(MismatchResult::Error(err.to_string(), interaction.id.clone()))
+        }
       }
     },
     Err(err) => {
