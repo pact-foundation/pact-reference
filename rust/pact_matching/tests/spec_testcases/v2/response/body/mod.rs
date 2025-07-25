@@ -1874,7 +1874,7 @@ async fn array_with_regex_matcher_xml() {
             "$.body.myDates": {
               "match": "type"
             },
-            "$.body.myDates[*].date['#text']" : {
+            "$.body.myDates.date['#text']" : {
               "match": "regex", "regex" : "\\d{2}/\\d{2}/\\d{4}"
             }
           }
