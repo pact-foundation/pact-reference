@@ -164,28 +164,29 @@ impl XMLPlanBuilder {
     let no_markers = remove_marker(&p);
     let no_indices = drop_indices(&no_markers);
     let matchers = context.select_best_matcher_from(&no_markers, &no_indices)
-      .filter(|matcher| !matcher.is_type_matcher())
       .remove_duplicates();
-    if !matchers.is_empty() {
-      node.add(ExecutionPlanNode::annotation(format!("{} {}", p.last_field().unwrap_or_default(),
-        matchers.generate_description(false))));
-      let mut current_value = ExecutionPlanNode::action("to-string");
-      current_value.add(ExecutionPlanNode::resolve_current_value(&p));
-      node.add(build_matching_rule_node(&ExecutionPlanNode::value_node(text_nodes.join("")),
-        &current_value, &matchers, false));
-    } else {
-      if text_nodes.is_empty() {
-        node.add(ExecutionPlanNode::action("expect:empty")
-          .add(ExecutionPlanNode::action("to-string")
-            .add(ExecutionPlanNode::resolve_current_value(&p))));
+    if !matchers.type_matcher_defined() {
+      if !matchers.is_empty() {
+        node.add(ExecutionPlanNode::annotation(format!("{} {}", p.last_field().unwrap_or_default(),
+                                                       matchers.generate_description(false))));
+        let mut current_value = ExecutionPlanNode::action("to-string");
+        current_value.add(ExecutionPlanNode::resolve_current_value(&p));
+        node.add(build_matching_rule_node(&ExecutionPlanNode::value_node(text_nodes.join("")),
+                                          &current_value, &matchers, false));
       } else {
-        let mut match_node = ExecutionPlanNode::action("match:equality");
-        match_node
-          .add(ExecutionPlanNode::value_node(NodeValue::STRING(text_nodes.join(""))))
-          .add(ExecutionPlanNode::action("to-string")
-            .add(ExecutionPlanNode::resolve_current_value(&p)))
-          .add(ExecutionPlanNode::value_node(NodeValue::NULL));
-        node.add(match_node);
+        if text_nodes.is_empty() {
+          node.add(ExecutionPlanNode::action("expect:empty")
+            .add(ExecutionPlanNode::action("to-string")
+              .add(ExecutionPlanNode::resolve_current_value(&p))));
+        } else {
+          let mut match_node = ExecutionPlanNode::action("match:equality");
+          match_node
+            .add(ExecutionPlanNode::value_node(NodeValue::STRING(text_nodes.join(""))))
+            .add(ExecutionPlanNode::action("to-string")
+              .add(ExecutionPlanNode::resolve_current_value(&p)))
+            .add(ExecutionPlanNode::value_node(NodeValue::NULL));
+          node.add(match_node);
+        }
       }
     }
   }
@@ -837,13 +838,7 @@ mod tests {
         ~>$.values
       ),
       :$.values (
-        :#text (
-          %expect:empty (
-            %to-string (
-              ~>$.values['#text']
-            )
-          )
-        ),
+        :#text (),
         %expect:only-entries (
           ['value'],
           ~>$.values
@@ -862,15 +857,7 @@ mod tests {
               ~>$.values['value*']
             ),
             :$.values['value*'] (
-              :#text (
-                %match:equality (
-                  '100',
-                  %to-string (
-                    ~>$.values['value*']['#text']
-                  ),
-                  NULL
-                )
-              ),
+              :#text (),
               %expect:empty (
                 ~>$.values['value*']
               )
