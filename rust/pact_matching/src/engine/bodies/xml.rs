@@ -78,7 +78,12 @@ impl XMLPlanBuilder {
   ) {
     let children = group_children(element);
 
-    if !context.config.allow_unexpected_entries {
+    let no_markers = remove_marker(&path);
+    let no_indices = drop_indices(&no_markers);
+    let matchers = context.select_best_matcher_from(&no_markers, &no_indices)
+      .filter(|matcher| matcher.is_type_matcher())
+      .remove_duplicates();
+    if !context.config.allow_unexpected_entries || !matchers.is_empty() {
       if element.child_elements().next().is_none() {
         parent_node.add(
           ExecutionPlanNode::action("expect:empty")
