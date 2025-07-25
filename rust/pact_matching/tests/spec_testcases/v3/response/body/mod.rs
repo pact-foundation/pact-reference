@@ -2682,7 +2682,7 @@ async fn unexpected_xml_namespace() {
     #[allow(unused_mut)]
     let mut pact: serde_json::Value = serde_json::from_str(r#"
       {
-        "match": false,
+        "match": true,
         "comment": "XML namespaces not expected",
         "expected" : {
           "headers": {"Content-Type": "application/xml"},

@@ -1,11 +1,11 @@
 use std::collections::btree_map::{BTreeMap, Entry};
-
+use std::collections::HashMap;
 use anyhow::anyhow;
 use bytes::Bytes;
 use itertools::{EitherOrBoth, Itertools};
 use maplit::*;
 use onig::Regex;
-use sxd_document::dom::*;
+use sxd_document::dom::Element;
 use sxd_document::QName;
 
 use pact_models::bodies::OptionalBody;
@@ -394,6 +394,34 @@ fn compare_value(
       }
     }).collect()
   })
+}
+
+/// Returns all the attributes with the namespaces resolved
+pub fn resolve_attr_namespaces(element: &kiss_xml::dom::Element) -> HashMap<String, String> {
+  let namespaces: HashMap<_, _> = element.attributes().iter()
+    .filter_map(|(key, value)| if key.starts_with("xmlns:") {
+      Some((key.strip_prefix("xmlns:").unwrap(), value.as_str()))
+    } else {
+      None
+    }).collect();
+  if namespaces.is_empty() {
+    element.attributes().iter()
+      .map(|(k, v)| (k.clone(), v.clone()))
+      .collect()
+  } else {
+    element.attributes().iter()
+      .map(|(k, v)| {
+        if let Some((ns, attr)) = k.split_once(':') {
+          if let Some(name) = namespaces.get(ns) {
+            (format!("{}:{}", *name, attr), v.clone())
+          } else {
+            (k.clone(), v.clone())
+          }
+        } else {
+          (k.clone(), v.clone())
+        }
+      }).collect()
+  }
 }
 
 #[cfg(test)]

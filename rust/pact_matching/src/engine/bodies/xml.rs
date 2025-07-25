@@ -11,6 +11,7 @@ use crate::engine::{build_matching_rule_node, ExecutionPlanNode, NodeValue};
 use crate::engine::bodies::{drop_indices, PlanBodyBuilder, remove_marker};
 use crate::engine::context::PlanMatchingContext;
 use crate::engine::xml::name;
+use crate::xml::resolve_attr_namespaces;
 
 /// Plan builder for XML bodies
 #[derive(Clone, Debug)]
@@ -107,19 +108,21 @@ impl XMLPlanBuilder {
         .filter(|matcher| matcher.is_type_matcher())
         .remove_duplicates();
       if matchers.is_empty() {
-        parent_node.add(
-          ExecutionPlanNode::action("expect:count")
-            .add(ExecutionPlanNode::value_node(NodeValue::UINT(elements.len() as u64)))
-            .add(ExecutionPlanNode::resolve_current_value(p.clone()))
-            .add(
-              ExecutionPlanNode::action("join")
-                .add(ExecutionPlanNode::value_node(
-                  format!("Expected {} <{}> child element{} but there were ",
-                          elements.len(), child_name.as_str(), if elements.len() > 1 { "s" } else { "" })))
-                .add(ExecutionPlanNode::action("length")
-                  .add(ExecutionPlanNode::resolve_current_value(p.clone())))
-            )
-        );
+        if !context.config.allow_unexpected_entries {
+          parent_node.add(
+            ExecutionPlanNode::action("expect:count")
+              .add(ExecutionPlanNode::value_node(NodeValue::UINT(elements.len() as u64)))
+              .add(ExecutionPlanNode::resolve_current_value(p.clone()))
+              .add(
+                ExecutionPlanNode::action("join")
+                  .add(ExecutionPlanNode::value_node(
+                    format!("Expected {} <{}> child element{} but there were ",
+                            elements.len(), child_name.as_str(), if elements.len() > 1 { "s" } else { "" })))
+                  .add(ExecutionPlanNode::action("length")
+                    .add(ExecutionPlanNode::resolve_current_value(p.clone())))
+              )
+          );
+        }
 
         if elements.len() == 1 {
           self.process_element(context, elements[0], Some(0), path, parent_node);
@@ -198,8 +201,12 @@ impl XMLPlanBuilder {
     node: &mut ExecutionPlanNode,
     context: &PlanMatchingContext
   ) {
-    let attributes = element.attributes();
-    let keys = attributes.keys().cloned().sorted().collect_vec();
+    let attributes = resolve_attr_namespaces(element);
+    let keys = attributes.keys()
+      .filter(|key| key.as_str() != "xmlns" && !key.starts_with("xmlns:"))
+      .cloned()
+      .sorted()
+      .collect_vec();
     for key in &keys {
       let p = path.join_field(format!("@{}", key));
       let value = attributes.get(key).unwrap();

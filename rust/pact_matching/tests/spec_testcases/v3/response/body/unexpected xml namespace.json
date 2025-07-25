@@ -1,5 +1,5 @@
 {
-  "match": false,
+  "match": true,
   "comment": "XML namespaces not expected",
   "expected" : {
     "headers": {"Content-Type": "application/xml"},

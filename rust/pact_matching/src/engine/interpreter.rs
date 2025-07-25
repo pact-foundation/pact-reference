@@ -1,6 +1,6 @@
 //! This module provides the interpreter that can execute a matching plan AST
 
-use std::collections::{HashSet, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::iter::once;
 
 use anyhow::anyhow;
@@ -19,6 +19,7 @@ use crate::engine::value_resolvers::ValueResolver;
 use crate::headers::{parse_charset_parameters, strip_whitespace};
 use crate::json::type_of;
 use crate::matchers::Matches;
+use crate::xml::resolve_attr_namespaces;
 
 /// Main interpreter for the matching plan AST
 #[derive(Debug)]
@@ -769,9 +770,12 @@ impl ExecutionPlanInterpreter {
           match value {
             NodeValue::XML(xml) => match xml {
               XmlValue::Attribute(name, value) => Ok(NodeResult::VALUE(NodeValue::ENTRY(name.clone(), Box::new(NodeValue::STRING(value.clone()))))),
-              XmlValue::Element(element) => Ok(NodeResult::VALUE(NodeValue::MMAP(element.attributes().iter()
-                .map(|(k, v)| (k.clone(), vec![v.clone()]))
-                .collect()))),
+              XmlValue::Element(element) => {
+                let attributes = resolve_attr_namespaces(element);
+                Ok(NodeResult::VALUE(NodeValue::MMAP(attributes.iter()
+                  .map(|(k, v)| (k.clone(), vec![v.clone()]))
+                  .collect())))
+              },
               _ => Err(anyhow!("xml:attributes can not be used with {}", xml))
             }
             _ => Err(anyhow!("xml:attributes can not be used with {}", value.value_type()))

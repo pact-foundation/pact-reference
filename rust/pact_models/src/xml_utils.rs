@@ -1,6 +1,6 @@
 //! Collection of utilities for working with XML
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::ops::Index;
 use std::str;
 use anyhow::anyhow;
@@ -66,10 +66,24 @@ fn query_graph(
     trace!(?token, "next token");
     match token {
       PathToken::Field(name) => {
-        if element.name() == name.as_str() {
+        let matches = if element.name() == name.as_str() {
           trace!(name, %parent_id, "Field name matches element");
-          let node_id = parent_id.append_value(format!("{}[{}]", name, index), tree);
+          Some(parent_id.append_value(format!("{}[{}]", name, index), tree))
+        } else {
+          if let Some(ns) = element.namespace() {
+            let name_with_ns = format!("{}:{}", ns, element.name());
+            if name_with_ns == name.as_str() {
+              trace!(name, %parent_id, "Field name matches element including namespace");
+              Some(parent_id.append_value(format!("{}[{}]", name_with_ns, index), tree))
+            } else {
+              None
+            }
+          } else {
+            None
+          }
+        };
 
+        if let Some(node_id) = matches {
           let remaining_tokens = &path_iter[1..];
           if !remaining_tokens.is_empty() {
             query_attributes(remaining_tokens, tree, node_id, element, index);
@@ -157,12 +171,38 @@ fn query_attributes(
     if let PathToken::Field(name) = token {
       if name.starts_with('@') {
         let attribute_name = &name[1..];
-        if element.attributes().contains_key(attribute_name) {
+        let attributes = resolve_namespaces(element.attributes());
+        if attributes.contains_key(attribute_name) {
           trace!(name, "Field name matches element attribute");
           parent_id.append_value(name.clone(), tree);
         }
       }
     }
+  }
+}
+
+fn resolve_namespaces(attributes: &HashMap<String, String>) -> HashMap<String, String> {
+  let namespaces: HashMap<_, _> = attributes.iter()
+    .filter_map(|(key, value)| if key.starts_with("xmlns:") {
+      Some((key.strip_prefix("xmlns:").unwrap(), value.as_str()))
+    } else {
+      None
+    }).collect();
+  if namespaces.is_empty() {
+    attributes.clone()
+  } else {
+    attributes.iter()
+      .flat_map(|(k, v)| {
+        if let Some((ns, attr)) = k.split_once(':') {
+          if let Some(name) = namespaces.get(ns) {
+            vec![(k.clone(), v.clone()), (format!("{}:{}", *name, attr), v.clone())]
+          } else {
+            vec![(k.clone(), v.clone())]
+          }
+        } else {
+          vec![(k.clone(), v.clone())]
+        }
+      }).collect()
   }
 }
 
@@ -285,6 +325,7 @@ fn match_next(element: &Element, paths: &[&str]) -> Option<XmlResult> {
 #[cfg(test)]
 mod tests {
   use expectest::prelude::*;
+  use maplit::hashmap;
 
   use crate::path_exp::DocPath;
 
@@ -370,6 +411,34 @@ mod tests {
   }
 
   #[test_log::test]
+  fn resolve_path_with_xml_namespaces_test() {
+    let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+      <a:alligator xmlns:a="urn:alligators" xmlns:n="urn:names" n:name="Mary">
+        <a:favouriteNumbers>
+          <favouriteNumber xmlns="urn:favourite:numbers">1</favouriteNumber>
+        </a:favouriteNumbers>
+      </a:alligator>
+      "#;
+    let dom = kiss_xml::parse_str(xml).unwrap();
+    let root = dom.root_element();
+
+    let path = DocPath::root();
+    expect!(resolve_path(root, &path).is_empty()).to(be_true());
+
+    let path = DocPath::new_unwrap("$.alligator");
+    expect!(resolve_path(root, &path)).to(be_equal_to(vec!["/alligator[0]"]));
+
+    let path = DocPath::new_unwrap("$['urn:alligators:alligator']");
+    expect!(resolve_path(root, &path)).to(be_equal_to(vec!["/urn:alligators:alligator[0]"]));
+
+    let path = DocPath::new_unwrap("$['urn:alligators:alligator']['@n:name']");
+    expect!(resolve_path(root, &path)).to(be_equal_to(vec!["/urn:alligators:alligator[0]/@n:name"]));
+
+    let path = DocPath::new_unwrap("$['urn:alligators:alligator']['@urn:names:name']");
+    expect!(resolve_path(root, &path)).to(be_equal_to(vec!["/urn:alligators:alligator[0]/@urn:names:name"]));
+  }
+
+  #[test_log::test]
   fn resolve_matching_node_test() {
     let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
       <config>
@@ -407,5 +476,28 @@ mod tests {
     expect!(resolve_matching_node(root, "/config[0]/name[0]/#text")).to(be_some()
       .value(XmlResult::TextNode("My Settings".to_string())));
     expect!(resolve_matching_node(root, "/config[0]/sound[0]/property[0]/#text")).to(be_none());
+  }
+
+  #[test_log::test]
+  fn resolve_namespaces_test() {
+    expect!(resolve_namespaces(&hashmap!{})).to(be_equal_to(hashmap!{}));
+
+    let attributes = hashmap!{
+      "a".to_string() => "b".to_string(),
+      "c".to_string() => "d".to_string()
+    };
+    expect!(resolve_namespaces(&attributes)).to(be_equal_to(attributes));
+
+    let attributes = hashmap!{
+      "n:name".to_string() => "Mary".to_string(),
+      "xmlns:a".to_string() => "urn:alligators".to_string(),
+      "xmlns:n".to_string() => "urn:names".to_string()
+    };
+    expect!(resolve_namespaces(&attributes)).to(be_equal_to(hashmap!{
+      "n:name".to_string() => "Mary".to_string(),
+      "urn:names:name".to_string() => "Mary".to_string(),
+      "xmlns:a".to_string() => "urn:alligators".to_string(),
+      "xmlns:n".to_string() => "urn:names".to_string()
+    }));
   }
 }
