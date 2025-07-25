@@ -277,7 +277,8 @@ impl ExecutionPlanInterpreter {
         "xml:value" => self.execute_xml_value(action, value_resolver, node, &action_path),
         #[cfg(feature = "xml")]
         "xml:attributes" => self.execute_xml_attributes(action, value_resolver, node, &action_path),
-        "json:expect:empty" => self.execute_json_expect_empty(action, value_resolver, node, &action_path),
+        "json:expect:empty" => self.execute_json_expect_empty(action, value_resolver, node, &action_path, true),
+        "json:expect:not-empty" => self.execute_json_expect_empty(action, value_resolver, node, &action_path, false),
         "json:match:length" => self.execute_json_match_length(action, value_resolver, node, &action_path),
         "json:expect:entries" => self.execute_json_expect_entries(action, value_resolver, node, &action_path),
         "check:exists" => self.execute_check_exists(action, value_resolver, node, &action_path),
@@ -493,7 +494,8 @@ impl ExecutionPlanInterpreter {
     action: &str,
     value_resolver: &dyn ValueResolver,
     node: &ExecutionPlanNode,
-    action_path: &Vec<String>
+    action_path: &Vec<String>,
+    is_empty: bool
   ) -> ExecutionPlanNode {
     match self.validate_two_args(node, action, value_resolver, &action_path) {
       Ok((first_node, second_node)) => {
@@ -519,6 +521,7 @@ impl ExecutionPlanInterpreter {
           }
           Some(value) => value
         };
+
         let json_value = match value {
           NodeValue::JSON(json) => json,
           _ => {
@@ -529,6 +532,7 @@ impl ExecutionPlanInterpreter {
             }
           }
         };
+
         if let Err(err) = json_check_type(expected_json_type, &json_value) {
           return ExecutionPlanNode {
             node_type: node.node_type.clone(),
@@ -536,25 +540,49 @@ impl ExecutionPlanInterpreter {
             children: vec![first_node, second_node]
           }
         };
-        let result = match &json_value {
-          Value::Null => Ok(NodeResult::VALUE(NodeValue::BOOL(true))),
-          Value::String(s) => if s.is_empty() {
-            Ok(NodeResult::VALUE(NodeValue::BOOL(true)))
-          } else {
-            Err(anyhow!("Expected JSON String ({}) to be empty", json_value))
+
+        let result = if is_empty {
+          match &json_value {
+            Value::Null => Ok(NodeResult::VALUE(NodeValue::BOOL(true))),
+            Value::String(s) => if s.is_empty() {
+              Ok(NodeResult::VALUE(NodeValue::BOOL(true)))
+            } else {
+              Err(anyhow!("Expected JSON String ({}) to be empty", json_value))
+            }
+            Value::Array(a) => if a.is_empty() {
+              Ok(NodeResult::VALUE(NodeValue::BOOL(true)))
+            } else {
+              Err(anyhow!("Expected JSON Array ({}) to be empty", json_value))
+            }
+            Value::Object(o) => if o.is_empty() {
+              Ok(NodeResult::VALUE(NodeValue::BOOL(true)))
+            } else {
+              Err(anyhow!("Expected JSON Object ({}) to be empty", json_value))
+            }
+            _ => Err(anyhow!("Expected json ({}) to be empty", json_value))
           }
-          Value::Array(a) => if a.is_empty() {
-            Ok(NodeResult::VALUE(NodeValue::BOOL(true)))
-          } else {
-            Err(anyhow!("Expected JSON Array ({}) to be empty", json_value))
+        } else {
+          match &json_value {
+            Value::Null => Err(anyhow!("Expected JSON value to not be empty but was NULL")),
+            Value::String(s) => if !s.is_empty() {
+              Ok(NodeResult::VALUE(NodeValue::BOOL(true)))
+            } else {
+              Err(anyhow!("Expected JSON String ({}) to not be empty", json_value))
+            }
+            Value::Array(a) => if !a.is_empty() {
+              Ok(NodeResult::VALUE(NodeValue::BOOL(true)))
+            } else {
+              Err(anyhow!("Expected JSON Array ({}) to not be empty", json_value))
+            }
+            Value::Object(o) => if !o.is_empty() {
+              Ok(NodeResult::VALUE(NodeValue::BOOL(true)))
+            } else {
+              Err(anyhow!("Expected JSON Object ({}) to not be empty", json_value))
+            }
+            _ => Ok(NodeResult::VALUE(NodeValue::BOOL(true)))
           }
-          Value::Object(o) => if o.is_empty() {
-            Ok(NodeResult::VALUE(NodeValue::BOOL(true)))
-          } else {
-            Err(anyhow!("Expected JSON Object ({}) to be empty", json_value))
-          }
-          _ => Err(anyhow!("Expected json ({}) to be empty", json_value))
         };
+
         match result {
           Ok(result) => {
             ExecutionPlanNode {

@@ -219,9 +219,10 @@ impl JsonPlanBuilder {
                                                            item_path.as_json_pointer().unwrap())))
             );
             item_node.add(presence_check);
-            root_node.add(item_node);
           }
         }
+
+        root_node.add(item_node);
       }
     }
   }
