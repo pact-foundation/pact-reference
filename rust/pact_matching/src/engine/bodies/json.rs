@@ -45,7 +45,7 @@ impl JsonPlanBuilder {
         if !matchers.is_empty() {
           root_node.add(ExecutionPlanNode::annotation(format!("{} {}", path.last_field().unwrap_or_default(), matchers.generate_description(false))));
           root_node.add(build_matching_rule_node(&ExecutionPlanNode::value_node(json),
-                                                 &ExecutionPlanNode::resolve_current_value(path), &matchers, false));
+            &ExecutionPlanNode::resolve_current_value(path), &matchers, false));
         } else {
           let mut match_node = ExecutionPlanNode::action("match:equality");
           match_node
@@ -130,8 +130,13 @@ impl JsonPlanBuilder {
 
       if let Some(template) = items.first() {
         let mut for_each_node = ExecutionPlanNode::action("for-each");
-        let marker = format!("{}*", path.last_field().unwrap_or_default());
+        let marker = if path.is_root() {
+          "$*".to_string()
+        } else {
+          format!("{}*", path.last_field().unwrap_or_default())
+        };
         for_each_node.add(ExecutionPlanNode::value_node(marker.as_str()));
+
         let item_path = path.parent()
           .unwrap_or_else(|| path.clone())
           .join_field(marker);
