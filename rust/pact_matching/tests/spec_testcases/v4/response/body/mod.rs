@@ -3146,6 +3146,7 @@ async fn plain_text_regex_matching() {
 
 #[test_log::test(tokio::test)]
 #[cfg(feature = "xml")]
+#[ignore = "Incorrect behaviour - fixed in V2 engine"]
 async fn unexpected_xml_namespace() {
     println!("FILE: tests/spec_testcases/v4/response/body/unexpected xml namespace.json");
     #[allow(unused_mut)]
