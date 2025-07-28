@@ -2292,6 +2292,7 @@ dependencies = [
  "env_logger 0.11.8",
  "expectest",
  "futures",
+ "hamcrest2",
  "home",
  "itertools 0.13.0",
  "lazy_static",
