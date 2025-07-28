@@ -346,6 +346,7 @@ impl Default for VerifierHandle {
 #[cfg(test)]
 mod tests {
   use expectest::prelude::*;
+  use hamcrest2::prelude::*;
   use serde_json::Value;
 
   use pact_models::pact::Pact;
@@ -377,6 +378,6 @@ mod tests {
     expect!(handle.verifier_output.result).to(be_false());
     let error: Value = handle.verifier_output.errors[0].clone().1.into();
     let message = error.as_object().unwrap()["message"].as_str().unwrap();
-    expect!(message).to(be_equal_to("error sending request"));
+    assert_that!(message, matches_regex(r"^error sending request"));
   }
 }

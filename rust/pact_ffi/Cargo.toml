@@ -58,6 +58,7 @@ zeroize = "1.8.1"
 
 [dev-dependencies]
 expectest = "0.12.0"
+hamcrest2 = "0.3.0"
 home = "0.5.9"
 pretty_assertions = "1.4.0"
 quickcheck = "1.0.3"
