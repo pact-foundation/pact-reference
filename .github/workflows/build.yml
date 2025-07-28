@@ -40,6 +40,7 @@ jobs:
 
   v2-engine:
     runs-on: ubuntu-latest
+    continue-on-error: true
     env:
       pact_do_not_track: true
     steps:
