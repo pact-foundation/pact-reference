@@ -1,5 +1,11 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.3.5 - Maintenance Release
+
+* e3d23beb - chore(v2-matching-engine): Support XML namespaces with attributes (Ronald Holshausen, Fri Jul 25 15:38:20 2025 +1000)
+* f95f7e35 - chore(v2-matching-engine): Fixes ported over from Pact-JVM (Ronald Holshausen, Wed Jul 23 16:31:50 2025 +1000)
+* d9b2d33a - bump version to 1.3.5 (Ronald Holshausen, Thu Jun 26 09:45:42 2025 +1000)
+
 # 1.3.4 - Bugfix Release
 
 * 72da979e - feat: Allow atLeast and atMost first in expression (tien.xuan.vo, Wed Jun 25 01:22:58 2025 +0700)
