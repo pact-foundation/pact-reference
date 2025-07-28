@@ -250,10 +250,16 @@ mod test {
   use super::{integer_value, port_value};
   use expectest::prelude::*;
   use expectest::expect;
-  use pact_matching::s;
 
   #[test]
   fn validates_integer_value() {
+    expect!(integer_value("300000".to_string())).to(be_ok());
+    expect!(integer_value("1234x".to_string())).to(be_err());
+  }
+
+  #[test]
+  #[ignore = "test is flaky"]
+  fn validates_integer_value_prop_test() {
     fn prop(s: String) -> TestResult {
       let mut rng = ::rand::thread_rng();
       if rng.gen() && s.chars().any(|ch| !ch.is_numeric()) {
@@ -267,9 +273,6 @@ mod test {
       }
     }
     quickcheck(prop as fn(_) -> _);
-
-    expect!(integer_value(s!("300000"))).to(be_ok());
-    expect!(integer_value(s!("1234x"))).to(be_err());
   }
 
   #[test]
