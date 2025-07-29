@@ -1,5 +1,10 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.3.6 - Maintenance Release
+
+* 7d4f5819 - chore(v2-matching-engine): Support root matching rules for bodies (Ronald Holshausen, Tue Jul 29 16:09:29 2025 +1000)
+* 2767ac68 - bump version to 1.3.6 (Ronald Holshausen, Mon Jul 28 10:17:13 2025 +1000)
+
 # 1.3.5 - Maintenance Release
 
 * e3d23beb - chore(v2-matching-engine): Support XML namespaces with attributes (Ronald Holshausen, Fri Jul 25 15:38:20 2025 +1000)
