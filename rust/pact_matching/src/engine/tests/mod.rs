@@ -19,7 +19,8 @@ use crate::engine::{
   execute_response_plan,
   NodeResult,
   NodeValue,
-  PlanMatchingContext
+  PlanMatchingContext,
+  setup_body_plan
 };
 use crate::Mismatch::{self, BodyMismatch, MethodMismatch};
 
@@ -764,4 +765,40 @@ fn match_status_with_matching_rule() -> anyhow::Result<()> {
 "#, executed_plan.pretty_form());
 
   Ok(())
+}
+
+#[test_log::test]
+fn body_with_root_matcher() {
+  let matching_rules = matchingrules! {
+      "body" => { "$" => [ MatchingRule::Regex(".*[0-9]+.*".to_string()) ] }
+    };
+  let mut context = PlanMatchingContext::default();
+  let response = HttpResponse {
+    body: OptionalBody::from("This is a 100+ body"),
+    matching_rules,
+    .. Default::default()
+  };
+  let body_plan = setup_body_plan(&response, &context).unwrap();
+  let mut buffer = String::new();
+  body_plan.pretty_form(&mut buffer, 0);
+  assert_eq!(r#":body (
+  %match:regex (
+    NULL,
+    $.body,
+    json:{"regex":".*[0-9]+.*"}
+  )
+)"#, buffer);
+
+  let plan = body_plan.into();
+  let executed_plan = execute_response_plan(&plan, &response, &mut context).unwrap();
+  assert_eq!(r#"(
+  :body (
+    %match:regex (
+      NULL => NULL,
+      $.body => BYTES(19, VGhpcyBpcyBhIDEwMCsgYm9keQ==),
+      json:{"regex":".*[0-9]+.*"} => json:{"regex":".*[0-9]+.*"}
+    ) => BOOL(true)
+  ) => BOOL(true)
+)
+"#, executed_plan.pretty_form());
 }

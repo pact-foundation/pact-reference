@@ -1,6 +1,6 @@
 //! This module provides the interpreter that can execute a matching plan AST
 
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashSet, VecDeque};
 use std::iter::once;
 
 use anyhow::anyhow;

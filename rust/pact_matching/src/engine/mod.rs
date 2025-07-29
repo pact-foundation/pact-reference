@@ -9,6 +9,7 @@ use ansi_term::Colour::{Green, Red};
 use anyhow::anyhow;
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
+use bytes::Bytes;
 use itertools::Itertools;
 #[cfg(feature = "xml")] use kiss_xml::dom::Element;
 use maplit::hashmap;
@@ -250,6 +251,14 @@ impl NodeValue {
     }
   }
 
+  /// If this value is a byte array, returns it, otherwise returns None
+  pub fn as_bytes(&self) -> Option<&Vec<u8>> {
+    match self {
+      NodeValue::BARRAY(b) => Some(b),
+      _ => None
+    }
+  }
+
   /// Calculates an AND of two values
   pub fn and(&self, other: &Self) -> Self {
     match self {
@@ -386,8 +395,14 @@ impl From<&Element> for NodeValue {
 
 impl Matches<NodeValue> for NodeValue {
   fn matches_with(&self, actual: NodeValue, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
+    self.matches_with(&actual, matcher, cascaded)
+  }
+}
+
+impl Matches<&NodeValue> for NodeValue {
+  fn matches_with(&self, actual: &NodeValue, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
     match self {
-      NodeValue::NULL => Value::Null.matches_with(actual.as_json().unwrap_or_default(), matcher, cascaded),
+      NodeValue::NULL => actual.matches_with(actual, matcher, cascaded),
       NodeValue::STRING(s) => if let Some(actual_str) = actual.as_string() {
         s.matches_with(actual_str, matcher, cascaded)
       } else if let Some(list) = actual.as_slist() {
@@ -425,6 +440,7 @@ impl Matches<NodeValue> for NodeValue {
       } else {
         Err(anyhow!("Was expecting an XML value but got {}", actual))
       },
+      NodeValue::BARRAY(b) => Bytes::new().matches_with(Bytes::copy_from_slice(b.as_slice()), matcher, cascaded),
       _ => Err(anyhow!("Matching rules can not be applied to {} values", self.str_form()))
     }
   }
@@ -1298,6 +1314,22 @@ impl ExecutionPlan {
   }
 }
 
+impl From<ExecutionPlanNode> for ExecutionPlan {
+  fn from(value: ExecutionPlanNode) -> Self {
+    ExecutionPlan {
+      plan_root: value
+    }
+  }
+}
+
+impl From<&ExecutionPlanNode> for ExecutionPlan {
+  fn from(value: &ExecutionPlanNode) -> Self {
+    ExecutionPlan {
+      plan_root: value.clone()
+    }
+  }
+}
+
 impl Into<Vec<Mismatch>> for ExecutionPlan {
   fn into(self) -> Vec<Mismatch> {
     let mut result = vec![];
@@ -1862,35 +1894,49 @@ fn setup_body_plan<T: HttpPart>(
 ) -> anyhow::Result<ExecutionPlanNode> {
   // TODO: Look at the matching rules and generators here
   let mut plan_node = ExecutionPlanNode::container("body");
+  let body_path = DocPath::body();
 
   match &expected.body() {
     OptionalBody::Missing => {}
     OptionalBody::Empty | OptionalBody::Null => {
       plan_node.add(ExecutionPlanNode::action("expect:empty")
-        .add(ExecutionPlanNode::resolve_value(DocPath::new("$.body")?)));
+        .add(ExecutionPlanNode::resolve_value(body_path)));
     }
     OptionalBody::Present(content, _, _) => {
       let content_type = expected.content_type().unwrap_or_else(|| TEXT.clone());
-      let mut content_type_check_node = ExecutionPlanNode::action("if");
-      content_type_check_node
-        .add(
-          ExecutionPlanNode::action("match:equality")
-            .add(ExecutionPlanNode::value_node(content_type.to_string()))
-            .add(ExecutionPlanNode::resolve_value(DocPath::new("$.content-type")?))
-            .add(ExecutionPlanNode::value_node(NodeValue::NULL))
-            .add(
-              ExecutionPlanNode::action("error")
-                .add(ExecutionPlanNode::value_node(NodeValue::STRING("Body type error - ".to_string())))
-                .add(ExecutionPlanNode::action("apply"))
-            )
-        );
-      if let Some(plan_builder) = get_body_plan_builder(&content_type) {
-        content_type_check_node.add(plan_builder.build_plan(content, context)?);
+      let root_matcher = expected.matching_rules()
+        .rules_for_category("body")
+        .map(|category| category.rules.get(&DocPath::root()).cloned())
+        .flatten();
+      if let Some(root_matcher) = root_matcher && root_matcher.can_match(&content_type) {
+        plan_node.add(build_matching_rule_node(
+          &ExecutionPlanNode::value_node(NodeValue::NULL),
+          &ExecutionPlanNode::resolve_value(body_path),
+          &root_matcher,
+          false
+        ));
       } else {
-        let plan_builder = PlainTextBuilder::new();
-        content_type_check_node.add(plan_builder.build_plan(content, context)?);
+        let mut content_type_check_node = ExecutionPlanNode::action("if");
+        content_type_check_node
+          .add(
+            ExecutionPlanNode::action("match:equality")
+              .add(ExecutionPlanNode::value_node(content_type.to_string()))
+              .add(ExecutionPlanNode::resolve_value(DocPath::new("$.content-type")?))
+              .add(ExecutionPlanNode::value_node(NodeValue::NULL))
+              .add(
+                ExecutionPlanNode::action("error")
+                  .add(ExecutionPlanNode::value_node(NodeValue::STRING("Body type error - ".to_string())))
+                  .add(ExecutionPlanNode::action("apply"))
+              )
+          );
+        if let Some(plan_builder) = get_body_plan_builder(&content_type) {
+          content_type_check_node.add(plan_builder.build_plan(content, context)?);
+        } else {
+          let plan_builder = PlainTextBuilder::new();
+          content_type_check_node.add(plan_builder.build_plan(content, context)?);
+        }
+        plan_node.add(content_type_check_node);
       }
-      plan_node.add(content_type_check_node);
     }
   }
 

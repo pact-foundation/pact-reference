@@ -14,6 +14,7 @@ use serde_json::{json, Map, Value};
 use tracing::{error, trace};
 
 use crate::{HttpStatus, PactSpecification};
+use crate::content_types::ContentType;
 use crate::generators::{Generator, GeneratorCategory, Generators};
 use crate::json_utils::{json_to_num, json_to_string};
 use crate::matchingrules::expressions::{MatchingReference, MatchingRuleDefinition, ValueType};
@@ -578,6 +579,19 @@ impl MatchingRule {
       _ => self.clone()
     }
   }
+
+  /// If the matching rule can be applied data in the form of the content type
+  pub fn can_match(&self, content_type: &ContentType) -> bool {
+    match self {
+      MatchingRule::NotEmpty => true,
+      MatchingRule::ArrayContains(_) => true, // why? This is set in Pact-JVM
+      MatchingRule::ContentType(_) => true,
+      MatchingRule::Equality => true,
+      MatchingRule::Include(_) => true,
+      MatchingRule::Regex(_) => content_type.is_text(),
+      _ => false
+    }
+  }
 }
 
 impl Hash for MatchingRule {
@@ -792,6 +806,11 @@ impl RuleList {
       rule_logic: self.rule_logic,
       cascaded: self.cascaded
     }
+  }
+
+  /// If all the matching rules in this list can match data on the form of the content type
+  pub fn can_match(&self, content_type: &ContentType) -> bool {
+    self.rules.iter().all(|rule| rule.can_match(content_type))
   }
 }
 

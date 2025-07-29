@@ -129,6 +129,14 @@ impl DocPath {
     }
   }
 
+  /// Construct a new DocPath for `$.body`
+  pub fn body() -> Self {
+    Self {
+      path_tokens: vec![PathToken::Root, PathToken::Field("body".to_string())],
+      expr: "$.body".into(),
+    }
+  }
+
   /// Construct a new DocPath from a list of tokens
   pub fn from_tokens<I>(tokens: I) -> Self
     where I: IntoIterator<Item = PathToken> {
