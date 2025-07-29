@@ -1,6 +1,6 @@
 [package]
 name = "pact_models"
-version = "1.3.6"
+version = "1.3.7"
 authors = ["Ronald Holshausen <ronald.holshausen@gmail.com>"]
 edition = "2024"
 description = "Pact-Rust support library that provides the core models for dealing with Pact files"
