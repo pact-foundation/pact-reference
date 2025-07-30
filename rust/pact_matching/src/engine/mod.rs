@@ -402,7 +402,11 @@ impl Matches<NodeValue> for NodeValue {
 impl Matches<&NodeValue> for NodeValue {
   fn matches_with(&self, actual: &NodeValue, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
     match self {
-      NodeValue::NULL => actual.matches_with(actual, matcher, cascaded),
+      NodeValue::NULL => if actual == &NodeValue::NULL {
+        "".matches_with("", matcher, cascaded)
+      } else {
+        actual.matches_with(actual, matcher, cascaded)
+      },
       NodeValue::STRING(s) => if let Some(actual_str) = actual.as_string() {
         s.matches_with(actual_str, matcher, cascaded)
       } else if let Some(list) = actual.as_slist() {
