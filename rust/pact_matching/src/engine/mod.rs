@@ -30,8 +30,8 @@ use crate::engine::interpreter::ExecutionPlanInterpreter;
 use crate::engine::value_resolvers::{HttpRequestValueResolver, HttpResponseValueResolver};
 #[cfg(feature = "xml")] use crate::engine::xml::XmlValue;
 use crate::headers::{parse_charset_parameters, strip_whitespace};
-use crate::matchers::Matches;
 use crate::{BodyMatchResult, Mismatch};
+use crate::matchingrules::{DoMatch, value_for_mismatch};
 use crate::Mismatch::{BodyMismatch, HeaderMismatch, QueryMismatch};
 
 mod bodies;
@@ -316,6 +316,17 @@ impl NodeValue {
       _ => vec![ self.clone() ]
     }
   }
+
+  /// Returns the inner value as a string
+  pub fn inner_str(&self) -> String {
+    match self {
+      NodeValue::BOOL(inner) => inner.to_string(),
+      NodeValue::UINT(inner) => inner.to_string(),
+      NodeValue::JSON(inner) => inner.to_string(),
+      NodeValue::XML(inner) => inner.to_string(),
+      _ => self.to_string()
+    }
+  }
 }
 
 impl From<String> for NodeValue {
@@ -345,6 +356,12 @@ impl From<u64> for NodeValue {
 impl From<u16> for NodeValue {
   fn from(value: u16) -> Self {
     NodeValue::UINT(value as u64)
+  }
+}
+
+impl From<bool> for NodeValue {
+  fn from(value: bool) -> Self {
+    NodeValue::BOOL(value)
   }
 }
 
@@ -393,59 +410,135 @@ impl From<&Element> for NodeValue {
   }
 }
 
-impl Matches<NodeValue> for NodeValue {
-  fn matches_with(&self, actual: NodeValue, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
-    self.matches_with(&actual, matcher, cascaded)
-  }
-}
-
-impl Matches<&NodeValue> for NodeValue {
-  fn matches_with(&self, actual: &NodeValue, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
+impl DoMatch<&NodeValue> for MatchingRule {
+  fn match_value(
+    &self,
+    expected_value: &NodeValue,
+    actual_value: &NodeValue,
+    cascaded: bool,
+    show_types: bool
+  ) -> anyhow::Result<()> {
     match self {
-      NodeValue::NULL => if actual == &NodeValue::NULL {
-        "".matches_with("", matcher, cascaded)
-      } else {
-        actual.matches_with(actual, matcher, cascaded)
-      },
-      NodeValue::STRING(s) => if let Some(actual_str) = actual.as_string() {
-        s.matches_with(actual_str, matcher, cascaded)
-      } else if let Some(list) = actual.as_slist() {
-        let result = list.iter()
-          .map(|item| s.matches_with(item, matcher, cascaded))
-          .filter_map(|r| match r {
-            Ok(_) => None,
-            Err(err) => Some(err.to_string())
-          })
-          .collect_vec();
-        if result.is_empty() {
-          Ok(())
-        } else {
-          Err(anyhow!(result.join(", ")))
+      MatchingRule::Equality | MatchingRule::Values => {
+        match expected_value {
+          NodeValue::JSON(json) => {
+            self.match_value(json, &actual_value.as_json().unwrap_or_default(), cascaded, show_types)
+          }
+          NodeValue::NULL => {
+            if let Some(json) = actual_value.as_json() {
+              self.match_value(&Value::Null, &json, cascaded, show_types)
+            } else if actual_value == &NodeValue::NULL {
+              Ok(())
+            } else {
+              Err(anyhow!("Expected {} to be equal to {}",
+                value_for_mismatch(actual_value.str_form(), actual_value.value_type(), show_types),
+                value_for_mismatch(expected_value.str_form(), expected_value.value_type(), show_types)
+              ))
+            }
+          }
+          #[cfg(feature = "xml")]
+          NodeValue::XML(xml_value) => if let Some(actual) = actual_value.as_xml() {
+            self.match_value(xml_value, &actual, cascaded, show_types)
+          } else {
+            Err(anyhow!("Was expecting an XML value but got {}", actual_value))
+          },
+          _ => {
+            if expected_value == actual_value {
+              Ok(())
+            } else {
+              Err(anyhow!("Expected {} to be equal to {}",
+                value_for_mismatch(actual_value.inner_str(), actual_value.value_type(), show_types),
+                value_for_mismatch(expected_value.inner_str(), expected_value.value_type(), show_types)
+              ))
+            }
+          }
         }
-      } else {
-        s.matches_with(actual.to_string(), matcher, cascaded)
-      },
-      NodeValue::BOOL(b) => b.matches_with(actual.as_bool().unwrap_or_default(), matcher, cascaded),
-      NodeValue::UINT(u) => u.matches_with(actual.as_uint().unwrap_or_default(), matcher, cascaded),
-      NodeValue::JSON(json) => json.matches_with(actual.as_json().unwrap_or_default(), matcher, cascaded),
-      NodeValue::SLIST(list) => if let Some(actual_list) = actual.as_slist() {
-        list.matches_with(&actual_list, matcher, cascaded)
-      } else {
-        let actual_str = if let Some(actual_str) = actual.as_string() {
-          actual_str
-        } else {
-          actual.to_string()
-        };
-        list.matches_with(&vec![actual_str], matcher, cascaded)
       }
-      #[cfg(feature = "xml")]
-      NodeValue::XML(xml_value) => if let Some(actual) = actual.as_xml() {
-        xml_value.matches_with(actual, matcher, cascaded)
-      } else {
-        Err(anyhow!("Was expecting an XML value but got {}", actual))
-      },
-      NodeValue::BARRAY(b) => Bytes::new().matches_with(Bytes::copy_from_slice(b.as_slice()), matcher, cascaded),
-      _ => Err(anyhow!("Matching rules can not be applied to {} values", self.str_form()))
+      MatchingRule::Regex(_) => {
+        match actual_value {
+          NodeValue::STRING(s) => {
+            self.match_value(expected_value.as_string().unwrap_or_default().as_str(), s.as_str(),
+              cascaded, show_types)
+          }
+          NodeValue::BARRAY(bytes) => {
+            self.match_value("", String::from_utf8_lossy(bytes.as_slice()).as_ref(),
+              cascaded, show_types)
+          }
+          NodeValue::JSON(json) => {
+            match json {
+              Value::String(s) => self.match_value("", s.as_str(), cascaded, show_types),
+              _ => self.match_value("", json.to_string().as_str(), cascaded, show_types)
+            }
+          }
+          #[cfg(feature = "xml")]
+          NodeValue::XML(xml_value) => self.match_value(xml_value, xml_value, cascaded, show_types),
+          _ => self.match_value("", actual_value.as_string().unwrap_or_default().as_str(),
+            cascaded, show_types)
+        }
+      }
+      MatchingRule::Type | MatchingRule::MinType(_) | MatchingRule::MaxType(_) | MatchingRule::MinMaxType(_, _) => {
+        match (expected_value, actual_value) {
+          (NodeValue::NULL, NodeValue::NULL) => Ok(()),
+          (NodeValue::UINT(_), NodeValue::UINT(_)) => Ok(()),
+          (NodeValue::STRING(_), NodeValue::STRING(_)) => Ok(()),
+          (NodeValue::ENTRY(_, _), NodeValue::ENTRY(_, _)) => Ok(()),
+          (NodeValue::BOOL(_), NodeValue::BOOL(_)) => Ok(()),
+          (NodeValue::NAMESPACED(_, _), NodeValue::NAMESPACED(_, _)) => Ok(()),
+          (NodeValue::LIST(elist), NodeValue::LIST(alist)) => {
+            self.match_value(elist, alist, cascaded, show_types)
+          }
+          (NodeValue::STRING(elist), NodeValue::SLIST(alist)) => {
+            self.match_value(&vec![elist.clone()], alist, cascaded, show_types)
+          }
+          (NodeValue::SLIST(elist), NodeValue::STRING(alist)) => {
+            self.match_value(elist, &vec![alist.clone()], cascaded, show_types)
+          }
+          (NodeValue::SLIST(elist), NodeValue::SLIST(alist)) => {
+            self.match_value(elist, alist, cascaded, show_types)
+          }
+          (NodeValue::XML(exml), NodeValue::XML(axml)) => {
+            self.match_value(exml, axml, cascaded, show_types)
+          }
+          (NodeValue::MMAP(emap), NodeValue::MMAP(amap)) => {
+            self.match_value(emap, amap, cascaded, show_types)
+          }
+          (NodeValue::JSON(ejson), NodeValue::JSON(ajson)) => {
+            self.match_value(ejson, ajson, cascaded, show_types)
+          }
+          (NodeValue::BARRAY(e), NodeValue::BARRAY(a)) => {
+            self.match_value(Bytes::from(e.clone()), Bytes::from(a.clone()), cascaded, show_types)
+          }
+          _ => {
+            Err(anyhow!("Expected {} ({}) to be the same type as {} ({})", actual_value,
+              actual_value.value_type(), expected_value, expected_value.value_type()))
+          }
+        }
+      }
+      _ => {
+        match (expected_value, actual_value) {
+          (NodeValue::STRING(s), NodeValue::SLIST(list)) => {
+            let result = list.iter()
+              .map(|item| self.match_value(s.as_str(), item.as_str(), cascaded, show_types))
+              .filter_map(|r| match r {
+                Ok(_) => None,
+                Err(err) => Some(err.to_string())
+              })
+              .collect_vec();
+            if result.is_empty() {
+              Ok(())
+            } else {
+              Err(anyhow!(result.join(", ")))
+            }
+          }
+          (NodeValue::STRING(e), NodeValue::STRING(a)) => {
+            self.match_value(e.as_str(), a.as_str(), cascaded, show_types)
+          }
+          (NodeValue::UINT(e), NodeValue::UINT(a)) => {
+            self.match_value(*e, *a, cascaded, show_types)
+          }
+          _ => Err(anyhow!("Matching rules can not be applied to {} values", actual_value.value_type()))
+        }
+      }
     }
   }
 }
@@ -609,7 +702,8 @@ impl Display for NodeResult {
     match self {
       NodeResult::OK => write!(f, "OK"),
       NodeResult::VALUE(val) => write!(f, "{}", val.str_form()),
-      NodeResult::ERROR(err) => write!(f, "ERROR({})", err),
+      NodeResult::ERROR(err) => write!(f, "ERROR({})", err.replace('(', "\\(")
+        .replace(')', "\\)"))
     }
   }
 }
@@ -1581,7 +1675,8 @@ fn setup_method_plan(
     .add(ExecutionPlanNode::value_node(expected_method.clone()))
     .add(ExecutionPlanNode::action("upper-case")
       .add(ExecutionPlanNode::resolve_value(DocPath::new("$.method")?)))
-    .add(ExecutionPlanNode::value_node(NodeValue::NULL));
+    .add(ExecutionPlanNode::value_node(NodeValue::NULL))
+    .add(ExecutionPlanNode::value_node(NodeValue::BOOL(false)));
 
   method_container.add(ExecutionPlanNode::annotation(format!("method == {}", expected_method)));
   method_container.add(match_method);
@@ -1600,7 +1695,8 @@ fn setup_path_plan(
   if context.matcher_is_defined(&doc_path) {
     let matchers = context.select_best_matcher(&doc_path);
     plan_node.add(ExecutionPlanNode::annotation(format!("path {}", matchers.generate_description(false))));
-    plan_node.add(build_matching_rule_node(&expected_node, &actual_node, &matchers, false));
+    plan_node.add(build_matching_rule_node(&expected_node, &actual_node, &matchers,
+      false, context.config.show_types_in_errors));
   } else {
     plan_node.add(ExecutionPlanNode::annotation(format!("path == '{}'", expected.path)));
     plan_node
@@ -1609,6 +1705,7 @@ fn setup_path_plan(
           .add(expected_node)
           .add(ExecutionPlanNode::resolve_value(doc_path))
           .add(ExecutionPlanNode::value_node(NodeValue::NULL))
+          .add(ExecutionPlanNode::value_node(context.config.show_types_in_errors))
       );
   }
   Ok(plan_node)
@@ -1618,7 +1715,8 @@ fn build_matching_rule_node(
   expected_node: &ExecutionPlanNode,
   actual_node: &ExecutionPlanNode,
   matchers: &RuleList,
-  for_collection: bool
+  for_collection: bool,
+  show_types: bool
 ) -> ExecutionPlanNode {
   if matchers.rules.len() == 1 {
     let matcher = if for_collection {
@@ -1630,7 +1728,8 @@ fn build_matching_rule_node(
     plan_node
       .add(expected_node.clone())
       .add(actual_node.clone())
-      .add(ExecutionPlanNode::value_node(matcher.values()));
+      .add(ExecutionPlanNode::value_node(matcher.values()))
+      .add(ExecutionPlanNode::value_node(show_types));
     plan_node
   } else {
     let mut logic_node = match matchers.rule_logic {
@@ -1649,6 +1748,7 @@ fn build_matching_rule_node(
             .add(expected_node.clone())
             .add(actual_node.clone())
             .add(ExecutionPlanNode::value_node(matcher.values()))
+            .add(ExecutionPlanNode::value_node(show_types))
         );
     }
     logic_node
@@ -1699,14 +1799,16 @@ fn setup_query_plan(
           let matchers = context.select_best_matcher(&item_path);
           item_node.add(ExecutionPlanNode::annotation(format!("{} {}", key, matchers.generate_description(true))));
           presence_check.add(build_matching_rule_node(&ExecutionPlanNode::value_node(item_value),
-                                                      &ExecutionPlanNode::resolve_value(&path), &matchers, true));
+            &ExecutionPlanNode::resolve_value(&path), &matchers, true,
+            context.config.show_types_in_errors));
         } else {
           item_node.add(ExecutionPlanNode::annotation(format!("{}={}", key, item_value.to_string())));
           let mut item_check = ExecutionPlanNode::action("match:equality");
           item_check
             .add(ExecutionPlanNode::value_node(item_value))
             .add(ExecutionPlanNode::resolve_value(&path))
-            .add(ExecutionPlanNode::value_node(NodeValue::NULL));
+            .add(ExecutionPlanNode::value_node(NodeValue::NULL))
+            .add(ExecutionPlanNode::value_node(context.config.show_types_in_errors));
           presence_check.add(item_check);
         }
 
@@ -1796,7 +1898,8 @@ fn setup_header_plan<T: HttpPart>(
           let matchers = context.select_best_matcher(&item_path);
           item_node.add(ExecutionPlanNode::annotation(format!("{} {}", key, matchers.generate_description(true))));
           presence_check.add(build_matching_rule_node(&ExecutionPlanNode::value_node(item_value),
-                                                      &ExecutionPlanNode::resolve_value(&path), &matchers, true));
+            &ExecutionPlanNode::resolve_value(&path), &matchers, true,
+            context.config.show_types_in_errors));
         } else if PARAMETERISED_HEADERS.contains(&key.to_lowercase().as_str()) {
           item_node.add(ExecutionPlanNode::annotation(format!("{}={}", key, item_value.to_string())));
           if value.len() == 1 {
@@ -1818,7 +1921,8 @@ fn setup_header_plan<T: HttpPart>(
           item_check
             .add(ExecutionPlanNode::value_node(item_value))
             .add(ExecutionPlanNode::resolve_value(doc_path.join(key)))
-            .add(ExecutionPlanNode::value_node(NodeValue::NULL));
+            .add(ExecutionPlanNode::value_node(NodeValue::NULL))
+            .add(ExecutionPlanNode::value_node(context.config.show_types_in_errors));
           presence_check.add(item_check);
         }
 
@@ -1866,6 +1970,7 @@ fn build_parameterised_header_plan(doc_path: &DocPath, val: &str) -> ExecutionPl
       .add(ExecutionPlanNode::action("to-string")
         .add(ExecutionPlanNode::resolve_current_value(&DocPath::new_unwrap("value"))))
       .add(ExecutionPlanNode::value_node(NodeValue::NULL))
+      .add(ExecutionPlanNode::value_node(NodeValue::BOOL(false)))
   );
 
   if !parameter_map.is_empty() {
@@ -1880,7 +1985,8 @@ fn build_parameterised_header_plan(doc_path: &DocPath, val: &str) -> ExecutionPl
             .add(ExecutionPlanNode::value_node(v.to_lowercase()))
             .add(ExecutionPlanNode::action("lower-case")
               .add(ExecutionPlanNode::resolve_current_value(&parameter_path.join(k.as_str()))))
-            .add(ExecutionPlanNode::value_node(NodeValue::NULL)))
+            .add(ExecutionPlanNode::value_node(NodeValue::NULL))
+            .add(ExecutionPlanNode::value_node(NodeValue::BOOL(false))))
           .add(ExecutionPlanNode::action("error")
             .add(ExecutionPlanNode::value_node(
               format!("Expected a {} value of '{}' but it was missing", k, v)))
@@ -1917,7 +2023,8 @@ fn setup_body_plan<T: HttpPart>(
           &ExecutionPlanNode::value_node(NodeValue::NULL),
           &ExecutionPlanNode::resolve_value(body_path),
           &root_matcher,
-          false
+          false,
+          context.config.show_types_in_errors
         ));
       } else {
         let mut content_type_check_node = ExecutionPlanNode::action("if");
@@ -1927,6 +2034,7 @@ fn setup_body_plan<T: HttpPart>(
               .add(ExecutionPlanNode::value_node(content_type.to_string()))
               .add(ExecutionPlanNode::resolve_value(DocPath::new("$.content-type")?))
               .add(ExecutionPlanNode::value_node(NodeValue::NULL))
+              .add(ExecutionPlanNode::value_node(false))
               .add(
                 ExecutionPlanNode::action("error")
                   .add(ExecutionPlanNode::value_node(NodeValue::STRING("Body type error - ".to_string())))
@@ -1989,7 +2097,8 @@ fn setup_status_plan(
   if context.matcher_is_defined(&doc_path) {
     let matchers = context.select_best_matcher(&doc_path);
     plan_node.add(ExecutionPlanNode::annotation(format!("status {}", matchers.generate_description(false))));
-    plan_node.add(build_matching_rule_node(&expected_node, &actual_node, &matchers, false));
+    plan_node.add(build_matching_rule_node(&expected_node, &actual_node, &matchers,
+      false, context.config.show_types_in_errors));
   } else {
     plan_node.add(ExecutionPlanNode::annotation(format!("status == {}", expected.status)));
     plan_node
@@ -1998,6 +2107,7 @@ fn setup_status_plan(
           .add(expected_node)
           .add(ExecutionPlanNode::resolve_value(doc_path))
           .add(ExecutionPlanNode::value_node(NodeValue::NULL))
+          .add(ExecutionPlanNode::value_node(context.config.show_types_in_errors))
       );
   }
   Ok(plan_node)

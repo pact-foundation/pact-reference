@@ -65,7 +65,8 @@ fn match_headers_with_expected_headers() {
           %match:equality (
             'b',
             $.headers['HEADER-X'],
-            NULL
+            NULL,
+            BOOL(false)
           )
         )
       ),
@@ -103,7 +104,8 @@ fn match_headers_with_expected_headers() {
           %match:equality (
             'b',
             $.headers['HEADER-X'],
-            NULL
+            NULL,
+            BOOL(false)
           )
         ) => BOOL(false)
       ) => BOOL(false),
@@ -146,7 +148,8 @@ fn match_headers_with_expected_headers() {
           %match:equality (
             'b' => 'b',
             $.headers['HEADER-X'] => 'b',
-            NULL => NULL
+            NULL => NULL,
+            BOOL(false) => BOOL(false)
           ) => BOOL(true)
         ) => BOOL(true)
       ) => BOOL(true),
@@ -189,7 +192,8 @@ fn match_headers_with_expected_headers() {
           %match:equality (
             'b' => 'b',
             $.headers['HEADER-X'] => 'C',
-            NULL => NULL
+            NULL => NULL,
+            BOOL(false) => BOOL(false)
           ) => ERROR(Expected 'C' to be equal to 'b')
         ) => BOOL(false)
       ) => BOOL(false),
@@ -233,7 +237,8 @@ fn match_headers_with_expected_headers() {
           %match:equality (
             'b' => 'b',
             $.headers['HEADER-X'] => 'b',
-            NULL => NULL
+            NULL => NULL,
+            BOOL(false) => BOOL(false)
           ) => BOOL(true)
         ) => BOOL(true)
       ) => BOOL(true),
@@ -276,7 +281,8 @@ fn match_headers_with_expected_headers() {
           %match:equality (
             'b',
             $.headers['HEADER-X'],
-            NULL
+            NULL,
+            BOOL(false)
           )
         ) => BOOL(false)
       ) => BOOL(false),
@@ -338,7 +344,8 @@ fn match_headers_with_matching_rule() {
           %match:equality (
             'test',
             $.headers['REF-CODE'],
-            NULL
+            NULL,
+            BOOL(false)
           )
         )
       ),
@@ -351,7 +358,8 @@ fn match_headers_with_matching_rule() {
           %match:regex (
             '1234',
             $.headers['REF-ID'],
-            json:{"regex":"^[0-9]+$"}
+            json:{"regex":"^[0-9]+$"},
+            BOOL(false)
           )
         )
       ),
@@ -395,7 +403,8 @@ fn match_headers_with_matching_rule() {
           %match:equality (
             'test' => 'test',
             $.headers['REF-CODE'] => 'test',
-            NULL => NULL
+            NULL => NULL,
+            BOOL(false) => BOOL(false)
           ) => BOOL(true)
         ) => BOOL(true)
       ) => BOOL(true),
@@ -408,7 +417,8 @@ fn match_headers_with_matching_rule() {
           %match:regex (
             '1234' => '1234',
             $.headers['REF-ID'] => '9023470945622',
-            json:{"regex":"^[0-9]+$"} => json:{"regex":"^[0-9]+$"}
+            json:{"regex":"^[0-9]+$"} => json:{"regex":"^[0-9]+$"},
+            BOOL(false) => BOOL(false)
           ) => BOOL(true)
         ) => BOOL(true)
       ) => BOOL(true),
@@ -452,7 +462,8 @@ fn match_headers_with_matching_rule() {
           %match:equality (
             'test' => 'test',
             $.headers['REF-CODE'] => 'test',
-            NULL => NULL
+            NULL => NULL,
+            BOOL(false) => BOOL(false)
           ) => BOOL(true)
         ) => BOOL(true)
       ) => BOOL(true),
@@ -465,7 +476,8 @@ fn match_headers_with_matching_rule() {
           %match:regex (
             '1234' => '1234',
             $.headers['REF-ID'] => '9023470X945622',
-            json:{"regex":"^[0-9]+$"} => json:{"regex":"^[0-9]+$"}
+            json:{"regex":"^[0-9]+$"} => json:{"regex":"^[0-9]+$"},
+            BOOL(false) => BOOL(false)
           ) => ERROR(Expected '9023470X945622' to match '^[0-9]+$')
         ) => BOOL(false)
       ) => BOOL(false),
@@ -523,7 +535,8 @@ fn match_headers_with_values_having_different_lengths() {
           %match:equality (
             ['test', 'test2'],
             $.headers['REF-CODE'],
-            NULL
+            NULL,
+            BOOL(false)
           )
         )
       ),
@@ -536,7 +549,8 @@ fn match_headers_with_values_having_different_lengths() {
           %match:equality (
             '1234',
             $.headers['REF-ID'],
-            NULL
+            NULL,
+            BOOL(false)
           )
         )
       ),
@@ -580,7 +594,8 @@ fn match_headers_with_values_having_different_lengths() {
           %match:equality (
             ['test', 'test2'] => ['test', 'test2'],
             $.headers['REF-CODE'] => ['test', 'test2'],
-            NULL => NULL
+            NULL => NULL,
+            BOOL(false) => BOOL(false)
           ) => BOOL(true)
         ) => BOOL(true)
       ) => BOOL(true),
@@ -593,7 +608,8 @@ fn match_headers_with_values_having_different_lengths() {
           %match:equality (
             '1234' => '1234',
             $.headers['REF-ID'] => '1234',
-            NULL => NULL
+            NULL => NULL,
+            BOOL(false) => BOOL(false)
           ) => BOOL(true)
         ) => BOOL(true)
       ) => BOOL(true),
@@ -637,8 +653,9 @@ fn match_headers_with_values_having_different_lengths() {
           %match:equality (
             ['test', 'test2'] => ['test', 'test2'],
             $.headers['REF-CODE'] => 'test',
-            NULL => NULL
-          ) => ERROR(Expected ["test"] to be equal to ["test","test2"])
+            NULL => NULL,
+            BOOL(false) => BOOL(false)
+          ) => ERROR(Expected 'test' to be equal to ['test', 'test2'])
         ) => BOOL(false)
       ) => BOOL(false),
       :REF-ID (
@@ -650,8 +667,9 @@ fn match_headers_with_values_having_different_lengths() {
           %match:equality (
             '1234' => '1234',
             $.headers['REF-ID'] => ['1234', '1234', '4567'],
-            NULL => NULL
-          ) => ERROR(Expected '4567' to be equal to '1234')
+            NULL => NULL,
+            BOOL(false) => BOOL(false)
+          ) => ERROR(Expected ['1234', '1234', '4567'] to be equal to '1234')
         ) => BOOL(false)
       ) => BOOL(false),
       %expect:entries (
@@ -712,7 +730,8 @@ fn match_headers_with_number_type_matching_rule() {
           %match:equality (
             'test',
             $.headers['REF-CODE'],
-            NULL
+            NULL,
+            BOOL(false)
           )
         )
       ),
@@ -725,7 +744,8 @@ fn match_headers_with_number_type_matching_rule() {
           %match:integer (
             '1234',
             $.headers['REF-ID'],
-            json:{}
+            json:{},
+            BOOL(false)
           )
         )
       ),
@@ -769,7 +789,8 @@ fn match_headers_with_number_type_matching_rule() {
           %match:equality (
             'test' => 'test',
             $.headers['REF-CODE'] => 'test',
-            NULL => NULL
+            NULL => NULL,
+            BOOL(false) => BOOL(false)
           ) => BOOL(true)
         ) => BOOL(true)
       ) => BOOL(true),
@@ -782,7 +803,8 @@ fn match_headers_with_number_type_matching_rule() {
           %match:integer (
             '1234' => '1234',
             $.headers['REF-ID'] => '9023470945622',
-            json:{} => json:{}
+            json:{} => json:{},
+            BOOL(false) => BOOL(false)
           ) => BOOL(true)
         ) => BOOL(true)
       ) => BOOL(true),
@@ -826,7 +848,8 @@ fn match_headers_with_number_type_matching_rule() {
           %match:equality (
             'test' => 'test',
             $.headers['REF-CODE'] => 'test',
-            NULL => NULL
+            NULL => NULL,
+            BOOL(false) => BOOL(false)
           ) => BOOL(true)
         ) => BOOL(true)
       ) => BOOL(true),
@@ -839,7 +862,8 @@ fn match_headers_with_number_type_matching_rule() {
           %match:integer (
             '1234' => '1234',
             $.headers['REF-ID'] => '9023470X945622',
-            json:{} => json:{}
+            json:{} => json:{},
+            BOOL(false) => BOOL(false)
           ) => ERROR(Expected '9023470X945622' to match an integer number)
         ) => BOOL(false)
       ) => BOOL(false),
@@ -883,7 +907,8 @@ fn match_headers_with_number_type_matching_rule() {
           %match:equality (
             'test' => 'test',
             $.headers['REF-CODE'] => 'test',
-            NULL => NULL
+            NULL => NULL,
+            BOOL(false) => BOOL(false)
           ) => BOOL(true)
         ) => BOOL(true)
       ) => BOOL(true),
@@ -896,7 +921,8 @@ fn match_headers_with_number_type_matching_rule() {
           %match:integer (
             '1234' => '1234',
             $.headers['REF-ID'] => ['1111', '2222'],
-            json:{} => json:{}
+            json:{} => json:{},
+            BOOL(false) => BOOL(false)
           ) => BOOL(true)
         ) => BOOL(true)
       ) => BOOL(true),
@@ -940,7 +966,8 @@ fn match_headers_with_number_type_matching_rule() {
           %match:equality (
             'test' => 'test',
             $.headers['REF-CODE'] => 'test',
-            NULL => NULL
+            NULL => NULL,
+            BOOL(false) => BOOL(false)
           ) => BOOL(true)
         ) => BOOL(true)
       ) => BOOL(true),
@@ -953,7 +980,8 @@ fn match_headers_with_number_type_matching_rule() {
           %match:integer (
             '1234' => '1234',
             $.headers['REF-ID'] => ['1111', 'two'],
-            json:{} => json:{}
+            json:{} => json:{},
+            BOOL(false) => BOOL(false)
           ) => ERROR(Expected 'two' to match an integer number)
         ) => BOOL(false)
       ) => BOOL(false),
@@ -1015,7 +1043,8 @@ fn match_headers_with_min_type_matching_rules() {
           %match:equality (
             'test',
             $.headers['REF-CODE'],
-            NULL
+            NULL,
+            BOOL(false)
           )
         )
       ),
@@ -1028,7 +1057,8 @@ fn match_headers_with_min_type_matching_rules() {
           %match:min-type (
             ['1234', '4567'],
             $.headers['REF-ID'],
-            json:{"min":2}
+            json:{"min":2},
+            BOOL(false)
           )
         )
       ),
@@ -1072,7 +1102,8 @@ fn match_headers_with_min_type_matching_rules() {
           %match:equality (
             'test' => 'test',
             $.headers['REF-CODE'] => 'test',
-            NULL => NULL
+            NULL => NULL,
+            BOOL(false) => BOOL(false)
           ) => BOOL(true)
         ) => BOOL(true)
       ) => BOOL(true),
@@ -1085,7 +1116,8 @@ fn match_headers_with_min_type_matching_rules() {
           %match:min-type (
             ['1234', '4567'] => ['1234', '4567'],
             $.headers['REF-ID'] => ['1', '1', '1'],
-            json:{"min":2} => json:{"min":2}
+            json:{"min":2} => json:{"min":2},
+            BOOL(false) => BOOL(false)
           ) => BOOL(true)
         ) => BOOL(true)
       ) => BOOL(true),
@@ -1129,7 +1161,8 @@ fn match_headers_with_min_type_matching_rules() {
           %match:equality (
             'test' => 'test',
             $.headers['REF-CODE'] => 'test',
-            NULL => NULL
+            NULL => NULL,
+            BOOL(false) => BOOL(false)
           ) => BOOL(true)
         ) => BOOL(true)
       ) => BOOL(true),
@@ -1142,8 +1175,9 @@ fn match_headers_with_min_type_matching_rules() {
           %match:min-type (
             ['1234', '4567'] => ['1234', '4567'],
             $.headers['REF-ID'] => '1',
-            json:{"min":2} => json:{"min":2}
-          ) => ERROR(Expected [1] (size 1) to have minimum size of 2)
+            json:{"min":2} => json:{"min":2},
+            BOOL(false) => BOOL(false)
+          ) => ERROR(Expected [1] \(size 1\) to have minimum size of 2)
         ) => BOOL(false)
       ) => BOOL(false),
       %expect:entries (
@@ -1199,7 +1233,8 @@ fn match_content_type_header() {
               %to-string (
                 ~>value
               ),
-              NULL
+              NULL,
+              BOOL(false)
             )
           )
         )
@@ -1249,7 +1284,8 @@ fn match_content_type_header() {
               %to-string (
                 ~>value => json:"application/hal+json"
               ) => 'application/hal+json',
-              NULL => NULL
+              NULL => NULL,
+              BOOL(false) => BOOL(false)
             ) => BOOL(true)
           ) => BOOL(true)
         ) => BOOL(true)
@@ -1302,7 +1338,8 @@ fn match_content_type_header() {
               %to-string (
                 ~>value
               ),
-              NULL
+              NULL,
+              BOOL(false)
             ),
             :charset (
               %if (
@@ -1314,7 +1351,8 @@ fn match_content_type_header() {
                   %lower-case (
                     ~>parameters.charset
                   ),
-                  NULL
+                  NULL,
+                  BOOL(false)
                 ),
                 %error (
                   'Expected a charset value of \'UTF-8\' but it was missing'
@@ -1369,7 +1407,8 @@ fn match_content_type_header() {
               %to-string (
                 ~>value => json:"application/json"
               ) => 'application/json',
-              NULL => NULL
+              NULL => NULL,
+              BOOL(false) => BOOL(false)
             ) => BOOL(true),
             :charset (
               %if (
@@ -1381,7 +1420,8 @@ fn match_content_type_header() {
                   %lower-case (
                     ~>parameters.charset => json:"UTF-8"
                   ) => 'utf-8',
-                  NULL => NULL
+                  NULL => NULL,
+                  BOOL(false) => BOOL(false)
                 ) => BOOL(true),
                 %error (
                   'Expected a charset value of \'UTF-8\' but it was missing'
@@ -1436,7 +1476,8 @@ fn match_content_type_header() {
               %to-string (
                 ~>value => json:"application/json"
               ) => 'application/json',
-              NULL => NULL
+              NULL => NULL,
+              BOOL(false) => BOOL(false)
             ) => BOOL(true),
             :charset (
               %if (
@@ -1448,7 +1489,8 @@ fn match_content_type_header() {
                   %lower-case (
                     ~>parameters.charset
                   ),
-                  NULL
+                  NULL,
+                  BOOL(false)
                 ),
                 %error (
                   'Expected a charset value of \'UTF-8\' but it was missing' => 'Expected a charset value of \'UTF-8\' but it was missing'
@@ -1503,7 +1545,8 @@ fn match_content_type_header() {
               %to-string (
                 ~>value => json:"application/json"
               ) => 'application/json',
-              NULL => NULL
+              NULL => NULL,
+              BOOL(false) => BOOL(false)
             ) => BOOL(true),
             :charset (
               %if (
@@ -1515,7 +1558,8 @@ fn match_content_type_header() {
                   %lower-case (
                     ~>parameters.charset => json:"UTF-16"
                   ) => 'utf-16',
-                  NULL => NULL
+                  NULL => NULL,
+                  BOOL(false) => BOOL(false)
                 ) => ERROR(Expected 'utf-16' to be equal to 'utf-8'),
                 %error (
                   'Expected a charset value of \'UTF-8\' but it was missing'

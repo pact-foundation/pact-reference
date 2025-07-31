@@ -112,7 +112,8 @@ fn simple_match_request_test() -> anyhow::Result<()> {
         %upper-case (
           $.method
         ),
-        NULL
+        NULL,
+        BOOL(false)
       )
     ),
     :path (
@@ -120,7 +121,8 @@ fn simple_match_request_test() -> anyhow::Result<()> {
       %match:equality (
         '/test',
         $.path,
-        NULL
+        NULL,
+        BOOL(false)
       )
     ),
     :"query parameters" (
@@ -138,6 +140,7 @@ fn simple_match_request_test() -> anyhow::Result<()> {
           'text/plain',
           $.content-type,
           NULL,
+          BOOL(false),
           %error (
             'Body type error - ',
             %apply ()
@@ -148,7 +151,8 @@ fn simple_match_request_test() -> anyhow::Result<()> {
           %convert:UTF8 (
             $.body
           ),
-          NULL
+          NULL,
+          BOOL(false)
         )
       )
     )
@@ -166,7 +170,8 @@ fn simple_match_request_test() -> anyhow::Result<()> {
         %upper-case (
           $.method => 'put'
         ) => 'PUT',
-        NULL => NULL
+        NULL => NULL,
+        BOOL(false) => BOOL(false)
       ) => ERROR(Expected 'PUT' to be equal to 'POST')
     ) => BOOL(false),
     :path (
@@ -174,7 +179,8 @@ fn simple_match_request_test() -> anyhow::Result<()> {
       %match:equality (
         '/test' => '/test',
         $.path => '/test',
-        NULL => NULL
+        NULL => NULL,
+        BOOL(false) => BOOL(false)
       ) => BOOL(true)
     ) => BOOL(true),
     :"query parameters" (
@@ -192,6 +198,7 @@ fn simple_match_request_test() -> anyhow::Result<()> {
           'text/plain' => 'text/plain',
           $.content-type => 'text/plain',
           NULL => NULL,
+          BOOL(false) => BOOL(false),
           %error (
             'Body type error - ',
             %apply ()
@@ -202,7 +209,8 @@ fn simple_match_request_test() -> anyhow::Result<()> {
           %convert:UTF8 (
             $.body => BYTES(21, U29tZSBuaWNlIGJpdCBvZiB0ZXh0)
           ) => 'Some nice bit of text',
-          NULL => NULL
+          NULL => NULL,
+          BOOL(false) => BOOL(false)
         ) => BOOL(true)
       ) => BOOL(true)
     ) => BOOL(true)
@@ -256,7 +264,8 @@ fn simple_match_response_test() -> anyhow::Result<()> {
       %match:equality (
         UINT(200),
         $.status,
-        NULL
+        NULL,
+        BOOL(false)
       )
     ),
     :body (
@@ -265,6 +274,7 @@ fn simple_match_response_test() -> anyhow::Result<()> {
           'text/plain',
           $.content-type,
           NULL,
+          BOOL(false),
           %error (
             'Body type error - ',
             %apply ()
@@ -275,7 +285,8 @@ fn simple_match_response_test() -> anyhow::Result<()> {
           %convert:UTF8 (
             $.body
           ),
-          NULL
+          NULL,
+          BOOL(false)
         )
       )
     )
@@ -291,7 +302,8 @@ fn simple_match_response_test() -> anyhow::Result<()> {
       %match:equality (
         UINT(200) => UINT(200),
         $.status => UINT(204),
-        NULL => NULL
+        NULL => NULL,
+        BOOL(false) => BOOL(false)
       ) => ERROR(Expected 204 to be equal to 200)
     ) => BOOL(false),
     :body (
@@ -300,6 +312,7 @@ fn simple_match_response_test() -> anyhow::Result<()> {
           'text/plain' => 'text/plain',
           $.content-type => 'text/plain',
           NULL => NULL,
+          BOOL(false) => BOOL(false),
           %error (
             'Body type error - ',
             %apply ()
@@ -310,7 +323,8 @@ fn simple_match_response_test() -> anyhow::Result<()> {
           %convert:UTF8 (
             $.body => BYTES(21, U29tZSBuaWNlIGJpdCBvZiB0ZXh0)
           ) => 'Some nice bit of text',
-          NULL => NULL
+          NULL => NULL,
+          BOOL(false) => BOOL(false)
         ) => BOOL(true)
       ) => BOOL(true)
     ) => BOOL(true)
@@ -366,7 +380,8 @@ fn simple_json_match_request_test() -> anyhow::Result<()> {
         %upper-case (
           $.method
         ),
-        NULL
+        NULL,
+        BOOL(false)
       )
     ),
     :path (
@@ -374,7 +389,8 @@ fn simple_json_match_request_test() -> anyhow::Result<()> {
       %match:equality (
         '/test',
         $.path,
-        NULL
+        NULL,
+        BOOL(false)
       )
     ),
     :"query parameters" (
@@ -392,6 +408,7 @@ fn simple_json_match_request_test() -> anyhow::Result<()> {
           'application/json;charset=utf-8',
           $.content-type,
           NULL,
+          BOOL(false),
           %error (
             'Body type error - ',
             %apply ()
@@ -415,14 +432,16 @@ fn simple_json_match_request_test() -> anyhow::Result<()> {
               %match:equality (
                 json:100,
                 ~>$.a,
-                NULL
+                NULL,
+                BOOL(true)
               )
             ),
             :$.b (
               %match:equality (
                 json:200.1,
                 ~>$.b,
-                NULL
+                NULL,
+                BOOL(true)
               )
             )
           )
@@ -443,7 +462,8 @@ fn simple_json_match_request_test() -> anyhow::Result<()> {
         %upper-case (
           $.method => 'POST'
         ) => 'POST',
-        NULL => NULL
+        NULL => NULL,
+        BOOL(false) => BOOL(false)
       ) => BOOL(true)
     ) => BOOL(true),
     :path (
@@ -451,7 +471,8 @@ fn simple_json_match_request_test() -> anyhow::Result<()> {
       %match:equality (
         '/test' => '/test',
         $.path => '/test',
-        NULL => NULL
+        NULL => NULL,
+        BOOL(false) => BOOL(false)
       ) => BOOL(true)
     ) => BOOL(true),
     :"query parameters" (
@@ -469,6 +490,7 @@ fn simple_json_match_request_test() -> anyhow::Result<()> {
           'application/json;charset=utf-8' => 'application/json;charset=utf-8',
           $.content-type => 'application/json;charset=utf-8',
           NULL => NULL,
+          BOOL(false) => BOOL(false),
           %error (
             'Body type error - ',
             %apply ()
@@ -492,15 +514,17 @@ fn simple_json_match_request_test() -> anyhow::Result<()> {
               %match:equality (
                 json:100 => json:100,
                 ~>$.a => NULL,
-                NULL => NULL
-              ) => ERROR(Expected null (Null) to be equal to 100 (Integer))
+                NULL => NULL,
+                BOOL(true) => BOOL(true)
+              ) => ERROR(Expected null \(Null\) to be equal to 100 \(Integer\))
             ) => BOOL(false),
             :$.b (
               %match:equality (
                 json:200.1 => json:200.1,
                 ~>$.b => json:"22",
-                NULL => NULL
-              ) => ERROR(Expected '22' (String) to be equal to 200.1 (Decimal))
+                NULL => NULL,
+                BOOL(true) => BOOL(true)
+              ) => ERROR(Expected '22' \(String\) to be equal to 200.1 \(Decimal\))
             ) => BOOL(false)
           ) => BOOL(false)
         ) => BOOL(false)
@@ -592,7 +616,8 @@ fn match_path_with_matching_rule() -> anyhow::Result<()> {
         %upper-case (
           $.method
         ),
-        NULL
+        NULL,
+        BOOL(false)
       )
     ),
     :path (
@@ -600,7 +625,8 @@ fn match_path_with_matching_rule() -> anyhow::Result<()> {
       %match:regex (
         '/test',
         $.path,
-        json:{"regex":"\\/test[0-9]+"}
+        json:{"regex":"\\/test[0-9]+"},
+        BOOL(false)
       )
     ),
     :"query parameters" (
@@ -626,7 +652,8 @@ fn match_path_with_matching_rule() -> anyhow::Result<()> {
         %upper-case (
           $.method => 'get'
         ) => 'GET',
-        NULL => NULL
+        NULL => NULL,
+        BOOL(false) => BOOL(false)
       ) => BOOL(true)
     ) => BOOL(true),
     :path (
@@ -634,7 +661,8 @@ fn match_path_with_matching_rule() -> anyhow::Result<()> {
       %match:regex (
         '/test' => '/test',
         $.path => '/test12345',
-        json:{"regex":"\\/test[0-9]+"} => json:{"regex":"\\/test[0-9]+"}
+        json:{"regex":"\\/test[0-9]+"} => json:{"regex":"\\/test[0-9]+"},
+        BOOL(false) => BOOL(false)
       ) => BOOL(true)
     ) => BOOL(true),
     :"query parameters" (
@@ -665,7 +693,8 @@ fn match_path_with_matching_rule() -> anyhow::Result<()> {
         %upper-case (
           $.method => 'get'
         ) => 'GET',
-        NULL => NULL
+        NULL => NULL,
+        BOOL(false) => BOOL(false)
       ) => BOOL(true)
     ) => BOOL(true),
     :path (
@@ -673,7 +702,8 @@ fn match_path_with_matching_rule() -> anyhow::Result<()> {
       %match:regex (
         '/test' => '/test',
         $.path => '/test12345X',
-        json:{"regex":"\\/test[0-9]+"} => json:{"regex":"\\/test[0-9]+"}
+        json:{"regex":"\\/test[0-9]+"} => json:{"regex":"\\/test[0-9]+"},
+        BOOL(false) => BOOL(false)
       ) => ERROR(Expected '/test12345X' to match '\/test[0-9]+')
     ) => BOOL(false),
     :"query parameters" (
@@ -723,7 +753,8 @@ fn match_status_with_matching_rule() -> anyhow::Result<()> {
       %match:status-code (
         UINT(200),
         $.status,
-        json:{"status":"success"}
+        json:{"status":"success"},
+        BOOL(false)
       )
     )
   )
@@ -738,7 +769,8 @@ fn match_status_with_matching_rule() -> anyhow::Result<()> {
       %match:status-code (
         UINT(200) => UINT(200),
         $.status => UINT(204),
-        json:{"status":"success"} => json:{"status":"success"}
+        json:{"status":"success"} => json:{"status":"success"},
+        BOOL(false) => BOOL(false)
       ) => BOOL(true)
     ) => BOOL(true)
   ) => BOOL(true)
@@ -757,8 +789,9 @@ fn match_status_with_matching_rule() -> anyhow::Result<()> {
       %match:status-code (
         UINT(200) => UINT(200),
         $.status => UINT(404),
-        json:{"status":"success"} => json:{"status":"success"}
-      ) => ERROR(Expected status code 404 to be a Successful response (200–299))
+        json:{"status":"success"} => json:{"status":"success"},
+        BOOL(false) => BOOL(false)
+      ) => ERROR(Expected status code 404 to be a Successful response \(200–299\))
     ) => BOOL(false)
   ) => BOOL(false)
 )
@@ -785,7 +818,8 @@ fn body_with_root_matcher() {
   %match:regex (
     NULL,
     $.body,
-    json:{"regex":".*[0-9]+.*"}
+    json:{"regex":".*[0-9]+.*"},
+    BOOL(false)
   )
 )"#, buffer);
 
@@ -796,7 +830,8 @@ fn body_with_root_matcher() {
     %match:regex (
       NULL => NULL,
       $.body => BYTES(19, VGhpcyBpcyBhIDEwMCsgYm9keQ==),
-      json:{"regex":".*[0-9]+.*"} => json:{"regex":".*[0-9]+.*"}
+      json:{"regex":".*[0-9]+.*"} => json:{"regex":".*[0-9]+.*"},
+      BOOL(false) => BOOL(false)
     ) => BOOL(true)
   ) => BOOL(true)
 )

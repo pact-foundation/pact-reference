@@ -9,10 +9,8 @@ use pact_models::headers::PARAMETERISED_HEADERS;
 use pact_models::matchingrules::MatchingRule;
 use pact_models::path_exp::DocPath;
 use tracing::{instrument, debug};
-
-use crate::{matchers, MatchingContext, Mismatch, CommonMismatch};
-use crate::matchers::Matches;
-use crate::matchingrules::compare_lists_with_matchingrules;
+use crate::{CommonMismatch, MatchingContext, Mismatch};
+use crate::matchingrules::{compare_lists_with_matchingrules, DoMatch, match_values};
 
 pub(crate) fn strip_whitespace<'a, T: FromIterator<&'a str>>(val: &'a str, split_by: &'a str) -> T {
   val.split(split_by).map(|v| v.trim()).filter(|v| !v.is_empty()).collect()
@@ -87,14 +85,14 @@ pub(crate) fn match_header_value(
   let actual = actual.trim();
 
   let matcher_result = if context.matcher_is_defined(&path) {
-    let result = matchers::match_values(&path, &context.select_best_matcher(&path), expected, actual);
+    let result = match_values(&path, &context.select_best_matcher(&path), expected, actual);
     if single_value {
       result
     } else {
       result.map_err(|err| err.iter().map(|e| format!("{} for value at index {}", e, index)).collect())
     }
   } else if context.matcher_is_defined(&indexed_path) {
-    let result = matchers::match_values(&indexed_path, &context.select_best_matcher(&indexed_path), expected, actual);
+    let result = match_values(&indexed_path, &context.select_best_matcher(&indexed_path), expected, actual);
     if single_value {
       result
     } else {
@@ -103,7 +101,7 @@ pub(crate) fn match_header_value(
   } else if PARAMETERISED_HEADERS.contains(&key.to_lowercase().as_str()) {
     match_parameter_header(expected, actual, key, "header", index, single_value)
   } else {
-    Matches::matches_with(&expected.to_string(), &actual.to_string(), &MatchingRule::Equality, false)
+    MatchingRule::Equality.match_value(expected, actual, false, false)
       .map_err(|err| {
         if single_value {
           vec![format!("{}", err)]

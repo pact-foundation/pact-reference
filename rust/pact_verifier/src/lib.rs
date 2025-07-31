@@ -1058,7 +1058,7 @@ pub async fn verify_provider_async<F: RequestFilterExecutor, S: ProviderStateExe
   provider_state_executor: &Arc<S>,
   metrics_data: Option<VerificationMetrics>
 ) -> anyhow::Result<VerificationExecutionResult> {
-  pact_matching::matchers::configure_core_catalogue();
+  pact_matching::matchingrules::configure_core_catalogue();
   async {
     let pact_results = fetch_pacts(source, consumers, &provider_info).await;
 

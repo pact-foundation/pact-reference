@@ -19,7 +19,9 @@ pub struct MatchingConfiguration {
   /// If the executed plan summary should be logged
   pub log_plan_summary: bool,
   /// If output should be coloured
-  pub coloured_output: bool
+  pub coloured_output: bool,
+  /// If types should be displayed in error messages. This is normally used with bodies.
+  pub show_types_in_errors: bool
 }
 
 impl MatchingConfiguration {
@@ -56,7 +58,8 @@ impl Default for MatchingConfiguration {
       allow_unexpected_entries: false,
       log_executed_plan: false,
       log_plan_summary: true,
-      coloured_output: true
+      coloured_output: true,
+      show_types_in_errors: false
     }
   }
 }
@@ -211,7 +214,10 @@ impl PlanMatchingContext {
       pact: self.pact.clone(),
       interaction: self.interaction.boxed_v4(),
       matching_rules,
-      config: self.config
+      config: MatchingConfiguration {
+        show_types_in_errors: true,
+        .. self.config
+      }
     }
   }
 

@@ -7,18 +7,19 @@ use anyhow::anyhow;
 use itertools::Itertools;
 use maplit::hashset;
 use serde_json::{json, Value};
-use tracing::{debug, error, instrument, trace, Level};
+use tracing::{debug, error, instrument, Level, trace};
 
 use pact_models::matchingrules::MatchingRule;
 use pact_models::path_exp::{DocPath, PathToken};
 #[cfg(feature = "xml")] use pact_models::xml_utils::resolve_matching_node;
+
 use crate::engine::{ExecutionPlanNode, NodeResult, NodeValue, PlanNodeType};
 use crate::engine::context::PlanMatchingContext;
 use crate::engine::value_resolvers::ValueResolver;
 #[cfg(feature = "xml")] use crate::engine::xml::XmlValue;
 use crate::headers::{parse_charset_parameters, strip_whitespace};
 use crate::json::type_of;
-use crate::matchers::Matches;
+use crate::matchingrules::DoMatch;
 use crate::xml::resolve_attr_namespaces;
 
 /// Main interpreter for the matching plan AST
@@ -1157,11 +1158,12 @@ impl ExecutionPlanInterpreter {
     node: &ExecutionPlanNode,
     action_path: &Vec<String>
   ) -> Result<ExecutionPlanNode, ExecutionPlanNode> {
-    match self.validate_args(3, 1, node, action, value_resolver, &action_path) {
+    match self.validate_args(4, 1, node, action, value_resolver, &action_path) {
       Ok((args, optional)) => {
         let first_node = &args[0];
         let second_node = &args[1];
         let third_node = &args[2];
+        let fourth_node = &args[3];
 
         let exepected_value = first_node.value()
           .unwrap_or_default()
@@ -1170,8 +1172,7 @@ impl ExecutionPlanInterpreter {
             ExecutionPlanNode {
               node_type: node.node_type.clone(),
               result: Some(NodeResult::ERROR(err.to_string())),
-              children: [first_node.clone(), second_node.clone(), third_node.clone()]
-                .iter()
+              children: args.iter()
                 .chain(optional.iter())
                 .cloned()
                 .collect()
@@ -1185,8 +1186,7 @@ impl ExecutionPlanInterpreter {
             ExecutionPlanNode {
               node_type: node.node_type.clone(),
               result: Some(NodeResult::ERROR(err.to_string())),
-              children: [first_node.clone(), second_node.clone(), third_node.clone()]
-                .iter()
+              children: args.iter()
                 .chain(optional.iter())
                 .cloned()
                 .collect()
@@ -1200,8 +1200,7 @@ impl ExecutionPlanInterpreter {
             ExecutionPlanNode {
               node_type: node.node_type.clone(),
               result: Some(NodeResult::ERROR(err.to_string())),
-              children: [first_node.clone(), second_node.clone(), third_node.clone()]
-                .iter()
+              children: args.iter()
                 .chain(optional.iter())
                 .cloned()
                 .collect()
@@ -1210,15 +1209,30 @@ impl ExecutionPlanInterpreter {
           .as_json()
           .unwrap_or_default();
 
+        let show_types = fourth_node.value()
+          .unwrap_or_default()
+          .value_or_error()
+            .map_err(|err| {
+              ExecutionPlanNode {
+                node_type: node.node_type.clone(),
+                result: Some(NodeResult::ERROR(err.to_string())),
+                children: args.iter()
+                  .chain(optional.iter())
+                  .cloned()
+                  .collect()
+              }
+            })?
+        .as_bool()
+        .unwrap_or_default();
+
         match MatchingRule::create(matcher, &matcher_params) {
           Ok(rule) => {
-            match exepected_value.matches_with(actual_value, &rule, false) {
+            match rule.match_value(&exepected_value, &actual_value, false, show_types) {
               Ok(_) => {
                 Ok(ExecutionPlanNode {
                   node_type: node.node_type.clone(),
                   result: Some(NodeResult::VALUE(NodeValue::BOOL(true))),
-                  children: [first_node.clone(), second_node.clone(), third_node.clone()]
-                    .iter()
+                  children: args.iter()
                     .chain(optional.iter())
                     .cloned()
                     .collect()
@@ -1233,7 +1247,7 @@ impl ExecutionPlanInterpreter {
                       Err(ExecutionPlanNode {
                         node_type: node.node_type.clone(),
                         result: Some(NodeResult::ERROR(message)),
-                        children: vec![first_node.clone(), second_node.clone(), third_node.clone(), error_node.clone()]
+                        children: args.iter().chain(vec![error_node].iter()).cloned().collect()
                       })
                     }
                     Err(_) => {
@@ -1243,8 +1257,7 @@ impl ExecutionPlanInterpreter {
                       Err(ExecutionPlanNode {
                         node_type: node.node_type.clone(),
                         result: Some(NodeResult::ERROR(err.to_string())),
-                        children: [first_node.clone(), second_node.clone(), third_node.clone()]
-                          .iter()
+                        children: args.iter()
                           .chain(optional.iter())
                           .cloned()
                           .collect()
@@ -1255,8 +1268,7 @@ impl ExecutionPlanInterpreter {
                   Err(ExecutionPlanNode {
                     node_type: node.node_type.clone(),
                     result: Some(NodeResult::ERROR(err.to_string())),
-                    children: [first_node.clone(), second_node.clone(), third_node.clone()]
-                      .iter()
+                    children: args.iter()
                       .chain(optional.iter())
                       .cloned()
                       .collect()

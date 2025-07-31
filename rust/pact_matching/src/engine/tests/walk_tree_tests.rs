@@ -27,7 +27,7 @@ impl ValueResolver for TestValueResolver {
 fn json_with_null() {
   let path = vec!["$".to_string()];
   let builder = JsonPlanBuilder::new();
-  let context = PlanMatchingContext::default();
+  let context = PlanMatchingContext::default().for_body();
   let content = Bytes::copy_from_slice(Value::Null.to_string().as_bytes());
   let node = builder.build_plan(&content, &context).unwrap();
 
@@ -46,7 +46,8 @@ fn json_with_null() {
       %match:equality (
         json:null => json:null,
         ~>$ => json:null,
-        NULL => NULL
+        NULL => NULL,
+        BOOL(true) => BOOL(true)
       ) => BOOL(true)
     ) => BOOL(true)
   ) => BOOL(true)", buffer);
@@ -67,8 +68,9 @@ fn json_with_null() {
       %match:equality (
         json:null => json:null,
         ~>$ => json:true,
-        NULL => NULL
-      ) => ERROR(Expected true (Boolean) to be equal to null (Null))
+        NULL => NULL,
+        BOOL(true) => BOOL(true)
+      ) => ERROR(Expected true \\(Boolean\\) to be equal to null \\(Null\\))
     ) => BOOL(false)
   ) => BOOL(false)", buffer);
 
@@ -88,7 +90,8 @@ fn json_with_null() {
       %match:equality (
         json:null,
         ~>$,
-        NULL
+        NULL,
+        BOOL(true)
       )
     )
   ) => ERROR(json parse error - EOF while parsing an object at line 1 column 1)", buffer);
@@ -98,7 +101,7 @@ fn json_with_null() {
 fn json_with_boolean() {
   let path = vec!["$".to_string()];
   let builder = JsonPlanBuilder::new();
-  let context = PlanMatchingContext::default();
+  let context = PlanMatchingContext::default().for_body();
   let content = Bytes::copy_from_slice(Value::Bool(true).to_string().as_bytes());
   let node = builder.build_plan(&content, &context).unwrap();
 
@@ -117,7 +120,8 @@ fn json_with_boolean() {
       %match:equality (
         json:true => json:true,
         ~>$ => json:true,
-        NULL => NULL
+        NULL => NULL,
+        BOOL(true) => BOOL(true)
       ) => BOOL(true)
     ) => BOOL(true)
   ) => BOOL(true)", buffer);
@@ -138,8 +142,9 @@ fn json_with_boolean() {
       %match:equality (
         json:true => json:true,
         ~>$ => json:false,
-        NULL => NULL
-      ) => ERROR(Expected false (Boolean) to be equal to true (Boolean))
+        NULL => NULL,
+        BOOL(true) => BOOL(true)
+      ) => ERROR(Expected false \\(Boolean\\) to be equal to true \\(Boolean\\))
     ) => BOOL(false)
   ) => BOOL(false)", buffer);
 }
@@ -148,7 +153,7 @@ fn json_with_boolean() {
 fn json_with_empty_array() {
   let path = vec!["$".to_string()];
   let builder = JsonPlanBuilder::new();
-  let context = PlanMatchingContext::default();
+  let context = PlanMatchingContext::default().for_body();;
   let content = Bytes::copy_from_slice(Value::Array(vec![]).to_string().as_bytes());
   let node = builder.build_plan(&content, &context).unwrap();
 
@@ -207,7 +212,7 @@ fn json_with_empty_array() {
       %json:expect:empty (
         'ARRAY' => 'ARRAY',
         ~>$ => json:[true]
-      ) => ERROR(Expected JSON Array ([true]) to be empty)
+      ) => ERROR(Expected JSON Array \\([true]\\) to be empty)
     ) => BOOL(false)
   ) => BOOL(false)", buffer);
 }
@@ -216,7 +221,7 @@ fn json_with_empty_array() {
 fn json_with_array() {
   let path = vec!["$".to_string()];
   let builder = JsonPlanBuilder::new();
-  let context = PlanMatchingContext::default();
+  let context = PlanMatchingContext::default().for_body();;
   let content = Bytes::copy_from_slice(json!([1, 2, 3]).to_string().as_bytes());
   let node = builder.build_plan(&content, &context).unwrap();
 
@@ -245,7 +250,8 @@ fn json_with_array() {
           %match:equality (
             json:1 => json:1,
             ~>$[0] => json:1,
-            NULL => NULL
+            NULL => NULL,
+            BOOL(true) => BOOL(true)
           ) => BOOL(true),
           %error (
             'Expected a value for \\'/0\\' but it was missing'
@@ -260,7 +266,8 @@ fn json_with_array() {
           %match:equality (
             json:2 => json:2,
             ~>$[1] => json:2,
-            NULL => NULL
+            NULL => NULL,
+            BOOL(true) => BOOL(true)
           ) => BOOL(true),
           %error (
             'Expected a value for \\'/1\\' but it was missing'
@@ -275,7 +282,8 @@ fn json_with_array() {
           %match:equality (
             json:3 => json:3,
             ~>$[2] => json:3,
-            NULL => NULL
+            NULL => NULL,
+            BOOL(true) => BOOL(true)
           ) => BOOL(true),
           %error (
             'Expected a value for \\'/2\\' but it was missing'
@@ -311,7 +319,8 @@ fn json_with_array() {
           %match:equality (
             json:1,
             ~>$[0],
-            NULL
+            NULL,
+            BOOL(true)
           ),
           %error (
             'Expected a value for \\'/0\\' but it was missing' => 'Expected a value for \\'/0\\' but it was missing'
@@ -326,7 +335,8 @@ fn json_with_array() {
           %match:equality (
             json:2,
             ~>$[1],
-            NULL
+            NULL,
+            BOOL(true)
           ),
           %error (
             'Expected a value for \\'/1\\' but it was missing' => 'Expected a value for \\'/1\\' but it was missing'
@@ -341,7 +351,8 @@ fn json_with_array() {
           %match:equality (
             json:3,
             ~>$[2],
-            NULL
+            NULL,
+            BOOL(true)
           ),
           %error (
             'Expected a value for \\'/2\\' but it was missing' => 'Expected a value for \\'/2\\' but it was missing'
@@ -377,8 +388,9 @@ fn json_with_array() {
           %match:equality (
             json:1 => json:1,
             ~>$[0] => json:true,
-            NULL => NULL
-          ) => ERROR(Expected true (Boolean) to be equal to 1 (Integer)),
+            NULL => NULL,
+            BOOL(true) => BOOL(true)
+          ) => ERROR(Expected true \\(Boolean\\) to be equal to 1 \\(Integer\\)),
           %error (
             'Expected a value for \\'/0\\' but it was missing'
           )
@@ -392,7 +404,8 @@ fn json_with_array() {
           %match:equality (
             json:2,
             ~>$[1],
-            NULL
+            NULL,
+            BOOL(true)
           ),
           %error (
             'Expected a value for \\'/1\\' but it was missing' => 'Expected a value for \\'/1\\' but it was missing'
@@ -407,7 +420,8 @@ fn json_with_array() {
           %match:equality (
             json:3,
             ~>$[2],
-            NULL
+            NULL,
+            BOOL(true)
           ),
           %error (
             'Expected a value for \\'/2\\' but it was missing' => 'Expected a value for \\'/2\\' but it was missing'
@@ -443,7 +457,8 @@ fn json_with_array() {
           %match:equality (
             json:1 => json:1,
             ~>$[0] => json:1,
-            NULL => NULL
+            NULL => NULL,
+            BOOL(true) => BOOL(true)
           ) => BOOL(true),
           %error (
             'Expected a value for \\'/0\\' but it was missing'
@@ -458,8 +473,9 @@ fn json_with_array() {
           %match:equality (
             json:2 => json:2,
             ~>$[1] => json:3,
-            NULL => NULL
-          ) => ERROR(Expected 3 (Integer) to be equal to 2 (Integer)),
+            NULL => NULL,
+            BOOL(true) => BOOL(true)
+          ) => ERROR(Expected 3 \\(Integer\\) to be equal to 2 \\(Integer\\)),
           %error (
             'Expected a value for \\'/1\\' but it was missing'
           )
@@ -473,7 +489,8 @@ fn json_with_array() {
           %match:equality (
             json:3 => json:3,
             ~>$[2] => json:3,
-            NULL => NULL
+            NULL => NULL,
+            BOOL(true) => BOOL(true)
           ) => BOOL(true),
           %error (
             'Expected a value for \\'/2\\' but it was missing'
@@ -515,7 +532,8 @@ fn very_simple_xml() {
               %to-string (
                 ~>$.foo['#text'] => xml:text:'test'
               ) => 'test',
-              NULL => NULL
+              NULL => NULL,
+              BOOL(false) => BOOL(false)
             ) => BOOL(true)
           ) => BOOL(true),
           %expect:empty (
@@ -553,7 +571,8 @@ fn very_simple_xml() {
               %to-string (
                 ~>$.foo['#text']
               ),
-              NULL
+              NULL,
+              BOOL(false)
             )
           ),
           %expect:empty (
@@ -591,7 +610,8 @@ fn very_simple_xml() {
               %to-string (
                 ~>$.foo['#text']
               ),
-              NULL
+              NULL,
+              BOOL(false)
             )
           ),
           %expect:empty (
@@ -671,7 +691,8 @@ fn simple_xml() {
                   %to-string (
                     ~>$.config.name[0]['#text'] => xml:text:'My Settings'
                   ) => 'My Settings',
-                  NULL => NULL
+                  NULL => NULL,
+                  BOOL(false) => BOOL(false)
                 ) => BOOL(true)
               ) => BOOL(true),
               %expect:empty (
@@ -735,7 +756,8 @@ fn simple_xml() {
                           %xml:value (
                             ~>$.config.sound[0].property[0]['@name'] => xml:attribute:'name'='volume'
                           ) => 'volume',
-                          NULL => NULL
+                          NULL => NULL,
+                          BOOL(false) => BOOL(false)
                         ) => BOOL(true)
                       ) => BOOL(true)
                     ) => BOOL(true),
@@ -750,7 +772,8 @@ fn simple_xml() {
                           %xml:value (
                             ~>$.config.sound[0].property[0]['@value'] => xml:attribute:'value'='11'
                           ) => '11',
-                          NULL => NULL
+                          NULL => NULL,
+                          BOOL(false) => BOOL(false)
                         ) => BOOL(true)
                       ) => BOOL(true)
                     ) => BOOL(true),
@@ -808,7 +831,8 @@ fn simple_xml() {
                           %xml:value (
                             ~>$.config.sound[0].property[1]['@name'] => xml:attribute:'name'='mixer'
                           ) => 'mixer',
-                          NULL => NULL
+                          NULL => NULL,
+                          BOOL(false) => BOOL(false)
                         ) => BOOL(true)
                       ) => BOOL(true)
                     ) => BOOL(true),
@@ -823,7 +847,8 @@ fn simple_xml() {
                           %xml:value (
                             ~>$.config.sound[0].property[1]['@value'] => xml:attribute:'value'='standard'
                           ) => 'standard',
-                          NULL => NULL
+                          NULL => NULL,
+                          BOOL(false) => BOOL(false)
                         ) => BOOL(true)
                       ) => BOOL(true)
                     ) => BOOL(true),
@@ -934,7 +959,8 @@ fn simple_xml() {
                   %to-string (
                     ~>$.config.name[0]['#text'] => NULL
                   ) => '',
-                  NULL => NULL
+                  NULL => NULL,
+                  BOOL(false) => BOOL(false)
                 ) => ERROR(Expected '' to be equal to 'My Settings')
               ) => BOOL(false),
               %expect:empty (
@@ -998,7 +1024,8 @@ fn simple_xml() {
                           %xml:value (
                             ~>$.config.sound[0].property[0]['@name'] => xml:attribute:'name'='mixer'
                           ) => 'mixer',
-                          NULL => NULL
+                          NULL => NULL,
+                          BOOL(false) => BOOL(false)
                         ) => ERROR(Expected 'mixer' to be equal to 'volume')
                       ) => BOOL(false)
                     ) => BOOL(false),
@@ -1013,7 +1040,8 @@ fn simple_xml() {
                           %xml:value (
                             ~>$.config.sound[0].property[0]['@value'] => xml:attribute:'value'='standard'
                           ) => 'standard',
-                          NULL => NULL
+                          NULL => NULL,
+                          BOOL(false) => BOOL(false)
                         ) => ERROR(Expected 'standard' to be equal to '11')
                       ) => BOOL(false)
                     ) => BOOL(false),
@@ -1071,7 +1099,8 @@ fn simple_xml() {
                           %xml:value (
                             ~>$.config.sound[0].property[1]['@name']
                           ),
-                          NULL
+                          NULL,
+                          BOOL(false)
                         )
                       )
                     ),
@@ -1086,7 +1115,8 @@ fn simple_xml() {
                           %xml:value (
                             ~>$.config.sound[0].property[1]['@value']
                           ),
-                          NULL
+                          NULL,
+                          BOOL(false)
                         )
                       )
                     ),
@@ -1198,7 +1228,8 @@ fn missing_xml_value() {
                   %to-string (
                     ~>$.values.value[0]['#text'] => xml:text:'A'
                   ) => 'A',
-                  NULL => NULL
+                  NULL => NULL,
+                  BOOL(false) => BOOL(false)
                 ) => BOOL(true)
               ) => BOOL(true),
               %expect:empty (
@@ -1220,7 +1251,8 @@ fn missing_xml_value() {
                   %to-string (
                     ~>$.values.value[1]['#text'] => xml:text:'B'
                   ) => 'B',
-                  NULL => NULL
+                  NULL => NULL,
+                  BOOL(false) => BOOL(false)
                 ) => BOOL(true)
               ) => BOOL(true),
               %expect:empty (
@@ -1289,7 +1321,8 @@ fn missing_xml_value() {
                   %to-string (
                     ~>$.values.value[0]['#text']
                   ),
-                  NULL
+                  NULL,
+                  BOOL(false)
                 )
               ),
               %expect:empty (
@@ -1311,7 +1344,8 @@ fn missing_xml_value() {
                   %to-string (
                     ~>$.values.value[1]['#text']
                   ),
-                  NULL
+                  NULL,
+                  BOOL(false)
                 )
               ),
               %expect:empty (
@@ -1380,7 +1414,8 @@ fn missing_xml_value() {
                   %to-string (
                     ~>$.values.value[0]['#text'] => xml:text:'A'
                   ) => 'A',
-                  NULL => NULL
+                  NULL => NULL,
+                  BOOL(false) => BOOL(false)
                 ) => BOOL(true)
               ) => BOOL(true),
               %expect:empty (
@@ -1402,7 +1437,8 @@ fn missing_xml_value() {
                   %to-string (
                     ~>$.values.value[1]['#text']
                   ),
-                  NULL
+                  NULL,
+                  BOOL(false)
                 )
               ),
               %expect:empty (
@@ -1480,7 +1516,8 @@ fn invalid_xml() {
                   %to-string (
                     ~>$.values.value[0]['#text']
                   ),
-                  NULL
+                  NULL,
+                  BOOL(false)
                 )
               ),
               %expect:empty (
@@ -1502,7 +1539,8 @@ fn invalid_xml() {
                   %to-string (
                     ~>$.values.value[1]['#text']
                   ),
-                  NULL
+                  NULL,
+                  BOOL(false)
                 )
               ),
               %expect:empty (
@@ -1580,7 +1618,8 @@ fn unexpected_xml_value() {
                   %to-string (
                     ~>$.values.value[0]['#text'] => xml:text:'A'
                   ) => 'A',
-                  NULL => NULL
+                  NULL => NULL,
+                  BOOL(false) => BOOL(false)
                 ) => BOOL(true)
               ) => BOOL(true),
               %expect:empty (
@@ -1602,7 +1641,8 @@ fn unexpected_xml_value() {
                   %to-string (
                     ~>$.values.value[1]['#text'] => xml:text:'B'
                   ) => 'B',
-                  NULL => NULL
+                  NULL => NULL,
+                  BOOL(false) => BOOL(false)
                 ) => BOOL(true)
               ) => BOOL(true),
               %expect:empty (

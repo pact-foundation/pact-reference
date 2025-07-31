@@ -71,7 +71,7 @@ specs.eachFileRecurse(FileType.DIRECTORIES) { dir ->
         |    println!("BODY: {}", actual.as_request_response().unwrap().request.body.display_string());
         |    let pact_match = pact.get("match").unwrap();
         |
-        |    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+        |    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
         |    let pact = RequestResponsePact { interactions: vec![ expected.as_request_response().unwrap_or_default() ], .. RequestResponsePact::default() }.boxed();
         |    let result = match_interaction_request(expected, actual, pact, &PactSpecification::$specVersion).await.unwrap().mismatches();
         |
@@ -94,7 +94,7 @@ specs.eachFileRecurse(FileType.DIRECTORIES) { dir ->
         |    println!("BODY: {}", actual.as_request_response().unwrap().response.body.display_string());
         |    let pact_match = pact.get("match").unwrap();
         |
-        |    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+        |    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
         |    let pact = RequestResponsePact { interactions: vec![ expected.as_request_response().unwrap_or_default() ], .. RequestResponsePact::default() }.boxed();
         |    let result = match_interaction_response(expected, actual, pact, &PactSpecification::$specVersion).await.unwrap();
         |
@@ -121,7 +121,7 @@ specs.eachFileRecurse(FileType.DIRECTORIES) { dir ->
         |    println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
         |    let pact_match = pact.get("match").unwrap();
         |
-        |    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+        |    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
         |    let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
         |    let result = match_interaction(expected, actual, pact, &PactSpecification::$specVersion).await.unwrap();
         |

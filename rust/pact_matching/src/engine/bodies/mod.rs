@@ -72,6 +72,7 @@ impl PlanBodyBuilder for PlainTextBuilder {
     node.add(ExecutionPlanNode::value_node(text_content.to_string()));
     node.add(child_node);
     node.add(ExecutionPlanNode::value_node(NodeValue::NULL));
+    node.add(ExecutionPlanNode::value_node(NodeValue::BOOL(false)));
     Ok(node)
   }
 }

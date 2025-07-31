@@ -62,7 +62,7 @@ async fn null_found_at_key_where_not_null_expected() {
     println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
     let pact_match = pact.get("match").unwrap();
 
-    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
     let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
     let result = match_interaction(expected, actual, pact, &PactSpecification::V4).await.unwrap();
 
@@ -147,7 +147,7 @@ async fn array_with_at_least_one_element_matching_by_example() {
     println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
     let pact_match = pact.get("match").unwrap();
 
-    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
     let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
     let result = match_interaction(expected, actual, pact, &PactSpecification::V4).await.unwrap();
 
@@ -196,7 +196,7 @@ async fn no_body_no_content_type() {
     println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
     let pact_match = pact.get("match").unwrap();
 
-    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
     let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
     let result = match_interaction(expected, actual, pact, &PactSpecification::V4).await.unwrap();
 
@@ -273,7 +273,7 @@ async fn array_at_top_level() {
     println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
     let pact_match = pact.get("match").unwrap();
 
-    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
     let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
     let result = match_interaction(expected, actual, pact, &PactSpecification::V4).await.unwrap();
 
@@ -379,7 +379,7 @@ async fn array_with_nested_array_that_does_not_match() {
     println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
     let pact_match = pact.get("match").unwrap();
 
-    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
     let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
     let result = match_interaction(expected, actual, pact, &PactSpecification::V4).await.unwrap();
 
@@ -464,7 +464,7 @@ async fn array_with_at_least_one_element_not_matching_example_type() {
     println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
     let pact_match = pact.get("match").unwrap();
 
-    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
     let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
     let result = match_interaction(expected, actual, pact, &PactSpecification::V4).await.unwrap();
 
@@ -524,7 +524,7 @@ async fn missing_key() {
     println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
     let pact_match = pact.get("match").unwrap();
 
-    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
     let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
     let result = match_interaction(expected, actual, pact, &PactSpecification::V4).await.unwrap();
 
@@ -645,7 +645,7 @@ async fn array_with_nested_array_that_matches() {
     println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
     let pact_match = pact.get("match").unwrap();
 
-    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
     let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
     let result = match_interaction(expected, actual, pact, &PactSpecification::V4).await.unwrap();
 
@@ -711,7 +711,7 @@ async fn unexpected_index_with_null_value() {
     println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
     let pact_match = pact.get("match").unwrap();
 
-    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
     let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
     let result = match_interaction(expected, actual, pact, &PactSpecification::V4).await.unwrap();
 
@@ -778,7 +778,7 @@ async fn null_found_in_array_when_not_null_expected() {
     println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
     let pact_match = pact.get("match").unwrap();
 
-    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
     let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
     let result = match_interaction(expected, actual, pact, &PactSpecification::V4).await.unwrap();
 
@@ -849,7 +849,7 @@ async fn array_size_less_than_required() {
     println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
     let pact_match = pact.get("match").unwrap();
 
-    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
     let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
     let result = match_interaction(expected, actual, pact, &PactSpecification::V4).await.unwrap();
 
@@ -920,7 +920,7 @@ async fn matches_with_regex_with_bracket_notation() {
     println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
     let pact_match = pact.get("match").unwrap();
 
-    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
     let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
     let result = match_interaction(expected, actual, pact, &PactSpecification::V4).await.unwrap();
 
@@ -987,7 +987,7 @@ async fn not_null_found_in_array_when_null_expected() {
     println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
     let pact_match = pact.get("match").unwrap();
 
-    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
     let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
     let result = match_interaction(expected, actual, pact, &PactSpecification::V4).await.unwrap();
 
@@ -1052,7 +1052,7 @@ async fn array_in_different_order() {
     println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
     let pact_match = pact.get("match").unwrap();
 
-    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
     let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
     let result = match_interaction(expected, actual, pact, &PactSpecification::V4).await.unwrap();
 
@@ -1149,7 +1149,7 @@ async fn matches_with_regex() {
     println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
     let pact_match = pact.get("match").unwrap();
 
-    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
     let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
     let result = match_interaction(expected, actual, pact, &PactSpecification::V4).await.unwrap();
 
@@ -1213,7 +1213,7 @@ async fn missing_index() {
     println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
     let pact_match = pact.get("match").unwrap();
 
-    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
     let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
     let result = match_interaction(expected, actual, pact, &PactSpecification::V4).await.unwrap();
 
@@ -1278,7 +1278,7 @@ async fn different_value_found_at_index() {
     println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
     let pact_match = pact.get("match").unwrap();
 
-    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
     let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
     let result = match_interaction(expected, actual, pact, &PactSpecification::V4).await.unwrap();
 
@@ -1328,7 +1328,7 @@ async fn no_body() {
     println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
     let pact_match = pact.get("match").unwrap();
 
-    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
     let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
     let result = match_interaction(expected, actual, pact, &PactSpecification::V4).await.unwrap();
 
@@ -1397,7 +1397,7 @@ async fn matches() {
     println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
     let pact_match = pact.get("match").unwrap();
 
-    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
     let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
     let result = match_interaction(expected, actual, pact, &PactSpecification::V4).await.unwrap();
 
@@ -1464,7 +1464,7 @@ async fn number_found_in_array_when_string_expected() {
     println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
     let pact_match = pact.get("match").unwrap();
 
-    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
     let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
     let result = match_interaction(expected, actual, pact, &PactSpecification::V4).await.unwrap();
 
@@ -1531,7 +1531,7 @@ async fn string_found_in_array_when_number_expected() {
     println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
     let pact_match = pact.get("match").unwrap();
 
-    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
     let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
     let result = match_interaction(expected, actual, pact, &PactSpecification::V4).await.unwrap();
 
@@ -1597,7 +1597,7 @@ async fn unexpected_index_with_not_null_value() {
     println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
     let pact_match = pact.get("match").unwrap();
 
-    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
     let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
     let result = match_interaction(expected, actual, pact, &PactSpecification::V4).await.unwrap();
 
@@ -1656,7 +1656,7 @@ async fn number_found_at_key_when_string_expected() {
     println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
     let pact_match = pact.get("match").unwrap();
 
-    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
     let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
     let result = match_interaction(expected, actual, pact, &PactSpecification::V4).await.unwrap();
 
@@ -1715,7 +1715,7 @@ async fn not_null_found_at_key_when_null_expected() {
     println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
     let pact_match = pact.get("match").unwrap();
 
-    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
     let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
     let result = match_interaction(expected, actual, pact, &PactSpecification::V4).await.unwrap();
 
@@ -1774,7 +1774,7 @@ async fn different_value_found_at_key() {
     println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
     let pact_match = pact.get("match").unwrap();
 
-    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
     let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
     let result = match_interaction(expected, actual, pact, &PactSpecification::V4).await.unwrap();
 
@@ -1867,7 +1867,7 @@ async fn array_with_regular_expression_in_element() {
     println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
     let pact_match = pact.get("match").unwrap();
 
-    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
     let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
     let result = match_interaction(expected, actual, pact, &PactSpecification::V4).await.unwrap();
 
@@ -1960,7 +1960,7 @@ async fn array_with_regular_expression_that_does_not_match_in_element() {
     println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
     let pact_match = pact.get("match").unwrap();
 
-    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
     let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
     let result = match_interaction(expected, actual, pact, &PactSpecification::V4).await.unwrap();
 
@@ -2020,7 +2020,7 @@ async fn unexpected_key_with_null_value() {
     println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
     let pact_match = pact.get("match").unwrap();
 
-    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
     let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
     let result = match_interaction(expected, actual, pact, &PactSpecification::V4).await.unwrap();
 
@@ -2079,7 +2079,7 @@ async fn string_found_at_key_when_number_expected() {
     println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
     let pact_match = pact.get("match").unwrap();
 
-    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
     let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
     let result = match_interaction(expected, actual, pact, &PactSpecification::V4).await.unwrap();
 
@@ -2139,7 +2139,7 @@ async fn unexpected_key_with_not_null_value() {
     println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
     let pact_match = pact.get("match").unwrap();
 
-    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
     let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
     let result = match_interaction(expected, actual, pact, &PactSpecification::V4).await.unwrap();
 
@@ -2226,7 +2226,7 @@ async fn matches_with_type() {
     println!("BODY: {}", actual.as_message().unwrap().contents.display_string());
     let pact_match = pact.get("match").unwrap();
 
-    #[cfg(feature = "plugins")] pact_matching::matchers::configure_core_catalogue();
+    #[cfg(feature = "plugins")] pact_matching::matchingrules::configure_core_catalogue();
     let pact = MessagePact { messages: vec![ expected.as_message().unwrap_or_default() ], .. MessagePact::default() }.boxed();
     let result = match_interaction(expected, actual, pact, &PactSpecification::V4).await.unwrap();
 

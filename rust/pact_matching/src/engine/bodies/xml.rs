@@ -10,8 +10,15 @@ use pact_models::xml_utils::{group_children, text_nodes};
 use crate::engine::{build_matching_rule_node, ExecutionPlanNode, NodeValue};
 use crate::engine::bodies::{drop_indices, PlanBodyBuilder, remove_marker};
 use crate::engine::context::PlanMatchingContext;
-use crate::engine::xml::name;
 use crate::xml::resolve_attr_namespaces;
+
+fn name(element: &Element) -> String {
+  if let Some(namespace) = element.namespace() {
+    format!("{}:{}", namespace, element.name())
+  } else {
+    element.name()
+  }
+}
 
 /// Plan builder for XML bodies
 #[derive(Clone, Debug)]
@@ -139,7 +146,7 @@ impl XMLPlanBuilder {
             p.last_field().unwrap_or_default(),
             rules.generate_description(true))));
           parent_node.add(build_matching_rule_node(&ExecutionPlanNode::value_node(elements[0]),
-            &ExecutionPlanNode::resolve_current_value(&p), &rules, true));
+            &ExecutionPlanNode::resolve_current_value(&p), &rules, true, false));
         }
 
         let mut for_each_node = ExecutionPlanNode::action("for-each");
@@ -175,7 +182,7 @@ impl XMLPlanBuilder {
         let mut current_value = ExecutionPlanNode::action("to-string");
         current_value.add(ExecutionPlanNode::resolve_current_value(&p));
         node.add(build_matching_rule_node(&ExecutionPlanNode::value_node(text_nodes.join("")),
-                                          &current_value, &matchers, false));
+          &current_value, &matchers, false, false));
       } else {
         if text_nodes.is_empty() {
           node.add(ExecutionPlanNode::action("expect:empty")
@@ -187,7 +194,8 @@ impl XMLPlanBuilder {
             .add(ExecutionPlanNode::value_node(NodeValue::STRING(text_nodes.join(""))))
             .add(ExecutionPlanNode::action("to-string")
               .add(ExecutionPlanNode::resolve_current_value(&p)))
-            .add(ExecutionPlanNode::value_node(NodeValue::NULL));
+            .add(ExecutionPlanNode::value_node(NodeValue::NULL))
+            .add(ExecutionPlanNode::value_node(false));
           node.add(match_node);
         }
       }
@@ -229,7 +237,7 @@ impl XMLPlanBuilder {
         presence_check.add(build_matching_rule_node(&ExecutionPlanNode::value_node(item_value),
           ExecutionPlanNode::action("xml:value")
             .add(ExecutionPlanNode::resolve_current_value(&p)),
-          &matchers, false));
+          &matchers, false, false));
       } else {
         item_node.add(ExecutionPlanNode::annotation(format!("@{}={}", key, item_value.to_string())));
         let mut item_check = ExecutionPlanNode::action("match:equality");
@@ -237,7 +245,8 @@ impl XMLPlanBuilder {
           .add(ExecutionPlanNode::value_node(item_value.clone()))
           .add(ExecutionPlanNode::action("xml:value")
             .add(ExecutionPlanNode::resolve_current_value(&p)))
-          .add(ExecutionPlanNode::value_node(NodeValue::NULL));
+          .add(ExecutionPlanNode::value_node(NodeValue::NULL))
+          .add(ExecutionPlanNode::value_node(false));
         presence_check.add(item_check);
       }
 
@@ -450,7 +459,8 @@ mod tests {
                 %to-string (
                   ~>$.config.name[0]['#text']
                 ),
-                NULL
+                NULL,
+                BOOL(false)
               )
             ),
             %expect:empty (
@@ -514,7 +524,8 @@ mod tests {
                         %xml:value (
                           ~>$.config.sound[0].property[0]['@name']
                         ),
-                        NULL
+                        NULL,
+                        BOOL(false)
                       )
                     )
                   ),
@@ -529,7 +540,8 @@ mod tests {
                         %xml:value (
                           ~>$.config.sound[0].property[0]['@value']
                         ),
-                        NULL
+                        NULL,
+                        BOOL(false)
                       )
                     )
                   ),
@@ -587,7 +599,8 @@ mod tests {
                         %xml:value (
                           ~>$.config.sound[0].property[1]['@name']
                         ),
-                        NULL
+                        NULL,
+                        BOOL(false)
                       )
                     )
                   ),
@@ -602,7 +615,8 @@ mod tests {
                         %xml:value (
                           ~>$.config.sound[0].property[1]['@value']
                         ),
-                        NULL
+                        NULL,
+                        BOOL(false)
                       )
                     )
                   ),
@@ -716,7 +730,8 @@ mod tests {
                 %to-string (
                   ~>$.values.value[0]['#text']
                 ),
-                json:{"regex":"\\d+"}
+                json:{"regex":"\\d+"},
+                BOOL(false)
               )
             ),
             %expect:empty (
@@ -774,7 +789,8 @@ mod tests {
                 %xml:value (
                   ~>$.value['@id']
                 ),
-                json:{"regex":"\\d+"}
+                json:{"regex":"\\d+"},
+                BOOL(false)
               )
             )
           ),
@@ -854,7 +870,8 @@ mod tests {
         %match:min-type (
           xml:'<value>100</value>',
           ~>$.values.value,
-          json:{"min":2}
+          json:{"min":2},
+          BOOL(false)
         ),
         %for-each (
           'value*',

@@ -45,13 +45,15 @@ impl JsonPlanBuilder {
         if !matchers.is_empty() {
           root_node.add(ExecutionPlanNode::annotation(format!("{} {}", path.last_field().unwrap_or_default(), matchers.generate_description(false))));
           root_node.add(build_matching_rule_node(&ExecutionPlanNode::value_node(json),
-            &ExecutionPlanNode::resolve_current_value(path), &matchers, false));
+            &ExecutionPlanNode::resolve_current_value(path), &matchers, false,
+            context.config.show_types_in_errors));
         } else {
           let mut match_node = ExecutionPlanNode::action("match:equality");
           match_node
             .add(ExecutionPlanNode::value_node(NodeValue::NAMESPACED("json".to_string(), json.to_string())))
             .add(ExecutionPlanNode::resolve_current_value(path))
-            .add(ExecutionPlanNode::value_node(NodeValue::NULL));
+            .add(ExecutionPlanNode::value_node(NodeValue::NULL))
+            .add(ExecutionPlanNode::value_node(context.config.show_types_in_errors));
           root_node.add(match_node);
         }
       }
@@ -72,7 +74,8 @@ impl JsonPlanBuilder {
     if !rules.is_empty() && should_apply_to_map_entries(&rules) {
       root_node.add(ExecutionPlanNode::annotation(rules.generate_description(true)));
       root_node.add(build_matching_rule_node(&ExecutionPlanNode::value_node(json.clone()),
-        &ExecutionPlanNode::resolve_current_value(path), &rules, true));
+        &ExecutionPlanNode::resolve_current_value(path), &rules, true,
+        context.config.show_types_in_errors));
     } else if entries.is_empty() {
       root_node.add(
         ExecutionPlanNode::action("json:expect:empty")
@@ -126,7 +129,8 @@ impl JsonPlanBuilder {
         path.last_field().unwrap_or_default(),
         matchers.generate_description(true))));
       root_node.add(build_matching_rule_node(&ExecutionPlanNode::value_node(json.clone()),
-        &ExecutionPlanNode::resolve_current_value(path), &matchers, true));
+        &ExecutionPlanNode::resolve_current_value(path), &matchers, true,
+        context.config.show_types_in_errors));
 
       if let Some(template) = items.first() {
         let mut for_each_node = ExecutionPlanNode::action("for-each");
@@ -160,13 +164,15 @@ impl JsonPlanBuilder {
               let matchers = context.select_best_matcher(&item_path);
               presence_check.add(ExecutionPlanNode::annotation(format!("[*] {}", matchers.generate_description(false))));
               presence_check.add(build_matching_rule_node(&ExecutionPlanNode::value_node(template),
-                                                          &ExecutionPlanNode::resolve_current_value(&item_path), &matchers, false));
+                &ExecutionPlanNode::resolve_current_value(&item_path), &matchers, false,
+                context.config.show_types_in_errors));
             } else {
               presence_check.add(
                 ExecutionPlanNode::action("match:equality")
                   .add(ExecutionPlanNode::value_node(NodeValue::NAMESPACED("json".to_string(), template.to_string())))
                   .add(ExecutionPlanNode::resolve_current_value(&item_path))
                   .add(ExecutionPlanNode::value_node(NodeValue::NULL))
+                  .add(ExecutionPlanNode::value_node(context.config.show_types_in_errors))
               );
             }
             item_node.add(presence_check);
@@ -209,13 +215,14 @@ impl JsonPlanBuilder {
               let matchers = context.select_best_matcher(&item_path);
               presence_check.add(ExecutionPlanNode::annotation(format!("[{}] {}", index, matchers.generate_description(false))));
               presence_check.add(build_matching_rule_node(&ExecutionPlanNode::value_node(item),
-                                                          &ExecutionPlanNode::resolve_current_value(&item_path), &matchers, false));
+                &ExecutionPlanNode::resolve_current_value(&item_path), &matchers, false, false));
             } else {
               presence_check.add(
                 ExecutionPlanNode::action("match:equality")
                   .add(ExecutionPlanNode::value_node(NodeValue::NAMESPACED("json".to_string(), item.to_string())))
                   .add(ExecutionPlanNode::resolve_current_value(&item_path))
                   .add(ExecutionPlanNode::value_node(NodeValue::NULL))
+                  .add(ExecutionPlanNode::value_node(context.config.show_types_in_errors))
               );
             }
             presence_check.add(
@@ -269,6 +276,29 @@ mod tests {
   use crate::engine::context::PlanMatchingContext;
 
   #[test]
+  fn sets_the_show_types_value_from_config() {
+    let builder = JsonPlanBuilder::new();
+    let context = PlanMatchingContext::default().for_body();
+    let content = Bytes::copy_from_slice(Value::Null.to_string().as_bytes());
+    let node = builder.build_plan(&content, &context).unwrap();
+    let mut buffer = String::new();
+    node.pretty_form(&mut buffer, 0);
+    pretty_assertions::assert_eq!(r#"%tee (
+  %json:parse (
+    $.body
+  ),
+  :$ (
+    %match:equality (
+      json:null,
+      ~>$,
+      NULL,
+      BOOL(true)
+    )
+  )
+)"#, buffer);
+  }
+
+  #[test]
   fn json_plan_builder_with_null() {
     let builder = JsonPlanBuilder::new();
     let context = PlanMatchingContext::default();
@@ -284,7 +314,8 @@ mod tests {
     %match:equality (
       json:null,
       ~>$,
-      NULL
+      NULL,
+      BOOL(false)
     )
   )
 )"#, buffer);
@@ -306,7 +337,8 @@ mod tests {
     %match:equality (
       json:true,
       ~>$,
-      NULL
+      NULL,
+      BOOL(false)
     )
   )
 )"#, buffer);
@@ -328,7 +360,8 @@ mod tests {
     %match:equality (
       json:"I am a string!",
       ~>$,
-      NULL
+      NULL,
+      BOOL(false)
     )
   )
 )"#, buffer);
@@ -350,7 +383,8 @@ mod tests {
     %match:equality (
       json:1000,
       ~>$,
-      NULL
+      NULL,
+      BOOL(false)
     )
   )
 )"#, buffer);
@@ -372,7 +406,8 @@ mod tests {
     %match:equality (
       json:1000.3,
       ~>$,
-      NULL
+      NULL,
+      BOOL(false)
     )
   )
 )"#, buffer);
@@ -425,7 +460,8 @@ mod tests {
         %match:equality (
           json:100,
           ~>$[0],
-          NULL
+          NULL,
+          BOOL(false)
         ),
         %error (
           'Expected a value for \'/0\' but it was missing'
@@ -440,7 +476,8 @@ mod tests {
         %match:equality (
           json:200,
           ~>$[1],
-          NULL
+          NULL,
+          BOOL(false)
         ),
         %error (
           'Expected a value for \'/1\' but it was missing'
@@ -455,7 +492,8 @@ mod tests {
         %match:equality (
           json:300,
           ~>$[2],
-          NULL
+          NULL,
+          BOOL(false)
         ),
         %error (
           'Expected a value for \'/2\' but it was missing'
@@ -514,21 +552,24 @@ mod tests {
       %match:equality (
         json:100,
         ~>$.a,
-        NULL
+        NULL,
+        BOOL(false)
       )
     ),
     :$.b (
       %match:equality (
         json:200,
         ~>$.b,
-        NULL
+        NULL,
+        BOOL(false)
       )
     ),
     :$.c (
       %match:equality (
         json:300,
         ~>$.c,
-        NULL
+        NULL,
+        BOOL(false)
       )
     )
   )
@@ -569,21 +610,24 @@ mod tests {
       %match:regex (
         json:100,
         ~>$.a,
-        json:{"regex":"^[0-9]+$"}
+        json:{"regex":"^[0-9]+$"},
+        BOOL(false)
       )
     ),
     :$.b (
       %match:equality (
         json:200,
         ~>$.b,
-        NULL
+        NULL,
+        BOOL(false)
       )
     ),
     :$.c (
       %match:equality (
         json:300,
         ~>$.c,
-        NULL
+        NULL,
+        BOOL(false)
       )
     )
   )
@@ -631,7 +675,8 @@ mod tests {
       %match:min-type (
         json:[{"a":100},{"a":200},{"a":300}],
         ~>$.item,
-        json:{"min":2}
+        json:{"min":2},
+        BOOL(false)
       ),
       %for-each (
         'item*',
@@ -651,7 +696,8 @@ mod tests {
             %match:type (
               json:100,
               ~>$['item*'].a,
-              json:{}
+              json:{},
+              BOOL(false)
             )
           )
         )

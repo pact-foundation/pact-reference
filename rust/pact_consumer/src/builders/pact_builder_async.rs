@@ -66,7 +66,7 @@ impl PactBuilderAsync {
         C: Into<String>,
         P: Into<String>,
     {
-        pact_matching::matchers::configure_core_catalogue();
+        pact_matching::matchingrules::configure_core_catalogue();
         pact_mock_server::configure_core_catalogue();
 
         let mut pact = RequestResponsePact::default();
@@ -91,7 +91,7 @@ impl PactBuilderAsync {
         C: Into<String>,
         P: Into<String>
     {
-      pact_matching::matchers::configure_core_catalogue();
+      pact_matching::matchingrules::configure_core_catalogue();
       pact_mock_server::configure_core_catalogue();
 
       let mut pact = V4Pact {

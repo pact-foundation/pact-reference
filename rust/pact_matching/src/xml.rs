@@ -15,9 +15,8 @@ use pact_models::path_exp::DocPath;
 use pact_models::xml_utils::parse_bytes;
 use tracing::debug;
 
-use crate::matchers::*;
 use crate::MatchingContext;
-
+use crate::matchingrules::{DoMatch, match_values, Matches};
 use super::DiffConfig;
 use super::Mismatch;
 
@@ -88,61 +87,139 @@ fn name(name: QName) -> String {
   }
 }
 
-impl<'a> Matches<&'a Element<'a>> for &'a Element<'a> {
-    fn matches_with(&self, actual: &Element, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
-        let result = match *matcher {
-          MatchingRule::Regex(ref regex) => {
-            match Regex::new(regex) {
-              Ok(re) => {
-                if re.is_match(actual.name().local_part()) {
-                  Ok(())
-                } else {
-                  Err(anyhow!("Expected '{}' to match '{}'", name(actual.name()), regex))
-                }
-              },
-              Err(err) => Err(anyhow!("'{}' is not a valid regular expression - {}", regex, err))
+impl Matches<&Element<'_>> for &Element<'_> {
+  fn matches_with(&self, actual: &Element, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
+    matcher.match_value(*self, actual, cascaded, false)
+  }
+}
+
+impl DoMatch<&Element<'_>> for MatchingRule {
+  fn match_value(
+    &self,
+    expected_value: &Element,
+    actual_value: &Element,
+    cascaded: bool,
+    _show_types: bool
+  ) -> anyhow::Result<()> {
+    let result = match self {
+      MatchingRule::Regex(regex) => {
+        match Regex::new(regex) {
+          Ok(re) => {
+            if re.is_match(actual_value.name().local_part()) {
+              Ok(())
+            } else {
+              Err(anyhow!("Expected '{}' to match '{}'", name(actual_value.name()), regex))
             }
           },
-          MatchingRule::Type => if self.name() == actual.name() {
-             Ok(())
-          } else {
-             Err(anyhow!("Expected '{}' to be the same type as '{}'", name(self.name()),
-                         name(actual.name())))
+          Err(err) => Err(anyhow!("'{}' is not a valid regular expression - {}", regex, err))
+        }
+      },
+      MatchingRule::Type => if expected_value.name() == actual_value.name() {
+        Ok(())
+      } else {
+        Err(anyhow!("Expected '{}' to be the same type as '{}'", name(expected_value.name()),
+          name(actual_value.name())))
+      },
+      MatchingRule::MinType(min) => if !cascaded && actual_value.children().len() < *min {
+        Err(anyhow!("Expected '{}' to have at least {} children", name(actual_value.name()), min))
+      } else {
+        Ok(())
+      },
+      MatchingRule::MaxType(max) => if !cascaded && actual_value.children().len() > *max {
+        Err(anyhow!("Expected '{}' to have at most {} children", name(actual_value.name()), max))
+      } else {
+        Ok(())
+      },
+      MatchingRule::MinMaxType(min, max) => if !cascaded && actual_value.children().len() < *min {
+        Err(anyhow!("Expected '{}' to have at least {} children", name(actual_value.name()), min))
+      } else if !cascaded && actual_value.children().len() > *max {
+        Err(anyhow!("Expected '{}' to have at most {} children", name(actual_value.name()), max))
+      } else {
+        Ok(())
+      },
+      MatchingRule::Equality => {
+        if expected_value.name() == actual_value.name() {
+          Ok(())
+        } else {
+          Err(anyhow!("Expected '{}' to be equal to '{}'", name(expected_value.name()),
+            name(actual_value.name())))
+        }
+      },
+      MatchingRule::NotEmpty => if actual_value.children().is_empty() {
+        Err(anyhow!("Expected '{}' to have at least one child", name(actual_value.name())))
+      } else {
+        Ok(())
+      },
+      _ => Err(anyhow!("Unable to match {:?} using {:?}", actual_value, self))
+    };
+    debug!("Comparing '{:?}' to '{:?}' using {:?} -> {:?}", expected_value, actual_value, self, result);
+    result
+  }
+}
+
+impl DoMatch<&kiss_xml::dom::Element> for MatchingRule {
+  fn match_value(
+    &self,
+    expected_value: &kiss_xml::dom::Element,
+    actual_value: &kiss_xml::dom::Element,
+    cascaded: bool,
+    _show_types: bool
+  ) -> anyhow::Result<()> {
+    let result = match self {
+      MatchingRule::Regex(regex) => {
+        match Regex::new(regex) {
+          Ok(re) => {
+            if re.is_match(actual_value.name().as_str()) {
+              Ok(())
+            } else {
+              Err(anyhow!("Expected '{}' to match '{}'", actual_value.name(), regex))
+            }
           },
-          MatchingRule::MinType(min) => if !cascaded && actual.children().len() < min {
-             Err(anyhow!("Expected '{}' to have at least {} children", name(actual.name()), min))
-          } else {
-             Ok(())
-          },
-          MatchingRule::MaxType(max) => if !cascaded && actual.children().len() > max {
-             Err(anyhow!("Expected '{}' to have at most {} children", name(actual.name()), max))
-          } else {
-             Ok(())
-          },
-          MatchingRule::MinMaxType(min, max) => if !cascaded && actual.children().len() < min {
-            Err(anyhow!("Expected '{}' to have at least {} children", name(actual.name()), min))
-          } else if !cascaded && actual.children().len() > max {
-            Err(anyhow!("Expected '{}' to have at most {} children", name(actual.name()), max))
-          } else {
-            Ok(())
-          },
-          MatchingRule::Equality => {
-             if self.name() == actual.name() {
-                 Ok(())
-             } else {
-                  Err(anyhow!("Expected '{}' to be equal to '{}'", name(self.name()), name(actual.name())))
-             }
-          },
-          MatchingRule::NotEmpty => if actual.children().is_empty() {
-            Err(anyhow!("Expected '{}' to have at least one child", name(actual.name())))
-          } else {
-            Ok(())
-          },
-          _ => Err(anyhow!("Unable to match {:?} using {:?}", self, matcher))
-        };
-        debug!("Comparing '{:?}' to '{:?}' using {:?} -> {:?}", self, actual, matcher, result);
-        result
-    }
+          Err(err) => Err(anyhow!("'{}' is not a valid regular expression - {}", regex, err))
+        }
+      },
+      MatchingRule::Type => if expected_value.name() == actual_value.name() {
+        Ok(())
+      } else {
+        Err(anyhow!("Expected '{}' to be the same type as '{}'", expected_value.name(), actual_value.name()))
+      },
+      MatchingRule::MinType(min) => if !cascaded && actual_value.children().count() < *min {
+        Err(anyhow!("Expected '{}' to have at least {} children", actual_value.name(), min))
+      } else {
+        Ok(())
+      },
+      MatchingRule::MaxType(max) => if !cascaded && actual_value.children().count() > *max {
+        Err(anyhow!("Expected '{}' to have at most {} children", actual_value.name(), max))
+      } else {
+        Ok(())
+      },
+      MatchingRule::MinMaxType(min, max) => {
+        let children = actual_value.children().count();
+        if !cascaded && children < *min {
+          Err(anyhow!("Expected '{}' to have at least {} children", actual_value.name(), min))
+        } else if !cascaded && children > *max {
+          Err(anyhow!("Expected '{}' to have at most {} children", actual_value.name(), max))
+        } else {
+          Ok(())
+        }
+      },
+      MatchingRule::Equality => {
+        if self.name() == actual_value.name() {
+          Ok(())
+        } else {
+          Err(anyhow!("Expected '{}' to be equal to '{}'", expected_value.name(), actual_value.name()))
+        }
+      },
+      MatchingRule::NotEmpty => if actual_value.children().next().is_some() {
+        Err(anyhow!("Expected '{}' to have at least one child", actual_value.name()))
+      } else {
+        Ok(())
+      },
+      _ => Err(anyhow!("Unable to match {:?} using {:?}", actual_value, self))
+    };
+    debug!("Comparing '{:?}' to '{:?}' using {:?} -> {:?}", expected_value, actual_value, self, result);
+    result
+  }
 }
 
 fn compare_element(
@@ -1183,7 +1260,7 @@ mod tests {
     }.rules_for_category("body").unwrap();
     let result = match_xml(&expected.clone(), &actual.clone(),
                            &CoreMatchingContext::new(DiffConfig::NoUnexpectedKeys, &matching_rules, &hashmap!{}));
-    expect!(mismatch_message(&result)).to(be_equal_to("Expected \'101\' (String) to match a boolean".to_string()));
+    expect!(mismatch_message(&result)).to(be_equal_to("Expected 101 to match a boolean".to_string()));
     expect!(result).to(be_err().value(vec![
       Mismatch::BodyMismatch {
         path: "$.foo['@somethingElse']".into(),

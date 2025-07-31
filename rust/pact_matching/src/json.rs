@@ -19,8 +19,14 @@ use tracing::debug;
 
 use crate::{DiffConfig, MatchingContext, Mismatch, CommonMismatch, merge_result};
 use crate::binary_utils::{convert_data, match_content_type};
-use crate::matchers::*;
-use crate::matchingrules::{compare_lists_with_matchingrules, compare_maps_with_matchingrule};
+use crate::matchingrules::{
+  compare_lists_with_matchingrules,
+  compare_maps_with_matchingrule,
+  DoMatch,
+  match_values,
+  Matches,
+  value_for_mismatch
+};
 
 lazy_static! {
   static ref DEC_REGEX: Regex = Regex::new(r"\d+\.\d+").unwrap();
@@ -66,36 +72,48 @@ impl Matches<&Value> for &Value {
 
 impl Matches<&Value> for Value {
   fn matches_with(&self, actual: &Value, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
-    let result = match matcher {
+    matcher.match_value(self, actual, cascaded, true)
+  }
+}
+
+impl DoMatch<&Value> for MatchingRule {
+  fn match_value(
+    &self,
+    expected_value: &Value,
+    actual_value: &Value,
+    cascaded: bool,
+    show_types: bool
+  ) -> anyhow::Result<()> {
+    let result = match self {
       MatchingRule::Regex(regex) => {
         match Regex::new(regex) {
           Ok(re) => {
-            let actual_str = match actual {
+            let actual_str = match actual_value {
               Value::String(s) => s.clone(),
-              _ => actual.to_string()
+              _ => actual_value.to_string()
             };
             if re.is_match(&actual_str) {
               Ok(())
             } else {
-              Err(anyhow!("Expected '{}' to match '{}'", json_to_string(actual), regex))
+              Err(anyhow!("Expected '{}' to match '{}'", json_to_string(actual_value), regex))
             }
           },
           Err(err) => Err(anyhow!("'{}' is not a valid regular expression - {}", regex, err))
         }
       },
       MatchingRule::Include(substr) => {
-        let actual_str = match actual {
+        let actual_str = match actual_value {
           Value::String(s) => s.clone(),
-          _ => actual.to_string()
+          _ => actual_value.to_string()
         };
         if actual_str.contains(substr) {
           Ok(())
         } else {
-          Err(anyhow!("Expected '{}' to include '{}'", json_to_string(actual), substr))
+          Err(anyhow!("Expected '{}' to include '{}'", json_to_string(actual_value), substr))
         }
       },
       MatchingRule::Type => {
-        match (self, actual) {
+        match (expected_value, actual_value) {
           (&Value::Array(_), &Value::Array(_)) => Ok(()),
           (&Value::Bool(_), &Value::Bool(_)) => Ok(()),
           (&Value::Number(_), &Value::Number(_)) => Ok(()),
@@ -103,13 +121,13 @@ impl Matches<&Value> for Value {
           (&Value::Object(_), &Value::Object(_)) => Ok(()),
           (&Value::String(_), &Value::String(_)) => Ok(()),
           (_, _) => Err(anyhow!("Expected {} ({}) to be the same type as {} ({})",
-            value_of(actual), type_of(actual), value_of(self), type_of(self))),
+            value_of(actual_value), type_of(actual_value), value_of(expected_value), type_of(expected_value))),
         }
       },
       MatchingRule::MinType(min) => {
-        match (self, actual) {
+        match (expected_value, actual_value) {
           (&Value::Array(_), &Value::Array(ref actual_array)) => if !cascaded && actual_array.len() < *min {
-            Err(anyhow!("Expected '{}' to have at least {} item(s)", json_to_string(actual), min))
+            Err(anyhow!("Expected '{}' to have at least {} item(s)", json_to_string(actual_value), min))
           } else {
             Ok(())
           },
@@ -119,13 +137,13 @@ impl Matches<&Value> for Value {
           (&Value::Object(_), &Value::Object(_)) => Ok(()),
           (&Value::String(_), &Value::String(_)) => Ok(()),
           (_, _) => Err(anyhow!("Expected {} ({}) to be the same type as {} ({})",
-            value_of(actual), type_of(actual), value_of(self), type_of(self))),
+            value_of(actual_value), type_of(actual_value), value_of(expected_value), type_of(expected_value))),
         }
       },
       MatchingRule::MaxType(max) => {
-        match (self, actual) {
+        match (expected_value, actual_value) {
           (&Value::Array(_), &Value::Array(ref actual_array)) => if !cascaded && actual_array.len() > *max {
-            Err(anyhow!("Expected '{}' to have at most {} item(s)", json_to_string(actual), max))
+            Err(anyhow!("Expected '{}' to have at most {} item(s)", json_to_string(actual_value), max))
           } else {
             Ok(())
           },
@@ -135,15 +153,15 @@ impl Matches<&Value> for Value {
           (&Value::Object(_), &Value::Object(_)) => Ok(()),
           (&Value::String(_), &Value::String(_)) => Ok(()),
           (_, _) => Err(anyhow!("Expected {} ({}) to be the same type as {} ({})",
-            value_of(actual), type_of(actual), value_of(self), type_of(self))),
+            value_of(actual_value), type_of(actual_value), value_of(expected_value), type_of(expected_value))),
         }
       },
       MatchingRule::MinMaxType(min, max) => {
-        match (self, actual) {
+        match (expected_value, actual_value) {
           (&Value::Array(_), &Value::Array(ref actual_array)) => if !cascaded && actual_array.len() < *min {
-            Err(anyhow!("Expected '{}' to have at least {} item(s)", json_to_string(actual), min))
+            Err(anyhow!("Expected '{}' to have at least {} item(s)", json_to_string(actual_value), min))
           } else if !cascaded && actual_array.len() > *max {
-            Err(anyhow!("Expected '{}' to have at most {} item(s)", json_to_string(actual), max))
+            Err(anyhow!("Expected '{}' to have at most {} item(s)", json_to_string(actual_value), max))
           } else {
             Ok(())
           },
@@ -153,41 +171,43 @@ impl Matches<&Value> for Value {
           (&Value::Object(_), &Value::Object(_)) => Ok(()),
           (&Value::String(_), &Value::String(_)) => Ok(()),
           (_, _) => Err(anyhow!("Expected {} ({}) to be the same type as {} ({})",
-            value_of(actual), type_of(actual), value_of(self), type_of(self))),
+            value_of(actual_value), type_of(actual_value), value_of(expected_value), type_of(expected_value))),
         }
       },
       MatchingRule::Equality | MatchingRule::Values => {
-        if self == actual {
+        if expected_value == actual_value {
           Ok(())
         } else {
-          Err(anyhow!("Expected {} ({}) to be equal to {} ({})",
-            value_of(actual), type_of(actual), value_of(self), type_of(self)))
+          Err(anyhow!("Expected {} to be equal to {}",
+            value_for_mismatch(value_of(actual_value), type_of(actual_value), show_types),
+            value_for_mismatch(value_of(expected_value), type_of(expected_value), show_types)
+          ))
         }
       },
-      MatchingRule::Null => match actual {
+      MatchingRule::Null => match actual_value {
         Value::Null => Ok(()),
-        _ => Err(anyhow!("Expected {} ({}) to be a null value", value_of(actual), type_of(actual)))
+        _ => Err(anyhow!("Expected {} ({}) to be a null value", value_of(actual_value), type_of(actual_value)))
       },
-      MatchingRule::Integer => if actual.is_i64() || actual.is_u64() {
+      MatchingRule::Integer => if actual_value.is_i64() || actual_value.is_u64() {
         Ok(())
       } else {
-        Err(anyhow!("Expected {} ({}) to be an integer", value_of(actual), type_of(actual)))
+        Err(anyhow!("Expected {} ({}) to be an integer", value_of(actual_value), type_of(actual_value)))
       },
-      MatchingRule::Decimal => if actual.is_f64() {
+      MatchingRule::Decimal => if actual_value.is_f64() {
         Ok(())
       } else {
-        Err(anyhow!("Expected {} ({}) to be a decimal number", value_of(actual), type_of(actual)))
+        Err(anyhow!("Expected {} ({}) to be a decimal number", value_of(actual_value), type_of(actual_value)))
       },
-      MatchingRule::Number => if actual.is_number() {
+      MatchingRule::Number => if actual_value.is_number() {
         Ok(())
       } else {
-        Err(anyhow!("Expected {} ({}) to be a number", value_of(actual), type_of(actual)))
+        Err(anyhow!("Expected {} ({}) to be a number", value_of(actual_value), type_of(actual_value)))
       },
       #[allow(unused_variables)]
       MatchingRule::Date(s) => {
         #[cfg(feature = "datetime")]
         {
-          let string = json_to_string(actual);
+          let string = json_to_string(actual_value);
           let format = if s.is_empty() {
             "yyyy-MM-dd"
           } else {
@@ -205,7 +225,7 @@ impl Matches<&Value> for Value {
       MatchingRule::Time(s) => {
         #[cfg(feature = "datetime")]
         {
-          let string = json_to_string(actual);
+          let string = json_to_string(actual_value);
           let format = if s.is_empty() {
             "HH:mm:ss"
           } else {
@@ -223,7 +243,7 @@ impl Matches<&Value> for Value {
       MatchingRule::Timestamp(s) => {
         #[cfg(feature = "datetime")]
         {
-          let string = json_to_string(actual);
+          let string = json_to_string(actual_value);
           let format = if s.is_empty() {
             "yyyy-MM-dd'T'HH:mm:ssXXX"
           } else {
@@ -238,19 +258,19 @@ impl Matches<&Value> for Value {
         }
       },
       MatchingRule::ContentType(expected_content_type) => {
-        match_content_type(&convert_data(actual), expected_content_type)
+        match_content_type(&convert_data(actual_value), expected_content_type)
           .map_err(|err| anyhow!("Failed to match data to have a content type of '{}': {}", expected_content_type, err))
       }
-      MatchingRule::Boolean => match actual {
+      MatchingRule::Boolean => match actual_value {
         Value::Bool(_) => Ok(()),
         Value::String(val) => if val == "true" || val == "false" {
           Ok(())
         } else {
-          Err(anyhow!("Expected {} ({}) to match a boolean", value_of(actual), type_of(actual)))
+          Err(anyhow!("Expected {} ({}) to match a boolean", value_of(actual_value), type_of(actual_value)))
         }
-        _ => Err(anyhow!("Expected {} ({}) to match a boolean", value_of(actual), type_of(actual)))
+        _ => Err(anyhow!("Expected {} ({}) to match a boolean", value_of(actual_value), type_of(actual_value)))
       }
-      MatchingRule::NotEmpty => match actual {
+      MatchingRule::NotEmpty => match actual_value {
         Value::Null => Err(anyhow!("Expected non-empty but got a NULL")),
         Value::String(s) => if s.is_empty() {
           Err(anyhow!("Expected '' (String) to not be empty"))
@@ -269,17 +289,17 @@ impl Matches<&Value> for Value {
         }
         _ => Ok(())
       }
-      MatchingRule::Semver => match actual {
+      MatchingRule::Semver => match actual_value {
         Value::String(s) => match Version::parse(s) {
           Ok(_) => Ok(()),
           Err(err) => Err(anyhow!("'{}' is not a valid semantic version - {}", s, err))
         }
-        _ => Err(anyhow!("Expected something that matches a semantic version, but got '{}'", actual))
+        _ => Err(anyhow!("Expected something that matches a semantic version, but got '{}'", actual_value))
       }
       _ => Ok(())
     };
-    debug!("JSON -> JSON: Comparing '{}' ({}) to '{}' ({}) using {:?} -> {:?}", self,
-      type_of(&self), actual, type_of(&actual), matcher, result);
+    debug!("JSON -> JSON: Comparing '{}' ({}) to '{}' ({}) using {:?} -> {:?}", expected_value,
+      type_of(expected_value), actual_value, type_of(actual_value), self, result);
     result
   }
 }
@@ -521,7 +541,8 @@ fn compare_values(
     debug!("compare_values: Calling match_values for path {}", path);
     match_values(path, &context.select_best_matcher(&path), expected, actual)
   } else {
-    expected.matches_with(actual, &MatchingRule::Equality, false).map_err(|err| vec![err.to_string()])
+    expected.matches_with(actual, &MatchingRule::Equality, false)
+      .map_err(|err| vec![err.to_string()])
   };
   debug!("compare_values: Comparing '{:?}' to '{:?}' at path '{}' -> {:?}", expected, actual, path.to_string(), matcher_result);
   matcher_result.map_err(|messages| {

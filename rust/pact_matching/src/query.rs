@@ -8,8 +8,8 @@ use pact_models::matchingrules::MatchingRule;
 use pact_models::path_exp::DocPath;
 use tracing::debug;
 
-use crate::{matchers, Matches, MatchingContext, merge_result, Mismatch, CommonMismatch};
-use crate::matchingrules::compare_lists_with_matchingrules;
+use crate::{MatchingContext, merge_result, Mismatch, CommonMismatch};
+use crate::matchingrules::{compare_lists_with_matchingrules, match_values, Matches};
 
 /// Match the query parameters as Maps
 pub(crate) fn match_query_maps(
@@ -98,7 +98,7 @@ fn compare_query_parameter_value(
   let index = index.to_string();
   let index_path = path.join(index.as_str());
   let matcher_result = if context.matcher_is_defined(&index_path) {
-    matchers::match_values(&index_path, &context.select_best_matcher(&index_path),
+    match_values(&index_path, &context.select_best_matcher(&index_path),
       expected.to_string(), actual.to_string())
   } else {
     expected.matches_with(actual, &MatchingRule::Equality, false)

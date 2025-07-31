@@ -403,8 +403,7 @@ use crate::generators::bodies::generators_process_body;
 use crate::generators::DefaultVariantMatcher;
 use crate::headers::{match_header_value, match_headers};
 #[cfg(feature = "plugins")] use crate::json::match_json;
-use crate::matchers::*;
-use crate::matchingrules::DisplayForMismatch;
+use crate::matchingrules::{DisplayForMismatch, DoMatch, match_values, Matches};
 #[cfg(feature = "plugins")] use crate::plugin_support::{InteractionPart, setup_plugin_config};
 use crate::query::match_query_maps;
 
@@ -417,7 +416,6 @@ macro_rules! s {
 /// Version of the library
 pub const PACT_RUST_VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 
-pub mod matchers;
 pub mod json;
 pub mod matchingrules;
 pub mod metrics;
@@ -574,7 +572,12 @@ impl MatchingContext for CoreMatchingContext {
     }
   }
 
-  fn match_keys(&self, path: &DocPath, expected: &BTreeSet<String>, actual: &BTreeSet<String>) -> Result<(), Vec<CommonMismatch>> {
+  fn match_keys(
+    &self,
+    path: &DocPath,
+    expected: &BTreeSet<String>,
+    actual: &BTreeSet<String>
+  ) -> Result<(), Vec<CommonMismatch>> {
     let mut expected_keys = expected.iter().cloned().collect::<Vec<String>>();
     expected_keys.sort();
     let mut actual_keys = actual.iter().cloned().collect::<Vec<String>>();
@@ -615,7 +618,7 @@ impl MatchingContext for CoreMatchingContext {
                 Either::Left(rule) => {
                   for key in &actual_keys {
                     let key_path = path.join(key);
-                    if let Err(err) = String::default().matches_with(key, &rule, false) {
+                    if let Err(err) = rule.match_value("", key.as_str(), false, false) {
                       result.push(CommonMismatch {
                         path: key_path.to_string(),
                         expected: "".to_string(),

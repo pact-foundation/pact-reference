@@ -95,7 +95,8 @@ fn match_query_with_expected_query_string() {
           %match:equality (
             'b',
             $.query.a,
-            NULL
+            NULL,
+            BOOL(false)
           )
         )
       ),
@@ -144,7 +145,8 @@ fn match_query_with_expected_query_string() {
           %match:equality (
             'b',
             $.query.a,
-            NULL
+            NULL,
+            BOOL(false)
           )
         ) => BOOL(false)
       ) => BOOL(false),
@@ -198,7 +200,8 @@ fn match_query_with_expected_query_string() {
           %match:equality (
             'b' => 'b',
             $.query.a => 'b',
-            NULL => NULL
+            NULL => NULL,
+            BOOL(false) => BOOL(false)
           ) => BOOL(true)
         ) => BOOL(true)
       ) => BOOL(true),
@@ -252,7 +255,8 @@ fn match_query_with_expected_query_string() {
           %match:equality (
             'b' => 'b',
             $.query.a => 'c',
-            NULL => NULL
+            NULL => NULL,
+            BOOL(false) => BOOL(false)
           ) => ERROR(Expected 'c' to be equal to 'b')
         ) => BOOL(false)
       ) => BOOL(false),
@@ -307,7 +311,8 @@ fn match_query_with_expected_query_string() {
           %match:equality (
             'b' => 'b',
             $.query.a => 'b',
-            NULL => NULL
+            NULL => NULL,
+            BOOL(false) => BOOL(false)
           ) => BOOL(true)
         ) => BOOL(true)
       ) => BOOL(true),
@@ -361,7 +366,8 @@ fn match_query_with_expected_query_string() {
           %match:equality (
             'b',
             $.query.a,
-            NULL
+            NULL,
+            BOOL(false)
           )
         ) => BOOL(false)
       ) => BOOL(false),
@@ -434,7 +440,8 @@ fn match_query_with_matching_rule() {
           %match:equality (
             'test',
             $.query.field,
-            NULL
+            NULL,
+            BOOL(false)
           )
         )
       ),
@@ -447,7 +454,8 @@ fn match_query_with_matching_rule() {
           %match:regex (
             '1',
             $.query.user_id,
-            json:{"regex":"^[0-9]+$"}
+            json:{"regex":"^[0-9]+$"},
+            BOOL(false)
           )
         )
       ),
@@ -502,7 +510,8 @@ fn match_query_with_matching_rule() {
           %match:equality (
             'test' => 'test',
             $.query.field => 'test',
-            NULL => NULL
+            NULL => NULL,
+            BOOL(false) => BOOL(false)
           ) => BOOL(true)
         ) => BOOL(true)
       ) => BOOL(true),
@@ -515,7 +524,8 @@ fn match_query_with_matching_rule() {
           %match:regex (
             '1' => '1',
             $.query.user_id => '2455324356421',
-            json:{"regex":"^[0-9]+$"} => json:{"regex":"^[0-9]+$"}
+            json:{"regex":"^[0-9]+$"} => json:{"regex":"^[0-9]+$"},
+            BOOL(false) => BOOL(false)
           ) => BOOL(true)
         ) => BOOL(true)
       ) => BOOL(true),
@@ -570,7 +580,8 @@ fn match_query_with_matching_rule() {
           %match:equality (
             'test' => 'test',
             $.query.field => 'test',
-            NULL => NULL
+            NULL => NULL,
+            BOOL(false) => BOOL(false)
           ) => BOOL(true)
         ) => BOOL(true)
       ) => BOOL(true),
@@ -583,7 +594,8 @@ fn match_query_with_matching_rule() {
           %match:regex (
             '1' => '1',
             $.query.user_id => '100Kb',
-            json:{"regex":"^[0-9]+$"} => json:{"regex":"^[0-9]+$"}
+            json:{"regex":"^[0-9]+$"} => json:{"regex":"^[0-9]+$"},
+            BOOL(false) => BOOL(false)
           ) => ERROR(Expected '100Kb' to match '^[0-9]+$')
         ) => BOOL(false)
       ) => BOOL(false),
@@ -652,7 +664,8 @@ fn match_query_with_query_values_having_different_lengths() {
           %match:equality (
             'b' => 'b',
             $.query.a => 'b',
-            NULL => NULL
+            NULL => NULL,
+            BOOL(false) => BOOL(false)
           ) => BOOL(true)
         ) => BOOL(true)
       ) => BOOL(true),
@@ -665,7 +678,8 @@ fn match_query_with_query_values_having_different_lengths() {
           %match:equality (
             ['d', 'e'] => ['d', 'e'],
             $.query.c => ['d', 'e'],
-            NULL => NULL
+            NULL => NULL,
+            BOOL(false) => BOOL(false)
           ) => BOOL(true)
         ) => BOOL(true)
       ) => BOOL(true),
@@ -720,8 +734,9 @@ fn match_query_with_query_values_having_different_lengths() {
           %match:equality (
             'b' => 'b',
             $.query.a => ['b', 'e'],
-            NULL => NULL
-          ) => ERROR(Expected 'e' to be equal to 'b')
+            NULL => NULL,
+            BOOL(false) => BOOL(false)
+          ) => ERROR(Expected ['b', 'e'] to be equal to 'b')
         ) => BOOL(false)
       ) => BOOL(false),
       :c (
@@ -733,8 +748,9 @@ fn match_query_with_query_values_having_different_lengths() {
           %match:equality (
             ['d', 'e'] => ['d', 'e'],
             $.query.c => 'd',
-            NULL => NULL
-          ) => ERROR(Expected ["d"] to be equal to ["d","e"])
+            NULL => NULL,
+            BOOL(false) => BOOL(false)
+          ) => ERROR(Expected 'd' to be equal to ['d', 'e'])
         ) => BOOL(false)
       ) => BOOL(false),
       %expect:entries (
@@ -812,7 +828,8 @@ fn match_query_with_number_type_matching_rule() {
           %match:integer (
             '1' => '1',
             $.query.user_id => '2455324356421',
-            json:{} => json:{}
+            json:{} => json:{},
+            BOOL(false) => BOOL(false)
           ) => BOOL(true)
         ) => BOOL(true)
       ) => BOOL(true),
@@ -866,7 +883,8 @@ fn match_query_with_number_type_matching_rule() {
           %match:integer (
             '1' => '1',
             $.query.user_id => ['100', '200'],
-            json:{} => json:{}
+            json:{} => json:{},
+            BOOL(false) => BOOL(false)
           ) => BOOL(true)
         ) => BOOL(true)
       ) => BOOL(true),
@@ -920,7 +938,8 @@ fn match_query_with_number_type_matching_rule() {
           %match:integer (
             '1' => '1',
             $.query.user_id => ['100x', '200'],
-            json:{} => json:{}
+            json:{} => json:{},
+            BOOL(false) => BOOL(false)
           ) => ERROR(Expected '100x' to match an integer number)
         ) => BOOL(false)
       ) => BOOL(false),
@@ -1004,7 +1023,8 @@ fn match_query_with_min_type_matching_rules() {
           %match:min-type (
             ['1', '2'] => ['1', '2'],
             $.query.id => ['1', '2', '3', '4'],
-            json:{"min":2} => json:{"min":2}
+            json:{"min":2} => json:{"min":2},
+            BOOL(false) => BOOL(false)
           ) => BOOL(true)
         ) => BOOL(true)
       ) => BOOL(true),
@@ -1058,8 +1078,9 @@ fn match_query_with_min_type_matching_rules() {
           %match:min-type (
             ['1', '2'] => ['1', '2'],
             $.query.id => '100',
-            json:{"min":2} => json:{"min":2}
-          ) => ERROR(Expected [100] (size 1) to have minimum size of 2)
+            json:{"min":2} => json:{"min":2},
+            BOOL(false) => BOOL(false)
+          ) => ERROR(Expected [100] \(size 1\) to have minimum size of 2)
         ) => BOOL(false)
       ) => BOOL(false),
       %expect:entries (

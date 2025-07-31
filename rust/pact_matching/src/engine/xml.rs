@@ -4,14 +4,12 @@ use std::fmt::{Display, Formatter};
 
 use anyhow::anyhow;
 use kiss_xml::dom::Element;
-use onig::Regex;
-use tracing::debug;
 
 use pact_models::matchingrules::MatchingRule;
 use pact_models::xml_utils::XmlResult;
 
 use crate::engine::escape;
-use crate::matchers::Matches;
+use crate::matchingrules::DoMatch;
 
 /// Enum to store different XML nodes
 #[derive(Debug, Clone, PartialOrd, PartialEq)]
@@ -70,112 +68,42 @@ impl From<XmlResult> for XmlValue {
   }
 }
 
-impl Matches<XmlValue> for XmlValue {
-  fn matches_with(
+impl DoMatch<XmlValue> for MatchingRule {
+  fn match_value(
     &self,
-    actual: XmlValue,
-    matcher: &MatchingRule,
-    cascaded: bool
+    expected_value: XmlValue,
+    actual_value: XmlValue,
+    cascaded: bool,
+    show_types: bool
   ) -> anyhow::Result<()> {
-    self.matches_with(&actual, matcher, cascaded)
+    self.match_value(&expected_value, &actual_value, cascaded, show_types)
   }
 }
 
-impl Matches<&XmlValue> for XmlValue {
-  fn matches_with(
+impl DoMatch<&XmlValue> for MatchingRule {
+  fn match_value(
     &self,
-    actual: &XmlValue,
-    matcher: &MatchingRule,
-    cascaded: bool
+    expected_value: &XmlValue,
+    actual_value: &XmlValue,
+    cascaded: bool,
+    show_types: bool
   ) -> anyhow::Result<()> {
-    match self {
-      XmlValue::Element(expected) => if let Some(actual) = actual.as_element() {
-        expected.matches_with(&actual, matcher, cascaded)
+    match expected_value {
+      XmlValue::Element(expected) => if let Some(actual) = actual_value.as_element() {
+        self.match_value(expected, &actual, cascaded, show_types)
       } else {
-        Err(anyhow!("Was expecting an XML element but got {}", actual))
+        Err(anyhow!("Was expecting an XML element but got {}", actual_value))
       }
-      XmlValue::Text(expected) => if let Some(actual) = actual.as_text() {
-        expected.matches_with(actual, matcher, cascaded)
+      XmlValue::Text(expected) => if let Some(actual) = actual_value.as_text() {
+        self.match_value(expected.as_str(), actual.as_str(), cascaded, show_types)
       } else {
-        Err(anyhow!("Was expecting XML text but got {}", actual))
+        Err(anyhow!("Was expecting XML text but got {}", actual_value))
       }
-      XmlValue::Attribute(_, expected_value) => if let Some((_, value)) = actual.as_attribute() {
-        expected_value.matches_with(value, matcher, cascaded)
+      XmlValue::Attribute(_, expected_value) => if let Some((_, value)) = actual_value.as_attribute() {
+        self.match_value(expected_value.as_str(), value.as_str(), cascaded, show_types)
       } else {
-        Err(anyhow!("Was expecting an XML attribute but got {}", actual))
+        Err(anyhow!("Was expecting an XML attribute but got {}", actual_value))
       }
     }
-  }
-}
-
-impl Matches<&Element> for Element {
-  fn matches_with(
-    &self,
-    actual: &Element,
-    matcher: &MatchingRule,
-    cascaded: bool
-  ) -> anyhow::Result<()> {
-    let result = match matcher {
-      MatchingRule::Regex(regex) => {
-        match Regex::new(regex) {
-          Ok(re) => {
-            if re.is_match(actual.name().as_str()) {
-              Ok(())
-            } else {
-              Err(anyhow!("Expected '{}' to match '{}'", actual.name(), regex))
-            }
-          },
-          Err(err) => Err(anyhow!("'{}' is not a valid regular expression - {}", regex, err))
-        }
-      },
-      MatchingRule::Type => if self.name() == actual.name() {
-        Ok(())
-      } else {
-        Err(anyhow!("Expected '{}' to be the same type as '{}'", self.name(), actual.name()))
-      },
-      MatchingRule::MinType(min) => if !cascaded && actual.children().count() < *min {
-        Err(anyhow!("Expected '{}' to have at least {} children", actual.name(), min))
-      } else {
-        Ok(())
-      },
-      MatchingRule::MaxType(max) => if !cascaded && actual.children().count() > *max {
-        Err(anyhow!("Expected '{}' to have at most {} children", actual.name(), max))
-      } else {
-        Ok(())
-      },
-      MatchingRule::MinMaxType(min, max) => {
-        let children = actual.children().count();
-        if !cascaded && children < *min {
-          Err(anyhow!("Expected '{}' to have at least {} children", actual.name(), min))
-        } else if !cascaded && children > *max {
-          Err(anyhow!("Expected '{}' to have at most {} children", actual.name(), max))
-        } else {
-          Ok(())
-        }
-      },
-      MatchingRule::Equality => {
-        if self.name() == actual.name() {
-          Ok(())
-        } else {
-          Err(anyhow!("Expected '{}' to be equal to '{}'", self.name(), actual.name()))
-        }
-      },
-      MatchingRule::NotEmpty => if actual.children().next().is_some() {
-        Err(anyhow!("Expected '{}' to have at least one child", actual.name()))
-      } else {
-        Ok(())
-      },
-      _ => Err(anyhow!("Unable to match {:?} using {:?}", self, matcher))
-    };
-    debug!("Comparing '{:?}' to '{:?}' using {:?} -> {:?}", self, actual, matcher, result);
-    result
-  }
-}
-
-pub(crate) fn name(element: &Element) -> String {
-  if let Some(namespace) = element.namespace() {
-    format!("{}:{}", namespace, element.name())
-  } else {
-    element.name()
   }
 }

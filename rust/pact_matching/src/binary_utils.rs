@@ -29,8 +29,7 @@ use serde_json::Value;
 
 use crate::{MatchingContext, Mismatch};
 #[cfg(feature = "multipart")] use crate::{BodyMatchResult, CoreMatchingContext, HeaderMatchingContext};
-use crate::matchers::Matches;
-#[cfg(feature = "multipart")] use crate::matchers::match_values;
+use crate::matchingrules::{match_values, Matches};
 
 /// Compares the binary data using a magic test and comparing the resulting detected content
 /// type against the expected content type
