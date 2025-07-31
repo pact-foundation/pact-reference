@@ -2255,7 +2255,7 @@ dependencies = [
  "lazy_static",
  "maplit",
  "pact-plugin-driver",
- "pact_matching 2.0.1",
+ "pact_matching 2.0.2",
  "pact_mock_server 2.1.3",
  "pact_models",
  "pretty_assertions",
@@ -2376,9 +2376,9 @@ dependencies = [
 
 [[package]]
 name = "pact_matching"
-version = "2.0.0"
+version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72772745b790372dcaea8e05c0dda103b648c5fd01c83a43ed91cd8f01877234"
+checksum = "53025d152918a0dbe4df6c7773b20ecb098e90f49e7a720ff91e490ba761fd3a"
 dependencies = [
  "ansi_term",
  "anyhow",
@@ -2418,7 +2418,7 @@ dependencies = [
 
 [[package]]
 name = "pact_matching"
-version = "2.0.1"
+version = "2.0.2"
 dependencies = [
  "ansi_term",
  "anyhow",
@@ -2513,7 +2513,7 @@ dependencies = [
  "lazy_static",
  "maplit",
  "pact-plugin-driver",
- "pact_matching 2.0.0",
+ "pact_matching 2.0.1",
  "pact_models",
  "rcgen",
  "rustls 0.23.31",
@@ -2601,7 +2601,7 @@ dependencies = [
  "mime",
  "pact-plugin-driver",
  "pact_consumer",
- "pact_matching 2.0.1",
+ "pact_matching 2.0.2",
  "pact_models",
  "pretty_assertions",
  "quickcheck",
