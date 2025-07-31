@@ -1,5 +1,30 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 2.0.0 - 2.0 Release
+
+* 72be9b0b - chore(pact_matching): remove beta pre-release version (Ronald Holshausen, Thu Jul 31 13:57:50 2025 +1000)
+* dcdc4825 - refactor(v2-matching-engine): Record the elapsed time for executing a plan (Ronald Holshausen, Thu Jul 31 13:36:42 2025 +1000)
+* e2e69295 - refactor(v2-matching-engine): Merged matchers.rs and matchingrules.rs; deprecated Matches replaced with DoMatch trait (Ronald Holshausen, Thu Jul 31 13:18:27 2025 +1000)
+* c5d6f66c - chore(v2-matching-engine): Fix infinite recursion with matching rule applied to an empty body (Ronald Holshausen, Wed Jul 30 10:31:24 2025 +1000)
+* ff964960 - chore: Update pact_models to 1.3.6 (Ronald Holshausen, Wed Jul 30 09:50:09 2025 +1000)
+* 7d4f5819 - chore(v2-matching-engine): Support root matching rules for bodies (Ronald Holshausen, Tue Jul 29 16:09:29 2025 +1000)
+* 1cb9a5ac - chore: Update pact_models to 1.3.5 (Ronald Holshausen, Mon Jul 28 10:44:30 2025 +1000)
+* 3cac171b - chore: Ignore invalid spec tests (Ronald Holshausen, Mon Jul 28 09:58:47 2025 +1000)
+* e3d23beb - chore(v2-matching-engine): Support XML namespaces with attributes (Ronald Holshausen, Fri Jul 25 15:38:20 2025 +1000)
+* 8a32316e - chore(v2-matching-engine): Support for-each over an array at the root of JSON document (Ronald Holshausen, Fri Jul 25 11:24:47 2025 +1000)
+* 5adada17 - chore(v2-matching-engine): Only compare text nodes if there is no type matcher for an XML element (Ronald Holshausen, Fri Jul 25 11:17:55 2025 +1000)
+* d6966d96 - chore(v2-matching-engine): Also check the child elements if there is a type matcher on an XML element (Ronald Holshausen, Fri Jul 25 10:58:26 2025 +1000)
+* 6aa960bc - chore(v2-matching-engine): Fix invalid matcher path in spec test (Ronald Holshausen, Fri Jul 25 10:15:49 2025 +1000)
+* 5ca57cea - chore(v2-matching-engine): Fixed deeply nested JSON arrays (Ronald Holshausen, Fri Jul 25 10:02:50 2025 +1000)
+* 64672a25 - chore(v2-matching-engine): Add response matching (Ronald Holshausen, Fri Jul 25 09:39:51 2025 +1000)
+* 05e1225f - chore(v2-matching-engine): Fix for JSON with type matching rules (Ronald Holshausen, Thu Jul 24 10:54:21 2025 +1000)
+* b6cba6d8 - chore(v2-matching-engine): Fix for XML with type matching rules (Ronald Holshausen, Thu Jul 24 10:36:05 2025 +1000)
+* 80ca2b0d - chore(v2-matching-engine): Refactored engine/bodies into seperate JSON and XML modules (Ronald Holshausen, Thu Jul 24 10:00:49 2025 +1000)
+* f95f7e35 - chore(v2-matching-engine): Fixes ported over from Pact-JVM (Ronald Holshausen, Wed Jul 23 16:31:50 2025 +1000)
+* 2dc425d0 - chore: Add PACT_ prefix to all V2 engine env vars (Ronald Holshausen, Wed Jul 23 10:50:41 2025 +1000)
+* 684a885a - chore: Remove snailquote as it is GPL licensed #493 (Ronald Holshausen, Thu Jun 12 14:41:47 2025 +1000)
+* 7921641e - bump version to 2.0.0-beta.4 (Ronald Holshausen, Wed Jun 11 13:44:12 2025 +1000)
+
 # 2.0.0-beta.3 - Fix for Alpine
 
 * 2b74599f - chore: Correct release script (Ronald Holshausen, Wed Jun 11 13:40:16 2025 +1000)
