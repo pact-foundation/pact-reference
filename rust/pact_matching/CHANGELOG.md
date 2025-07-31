@@ -1,5 +1,10 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 2.0.1 - Bugfix Release
+
+* d1b455f5 - fix(pact_matching): Add missing XML feature gates (Ronald Holshausen, Thu Jul 31 15:32:16 2025 +1000)
+* 167b05ac - bump version to 2.0.1 (Ronald Holshausen, Thu Jul 31 15:11:30 2025 +1000)
+
 # 2.0.0 - 2.0 Release
 
 * 72be9b0b - chore(pact_matching): remove beta pre-release version (Ronald Holshausen, Thu Jul 31 13:57:50 2025 +1000)
