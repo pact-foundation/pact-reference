@@ -3,6 +3,7 @@
 use std::collections::{HashSet, VecDeque};
 use std::iter::once;
 use std::time::Instant;
+
 use anyhow::anyhow;
 use itertools::Itertools;
 use maplit::hashset;
@@ -20,7 +21,7 @@ use crate::engine::value_resolvers::{HttpRequestValueResolver, ValueResolver};
 use crate::headers::{parse_charset_parameters, strip_whitespace};
 use crate::json::type_of;
 use crate::matchingrules::DoMatch;
-use crate::xml::resolve_attr_namespaces;
+#[cfg(feature = "xml")] use crate::xml::resolve_attr_namespaces;
 
 /// Main interpreter for the matching plan AST
 #[derive(Debug)]

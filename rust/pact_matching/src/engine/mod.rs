@@ -323,7 +323,7 @@ impl NodeValue {
       NodeValue::BOOL(inner) => inner.to_string(),
       NodeValue::UINT(inner) => inner.to_string(),
       NodeValue::JSON(inner) => inner.to_string(),
-      NodeValue::XML(inner) => inner.to_string(),
+      #[cfg(feature = "xml")] NodeValue::XML(inner) => inner.to_string(),
       _ => self.to_string()
     }
   }
@@ -496,6 +496,7 @@ impl DoMatch<&NodeValue> for MatchingRule {
           (NodeValue::SLIST(elist), NodeValue::SLIST(alist)) => {
             self.match_value(elist, alist, cascaded, show_types)
           }
+          #[cfg(feature = "xml")]
           (NodeValue::XML(exml), NodeValue::XML(axml)) => {
             self.match_value(exml, axml, cascaded, show_types)
           }

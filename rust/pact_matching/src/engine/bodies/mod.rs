@@ -11,7 +11,7 @@ use pact_models::path_exp::{DocPath, PathToken};
 
 use crate::engine::{ExecutionPlanNode, NodeValue, PlanMatchingContext};
 use crate::engine::bodies::json::JsonPlanBuilder;
-use crate::engine::bodies::xml::XMLPlanBuilder;
+#[cfg(feature = "xml")] use crate::engine::bodies::xml::XMLPlanBuilder;
 
 pub mod json;
 #[cfg(feature = "xml")] pub mod xml;
