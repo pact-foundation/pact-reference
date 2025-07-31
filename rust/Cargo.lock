@@ -463,18 +463,18 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.5.41"
+version = "4.5.42"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be92d32e80243a54711e5d7ce823c35c41c9d929dc4ab58e1276f625841aadf9"
+checksum = "ed87a9d530bb41a67537289bafcac159cb3ee28460e0a4571123d2a778a6a882"
 dependencies = [
  "clap_builder",
 ]
 
 [[package]]
 name = "clap_builder"
-version = "4.5.41"
+version = "4.5.42"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "707eab41e9622f9139419d573eca0900137718000c517d47da73045f54331c3d"
+checksum = "64f4f3f3c77c94aff3c7e9aac9a2ca1974a5adf392a8bb751e827d6d127ab966"
 dependencies = [
  "anstream",
  "anstyle",
@@ -1755,9 +1755,9 @@ checksum = "1171693293099992e19cddea4e8b849964e9846f4acee11b3948bcc337be8776"
 
 [[package]]
 name = "libredox"
-version = "0.1.8"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "360e552c93fa0e8152ab463bc4c4837fce76a225df11dfaeea66c313de5e61f7"
+checksum = "391290121bad3d37fbddad76d8f5d1c1c314cfc646d143d7e07a3086ddff0ce3"
 dependencies = [
  "bitflags 2.9.1",
  "libc",
@@ -2255,7 +2255,7 @@ dependencies = [
  "lazy_static",
  "maplit",
  "pact-plugin-driver",
- "pact_matching 2.0.0-beta.4",
+ "pact_matching 2.0.1",
  "pact_mock_server 2.1.2",
  "pact_models",
  "pretty_assertions",
@@ -2376,9 +2376,9 @@ dependencies = [
 
 [[package]]
 name = "pact_matching"
-version = "2.0.0-beta.3"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b58230a242ff4298d9b47c03038026078ab031ab37c4b96fa3ccb837f222a95"
+checksum = "72772745b790372dcaea8e05c0dda103b648c5fd01c83a43ed91cd8f01877234"
 dependencies = [
  "ansi_term",
  "anyhow",
@@ -2408,7 +2408,6 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded",
- "snailquote",
  "sxd-document",
  "tokio",
  "tracing",
@@ -2419,7 +2418,7 @@ dependencies = [
 
 [[package]]
 name = "pact_matching"
-version = "2.0.0-beta.4"
+version = "2.0.1"
 dependencies = [
  "ansi_term",
  "anyhow",
@@ -2514,7 +2513,7 @@ dependencies = [
  "lazy_static",
  "maplit",
  "pact-plugin-driver",
- "pact_matching 2.0.0-beta.3",
+ "pact_matching 2.0.0",
  "pact_models",
  "rcgen",
  "rustls 0.23.31",
@@ -2602,7 +2601,7 @@ dependencies = [
  "mime",
  "pact-plugin-driver",
  "pact_consumer",
- "pact_matching 2.0.0-beta.4",
+ "pact_matching 2.0.1",
  "pact_models",
  "pretty_assertions",
  "quickcheck",
@@ -2628,7 +2627,7 @@ version = "1.2.1"
 dependencies = [
  "ansi_term",
  "anyhow",
- "clap 4.5.41",
+ "clap 4.5.42",
  "env_logger 0.11.8",
  "expectest",
  "junit-report",
@@ -3821,16 +3820,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03"
 
 [[package]]
-name = "snailquote"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec62a949bda7f15800481a711909f946e1204f2460f89210eaf7f57730f88f86"
-dependencies = [
- "thiserror 1.0.69",
- "unicode_categories",
-]
-
-[[package]]
 name = "snapbox"
 version = "0.6.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4628,12 +4617,6 @@ name = "unicode-xid"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc72304796d0818e357ead4e000d19c9c174ab23dc11093ac919054d20a6a7fc"
-
-[[package]]
-name = "unicode_categories"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "39ec24b3121d976906ece63c9daad25b85969647682eee313cb5779fdd69e14e"
 
 [[package]]
 name = "untrusted"
