@@ -2,7 +2,7 @@
 
 use std::collections::{HashSet, VecDeque};
 use std::iter::once;
-
+use std::time::Instant;
 use anyhow::anyhow;
 use itertools::Itertools;
 use maplit::hashset;
@@ -13,9 +13,9 @@ use pact_models::matchingrules::MatchingRule;
 use pact_models::path_exp::{DocPath, PathToken};
 #[cfg(feature = "xml")] use pact_models::xml_utils::resolve_matching_node;
 
-use crate::engine::{ExecutionPlanNode, NodeResult, NodeValue, PlanNodeType};
+use crate::engine::{ExecutionPlan, ExecutionPlanNode, NodeResult, NodeValue, PlanNodeType};
 use crate::engine::context::PlanMatchingContext;
-use crate::engine::value_resolvers::ValueResolver;
+use crate::engine::value_resolvers::{HttpRequestValueResolver, ValueResolver};
 #[cfg(feature = "xml")] use crate::engine::xml::XmlValue;
 use crate::headers::{parse_charset_parameters, strip_whitespace};
 use crate::json::type_of;
@@ -46,6 +46,21 @@ impl ExecutionPlanInterpreter {
       value_stack: vec![],
       context: context.clone()
     }
+  }
+
+  /// Executes the given plan using the provided value resolver
+  pub fn execute_plan(
+    &mut self,
+    plan: &ExecutionPlan,
+    value_resolver: &dyn ValueResolver
+  ) -> anyhow::Result<ExecutionPlan> {
+    let path = vec![];
+    let start = Instant::now();
+    let executed_tree = self.walk_tree(&path, &plan.plan_root, value_resolver)?;
+    Ok(ExecutionPlan {
+      plan_root: executed_tree,
+      execution_time: Some(start.elapsed())
+    })
   }
 
   /// Walks the tree from a given node, executing all visited nodes

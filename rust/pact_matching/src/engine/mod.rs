@@ -4,7 +4,7 @@ use std::cell::Cell;
 use std::cmp::PartialEq;
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
-
+use std::time::Duration;
 use ansi_term::Colour::{Green, Red};
 use anyhow::anyhow;
 use base64::Engine;
@@ -15,7 +15,7 @@ use itertools::Itertools;
 use maplit::hashmap;
 use serde_json::Value;
 use serde_json::Value::Object;
-
+use tracing::debug;
 use pact_models::bodies::OptionalBody;
 use pact_models::content_types::TEXT;
 use pact_models::headers::PARAMETERISED_HEADERS;
@@ -1363,14 +1363,17 @@ impl From<anyhow::Error> for ExecutionPlanNode {
 #[derive(Clone, Debug, Default)]
 pub struct ExecutionPlan {
   /// Root node for the plan tree
-  pub plan_root: ExecutionPlanNode
+  pub plan_root: ExecutionPlanNode,
+  /// Total execution time
+  pub execution_time: Option<Duration>
 }
 
 impl ExecutionPlan {
   /// Creates a new empty execution plan with a single root container
   fn new(label: &str) -> ExecutionPlan {
     ExecutionPlan {
-      plan_root: ExecutionPlanNode::container(label)
+      plan_root: ExecutionPlanNode::container(label),
+      execution_time: None
     }
   }
 
@@ -1415,7 +1418,8 @@ impl ExecutionPlan {
 impl From<ExecutionPlanNode> for ExecutionPlan {
   fn from(value: ExecutionPlanNode) -> Self {
     ExecutionPlan {
-      plan_root: value
+      plan_root: value,
+      execution_time: None
     }
   }
 }
@@ -1423,7 +1427,8 @@ impl From<ExecutionPlanNode> for ExecutionPlan {
 impl From<&ExecutionPlanNode> for ExecutionPlan {
   fn from(value: &ExecutionPlanNode) -> Self {
     ExecutionPlan {
-      plan_root: value.clone()
+      plan_root: value.clone(),
+      execution_time: None
     }
   }
 }
@@ -2065,11 +2070,9 @@ pub fn execute_request_plan(
     request: actual.clone()
   };
   let mut interpreter = ExecutionPlanInterpreter::new_with_context(context);
-  let path = vec![];
-  let executed_tree = interpreter.walk_tree(&path, &plan.plan_root, &value_resolver)?;
-  Ok(ExecutionPlan {
-    plan_root: executed_tree
-  })
+  let result = interpreter.execute_plan(&plan, &value_resolver)?;
+  debug!("Total execution time: {:?}", result.execution_time.unwrap_or_default());
+  Ok(result)
 }
 
 /// Constructs an execution plan for the HTTP response part.
@@ -2123,11 +2126,9 @@ pub fn execute_response_plan(
     response: actual.clone()
   };
   let mut interpreter = ExecutionPlanInterpreter::new_with_context(context);
-  let path = vec![];
-  let executed_tree = interpreter.walk_tree(&path, &plan.plan_root, &value_resolver)?;
-  Ok(ExecutionPlan {
-    plan_root: executed_tree
-  })
+  let result = interpreter.execute_plan(&plan, &value_resolver)?;
+  debug!("Total execution time: {:?}", result.execution_time.unwrap_or_default());
+  Ok(result)
 }
 
 pub(crate) fn escape(s: &str) -> String {
