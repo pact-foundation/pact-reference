@@ -1,5 +1,17 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.4.2 - Maintenance Release
+
+* a77b53c8 - chore: Update pact_matching to 2.0.1 (Ronald Holshausen, Fri Aug 1 09:16:28 2025 +1000)
+* 52f5e243 - Chore: Update pact_mock_server to 2.1.3 (Ronald Holshausen, Thu Jul 31 15:43:54 2025 +1000)
+* c480357e - Chore: Update pact_matching to 2.0.0 (Ronald Holshausen, Thu Jul 31 15:40:59 2025 +1000)
+* e2e69295 - refactor(v2-matching-engine): Merged matchers.rs and matchingrules.rs; deprecated Matches replaced with DoMatch trait (Ronald Holshausen, Thu Jul 31 13:18:27 2025 +1000)
+* ff964960 - chore: Update pact_models to 1.3.6 (Ronald Holshausen, Wed Jul 30 09:50:09 2025 +1000)
+* 1cb9a5ac - chore: Update pact_models to 1.3.5 (Ronald Holshausen, Mon Jul 28 10:44:30 2025 +1000)
+* 77c61e3c - fix(pact_consumer): Upgrade pact_mock_server to 2.1.2 to fix mock server URL in the test context (Ronald Holshausen, Thu Jun 12 11:26:11 2025 +1000)
+* 5371ee6f - chore(pact_verifier): Update pact_consumer to 1.4.1 (Ronald Holshausen, Wed Jun 11 16:29:07 2025 +1000)
+* 6c009917 - bump version to 1.4.2 (Ronald Holshausen, Wed Jun 11 16:25:26 2025 +1000)
+
 # 1.4.1 - Maintenance Release
 
 * 76530c4a - chore(pact_consumer): Update dependencies (Ronald Holshausen, Wed Jun 11 16:22:05 2025 +1000)
