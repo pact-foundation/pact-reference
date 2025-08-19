@@ -1,5 +1,15 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.3.3 - Maintenance Release
+
+* a77b53c8 - chore: Update pact_matching to 2.0.1 (Ronald Holshausen, Fri Aug 1 09:16:28 2025 +1000)
+* c480357e - Chore: Update pact_matching to 2.0.0 (Ronald Holshausen, Thu Jul 31 15:40:59 2025 +1000)
+* e2e69295 - refactor(v2-matching-engine): Merged matchers.rs and matchingrules.rs; deprecated Matches replaced with DoMatch trait (Ronald Holshausen, Thu Jul 31 13:18:27 2025 +1000)
+* ff964960 - chore: Update pact_models to 1.3.6 (Ronald Holshausen, Wed Jul 30 09:50:09 2025 +1000)
+* 1cb9a5ac - chore: Update pact_models to 1.3.5 (Ronald Holshausen, Mon Jul 28 10:44:30 2025 +1000)
+* cfc5e44d - chore(v2-matching-engine): Fix after refactor of match_response function (Ronald Holshausen, Fri Jul 25 10:29:09 2025 +1000)
+* 24bc59a7 - bump version to 1.3.3 (Ronald Holshausen, Fri Jun 20 11:21:42 2025 +1000)
+
 # 1.3.2 - Support exit-on-first-error and last-failed options
 
 * 31113440 - feat(pact_verifier_cli): Implement the --last-failed CLI flag #494 (Ronald Holshausen, Fri Jun 20 11:03:44 2025 +1000)
