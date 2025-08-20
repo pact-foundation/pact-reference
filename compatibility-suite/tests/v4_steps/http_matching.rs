@@ -1,5 +1,6 @@
 use std::fs::File;
 use std::io::BufReader;
+
 use anyhow::anyhow;
 use cucumber::gherkin::Step;
 use cucumber::{given, then, when};
@@ -11,8 +12,8 @@ use pact_models::v4::http_parts::{HttpRequest, HttpResponse};
 use pact_models::v4::synch_http::SynchronousHttp;
 use serde_json::{json, Value};
 use pact_matching::{match_request, match_response, Mismatch};
-use crate::shared_steps::setup_body;
 
+use crate::shared_steps::setup_body;
 use crate::v4_steps::V4World;
 
 #[given("an expected response configured with the following:")]
@@ -58,11 +59,13 @@ fn a_status_response_is_received(world: &mut V4World, status: u16) {
 }
 
 #[when("the response is compared to the expected one")]
-async fn the_response_is_compared_to_the_expected_one(world: &mut V4World) {
-    world.response_results.extend(match_response(world.expected_response.clone(),
-      world.received_responses.first().unwrap().clone(), &world.pact.boxed(), &SynchronousHttp::default().boxed())
-      .await
-    )
+async fn the_response_is_compared_to_the_expected_one(world: &mut V4World) -> anyhow::Result<()> {
+  world.response_results.extend(match_response(world.expected_response.clone(),
+    world.received_responses.first().unwrap().clone(), &world.pact.boxed(),
+    &SynchronousHttp::default().boxed())
+    .await?
+  );
+  Ok(())
 }
 
 #[then("the response comparison should be OK")]

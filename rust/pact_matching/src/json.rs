@@ -271,7 +271,7 @@ impl DoMatch<&Value> for MatchingRule {
         _ => Err(anyhow!("Expected {} ({}) to match a boolean", value_of(actual_value), type_of(actual_value)))
       }
       MatchingRule::NotEmpty => match actual_value {
-        Value::Null => Err(anyhow!("Expected non-empty but got a NULL")),
+        Value::Null => Err(anyhow!("Expected non-empty value but got a NULL")),
         Value::String(s) => if s.is_empty() {
           Err(anyhow!("Expected '' (String) to not be empty"))
         } else {

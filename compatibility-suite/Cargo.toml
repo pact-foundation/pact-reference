@@ -9,16 +9,14 @@ async-trait = "0.1.74"
 base64 = "0.22.0"
 bytes = "1.5.0"
 cucumber = "0.21.1"
-futures = "0.3.29"
 itertools = "0.14.0"
 lazy_static = "1.4.0"
 maplit = "1.0.2"
 pact_models = { version = "~1.3.6" }
-pact_matching = { version = "2.0.0-beta.3" }
-pact_mock_server = { version = "=2.1.2" }
+pact_matching = { version = "~2.0.1" }
+pact_mock_server = { version = "~2.1.2" }
 pact_verifier = { version = "~1.3.2" }
 pact_consumer = { version = "~1.4.1" }
-pretty_assertions = "1.4.0"
 regex = "1.10.2"
 reqwest = { version = "0.12.3", default-features = false, features = ["rustls-tls-native-roots", "json"] }
 rocket = { version = "0.5.0", features = ["json"] }
@@ -31,7 +29,8 @@ tracing-subscriber = { version = "0.3.19", features = ["env-filter", "tracing-lo
 uuid = { version = "1.5.0", features = ["v4"] }
 
 [patch.crates-io]
-pact_matching = { version = "2.0.0-beta.3", git = "http://github.com/pact-foundation/pact-reference", tag = "libpact_matching-v2.0.0-beta.3" }
+pact_models = { version = "1.3.6", path = "../rust/pact_models" }
+pact_matching = { version = "2.0.1", path = "../rust/pact_matching" }
 
 [[test]]
 name = "v1_consumer"

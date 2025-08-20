@@ -1463,7 +1463,7 @@ pub fn compare_lists_with_matchingrule<T: Display + Debug + PartialEq + Clone + 
         result.extend(match_list_contents(path, expected, actual, context.as_ref(), callback));
       }
       _ => {
-        if let Err(mismatch) = expected.matches_with(actual, rule, cascaded) {
+        if let Err(mismatch) = rule.match_value(expected, actual, cascaded, true) {
           result.push(CommonMismatch {
             path: path.to_string(),
             expected: expected.for_mismatch(),
