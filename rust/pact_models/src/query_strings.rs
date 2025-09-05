@@ -311,4 +311,67 @@ use crate::query_strings::build_query_string;
     assert_eq!(result, "pacticipant=foo&version=1%2e2%2e3&pacticipant=bar&version=4%2e5%2e6");
   }
 
+
+    // sends URL Querying broker at: http://127.0.0.1:61567/matrix?q[][pacticipant]=Foo&q[][version]=1.2.3&q[][pacticipant]=Bar&q[][latest]=true&q[][tag]=prod&latestby=cvpv
+    // pact saves url as latestby=cvpv&q[][latest]=true&q[][pacticipant]=Foo&q[][tag]=prod&q[][version]=1%2e2%2e3&q[][pacticipant]=Bar
+    // pact should save url as q[][pacticipant]=Foo&q[][version]=1%2e2%2e3&q[][pacticipant]=Bar&q[][latest]=true&q[][tag]=prod&latestby=cvpv
+    // pact-ruby saves q%5B%5D%5Bpacticipant%5D=Foo&q%5B%5D%5Bversion%5D=1.2.3&q%5B%5D%5Bpacticipant%5D=Bar&q%5B%5D%5Blatest%5D=true&q%5B%5D%5Btag%5D=prod&latestby=cvpv 
+
+
+      // .query_param("q[][pacticipant]", "Foo")
+      // .query_param("q[][version]", "1.2.3")
+      // .query_param("q[][pacticipant]", "Bar")
+      // .query_param("q[][latest]", "true")
+      // .query_param("q[][tag]", "prod")
+      // .query_param("latestby", "cvpv");
+
+
+    #[test]
+    fn build_query_string_matrix_query_with_multiple_q_params_and_latestby() {
+      // This test checks that the query string is built in the expected order for matrix queries
+      // with multiple q[][param] and a latestby param.
+      let mut query = HashMap::new();
+      query.insert("q[][pacticipant]".to_string(), vec![Some("Foo".to_string()), Some("Bar".to_string())]);
+      query.insert("q[][version]".to_string(), vec![Some("1.2.3".to_string())]);
+      query.insert("q[][latest]".to_string(), vec![Some("true".to_string())]);
+      query.insert("q[][tag]".to_string(), vec![Some("prod".to_string())]);
+      query.insert("latestby".to_string(), vec![Some("cvpv".to_string())]);
+      // The expected order is: q[][pacticipant]=Foo&q[][version]=1%2e2%2e3&q[][pacticipant]=Bar&q[][latest]=true&q[][tag]=prod&latestby=cvpv
+      let result = build_query_string(query);
+      assert_eq!(
+        result,
+        "q[][pacticipant]=Foo&q[][version]=1%2e2%2e3&q[][pacticipant]=Bar&q[][latest]=true&q[][tag]=prod&latestby=cvpv"
+      );
+    }
+
+
+    // sends URL Querying broker at: http://127.0.0.1:61517/matrix?q[][pacticipant]=Foo&q[][version]=1.2.4&q[][pacticipant]=Bar&q[][latest]=true&latestby=cvpv
+    // pact saves URL as latestby=cvpv&q[][latest]=true&q[][pacticipant]=Foo&q[][version]=1%2e2%2e4&q[][pacticipant]=Bar
+    // pact should save url as q[][pacticipant]=Foo&q[][version]=1%2e2%2e4&q[][pacticipant]=Bar&q[][latest]=true&latestby=cvpv
+    // pact-ruby saves q%5B%5D%5Bpacticipant%5D=Foo&q%5B%5D%5Bversion%5D=1.2.4&q%5B%5D%5Bpacticipant%5D=Bar&q%5B%5D%5Blatest%5D=true&latestby=cvpv
+
+    // .query_param("q[][pacticipant]", "Foo")
+    // .query_param("q[][version]", "1.2.4")
+    // .query_param("q[][pacticipant]", "Bar")
+    // .query_param("q[][latest]", "true")
+    // .query_param("latestby", "cvpv");
+
+
+  #[test]
+  fn build_query_string_matrix_query_with_multiple_q_params_and_latestby_different_version() {
+    // This test checks that the query string is built in the expected order for matrix queries
+    // with multiple q[][param] and a latestby param, with a different version value.
+    let mut query = HashMap::new();
+    query.insert("q[][pacticipant]".to_string(), vec![Some("Foo".to_string()), Some("Bar".to_string())]);
+    query.insert("q[][version]".to_string(), vec![Some("1.2.4".to_string())]);
+    query.insert("q[][pacticipant]".to_string(), vec![Some("Bar".to_string())]);
+    query.insert("q[][latest]".to_string(), vec![Some("true".to_string())]);
+    query.insert("latestby".to_string(), vec![Some("cvpv".to_string())]);
+    // The expected order is: q[][pacticipant]=Foo&q[][version]=1%2e2%2e4&q[][pacticipant]=Bar&q[][latest]=true&latestby=cvpv
+    let result = build_query_string(query);
+    assert_eq!(
+      result,
+      "q[][pacticipant]=Foo&q[][version]=1%2e2%2e4&q[][pacticipant]=Bar&q[][latest]=true&latestby=cvpv"
+    );
+  }
 }
