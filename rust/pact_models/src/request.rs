@@ -420,7 +420,7 @@ mod tests {
         "b".to_string() => vec![Some("3".to_string())]
     }), .. Request::default() };
     expect!(request.to_json(&PactSpecification::V2).to_string()).to(
-      be_equal_to(r#"{"method":"GET","path":"/","query":"a=1&a=2&b=3"}"#)
+      be_equal_to(r#"{"method":"GET","path":"/","query":"a=1&b=3&a=2"}"#)
     );
   }
 

@@ -120,17 +120,28 @@ pub fn parse_query_string(query: &str) -> Option<HashMap<String, Vec<Option<Stri
 
 /// Converts a query string map into a query string
 pub fn build_query_string(query: HashMap<String, Vec<Option<String>>>) -> String {
-  query.into_iter()
-    .filter(|(k, _)| !k.is_empty())
-    .sorted_by(|a, b| Ord::cmp(&a.0, &b.0))
-    .flat_map(|kv| {
-      kv.1.iter()
-        .map(|v| match v {
-          None => kv.0.clone(),
-          Some(s) => format!("{}={}", kv.0, encode_query(s))
-        })
-        .collect_vec()
+  // Collect all (key, index, value) triples to preserve the order of values
+  let mut entries = vec![];
+  for (key, values) in &query {
+    for (idx, value) in values.iter().enumerate() {
+      entries.push((idx, key, value));
+    }
+  }
+  // Sort by index to preserve the order of values across keys
+  entries.sort_by_key(|(idx, _, _)| *idx);
+
+  // Sort by index, then by key lexicographically for each index
+  entries.sort_by(|(idx_a, key_a, _), (idx_b, key_b, _)| {
+    idx_a.cmp(idx_b).then_with(|| key_a.cmp(key_b))
+  });
+
+  entries.into_iter()
+    .filter(|(_, k, _)| !k.is_empty())
+    .map(|(_, k, v)| match v {
+      None => k.clone(),
+      Some(s) => format!("{}={}", k, encode_query(s))
     })
+    .collect::<Vec<_>>()
     .join("&")
 }
 
@@ -202,6 +213,7 @@ mod tests {
   use rstest::rstest;
 
   use crate::query_strings::parse_query_string;
+use crate::query_strings::build_query_string;
 
   #[test]
   fn parse_query_string_test() {
@@ -288,4 +300,15 @@ mod tests {
     let result = super::build_query_string(map);
     assert_eq!(result, expected)
   }
+
+  #[test]
+  fn build_query_string_multiple_keys_and_values_ordered() {
+    let mut query = HashMap::new();
+    query.insert("pacticipant".to_string(), vec![Some("foo".to_string()), Some("bar".to_string())]);
+    query.insert("version".to_string(), vec![Some("1.2.3".to_string()), Some("4.5.6".to_string())]);
+    // The order must be: pacticipant=foo&version=1.2.3&pacticipant=bar&version=4.5.6
+    let result = build_query_string(query);
+    assert_eq!(result, "pacticipant=foo&version=1%2e2%2e3&pacticipant=bar&version=4%2e5%2e6");
+  }
+
 }

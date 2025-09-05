@@ -412,7 +412,7 @@ mod tests {
   use maplit::hashmap;
   use serde_json::json;
 
-  use crate::sync_pact::RequestResponsePact;
+  use crate::{PactSpecification, pact::Pact, sync_pact::RequestResponsePact};
 
   #[test_log::test]
   fn convert_from_v4_json() -> anyhow::Result<()> {
@@ -597,6 +597,63 @@ mod tests {
       "x-webkit-csp".to_string() => vec!["default-src 'self'".to_string()],
       "x-xss-protection".to_string() => vec!["1; mode=block".to_string()]
     }));
+
+    Ok(())
+  }
+  #[test_log::test]
+  fn convert_from_v4_to_v2_with_repeated_query_params_preserves_order() -> anyhow::Result<()> {
+    let pact_json = json!({
+      "consumer": {
+        "name": "convert_from_v4_to_v2_consumer"
+      },
+      "interactions": [
+        {
+          "description": "get participants",
+          "key": "abc123",
+          "pending": false,
+          "request": {
+            "method": "GET",
+            "path": "/participants",
+            "query": {
+              "pacticipant": [
+                "foo",
+                "bar"
+              ],
+              "version": [
+                "1.2.3",
+                "4.5.6"
+              ]
+            }
+          },
+          "response": {
+            "status": 200
+          },
+          "type": "Synchronous/HTTP"
+        }
+      ],
+      "metadata": {
+        "pactRust": {
+          "models": "1.0.4"
+        },
+        "pactSpecification": {
+          "version": "4.0"
+        }
+      },
+      "provider": {
+        "name": "convert_from_v4_to_v2_provider"
+      }
+    });
+
+    let pact = RequestResponsePact::from_json("test", &pact_json)?;
+    let v2_json = pact.to_json(PactSpecification::V2)?;
+
+    // Check that the query string is preserved in order in the output
+    let interactions = v2_json.get("interactions").unwrap().as_array().unwrap();
+    let req = interactions[0].get("request").unwrap();
+    let query_str = req.get("query").unwrap().as_str().unwrap();
+
+    // The order must be: pacticipant=foo&version=1.2.3&pacticipant=bar&version=4.5.6
+    expect!(query_str).to(be_equal_to("pacticipant=foo&version=1%2e2%2e3&pacticipant=bar&version=4%2e5%2e6"));
 
     Ok(())
   }

@@ -630,7 +630,7 @@ mod tests {
           "headers" : {
             "testreqheader" : "testreqheadervalue"
           },
-          "query" : "q=p&q=p2&r=s",
+          "query" : "q=p&r=s&q=p2",
           "body" : {
             "test" : true
           }
