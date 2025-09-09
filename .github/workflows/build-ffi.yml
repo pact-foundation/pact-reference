@@ -8,6 +8,14 @@ on:
     branches:
       - master
 
+env:
+  # Generic
+  FORCE_COLOR: '1'
+  CLICOLOR: '1'
+  # Rust
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: '1'
+
 jobs:
   build:
     runs-on: ${{ matrix.operating-system }}
@@ -15,46 +23,43 @@ jobs:
       fail-fast: false
       matrix:
         operating-system: [ ubuntu-latest, windows-latest, macos-15, macos-15-intel ]
-        rust: [ stable ]
+        rust: [ nightly ]
     env:
       pact_do_not_track: true
     steps:
-      - uses: actions/checkout@v3
-      - run: rustc --version || true
-        shell: bash
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Install Conan
+        uses: conan-io/setup-conan@09566912d661de90608308897a4d513e850c04e8  # v1.2.0
         with:
-          toolchain: stable
-      - name: Install shared mime info DB
+          cache_packages: true
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ matrix.rust }}
+
+      - name: Install cbindgen and just
+        uses: taiki-e/install-action@main
+        with:
+          tool: cbindgen,just
+
+      - name: Install macOS dependencies
         if: runner.os == 'macOS'
-        run: brew install shared-mime-info
-      - uses: dtolnay/rust-toolchain@nightly
-        with:
-          toolchain: nightly
-          components: rustfmt
-      - name: Install doxygen
-        if: runner.os == 'Linux'
-        run: sudo apt-get install -y doxygen
-      - name: Build pact_ffi with CMake
-        run: ./ci-build.sh
-        working-directory: rust/pact_ffi
-        shell: bash
-      - name: Run the C FFI tests
-        if: runner.os == 'Linux'
-        working-directory: c/consumer-verification
         run: |
-          sudo apt update
-          sudo apt install libcurl4-openssl-dev
-          /usr/bin/aclocal
-          autoconf
-          automake --add-missing
-          ./configure
-          make
-          src/consumer-verification basic ../../rust/target/debug/libpact_ffi.so
-          src/consumer-verification error ../../rust/target/debug/libpact_ffi.so
+          brew install \
+            shared-mime-info \
+            gettext
+
+      - name: Run C consumer examples
+        working-directory: c/consumer
+        run: just run
+
+      - name: Run C provider verification
+        working-directory: c/provider
+        run: just run
+
       - name: Run mock_server_logs test
         run: cargo test -p pact_ffi returns_mock_server_logs -- --nocapture --include-ignored
         working-directory: rust
-        env:
-          RUST_LOG: debug
-          RUST_BACKTRACE: 1
