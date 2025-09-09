@@ -1,0 +1,9 @@
+[requires]
+libcurl/[~8]
+xz_utils/[~5]
+bzip2/[~1]
+zlib/[~1]
+
+[generators]
+CMakeDeps
+CMakeToolchain
