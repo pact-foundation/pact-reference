@@ -17,6 +17,10 @@ use crate::log::status::Status;
 use crate::util::string::to_c;
 
 /// Convenience function to direct all logging to stdout.
+///
+/// This function is equivalent to using [`pactffi_logger_init`] followed by the
+/// [`pactffi_logger_attach_sink`] with the appropriate sink specifier, and then
+/// [`pactffi_logger_apply`].
 #[no_mangle]
 pub extern "C" fn pactffi_log_to_stdout(level_filter: LevelFilter) -> c_int {
     pactffi_logger_init();
@@ -43,6 +47,10 @@ pub extern "C" fn pactffi_log_to_stdout(level_filter: LevelFilter) -> c_int {
 }
 
 /// Convenience function to direct all logging to stderr.
+///
+/// This function is equivalent to using [`pactffi_logger_init`] followed by the
+/// [`pactffi_logger_attach_sink`] with the appropriate sink specifier, and then
+/// [`pactffi_logger_apply`].
 #[no_mangle]
 pub extern "C" fn pactffi_log_to_stderr(level_filter: LevelFilter) -> c_int {
     pactffi_logger_init();
@@ -70,7 +78,13 @@ pub extern "C" fn pactffi_log_to_stderr(level_filter: LevelFilter) -> c_int {
 
 /// Convenience function to direct all logging to a file.
 ///
+///
+/// This function is equivalent to using [`pactffi_logger_init`] followed by the
+/// [`pactffi_logger_attach_sink`] with the appropriate sink specifier, and then
+/// [`pactffi_logger_apply`].
+///
 /// # Safety
+///
 /// This function will fail if the file_name pointer is invalid or does not point to a NULL
 /// terminated string.
 #[no_mangle]
@@ -118,8 +132,14 @@ pub unsafe extern "C" fn pactffi_log_to_file(
     Status::Success as c_int
 }
 
-
 /// Convenience function to direct all logging to a task local memory buffer.
+///
+/// This function is equivalent to using [`pactffi_logger_init`] followed by the
+/// [`pactffi_logger_attach_sink`] with the appropriate sink specifier, and then
+/// [`pactffi_logger_apply`].
+///
+/// The contents of the buffer can be fetched using
+/// [`pactffi_fetch_log_buffer`].
 #[no_mangle]
 pub extern "C" fn pactffi_log_to_buffer(level_filter: LevelFilter) -> c_int {
   pactffi_logger_init();
