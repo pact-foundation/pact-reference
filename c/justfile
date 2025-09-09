@@ -1,0 +1,8 @@
+build:
+	just consumer/build
+
+clean:
+	just consumer/clean
+
+run: build
+	just consumer/run
