@@ -62,10 +62,10 @@ uuid = { version = "1.17.0", features = ["v4"] }
 quickcheck = "1"
 expectest = "0.12.0"
 env_logger = "0.11.8"
-googletest = "0.13.0"
+googletest = "0.14.2"
 hamcrest2 = "0.3.0"
-test-log = { version = "0.2.17", features = ["trace"] }
-tracing-subscriber = { version = "0.3.19", features = ["env-filter", "tracing-log", "fmt"] }
+test-log = { version = "0.2.18", features = ["trace"] }
+tracing-subscriber = { version = "0.3.20", features = ["env-filter", "tracing-log", "fmt"] }
 ntest = "0.9.3"
 pretty_assertions = "1.4.1"
-rstest = "0.24.0"
+rstest = "0.26.1"
