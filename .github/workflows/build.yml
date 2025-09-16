@@ -64,10 +64,16 @@ jobs:
       - run: |
          docker run --rm --user "$(id -u)":"$(id -g)" -v $(pwd):/workspace -w /workspace/rust -t -e TZ=UTC pactfoundation/rust-musl-build ./scripts/ci-musl-build.sh
 
-
   check-features:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - run: cargo check --no-default-features
         working-directory: rust
+
+  check-wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: cargo build --target wasm32-wasip2
+        working-directory: rust/pact_models
