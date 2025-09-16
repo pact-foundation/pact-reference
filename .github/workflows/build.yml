@@ -75,5 +75,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-wasip2
       - run: cargo build --target wasm32-wasip2
         working-directory: rust/pact_models
