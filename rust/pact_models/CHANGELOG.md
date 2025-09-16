@@ -1,5 +1,10 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.3.7 - Support wasm32-wasip2 target
+
+* 183a8c74 - fix(pact-models): Support compiling with wasm32-wasip2 target (Ronald Holshausen, Tue Sep 16 13:06:38 2025 +1000)
+* dfa63271 - bump version to 1.3.7 (Ronald Holshausen, Wed Jul 30 09:45:24 2025 +1000)
+
 # 1.3.6 - Maintenance Release
 
 * 7d4f5819 - chore(v2-matching-engine): Support root matching rules for bodies (Ronald Holshausen, Tue Jul 29 16:09:29 2025 +1000)
