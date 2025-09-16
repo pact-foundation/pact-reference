@@ -3,10 +3,11 @@
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::panic::RefUnwindSafe;
-use std::path::Path;
+#[cfg(not(target_family = "wasm"))] use std::path::Path;
 use std::sync::{Arc, Mutex};
 
-use anyhow::{anyhow, Context};
+use anyhow::anyhow;
+#[cfg(not(target_family = "wasm"))] use anyhow::Context;
 use itertools::EitherOrBoth::{Both, Left, Right};
 use itertools::Itertools;
 use maplit::btreemap;

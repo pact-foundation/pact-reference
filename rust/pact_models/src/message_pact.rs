@@ -3,11 +3,11 @@
 
 use std::cmp::Ordering;
 use std::collections::{BTreeMap, HashMap};
-use std::fs;
-use std::fs::File;
-use std::io::prelude::*;
+#[cfg(not(target_family = "wasm"))] use std::fs;
+#[cfg(not(target_family = "wasm"))] use std::fs::File;
+#[cfg(not(target_family = "wasm"))] use std::io::prelude::*;
 use std::panic::RefUnwindSafe;
-use std::path::Path;
+#[cfg(not(target_family = "wasm"))] use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use anyhow::{anyhow, bail};

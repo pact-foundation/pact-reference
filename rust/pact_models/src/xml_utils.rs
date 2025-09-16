@@ -8,8 +8,6 @@ use indextree::{Arena, NodeId};
 use itertools::Itertools;
 use kiss_xml::dom::{Element, Node};
 use lazy_static::lazy_static;
-use onig::EncodedChars;
-use regex::Regex;
 use sxd_document::{Package, parser};
 use tracing::trace;
 
@@ -243,7 +241,7 @@ pub fn text_nodes(element: &Element) -> Vec<String> {
 }
 
 lazy_static!{
-   static ref PATH_RE: Regex = Regex::new(r#"(\w+)\[(\d+)]"#).unwrap();
+   static ref PATH_RE: regex::Regex = regex::Regex::new(r#"(\w+)\[(\d+)]"#).unwrap();
 }
 
 /// Enum to box the result value from resolve_matching_node

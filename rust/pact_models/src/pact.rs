@@ -2,15 +2,16 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::fmt::Debug;
-use std::fs;
-use std::fs::File;
-use std::io::{Read, Seek, SeekFrom, Write};
-use std::ops::Deref;
+#[cfg(not(target_family = "wasm"))] use std::fs;
+#[cfg(not(target_family = "wasm"))] use std::fs::File;
+#[cfg(not(target_family = "wasm"))] use std::io::{Read, Seek, SeekFrom, Write};
+#[cfg(not(target_family = "wasm"))] use std::ops::Deref;
 use std::panic::RefUnwindSafe;
-use std::path::Path;
+#[cfg(not(target_family = "wasm"))] use std::path::Path;
 use std::sync::{Arc, Mutex};
 
-use anyhow::{anyhow, Context};
+use anyhow::anyhow;
+#[cfg(not(target_family = "wasm"))] use anyhow::Context;
 use lazy_static::lazy_static;
 use maplit::btreemap;
 use serde_json::{json, Value};
