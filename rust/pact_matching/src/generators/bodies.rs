@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-#[cfg(feature = "plugins")] use pact_plugin_driver::catalogue_manager::find_content_generator;
+#[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))] use pact_plugin_driver::catalogue_manager::find_content_generator;
 use serde_json::Value;
 use tracing::{debug, error, warn};
 
@@ -95,7 +95,7 @@ pub async fn generators_process_body(
       }
     }
     else {
-      #[cfg(feature = "plugins")]
+      #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))]
       {
         if let Some(content_generator) = find_content_generator(&content_type) {
           debug!("apply_body_generators: Found a content generator from a plugin");
@@ -108,7 +108,8 @@ pub async fn generators_process_body(
           Ok(body.clone())
         }
       }
-      #[cfg(not(feature = "plugins"))]
+
+      #[cfg(any(not(feature = "plugins"), target_family = "wasm"))]
       {
         warn!("Unsupported content type {} - Generators only support JSON and XML", content_type);
         Ok(body.clone())

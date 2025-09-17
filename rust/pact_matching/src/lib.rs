@@ -367,8 +367,8 @@ use bytes::Bytes;
 use itertools::{Either, Itertools};
 use lazy_static::*;
 use maplit::{hashmap, hashset};
-#[cfg(feature = "plugins")] use pact_plugin_driver::catalogue_manager::find_content_matcher;
-#[cfg(feature = "plugins")] use pact_plugin_driver::plugin_models::PluginInteractionConfig;
+#[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))] use pact_plugin_driver::catalogue_manager::find_content_matcher;
+#[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))] use pact_plugin_driver::plugin_models::PluginInteractionConfig;
 use serde_json::{json, Value};
 #[allow(unused_imports)] use tracing::{debug, error, info, instrument, trace, warn};
 
@@ -402,9 +402,9 @@ use crate::engine::context::{MatchingConfiguration, PlanMatchingContext};
 use crate::generators::bodies::generators_process_body;
 use crate::generators::DefaultVariantMatcher;
 use crate::headers::{match_header_value, match_headers};
-#[cfg(feature = "plugins")] use crate::json::match_json;
+#[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))] use crate::json::match_json;
 use crate::matchingrules::{DisplayForMismatch, DoMatch, match_values, Matches};
-#[cfg(feature = "plugins")] use crate::plugin_support::{InteractionPart, setup_plugin_config};
+#[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))] use crate::plugin_support::{InteractionPart, setup_plugin_config};
 use crate::query::match_query_maps;
 
 /// Simple macro to convert a string slice to a `String` struct.
@@ -418,7 +418,7 @@ pub const PACT_RUST_VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSI
 
 pub mod json;
 pub mod matchingrules;
-pub mod metrics;
+#[cfg(not(target_family = "wasm"))] pub mod metrics;
 pub mod generators;
 pub mod engine;
 
@@ -427,7 +427,7 @@ pub mod binary_utils;
 pub mod headers;
 pub mod query;
 pub mod form_urlencoded;
-#[cfg(feature = "plugins")] mod plugin_support;
+#[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))] mod plugin_support;
 
 #[cfg(not(feature = "plugins"))]
 #[derive(Clone, Debug, PartialEq)]
@@ -455,6 +455,7 @@ pub trait MatchingContext: Debug {
   fn match_keys(&self, path: &DocPath, expected: &BTreeSet<String>, actual: &BTreeSet<String>) -> Result<(), Vec<CommonMismatch>>;
 
   /// Returns the plugin configuration associated with the context
+  #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))]
   fn plugin_configuration(&self) -> &HashMap<String, PluginInteractionConfig>;
 
   /// Returns the matching rules for the matching context
@@ -477,6 +478,7 @@ pub struct CoreMatchingContext {
   /// Specification version to apply when matching with the context
   pub matching_spec: PactSpecification,
   /// Any plugin configuration available for the interaction
+  #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))]
   pub plugin_configuration: HashMap<String, PluginInteractionConfig>
 }
 
@@ -485,13 +487,26 @@ impl CoreMatchingContext {
   pub fn new(
     config: DiffConfig,
     matchers: &MatchingRuleCategory,
+    #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))]
     plugin_configuration: &HashMap<String, PluginInteractionConfig>
   ) -> Self {
-    CoreMatchingContext {
-      matchers: matchers.clone(),
-      config,
-      plugin_configuration: plugin_configuration.clone(),
-      .. CoreMatchingContext::default()
+    #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))]
+    {
+      CoreMatchingContext {
+        matchers: matchers.clone(),
+        config,
+        plugin_configuration: plugin_configuration.clone(),
+        ..CoreMatchingContext::default()
+      }
+    }
+
+    #[cfg(any(not(feature = "plugins"), target_family = "wasm"))]
+    {
+      CoreMatchingContext {
+        matchers: matchers.clone(),
+        config,
+        ..CoreMatchingContext::default()
+      }
     }
   }
 
@@ -519,22 +534,46 @@ impl CoreMatchingContext {
 
   #[allow(dead_code)]
   pub(crate) fn clone_from(context: &(dyn MatchingContext + Send + Sync)) -> Self {
-    CoreMatchingContext {
-      matchers: context.matchers().clone(),
-      config: context.config().clone(),
-      plugin_configuration: context.plugin_configuration().clone(),
-      .. CoreMatchingContext::default()
+    #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))]
+    {
+      CoreMatchingContext {
+        matchers: context.matchers().clone(),
+        config: context.config().clone(),
+        plugin_configuration: context.plugin_configuration().clone(),
+        .. CoreMatchingContext::default()
+      }
+    }
+
+    #[cfg(any(not(feature = "plugins"), target_family = "wasm"))]
+    {
+      CoreMatchingContext {
+        matchers: context.matchers().clone(),
+        config: context.config().clone(),
+        .. CoreMatchingContext::default()
+      }
     }
   }
 }
 
 impl Default for CoreMatchingContext {
   fn default() -> Self {
-    CoreMatchingContext {
-      matchers: Default::default(),
-      config: DiffConfig::AllowUnexpectedKeys,
-      matching_spec: PactSpecification::V3,
-      plugin_configuration: Default::default()
+    #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))]
+    {
+      CoreMatchingContext {
+        matchers: Default::default(),
+        config: DiffConfig::AllowUnexpectedKeys,
+        matching_spec: PactSpecification::V3,
+        plugin_configuration: Default::default()
+      }
+    }
+
+    #[cfg(any(not(feature = "plugins"), target_family = "wasm"))]
+    {
+      CoreMatchingContext {
+        matchers: Default::default(),
+        config: DiffConfig::AllowUnexpectedKeys,
+        matching_spec: PactSpecification::V3
+      }
     }
   }
 }
@@ -652,6 +691,7 @@ impl MatchingContext for CoreMatchingContext {
     }
   }
 
+  #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))]
   fn plugin_configuration(&self) -> &HashMap<String, PluginInteractionConfig> {
     &self.plugin_configuration
   }
@@ -665,12 +705,24 @@ impl MatchingContext for CoreMatchingContext {
   }
 
   fn clone_with(&self, matchers: &MatchingRuleCategory) -> Box<dyn MatchingContext + Send + Sync> {
-    Box::new(CoreMatchingContext {
-      matchers: matchers.clone(),
-      config: self.config.clone(),
-      matching_spec: self.matching_spec,
-      plugin_configuration: self.plugin_configuration.clone()
-    })
+    #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))]
+    {
+      Box::new(CoreMatchingContext {
+        matchers: matchers.clone(),
+        config: self.config.clone(),
+        matching_spec: self.matching_spec,
+        plugin_configuration: self.plugin_configuration.clone()
+      })
+    }
+
+    #[cfg(any(not(feature = "plugins"), target_family = "wasm"))]
+    {
+      Box::new(CoreMatchingContext {
+        matchers: matchers.clone(),
+        config: self.config.clone(),
+        matching_spec: self.matching_spec
+      })
+    }
   }
 }
 
@@ -684,19 +736,40 @@ impl HeaderMatchingContext {
   /// Wraps a MatchingContext, downcasing all the matching path keys
   pub fn new(context: &(dyn MatchingContext + Send + Sync)) -> Self {
     let matchers = context.matchers();
-    HeaderMatchingContext {
-      inner_context: CoreMatchingContext::new(
-        context.config(),
-        &MatchingRuleCategory {
-          name: matchers.name.clone(),
-          rules: matchers.rules.iter()
-            .map(|(path, rules)| {
-              (path.to_lower_case(), rules.clone())
-            })
-            .collect()
-        },
-        &context.plugin_configuration()
-      )
+
+    #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))]
+    {
+      HeaderMatchingContext {
+        inner_context: CoreMatchingContext::new(
+          context.config(),
+          &MatchingRuleCategory {
+            name: matchers.name.clone(),
+            rules: matchers.rules.iter()
+              .map(|(path, rules)| {
+                (path.to_lower_case(), rules.clone())
+              })
+              .collect()
+          },
+          &context.plugin_configuration()
+        )
+      }
+    }
+
+    #[cfg(any(not(feature = "plugins"), target_family = "wasm"))]
+    {
+      HeaderMatchingContext {
+        inner_context: CoreMatchingContext::new(
+          context.config(),
+          &MatchingRuleCategory {
+            name: matchers.name.clone(),
+            rules: matchers.rules.iter()
+              .map(|(path, rules)| {
+                (path.to_lower_case(), rules.clone())
+              })
+              .collect()
+          }
+        )
+      }
     }
   }
 }
@@ -726,6 +799,7 @@ impl MatchingContext for HeaderMatchingContext {
     self.inner_context.match_keys(path, expected, actual)
   }
 
+  #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))]
   fn plugin_configuration(&self) -> &HashMap<String, PluginInteractionConfig> {
     self.inner_context.plugin_configuration()
   }
@@ -739,14 +813,28 @@ impl MatchingContext for HeaderMatchingContext {
   }
 
   fn clone_with(&self, matchers: &MatchingRuleCategory) -> Box<dyn MatchingContext + Send + Sync> {
-    Box::new(HeaderMatchingContext::new(
-      &CoreMatchingContext {
-        matchers: matchers.clone(),
-        config: self.inner_context.config.clone(),
-        matching_spec: self.inner_context.matching_spec,
-        plugin_configuration: self.inner_context.plugin_configuration.clone()
-      }
-    ))
+    #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))]
+    {
+      Box::new(HeaderMatchingContext::new(
+        &CoreMatchingContext {
+          matchers: matchers.clone(),
+          config: self.inner_context.config.clone(),
+          matching_spec: self.inner_context.matching_spec,
+          plugin_configuration: self.inner_context.plugin_configuration.clone()
+        }
+      ))
+    }
+
+    #[cfg(any(not(feature = "plugins"), target_family = "wasm"))]
+    {
+      Box::new(HeaderMatchingContext::new(
+        &CoreMatchingContext {
+          matchers: matchers.clone(),
+          config: self.inner_context.config.clone(),
+          matching_spec: self.inner_context.matching_spec
+        }
+      ))
+    }
   }
 }
 
@@ -1203,9 +1291,10 @@ fn merge_result<T: Clone>(res1: Result<(), Vec<T>>, res2: Result<(), Vec<T>>) ->
 }
 
 /// Result of matching a request body
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub enum BodyMatchResult {
   /// Matched OK
+  #[default]
   Ok,
   /// Mismatch in the content type of the body
   BodyTypeMismatch {
@@ -1255,7 +1344,7 @@ impl BodyMatchResult {
 }
 
 /// Result of matching a request
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct RequestMatchResult {
   /// Method match result
   pub method: Option<Mismatch>,
@@ -1519,7 +1608,7 @@ pub(crate) async fn compare_bodies(
 
   trace!(?content_type, "Comparing bodies");
 
-  #[cfg(feature = "plugins")]
+  #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))]
   {
     match find_content_matcher(content_type) {
       Some(matcher) => {
@@ -1576,7 +1665,7 @@ pub(crate) async fn compare_bodies(
     }
   }
 
-  #[cfg(not(feature = "plugins"))]
+  #[cfg(any(not(feature = "plugins"), target_family = "wasm"))]
   {
     mismatches.extend(compare_bodies_core(content_type, expected, actual, context));
   }
@@ -1714,13 +1803,6 @@ pub async fn match_request<'a>(
   debug!("     matching_rules:\n{}", expected.matching_rules);
   debug!("     generators: {:?}", expected.generators);
 
-  #[allow(unused_mut, unused_assignments)] let mut plugin_data = hashmap!{};
-  #[cfg(feature = "plugins")]
-  {
-    plugin_data = setup_plugin_config(pact, interaction, InteractionPart::Request);
-  };
-  trace!("plugin_data = {:?}", plugin_data);
-
   let use_v2_engine = std::env::var("PACT_MATCHING_ENGINE")
     .map(|val| val.to_lowercase() == "v2")
     .unwrap_or(false);
@@ -1748,28 +1830,64 @@ pub async fn match_request<'a>(
     }
     Ok(executed_plan.into())
   } else {
-    let path_context = CoreMatchingContext::new(DiffConfig::NoUnexpectedKeys,
-      &expected.matching_rules.rules_for_category("path").unwrap_or_default(),
-      &plugin_data);
-    let body_context = CoreMatchingContext::new(DiffConfig::NoUnexpectedKeys,
-      &expected.matching_rules.rules_for_category("body").unwrap_or_default(),
-      &plugin_data);
-    let query_context = CoreMatchingContext::new(DiffConfig::NoUnexpectedKeys,
-      &expected.matching_rules.rules_for_category("query").unwrap_or_default(),
-      &plugin_data);
-    let header_context = HeaderMatchingContext::new(
-      &CoreMatchingContext::new(DiffConfig::NoUnexpectedKeys,
-        &expected.matching_rules.rules_for_category("header").unwrap_or_default(),
+    let mut result = RequestMatchResult::default();
+
+    #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))]
+    {
+      let plugin_data = setup_plugin_config(pact, interaction, InteractionPart::Request);
+      trace!("plugin_data = {:?}", plugin_data);
+
+      let path_context = CoreMatchingContext::new(DiffConfig::NoUnexpectedKeys,
+        &expected.matching_rules.rules_for_category("path").unwrap_or_default(),
         &plugin_data
-      )
-    );
-    let result = RequestMatchResult {
-      method: match_method(&expected.method, &actual.method).err(),
-      path: match_path(&expected.path, &actual.path, &path_context).err(),
-      body: match_body(&expected, &actual, &body_context, &header_context).await,
-      query: match_query(expected.query, actual.query, &query_context),
-      headers: match_headers(expected.headers, actual.headers, &header_context)
-    };
+      );
+      let body_context = CoreMatchingContext::new(DiffConfig::NoUnexpectedKeys,
+        &expected.matching_rules.rules_for_category("body").unwrap_or_default(),
+        &plugin_data
+      );
+      let query_context = CoreMatchingContext::new(DiffConfig::NoUnexpectedKeys,
+        &expected.matching_rules.rules_for_category("query").unwrap_or_default(),
+        &plugin_data
+      );
+      let header_context = HeaderMatchingContext::new(
+        &CoreMatchingContext::new(DiffConfig::NoUnexpectedKeys,
+          &expected.matching_rules.rules_for_category("header").unwrap_or_default(),
+          &plugin_data
+        )
+      );
+      result = RequestMatchResult {
+        method: match_method(&expected.method, &actual.method).err(),
+        path: match_path(&expected.path, &actual.path, &path_context).err(),
+        body: match_body(&expected, &actual, &body_context, &header_context).await,
+        query: match_query(expected.query, actual.query, &query_context),
+        headers: match_headers(expected.headers, actual.headers, &header_context)
+      };
+    }
+
+    #[cfg(any(not(feature = "plugins"), target_family = "wasm"))]
+    {
+      let path_context = CoreMatchingContext::new(DiffConfig::NoUnexpectedKeys,
+        &expected.matching_rules.rules_for_category("path").unwrap_or_default()
+      );
+      let body_context = CoreMatchingContext::new(DiffConfig::NoUnexpectedKeys,
+        &expected.matching_rules.rules_for_category("body").unwrap_or_default()
+      );
+      let query_context = CoreMatchingContext::new(DiffConfig::NoUnexpectedKeys,
+        &expected.matching_rules.rules_for_category("query").unwrap_or_default()
+      );
+      let header_context = HeaderMatchingContext::new(
+        &CoreMatchingContext::new(DiffConfig::NoUnexpectedKeys,
+          &expected.matching_rules.rules_for_category("header").unwrap_or_default()
+        )
+      );
+      result = RequestMatchResult {
+        method: match_method(&expected.method, &actual.method).err(),
+        path: match_path(&expected.path, &actual.path, &path_context).err(),
+        body: match_body(&expected, &actual, &body_context, &header_context).await,
+        query: match_query(expected.query, actual.query, &query_context),
+        headers: match_headers(expected.headers, actual.headers, &header_context)
+      };
+    }
 
     debug!("--> Mismatches: {:?}", result.mismatches());
     Ok(result)
@@ -1813,12 +1931,6 @@ pub async fn match_response<'a>(
   let mut mismatches = vec![];
 
   debug!("comparing to expected response: {}", expected);
-  #[allow(unused_mut, unused_assignments)] let mut plugin_data = hashmap!{};
-  #[cfg(feature = "plugins")]
-  {
-    plugin_data = setup_plugin_config(pact, interaction, InteractionPart::Response);
-  };
-  trace!("plugin_data = {:?}", plugin_data);
 
   let use_v2_engine = std::env::var("PACT_MATCHING_ENGINE")
     .map(|val| val.to_lowercase() == "v2")
@@ -1847,28 +1959,59 @@ pub async fn match_response<'a>(
     }
     Ok(executed_plan.into())
   } else {
-    let status_context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys,
-      &expected.matching_rules.rules_for_category("status").unwrap_or_default(),
-      &plugin_data);
-    let body_context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys,
-      &expected.matching_rules.rules_for_category("body").unwrap_or_default(),
-      &plugin_data);
-    let header_context = HeaderMatchingContext::new(
-      &CoreMatchingContext::new(DiffConfig::NoUnexpectedKeys,
-        &expected.matching_rules.rules_for_category("header").unwrap_or_default(),
-        &plugin_data
-      )
-    );
 
-    mismatches.extend_from_slice(match_body(&expected, &actual, &body_context, &header_context).await
-      .mismatches().as_slice());
-    if let Err(m) = match_status(expected.status, actual.status, &status_context) {
-      mismatches.extend_from_slice(&m);
+    #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))]
+    {
+      let plugin_data = setup_plugin_config(pact, interaction, InteractionPart::Response);
+      trace!("plugin_data = {:?}", plugin_data);
+
+      let status_context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys,
+        &expected.matching_rules.rules_for_category("status").unwrap_or_default(),
+        &plugin_data);
+      let body_context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys,
+        &expected.matching_rules.rules_for_category("body").unwrap_or_default(),
+        &plugin_data);
+      let header_context = HeaderMatchingContext::new(
+        &CoreMatchingContext::new(DiffConfig::NoUnexpectedKeys,
+          &expected.matching_rules.rules_for_category("header").unwrap_or_default(),
+          &plugin_data
+        )
+      );
+
+      mismatches.extend_from_slice(match_body(&expected, &actual, &body_context, &header_context).await
+        .mismatches().as_slice());
+      if let Err(m) = match_status(expected.status, actual.status, &status_context) {
+        mismatches.extend_from_slice(&m);
+      }
+      let result = match_headers(expected.headers, actual.headers,
+        &header_context);
+      for values in result.values() {
+        mismatches.extend_from_slice(values.as_slice());
+      }
     }
-    let result = match_headers(expected.headers, actual.headers,
-      &header_context);
-    for values in result.values() {
-      mismatches.extend_from_slice(values.as_slice());
+
+    #[cfg(any(not(feature = "plugins"), target_family = "wasm"))]
+    {
+      let status_context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys,
+        &expected.matching_rules.rules_for_category("status").unwrap_or_default());
+      let body_context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys,
+        &expected.matching_rules.rules_for_category("body").unwrap_or_default());
+      let header_context = HeaderMatchingContext::new(
+        &CoreMatchingContext::new(DiffConfig::NoUnexpectedKeys,
+          &expected.matching_rules.rules_for_category("header").unwrap_or_default()
+        )
+      );
+
+      mismatches.extend_from_slice(match_body(&expected, &actual, &body_context, &header_context).await
+        .mismatches().as_slice());
+      if let Err(m) = match_status(expected.status, actual.status, &status_context) {
+        mismatches.extend_from_slice(&m);
+      }
+      let result = match_headers(expected.headers, actual.headers,
+        &header_context);
+      for values in result.values() {
+        mismatches.extend_from_slice(values.as_slice());
+      }
     }
 
     trace!(?mismatches, "match response");
@@ -1995,33 +2138,54 @@ pub async fn match_message<'a>(
     let actual_message = actual.as_message().unwrap();
 
     let matching_rules = &expected_message.matching_rules;
-    #[allow(unused_mut, unused_assignments)] let mut plugin_data = hashmap!{};
-    #[cfg(feature = "plugins")]
+
+    #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))]
     {
-      plugin_data = setup_plugin_config(pact, expected, InteractionPart::None);
-    };
+      let plugin_data  = setup_plugin_config(pact, expected, InteractionPart::None);
 
-    let body_context = if expected.is_v4() {
-      CoreMatchingContext {
-        matchers: matching_rules.rules_for_category("content").unwrap_or_default(),
-        config: DiffConfig::AllowUnexpectedKeys,
-        matching_spec: PactSpecification::V4,
-        plugin_configuration: plugin_data.clone()
+      let body_context = if expected.is_v4() {
+        CoreMatchingContext {
+          matchers: matching_rules.rules_for_category("content").unwrap_or_default(),
+          config: DiffConfig::AllowUnexpectedKeys,
+          matching_spec: PactSpecification::V4,
+          plugin_configuration: plugin_data.clone()
+        }
+      } else {
+        CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys,
+          &matching_rules.rules_for_category("body").unwrap_or_default(),
+          &plugin_data)
+      };
+
+      let metadata_context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys,
+        &matching_rules.rules_for_category("metadata").unwrap_or_default(),
+        &plugin_data);
+      let result = match_message_contents(&expected_message.as_message_content(), &actual_message.as_message_content(), &body_context).await;
+      mismatches.extend_from_slice(result.err().unwrap_or_default().as_slice());
+      for values in match_message_metadata(&expected_message.as_message_content(), &actual_message.as_message_content(), &metadata_context).values() {
+        mismatches.extend_from_slice(values.as_slice());
       }
-    } else {
-      CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys,
-                           &matching_rules.rules_for_category("body").unwrap_or_default(),
-                           &plugin_data)
-    };
+    }
 
-    let metadata_context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys,
-                                                &matching_rules.rules_for_category("metadata").unwrap_or_default(),
-                                                &plugin_data);
-    let contents = match_message_contents(&expected_message.as_message_content(), &actual_message.as_message_content(), &body_context).await;
+    #[cfg(any(not(feature = "plugins"), target_family = "wasm"))]
+    {
+      let body_context = if expected.is_v4() {
+        CoreMatchingContext {
+          matchers: matching_rules.rules_for_category("content").unwrap_or_default(),
+          config: DiffConfig::AllowUnexpectedKeys,
+          matching_spec: PactSpecification::V4
+        }
+      } else {
+        CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys,
+          &matching_rules.rules_for_category("body").unwrap_or_default())
+      };
 
-    mismatches.extend_from_slice(contents.err().unwrap_or_default().as_slice());
-    for values in match_message_metadata(&expected_message.as_message_content(), &actual_message.as_message_content(), &metadata_context).values() {
-      mismatches.extend_from_slice(values.as_slice());
+      let metadata_context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys,
+        &matching_rules.rules_for_category("metadata").unwrap_or_default());
+      let result = crate::match_message_contents(&expected_message.as_message_content(), &actual_message.as_message_content(), &body_context).await;
+      mismatches.extend_from_slice(result.err().unwrap_or_default().as_slice());
+      for values in crate::match_message_metadata(&expected_message.as_message_content(), &actual_message.as_message_content(), &metadata_context).values() {
+        mismatches.extend_from_slice(values.as_slice());
+      }
     }
   } else {
     mismatches.push(Mismatch::BodyTypeMismatch {
@@ -2053,30 +2217,49 @@ pub async fn match_sync_message_request<'a>(
 ) -> Vec<Mismatch> {
   debug!("comparing to expected message request: {:?}", expected);
 
-  let matching_rules = &expected.request.matching_rules;
-  #[allow(unused_mut, unused_assignments)] let mut plugin_data = hashmap!{};
-  #[cfg(feature = "plugins")]
-  {
-    plugin_data = setup_plugin_config(pact, &expected.boxed(), InteractionPart::None);
-  };
-
-  let body_context = CoreMatchingContext {
-    matchers: matching_rules.rules_for_category("content").unwrap_or_default(),
-    config: DiffConfig::AllowUnexpectedKeys,
-    matching_spec: PactSpecification::V4,
-    plugin_configuration: plugin_data.clone()
-  };
-
-  let metadata_context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys,
-                                              &matching_rules.rules_for_category("metadata").unwrap_or_default(),
-                                              &plugin_data);
-  let contents = match_message_contents(&expected.request, &actual.request, &body_context).await;
-
   let mut mismatches = vec![];
-  mismatches.extend_from_slice(contents.err().unwrap_or_default().as_slice());
-  for values in match_message_metadata(&expected.request, &actual.request, &metadata_context).values() {
-    mismatches.extend_from_slice(values.as_slice());
+  let matching_rules = &expected.request.matching_rules;
+
+  #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))]
+  {
+    let plugin_data = setup_plugin_config(pact, &expected.boxed(), InteractionPart::None);
+
+    let body_context = CoreMatchingContext {
+      matchers: matching_rules.rules_for_category("content").unwrap_or_default(),
+      config: DiffConfig::AllowUnexpectedKeys,
+      matching_spec: PactSpecification::V4,
+      plugin_configuration: plugin_data.clone()
+    };
+
+    let metadata_context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys,
+      &matching_rules.rules_for_category("metadata").unwrap_or_default(),
+      &plugin_data);
+    let contents = match_message_contents(&expected.request, &actual.request, &body_context).await;
+
+    mismatches.extend_from_slice(contents.err().unwrap_or_default().as_slice());
+    for values in match_message_metadata(&expected.request, &actual.request, &metadata_context).values() {
+      mismatches.extend_from_slice(values.as_slice());
+    }
   }
+
+  #[cfg(any(not(feature = "plugins"), target_family = "wasm"))]
+  {
+    let body_context = CoreMatchingContext {
+      matchers: matching_rules.rules_for_category("content").unwrap_or_default(),
+      config: DiffConfig::AllowUnexpectedKeys,
+      matching_spec: PactSpecification::V4
+    };
+
+    let metadata_context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys,
+      &matching_rules.rules_for_category("metadata").unwrap_or_default());
+    let contents = match_message_contents(&expected.request, &actual.request, &body_context).await;
+
+    mismatches.extend_from_slice(contents.err().unwrap_or_default().as_slice());
+    for values in match_message_metadata(&expected.request, &actual.request, &metadata_context).values() {
+      mismatches.extend_from_slice(values.as_slice());
+    }
+  }
+
   mismatches
 }
 
@@ -2112,28 +2295,49 @@ pub async fn match_sync_message_response<'a>(
       });
     }
   } else {
-    #[allow(unused_mut, unused_assignments)] let mut plugin_data = hashmap!{};
-    #[cfg(feature = "plugins")]
+
+    #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))]
     {
-      plugin_data = setup_plugin_config(pact, &expected.boxed(), InteractionPart::None);
-    };
-    for (expected_response, actual_response) in expected_responses.iter().zip(actual_responses) {
-      let matching_rules = &expected_response.matching_rules;
-      let body_context = CoreMatchingContext {
-        matchers: matching_rules.rules_for_category("content").unwrap_or_default(),
-        config: DiffConfig::AllowUnexpectedKeys,
-        matching_spec: PactSpecification::V4,
-        plugin_configuration: plugin_data.clone()
-      };
+      let plugin_data = setup_plugin_config(pact, &expected.boxed(), InteractionPart::None);
+      for (expected_response, actual_response) in expected_responses.iter().zip(actual_responses) {
+        let matching_rules = &expected_response.matching_rules;
+        let body_context = CoreMatchingContext {
+          matchers: matching_rules.rules_for_category("content").unwrap_or_default(),
+          config: DiffConfig::AllowUnexpectedKeys,
+          matching_spec: PactSpecification::V4,
+          plugin_configuration: plugin_data.clone()
+        };
 
-      let metadata_context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys,
-                                                  &matching_rules.rules_for_category("metadata").unwrap_or_default(),
-                                                  &plugin_data);
-      let contents = match_message_contents(expected_response, actual_response, &body_context).await;
+        let metadata_context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys,
+          &matching_rules.rules_for_category("metadata").unwrap_or_default(),
+          &plugin_data);
+        let contents = match_message_contents(expected_response, actual_response, &body_context).await;
 
-      mismatches.extend_from_slice(contents.err().unwrap_or_default().as_slice());
-      for values in match_message_metadata(expected_response, actual_response, &metadata_context).values() {
-        mismatches.extend_from_slice(values.as_slice());
+        mismatches.extend_from_slice(contents.err().unwrap_or_default().as_slice());
+        for values in match_message_metadata(expected_response, actual_response, &metadata_context).values() {
+          mismatches.extend_from_slice(values.as_slice());
+        }
+      }
+    }
+
+    #[cfg(any(not(feature = "plugins"), target_family = "wasm"))]
+    {
+      for (expected_response, actual_response) in expected_responses.iter().zip(actual_responses) {
+        let matching_rules = &expected_response.matching_rules;
+        let body_context = CoreMatchingContext {
+          matchers: matching_rules.rules_for_category("content").unwrap_or_default(),
+          config: DiffConfig::AllowUnexpectedKeys,
+          matching_spec: PactSpecification::V4
+        };
+
+        let metadata_context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys,
+          &matching_rules.rules_for_category("metadata").unwrap_or_default());
+        let contents = match_message_contents(expected_response, actual_response, &body_context).await;
+
+        mismatches.extend_from_slice(contents.err().unwrap_or_default().as_slice());
+        for values in match_message_metadata(expected_response, actual_response, &metadata_context).values() {
+          mismatches.extend_from_slice(values.as_slice());
+        }
       }
     }
   }

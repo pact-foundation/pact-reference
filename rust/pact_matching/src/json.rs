@@ -6,7 +6,7 @@ use ansi_term::Colour::*;
 use anyhow::anyhow;
 use difference::*;
 use lazy_static::lazy_static;
-use onig::Regex;
+use regex::Regex;
 use semver::Version;
 use serde_json::{json, Value};
 

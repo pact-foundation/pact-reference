@@ -16,7 +16,8 @@ use bytes::Bytes;
 #[cfg(feature = "multipart")] use http::header::{HeaderMap, HeaderName};
 #[cfg(feature = "multipart")] use itertools::Itertools;
 #[cfg(feature = "multipart")] use multer::Multipart;
-#[cfg(feature = "multipart")] use onig::Regex;
+#[cfg(feature = "multipart")] #[cfg(not(target_family = "wasm"))] use onig::Regex;
+#[cfg(feature = "multipart")] #[cfg(target_family = "wasm")] use regex::Regex;
 #[cfg(feature = "multipart")] use pact_models::bodies::OptionalBody;
 use pact_models::content_types::{ContentType, detect_content_type_from_bytes};
 use pact_models::http_parts::HttpPart;
@@ -307,8 +308,11 @@ pub fn match_mime_multipart(
         },
         Err(err) => {
           warn!("Could not get the tokio runtime, will try start a new one: {}", err);
-          tokio::runtime::Builder::new_multi_thread()
-            .enable_all()
+          #[cfg(not(target_family = "wasm"))]
+          let mut builder = tokio::runtime::Builder::new_multi_thread();
+          #[cfg(target_family = "wasm")]
+          let mut builder = tokio::runtime::Builder::new_current_thread();
+          builder.enable_all()
             .build()
             .expect("Could not start a Tokio runtime for running async tasks")
             .block_on(async move {

@@ -53,11 +53,23 @@ pub(crate) fn find_matching_variant<T>(
   let result = variants.iter()
     .find(|(index, rules, _)| {
       debug!("find_matching_variant: Comparing variant {} with value '{:?}'", index, value);
-      let context = CoreMatchingContext::new(DiffConfig::NoUnexpectedKeys,
-                                             rules, &hashmap!{});
-      let matches = callback(&DocPath::root(), value, &context);
-      debug!("find_matching_variant: Comparing variant {} => {}", index, matches);
-      matches
+
+      #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))]
+      {
+        let context = CoreMatchingContext::new(DiffConfig::NoUnexpectedKeys,
+          rules, &hashmap! {});
+        let matches = callback(&DocPath::root(), value, &context);
+        debug!("find_matching_variant: Comparing variant {} => {}", index, matches);
+        matches
+      }
+
+      #[cfg(any(not(feature = "plugins"), target_family = "wasm"))]
+      {
+        let context = CoreMatchingContext::new(DiffConfig::NoUnexpectedKeys, rules);
+        let matches = callback(&DocPath::root(), value, &context);
+        debug!("find_matching_variant: Comparing variant {} => {}", index, matches);
+        matches
+      }
     });
   debug!("find_matching_variant: result = {:?}", result);
   result.map(|(index, _, generators)| (*index, generators.clone()))

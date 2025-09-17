@@ -4,7 +4,8 @@ use anyhow::anyhow;
 use bytes::Bytes;
 use itertools::{EitherOrBoth, Itertools};
 use maplit::*;
-use onig::Regex;
+#[cfg(not(target_family = "wasm"))] use onig::Regex;
+#[cfg(target_family = "wasm")] use regex::Regex;
 use sxd_document::dom::Element;
 use sxd_document::QName;
 

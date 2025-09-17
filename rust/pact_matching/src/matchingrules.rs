@@ -7,10 +7,11 @@ use std::str::from_utf8;
 use anyhow::anyhow;
 use bytes::Bytes;
 use itertools::Itertools;
-#[cfg(feature = "plugins")] use lazy_static::lazy_static;
+#[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))] use lazy_static::lazy_static;
 use maplit::hashmap;
-use onig::Regex;
-#[cfg(feature = "plugins")]  use pact_plugin_driver::catalogue_manager::{
+#[cfg(not(target_family = "wasm"))] use onig::Regex;
+#[cfg(target_family = "wasm")] use regex::Regex;
+#[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))] use pact_plugin_driver::catalogue_manager::{
   CatalogueEntry,
   CatalogueEntryProviderType,
   CatalogueEntryType,
@@ -34,7 +35,7 @@ use pact_models::path_exp::DocPath;
 use crate::{CommonMismatch, Either, MatchingContext, merge_result};
 use crate::binary_utils::match_content_type;
 
-#[cfg(feature = "plugins")]
+#[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))]
 lazy_static! {
   /// Content matcher/generator entries to add to the plugin catalogue
   static ref CONTENT_MATCHER_CATALOGUE_ENTRIES: Vec<CatalogueEntry> = {
@@ -127,8 +128,8 @@ lazy_static! {
 
 /// Sets up all the core catalogue entries for matchers and generators
 pub fn configure_core_catalogue() {
-  #[cfg(feature = "plugins")] register_core_entries(CONTENT_MATCHER_CATALOGUE_ENTRIES.as_ref());
-  #[cfg(feature = "plugins")] register_core_entries(MATCHER_CATALOGUE_ENTRIES.as_ref());
+  #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))] register_core_entries(CONTENT_MATCHER_CATALOGUE_ENTRIES.as_ref());
+  #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))] register_core_entries(MATCHER_CATALOGUE_ENTRIES.as_ref());
 }
 
 pub(crate) fn display<T: Display>(value: &[T]) -> String {

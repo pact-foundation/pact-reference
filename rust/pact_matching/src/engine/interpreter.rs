@@ -16,7 +16,7 @@ use pact_models::path_exp::{DocPath, PathToken};
 
 use crate::engine::{ExecutionPlan, ExecutionPlanNode, NodeResult, NodeValue, PlanNodeType};
 use crate::engine::context::PlanMatchingContext;
-use crate::engine::value_resolvers::{HttpRequestValueResolver, ValueResolver};
+use crate::engine::value_resolvers::ValueResolver;
 #[cfg(feature = "xml")] use crate::engine::xml::XmlValue;
 use crate::headers::{parse_charset_parameters, strip_whitespace};
 use crate::json::type_of;
