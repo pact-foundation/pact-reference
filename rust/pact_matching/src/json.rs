@@ -6,7 +6,8 @@ use ansi_term::Colour::*;
 use anyhow::anyhow;
 use difference::*;
 use lazy_static::lazy_static;
-use regex::Regex;
+#[cfg(not(target_family = "wasm"))] use onig::Regex;
+#[cfg(target_family = "wasm")] use regex::Regex;
 use semver::Version;
 use serde_json::{json, Value};
 
