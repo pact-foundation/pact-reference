@@ -4,6 +4,7 @@
 //! server:
 //! ```
 //! use std::ffi::{CStr, CString};
+//! use std::ptr::null;
 //! use expectest::prelude::*;
 //! use reqwest::blocking::Client;
 //! use pact_ffi::mock_server::handles::{
@@ -19,7 +20,7 @@
 //! };
 //! use pact_ffi::mock_server::{
 //!   pactffi_cleanup_mock_server,
-//!   pactffi_create_mock_server_for_pact,
+//!   pactffi_create_mock_server_for_transport,
 //!   pactffi_mock_server_mismatches,
 //!   pactffi_write_pact_file
 //! };
@@ -40,7 +41,7 @@
 //! let query_param_matcher = CString::new("{\"value\":\"bar\",\"pact:matcher:type\":\"regex\", \"regex\":\"(bar|baz|bat)\"}").unwrap();
 //! let request_body_with_matchers = CString::new("{\"id\": {\"value\":1,\"pact:matcher:type\":\"type\"}}").unwrap();
 //! let response_body_with_matchers = CString::new("{\"created\": {\"value\":\"maybe\",\"pact:matcher:type\":\"regex\", \"regex\":\"(yes|no|maybe)\"}}").unwrap();
-//! let address = CString::new("127.0.0.1:0").unwrap();
+//! let address = CString::new("127.0.0.1").unwrap();
 //! let file_path = CString::new("/tmp/pact").unwrap();
 //! let description = CString::new("a request to test the FFI interface").unwrap();
 //! let method = CString::new("POST").unwrap();
@@ -62,7 +63,7 @@
 //! pactffi_response_status(interaction.clone(), 200);
 //!
 //! // Start the mock server
-//! let port = pactffi_create_mock_server_for_pact(pact_handle.clone(), address.as_ptr(), false);
+//! let port = pactffi_create_mock_server_for_transport(pact_handle.clone(), address.as_ptr(), 0, null(), null());
 //!
 //! expect!(port).to(be_greater_than(0));
 //!
