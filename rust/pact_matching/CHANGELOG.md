@@ -1,5 +1,14 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 2.0.2 - Support the wasm32-wasip2 target
+
+* b95b30dd - chore(pact_matching): Support compiling with wasm32-wasip2 target (Ronald Holshausen, Wed Sep 17 10:14:50 2025 +1000)
+* eaaee9de - chore: Upgrade pact_models to 1.3.7 (Ronald Holshausen, Tue Sep 16 13:57:37 2025 +1000)
+* 4ce86e68 - chore(pact_matching): Update deps (Ronald Holshausen, Tue Sep 16 13:55:25 2025 +1000)
+* 0bb51981 - chore(pact_matching): Update test deps (Ronald Holshausen, Tue Sep 16 13:50:49 2025 +1000)
+* e2d2ca33 - fix: compatibility-suite was failing after upgrading pact_matching to 2.0.1 (Ronald Holshausen, Wed Aug 20 10:32:37 2025 +1000)
+* 805777f7 - bump version to 2.0.2 (Ronald Holshausen, Fri Aug 1 09:01:58 2025 +1000)
+
 # 2.0.1 - Bugfix Release
 
 * d1b455f5 - fix(pact_matching): Add missing XML feature gates (Ronald Holshausen, Thu Jul 31 15:32:16 2025 +1000)
