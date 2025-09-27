@@ -48,7 +48,7 @@ fn transport_value(v: &str) -> Result<(String, u16, Option<String>), String> {
   }
 }
 
-pub(crate) fn setup_app() -> Command {
+pub fn setup_app() -> Command {
   command!()
     .disable_version_flag(true)
     .disable_help_flag(true)

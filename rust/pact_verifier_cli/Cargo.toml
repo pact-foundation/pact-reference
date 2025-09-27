@@ -49,3 +49,11 @@ expectest = "0.12.0"
 rstest = "0.24.0"
 tempfile = "3.20.0"
 trycmd = "0.15.9"
+
+
+[[bin]]
+name = "pact_verifier_cli"
+path = "src/bin.rs"
+[lib]
+name = "pact_verifier_cli"
+path = "src/main.rs"
