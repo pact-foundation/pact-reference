@@ -56,4 +56,4 @@ name = "pact_verifier_cli"
 path = "src/bin.rs"
 [lib]
 name = "pact_verifier_cli"
-path = "src/main.rs"
+path = "src/lib.rs"
