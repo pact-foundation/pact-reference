@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        operating-system: [ ubuntu-latest, windows-latest, macos-13, macos-14 ]
+        operating-system: [ ubuntu-latest, windows-latest, macos-15, macos-15-intel ]
         rust: [ stable ]
     env:
       pact_do_not_track: true
