@@ -1,6 +1,6 @@
 Standalone pact verifier for provider pact verification
 
-Usage: pact_verifier_cli [OPTIONS]
+Usage: pact-verifier [OPTIONS]
 
 Options:
       --help     Print help and exit

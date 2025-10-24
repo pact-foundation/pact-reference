@@ -52,7 +52,7 @@ trycmd = "0.15.9"
 
 
 [[bin]]
-name = "pact_verifier_cli"
+name = "pact-verifier"
 path = "src/bin.rs"
 [lib]
 name = "pact_verifier_cli"

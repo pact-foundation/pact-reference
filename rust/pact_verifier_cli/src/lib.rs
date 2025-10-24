@@ -11,14 +11,14 @@
 //!
 //! ## Command line interface
 //!
-//! The pact verifier is bundled as a single binary executable `pact_verifier_cli`. Running this without any options 
+//! The pact verifier is bundled as a single binary executable `pact-verifier`. Running this without any options 
 //! displays the standard help.
 //!
 //! ```console
-//! $ pact_verifier_cli,ignore
+//! $ pact-verifier,ignore
 //! Standalone pact verifier for provider pact verification
 //!
-//! Usage: pact_verifier_cli [OPTIONS]
+//! Usage: pact-verifier [OPTIONS]
 //!
 //! Options:
 //!       --help     Print help and exit
@@ -249,7 +249,7 @@
 //! This will verify all the pacts for the `happy_provider` found in the pact broker (running on localhost) against the provider running on localhost port 5050. Only the pacts for the consumers `Consumer` and `Consumer2` will be verified.
 //!
 //! ```console,ignore
-//! $ pact_verifier_cli -b http://localhost -n 'happy_provider' -p 5050 --filter-consumer Consumer --filter-consumer Consumer2
+//! $ pact-verifier -b http://localhost -n 'happy_provider' -p 5050 --filter-consumer Consumer --filter-consumer Consumer2
 //! 21:59:28 [WARN] pact_matching::models: No metadata found in pact file "http://localhost/pacts/provider/happy_provider/consumer/Consumer/version/1.0.0", assuming V1.1 specification
 //! 21:59:28 [WARN] pact_matching::models: No metadata found in pact file "http://localhost/pacts/provider/happy_provider/consumer/Consumer2/version/1.0.0", assuming V1.1 specification
 //!
