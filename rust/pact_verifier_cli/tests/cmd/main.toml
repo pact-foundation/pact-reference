@@ -1,2 +1,2 @@
-bin.name = "pact_verifier_cli"
+bin.name = "pact-verifier"
 status.code = 2

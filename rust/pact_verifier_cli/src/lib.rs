@@ -11,14 +11,14 @@
 //!
 //! ## Command line interface
 //!
-//! The pact verifier is bundled as a single binary executable `pact_verifier_cli`. Running this without any options 
+//! The pact verifier is bundled as a single binary executable `pact-verifier`. Running this without any options 
 //! displays the standard help.
 //!
 //! ```console
-//! $ pact_verifier_cli,ignore
+//! $ pact-verifier,ignore
 //! Standalone pact verifier for provider pact verification
 //!
-//! Usage: pact_verifier_cli [OPTIONS]
+//! Usage: pact-verifier [OPTIONS]
 //!
 //! Options:
 //!       --help     Print help and exit
@@ -249,7 +249,7 @@
 //! This will verify all the pacts for the `happy_provider` found in the pact broker (running on localhost) against the provider running on localhost port 5050. Only the pacts for the consumers `Consumer` and `Consumer2` will be verified.
 //!
 //! ```console,ignore
-//! $ pact_verifier_cli -b http://localhost -n 'happy_provider' -p 5050 --filter-consumer Consumer --filter-consumer Consumer2
+//! $ pact-verifier -b http://localhost -n 'happy_provider' -p 5050 --filter-consumer Consumer --filter-consumer Consumer2
 //! 21:59:28 [WARN] pact_matching::models: No metadata found in pact file "http://localhost/pacts/provider/happy_provider/consumer/Consumer/version/1.0.0", assuming V1.1 specification
 //! 21:59:28 [WARN] pact_matching::models: No metadata found in pact file "http://localhost/pacts/provider/happy_provider/consumer/Consumer2/version/1.0.0", assuming V1.1 specification
 //!
@@ -410,9 +410,9 @@
 use std::env;
 use std::fs::File;
 use std::io::Read;
+use std::process::ExitCode;
 use std::str::FromStr;
 use std::sync::Arc;
-use std::time::Duration;
 
 use anyhow::anyhow;
 use clap::ArgMatches;
@@ -420,7 +420,6 @@ use clap::error::ErrorKind;
 use log::LevelFilter;
 use maplit::hashmap;
 use serde_json::Value;
-use tokio::time::sleep;
 use tracing::{debug, debug_span, error, Instrument, warn};
 use tracing_log::LogTracer;
 use tracing_subscriber::FmtSubscriber;
@@ -432,11 +431,11 @@ use pact_verifier::callback_executors::HttpRequestProviderStateExecutor;
 use pact_verifier::metrics::VerificationMetrics;
 use pact_verifier::selectors::{consumer_tags_to_selectors, json_to_selectors};
 
-mod args;
+pub mod args;
 mod reports;
 
 /// Handles the command line arguments from the running process
-pub async fn handle_cli(version: &'static str) -> Result<(), i32> {
+pub async fn handle_cli() -> Result<(), i32> {
   let app = args::setup_app();
   let matches = app
     .arg_required_else_help(true)
@@ -451,7 +450,7 @@ pub async fn handle_cli(version: &'static str) -> Result<(), i32> {
           Ok(())
         },
         ErrorKind::DisplayVersion => {
-          print_version(version);
+          print_version();
           println!();
           Ok(())
         },
@@ -463,7 +462,17 @@ pub async fn handle_cli(version: &'static str) -> Result<(), i32> {
   }
 }
 
-async fn handle_matches(matches: &ArgMatches) -> Result<(), i32> {
+pub fn process_verifier_command(args: &ArgMatches) -> Result<(), ExitCode>  {
+    tokio::runtime::Runtime::new().unwrap().block_on(async {
+        let res = handle_matches(args).await;
+        match res {
+            Ok(()) => Ok(()),
+            Err(code) => Err(ExitCode::from(code as u8)),
+        }
+    })
+}
+
+pub async fn handle_matches(matches: &ArgMatches) -> Result<(), i32> {
   let coloured_output = setup_output(matches);
 
   let provider = configure_provider(matches);
@@ -683,8 +692,8 @@ pub(crate) fn configure_provider(matches: &ArgMatches) -> ProviderInfo {
   }
 }
 
-fn print_version(version: &str) {
-  println!("pact verifier version   : v{}", version);
+pub fn print_version() {
+  println!("pact verifier version   : v{}", clap::crate_version!());
   println!("pact specification      : v{}", PactSpecification::V4.version_str());
   println!("models version          : v{}", PACT_RUST_VERSION.unwrap_or_default());
 }
@@ -809,39 +818,17 @@ fn interaction_filter(matches: &ArgMatches) -> FilterInfo {
   }
 }
 
-fn main() {
-  init_windows();
 
-  let runtime = tokio::runtime::Builder::new_multi_thread()
-    .enable_all()
-    .build()
-    .expect("Could not start a Tokio runtime for running async tasks");
-
-  let result = runtime.block_on(async {
-    let result = handle_cli(clap::crate_version!()).await;
-
-    // Add a small delay to let asynchronous tasks to complete
-    sleep(Duration::from_millis(200)).await;
-
-    result
-  });
-
-  runtime.shutdown_timeout(Duration::from_millis(500));
-
-  if let Err(err) = result {
-    std::process::exit(err);
-  }
-}
 
 #[cfg(windows)]
-fn init_windows() {
+pub fn init_windows() {
   if let Err(err) = ansi_term::enable_ansi_support() {
     warn!("Could not enable ANSI console support - {err}");
   }
 }
 
 #[cfg(not(windows))]
-fn init_windows() { }
+pub fn init_windows() { }
 
 #[cfg(test)]
 mod tests {

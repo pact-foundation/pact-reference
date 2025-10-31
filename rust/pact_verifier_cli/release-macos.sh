@@ -4,7 +4,7 @@ set -e
 set -x
 
 RUST_DIR="$(cd -- "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APP_NAME=pact_verifier_cli
+APP_NAME=pact-verifier
 
 source "$RUST_DIR/scripts/gzip-and-sum.sh"
 ARTIFACTS_DIR=${ARTIFACTS_DIR:-"$RUST_DIR/release_artifacts"}
