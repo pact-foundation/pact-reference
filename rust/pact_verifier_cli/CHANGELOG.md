@@ -1,5 +1,17 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.3.0 - [Feature Release]
+
+* 63b8ce48 - chore: rename docker image to pact-verifier (Yousaf Nabi, Fri Oct 31 16:27:29 2025 +0000)
+* 4c8358ee - chore(pact_verifier_cli): rename bin.rs to bin/pact-verifier (Yousaf Nabi, Wed Oct 29 19:59:27 2025 +0000)
+* b250555c - feat(verifier-cli)!: rename binary to pact-verifier (Yousaf Nabi, Fri Oct 24 20:43:33 2025 +0100)
+* 829ec5aa - chore: rename main.rs to lib.rs to align with rust conventions (Yousaf Nabi, Thu Oct 9 00:04:28 2025 +0100)
+* e4af2e44 - feat: cli as lib (Yousaf Nabi, Sat Sep 27 18:38:04 2025 +0100)
+* eaaee9de - chore: Upgrade pact_models to 1.3.7 (Ronald Holshausen, Tue Sep 16 13:57:37 2025 +1000)
+* ff964960 - chore: Update pact_models to 1.3.6 (Ronald Holshausen, Wed Jul 30 09:50:09 2025 +1000)
+* 1cb9a5ac - chore: Update pact_models to 1.3.5 (Ronald Holshausen, Mon Jul 28 10:44:30 2025 +1000)
+* df1afe32 - bump version to 1.2.1 (Ronald Holshausen, Fri Jun 20 14:47:51 2025 +1000)
+
 # 1.2.0 - Add Exit on first error and Only run previously failed interactions CLI options
 
 * ce3c5d9e - feat(pact_verifier_cli): Update the docs on the new options flag #494 (Ronald Holshausen, Fri Jun 20 11:56:43 2025 +1000)
