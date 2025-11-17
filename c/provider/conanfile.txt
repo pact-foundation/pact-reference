@@ -1,0 +1,10 @@
+[requires]
+cjson/[~1]
+libmicrohttpd/[~0.9]
+xz_utils/[~5]
+bzip2/[~1]
+zlib/[~1]
+
+[generators]
+CMakeDeps
+CMakeToolchain
