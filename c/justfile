@@ -1,8 +1,11 @@
 build:
 	just consumer/build
+	just provider/build
 
 clean:
 	just consumer/clean
+	just provider/clean
 
 run: build
 	just consumer/run
+	just provider/run
