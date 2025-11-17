@@ -27,7 +27,7 @@ This project uses Conan for dependency management and CMake for configuration an
 just run
 ```
 
-The results of the tests are printed to stdout and will exit with a non-zero status if any tests fail.
+The results of the tests are printed to stdout and will exit with a non-zero status if any tests fail. On success, the generated Pact contract files will be available in the `pacts/` directory.
 
 ## Prerequisites
 
