@@ -33,7 +33,7 @@ The results of the tests are printed to stdout and will exit with a non-zero sta
 
 The tests require:
 
-- A C and Rust compiler
+- A C and Rust compiler (Rust compiler requires nightly toolchain)
 - CMake (version 3.24 or higher)
 - Conan (version 2.0 or higher)
 
