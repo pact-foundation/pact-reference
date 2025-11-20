@@ -61,6 +61,7 @@ use pact_ffi::mock_server::handles::{
   pactffi_upon_receiving,
   pactffi_with_binary_file,
   pactffi_with_body,
+  pactffi_with_binary_body,
   pactffi_with_header,
   pactffi_with_header_v2,
   pactffi_with_multipart_file,
@@ -2308,4 +2309,113 @@ fn date_matcher_in_response_body_without_generator_type() {
     pactffi_cleanup_mock_server(port);
 
     expect!(mismatches).to(be_equal_to("[]"));
+}
+
+// Test multipart request with JSON metadata and JPEG image using matching rules
+#[test_log::test]
+fn mime_multipart_with_json_and_image() {
+  let pact_handle = pactffi_new_pact(
+    c"multipart-json-image-consumer".as_ptr(),
+    c"multipart-json-image-provider".as_ptr()
+  );
+  let interaction = pactffi_new_interaction(
+    pact_handle,
+    c"multipart_with_json_metadata_and_jpeg_image".as_ptr()
+  );
+  pactffi_with_request(interaction, c"POST".as_ptr(), c"/upload".as_ptr());
+
+  // Create the expected multipart body with JSON metadata and JPEG image
+  let jpeg_bytes: [u8; 48] = [
+
+    // Magic bytes
+    0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
+    // Other data
+    0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0xff, 0xdb, 0x00, 0x43,
+    0x00, 0x10, 0x0b, 0x0c, 0x0e, 0x0c, 0x0a, 0x10, 0x0e, 0x0d, 0x0e, 0x12,
+    0x11, 0x10, 0x13, 0x18, 0x28, 0x1a, 0x18, 0x16, 0x16, 0x18, 0x31, 0x23,
+  ];
+
+  let boundary = "test-boundary-12345";
+  let expected_body = format!(
+    "--{boundary}\r\n\
+    Content-Type: application/json\r\n\
+    Content-Disposition: form-data; name=\"metadata\"\r\n\
+    \r\n\
+    {{\"name\":\"test\",\"size\":100}}\r\n\
+    --{boundary}\r\n\
+    Content-Type: image/jpeg\r\n\
+    Content-Disposition: form-data; name=\"image\"; filename=\"test.jpg\"\r\n\
+    \r\n",
+  );
+
+  let mut body = expected_body.as_bytes().to_vec();
+  body.extend_from_slice(&jpeg_bytes);
+  body.extend_from_slice(format!("\r\n--{}--\r\n", boundary).as_bytes());
+
+  let content_type = CString::new(format!("multipart/form-data; boundary={}", boundary)).unwrap();
+  pactffi_with_binary_body(
+    interaction,
+    InteractionPart::Request,
+    content_type.as_ptr(),
+    body.as_ptr(),
+    body.len()
+  );
+
+  // Add matching rules for the JSON metadata and image
+  let matching_rules = matchingrules!{
+    "body" => {
+      "$.metadata" => [ MatchingRule::Type ],
+      "$.metadata.name" => [ MatchingRule::Regex("^[a-zA-Z]+$".to_string()) ],
+      "$.metadata.size" => [ MatchingRule::Integer ],
+      "$.image" => [ MatchingRule::ContentType("image/jpeg".to_string()) ]
+    },
+    "header" => {
+      "Content-Type" => [
+        MatchingRule::Regex("multipart/form-data;(\\s*charset=[^;]*;)?\\s*boundary=.*".to_string())
+      ]
+    }
+  };
+  let matching_rules_json = matchers_to_json(&matching_rules, &PactSpecification::V4);
+  println!("Matching rules JSON: {}", matching_rules_json);
+  let matching_rules_str = CString::new(matching_rules_json.to_string()).unwrap();
+  pactffi_with_matching_rules(interaction, InteractionPart::Request, matching_rules_str.as_ptr());
+
+  pactffi_response_status(interaction, 201);
+
+  let port = pactffi_create_mock_server_for_transport(pact_handle, c"127.0.0.1".as_ptr(), 0, null(), null());
+  expect!(port).to(be_greater_than(0));
+
+  // Make actual request with different JSON values and the same JPEG structure
+  let client = Client::default();
+  let form = reqwest::blocking::multipart::Form::new()
+    .text("metadata", r#"{"name":"different","size":200}"#)
+    .part(
+      "image",
+      reqwest::blocking::multipart::Part::bytes(jpeg_bytes.to_vec())
+        .file_name("actual.jpg")
+        .mime_str("image/jpeg").unwrap()
+    );
+
+  let result = client.post(format!("http://127.0.0.1:{}/upload", port).as_str())
+    .multipart(form)
+    .send();
+
+  thread::sleep(Duration::from_millis(100)); // Give mock server some time to update events
+  let mismatches = unsafe {
+    CStr::from_ptr(pactffi_mock_server_mismatches(port)).to_string_lossy().into_owned()
+  };
+
+  match result {
+    Ok(res) => {
+      let status = res.status();
+      expect!(status).to(be_eq(201));
+    },
+    Err(err) => {
+      panic!("expected 201 response but request failed - {}", err);
+    }
+  };
+
+  pactffi_cleanup_mock_server(port);
+
+  expect!(mismatches).to(be_equal_to("[]"));
 }
