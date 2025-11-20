@@ -28,8 +28,6 @@ use pact_ffi::log::pactffi_log_to_buffer;
 #[allow(deprecated)]
 use pact_ffi::mock_server::{
   pactffi_cleanup_mock_server,
-  pactffi_create_mock_server,
-  pactffi_create_mock_server_for_pact,
   pactffi_create_mock_server_for_transport,
   pactffi_mock_server_logs,
   pactffi_mock_server_mismatches,
@@ -92,11 +90,25 @@ use pact_models::path_exp::DocPath;
 
 #[test]
 fn post_to_mock_server_with_mismatches() {
-  let pact_json = include_str!("post-pact.json");
-  let pact_json_c = CString::new(pact_json).expect("Could not construct C string from json");
-  let address = CString::new("127.0.0.1:0").unwrap();
-  #[allow(deprecated)]
-  let port = pactffi_create_mock_server(pact_json_c.as_ptr(), address.as_ptr(), false);
+  // Refactored to use pactffi_create_mock_server_for_transport and pact handle API
+  let consumer_name = CString::new("mismatches-consumer").unwrap();
+  let provider_name = CString::new("mismatches-provider").unwrap();
+  let pact_handle = pactffi_new_pact(consumer_name.as_ptr(), provider_name.as_ptr());
+  let description = CString::new("post_with_mismatches").unwrap();
+  let interaction = pactffi_new_interaction(pact_handle, description.as_ptr());
+  let path = CString::new("/path").unwrap();
+  let method = CString::new("POST").unwrap();
+  let content_type = CString::new("application/json").unwrap();
+  let request_body = CString::new(r#"{"foo":"bar"}"#).unwrap();
+
+  pactffi_upon_receiving(interaction, description.as_ptr());
+  pactffi_with_request(interaction, method.as_ptr(), path.as_ptr());
+  pactffi_with_header(interaction, InteractionPart::Request, CString::new("Content-Type").unwrap().as_ptr(), 0, content_type.as_ptr());
+  pactffi_with_body(interaction, InteractionPart::Request, content_type.as_ptr(), request_body.as_ptr());
+  pactffi_response_status(interaction, 200);
+
+  let address = CString::new("127.0.0.1").unwrap();
+  let port = pactffi_create_mock_server_for_transport(pact_handle, address.as_ptr(), 0, null(), null());
   expect!(port).to(be_greater_than(0));
 
   let client = Client::default();
@@ -110,6 +122,7 @@ fn post_to_mock_server_with_mismatches() {
   };
 
   pactffi_cleanup_mock_server(port);
+  pactffi_free_pact_handle(pact_handle);
 
   assert_eq!(
     "[{\"method\":\"POST\",\"mismatches\":[{\"actual\":\"\\\"no-very-bar\\\"\",\"expected\":\"\\\"bar\\\"\",\"mismatch\":\"Expected 'no-very-bar' (String) to be equal to 'bar' (String)\",\"path\":\"$.foo\",\"type\":\"BodyMismatch\"}],\"path\":\"/path\",\"type\":\"request-mismatch\"}]",
@@ -493,7 +506,7 @@ fn http_xml_consumer_feature_test() {
   let accept = CString::new("Accept").unwrap();
   let content_type = CString::new("Content-Type").unwrap();
   let response_body_with_matchers = CString::new(r#"{"version":"1.0","charset":"UTF-8","root":{"name":"ns1:projects","children":[{"pact:matcher:type":"type","value":{"name":"ns1:project","children":[{"name":"ns1:tasks","children":[{"pact:matcher:type":"type","value":{"name":"ns1:task","children":[],"attributes":{"id":{"pact:matcher:type":"integer","value":1},"name":{"pact:matcher:type":"type","value":"Task 1"},"done":{"pact:matcher:type":"type","value":true}}},"examples":5}],"attributes":{}}],"attributes":{"id":{"pact:matcher:type":"integer","value":1},"type":"activity","name":{"pact:matcher:type":"type","value":"Project 1"}}},"examples":2}],"attributes":{"id":"1234","xmlns:ns1":"http://some.namespace/and/more/stuff"}}}"#).unwrap();
-  let address = CString::new("127.0.0.1:0").unwrap();
+  let address = CString::new("127.0.0.1").unwrap();
   let description = CString::new("a request to test the FFI interface").unwrap();
   let method = CString::new("GET").unwrap();
   let path = CString::new("/xml").unwrap();
@@ -510,7 +523,7 @@ fn http_xml_consumer_feature_test() {
   pactffi_with_header(interaction.clone(), InteractionPart::Response, content_type.as_ptr(), 0, header.as_ptr());
   pactffi_with_body(interaction.clone(), InteractionPart::Response, header.as_ptr(), response_body_with_matchers.as_ptr());
   pactffi_response_status(interaction.clone(), 200);
-  let port = pactffi_create_mock_server_for_pact(pact_handle.clone(), address.as_ptr(), false);
+  let port = pactffi_create_mock_server_for_transport(pact_handle.clone(), address.as_ptr(), 0, null(), null());
 
   expect!(port).to(be_greater_than(0));
 
@@ -954,7 +967,7 @@ fn array_contains_matcher() {
     ]
   });
   let body = CString::new(json.to_string()).unwrap();
-  let address = CString::new("127.0.0.1:0").unwrap();
+  let address = CString::new("127.0.0.1").unwrap();
   let method = CString::new("GET").unwrap();
 
   pactffi_upon_receiving(interaction.clone(), description.as_ptr());
@@ -962,7 +975,7 @@ fn array_contains_matcher() {
   pactffi_with_body(interaction.clone(), InteractionPart::Response, content_type.as_ptr(), body.as_ptr());
   pactffi_response_status(interaction.clone(), 200);
 
-  let port = pactffi_create_mock_server_for_pact(pact_handle.clone(), address.as_ptr(), false);
+  let port = pactffi_create_mock_server_for_transport(pact_handle.clone(), address.as_ptr(), 0, null(), null());
 
   expect!(port).to(be_greater_than(0));
 
@@ -1010,7 +1023,7 @@ fn multiple_query_values_with_regex_matcher() {
   let interaction = pactffi_new_interaction(pact_handle.clone(), description.as_ptr());
   let path = CString::new("/request").unwrap();
   let query_param_matcher = CString::new("{\"value\":[\"1\"],\"pact:matcher:type\":\"regex\", \"regex\":\"\\\\d+\"}").unwrap();
-  let address = CString::new("127.0.0.1:0").unwrap();
+  let address = CString::new("127.0.0.1").unwrap();
   let method = CString::new("GET").unwrap();
   let query =  CString::new("foo").unwrap();
 
@@ -1019,7 +1032,7 @@ fn multiple_query_values_with_regex_matcher() {
   pactffi_with_query_parameter_v2(interaction.clone(), query.as_ptr(), 0, query_param_matcher.as_ptr());
   pactffi_response_status(interaction.clone(), 200);
 
-  let port = pactffi_create_mock_server_for_pact(pact_handle.clone(), address.as_ptr(), false);
+  let port = pactffi_create_mock_server_for_transport(pact_handle.clone(), address.as_ptr(), 0, null(), null());
   expect!(port).to(be_greater_than(0));
 
   let client = Client::default();
@@ -1710,7 +1723,7 @@ fn combined_each_key_and_each_value_matcher() {
     }
   });
   let body = CString::new(json.to_string()).unwrap();
-  let address = CString::new("127.0.0.1:0").unwrap();
+  let address = CString::new("127.0.0.1").unwrap();
   let method = CString::new("PUT").unwrap();
 
   pactffi_upon_receiving(interaction.clone(), description.as_ptr());
@@ -1718,7 +1731,7 @@ fn combined_each_key_and_each_value_matcher() {
   pactffi_with_body(interaction.clone(), InteractionPart::Request, content_type.as_ptr(), body.as_ptr());
   pactffi_response_status(interaction.clone(), 200);
 
-  let port = pactffi_create_mock_server_for_pact(pact_handle.clone(), address.as_ptr(), false);
+  let port = pactffi_create_mock_server_for_transport(pact_handle.clone(), address.as_ptr(), 0, null(), null());
 
   expect!(port).to(be_greater_than(0));
 
@@ -1777,7 +1790,7 @@ fn matching_definition_expressions_matcher() {
     }
   });
   let body = CString::new(json.to_string()).unwrap();
-  let address = CString::new("127.0.0.1:0").unwrap();
+  let address = CString::new("127.0.0.1").unwrap();
   let method = CString::new("PUT").unwrap();
 
   pactffi_upon_receiving(interaction.clone(), description.as_ptr());
@@ -1785,7 +1798,7 @@ fn matching_definition_expressions_matcher() {
   pactffi_with_body(interaction.clone(), InteractionPart::Request, content_type.as_ptr(), body.as_ptr());
   pactffi_response_status(interaction.clone(), 200);
 
-  let port = pactffi_create_mock_server_for_pact(pact_handle.clone(), address.as_ptr(), false);
+  let port = pactffi_create_mock_server_for_transport(pact_handle.clone(), address.as_ptr(), 0, null(), null());
 
   expect!(port).to(be_greater_than(0));
 
@@ -1826,13 +1839,26 @@ fn matching_definition_expressions_matcher() {
 #[ignore]
 #[test_log::test]
 fn returns_mock_server_logs() {
-  let pact_json = include_str!("post-pact.json");
-  let pact_json_c = CString::new(pact_json).expect("Could not construct C string from json");
-  let address = CString::new("127.0.0.1:0").unwrap();
+  // Rewritten to use pactffi_create_mock_server_for_transport
+  let consumer_name = CString::new("logs-consumer").unwrap();
+  let provider_name = CString::new("logs-provider").unwrap();
+  let pact_handle = pactffi_new_pact(consumer_name.as_ptr(), provider_name.as_ptr());
+  let description = CString::new("request_with_logs").unwrap();
+  let interaction = pactffi_new_interaction(pact_handle, description.as_ptr());
+  let path = CString::new("/path").unwrap();
+  let method = CString::new("POST").unwrap();
+  let content_type = CString::new("application/json").unwrap();
+  let request_body = CString::new(r#"{"foo":"no-very-bar"}"#).unwrap();
 
+  pactffi_upon_receiving(interaction, description.as_ptr());
+  pactffi_with_request(interaction, method.as_ptr(), path.as_ptr());
+  pactffi_with_header(interaction, InteractionPart::Request, CString::new("Content-Type").unwrap().as_ptr(), 0, content_type.as_ptr());
+  pactffi_with_body(interaction, InteractionPart::Request, content_type.as_ptr(), request_body.as_ptr());
+  pactffi_response_status(interaction, 200);
+
+  let address = CString::new("127.0.0.1").unwrap();
   pactffi_log_to_buffer(LevelFilter::Debug.into());
-  #[allow(deprecated)]
-  let port = pactffi_create_mock_server(pact_json_c.as_ptr(), address.as_ptr(), false);
+  let port = pactffi_create_mock_server_for_transport(pact_handle, address.as_ptr(), 0, null(), null());
   expect!(port).to(be_greater_than(0));
 
   let client = Client::default();
@@ -1847,8 +1873,9 @@ fn returns_mock_server_logs() {
   println!("{}",logs);
 
   pactffi_cleanup_mock_server(port);
+  pactffi_free_pact_handle(pact_handle);
 
-  assert_ne!(logs,"", "logs are empty");
+  assert_ne!(logs, "", "logs are empty");
 }
 
 #[test]
@@ -1904,7 +1931,7 @@ fn http_form_urlencoded_consumer_feature_test() {
     ]
   });
   let response_body = CString::new(response_json.to_string()).unwrap();
-  let address = CString::new("127.0.0.1:0").unwrap();
+  let address = CString::new("127.0.0.1").unwrap();
   let description = CString::new("a request to test the form urlencoded body").unwrap();
   let method = CString::new("POST").unwrap();
   let path = CString::new("/form-urlencoded").unwrap();
@@ -1921,7 +1948,7 @@ fn http_form_urlencoded_consumer_feature_test() {
   pactffi_with_header(interaction.clone(), InteractionPart::Response, content_type_header.as_ptr(), 0, content_type.as_ptr());
   pactffi_with_body(interaction.clone(), InteractionPart::Response, content_type.as_ptr(), response_body.as_ptr());
   pactffi_response_status(interaction.clone(), status);
-  let port = pactffi_create_mock_server_for_pact(pact_handle.clone(), address.as_ptr(), false);
+  let port = pactffi_create_mock_server_for_transport(pact_handle.clone(), address.as_ptr(), 0, null(), null());
 
   expect!(port).to(be_greater_than(0));
 
@@ -1965,7 +1992,7 @@ fn time_matcher_in_query_parameters() {
   let interaction = pactffi_new_interaction(pact_handle.clone(), description.as_ptr());
   let path = CString::new("/request").unwrap();
   let query_param_matcher = CString::new("{\"value\":\"12:12\",\"pact:matcher:type\":\"time\", \"format\":\"HH:mm\"}").unwrap();
-  let address = CString::new("127.0.0.1:0").unwrap();
+  let address = CString::new("127.0.0.1").unwrap();
   let method = CString::new("GET").unwrap();
   let query =  CString::new("item").unwrap();
 
@@ -1974,7 +2001,7 @@ fn time_matcher_in_query_parameters() {
   pactffi_with_query_parameter_v2(interaction.clone(), query.as_ptr(), 0, query_param_matcher.as_ptr());
   pactffi_response_status(interaction.clone(), 200);
 
-  let port = pactffi_create_mock_server_for_pact(pact_handle.clone(), address.as_ptr(), false);
+  let port = pactffi_create_mock_server_for_transport(pact_handle.clone(), address.as_ptr(), 0, null(), null());
   expect!(port).to(be_greater_than(0));
 
   let client = Client::default();
@@ -2067,7 +2094,7 @@ fn include_matcher_in_query_parameters() {
 
   let path = CString::new("/request").unwrap();
   let query_param_matcher = CString::new("{\"value\":\"substring\",\"pact:matcher:type\":\"include\", \"value\":\"sub\"}").unwrap();
-  let address = CString::new("127.0.0.1:0").unwrap();
+  let address = CString::new("127.0.0.1").unwrap();
   let method = CString::new("GET").unwrap();
   let query =  CString::new("item").unwrap();
 
@@ -2076,7 +2103,7 @@ fn include_matcher_in_query_parameters() {
   pactffi_with_query_parameter_v2(interaction.clone(), query.as_ptr(), 0, query_param_matcher.as_ptr());
   pactffi_response_status(interaction.clone(), 200);
 
-  let port = pactffi_create_mock_server_for_pact(pact_handle.clone(), address.as_ptr(), false);
+  let port = pactffi_create_mock_server_for_transport(pact_handle.clone(), address.as_ptr(), 0, null(), null());
   expect!(port).to(be_greater_than(0));
 
   let client = Client::default();

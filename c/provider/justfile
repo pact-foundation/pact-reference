@@ -1,0 +1,23 @@
+[unix]
+build:
+    conan install . --output-folder=build --build=missing
+    cmake --preset conan-release
+    cmake --build --preset conan-release
+
+[windows]
+build:
+    conan install . --output-folder=build --build=missing
+    cmake --preset conan-default
+    cmake --build --preset conan-release
+
+clean:
+    rm -rf build
+    rm CMakeUserPresets.json
+
+[unix]
+run: build
+    ./build/pact-provider
+
+[windows]
+run: build
+    ./build/Release/pact-provider.exe
