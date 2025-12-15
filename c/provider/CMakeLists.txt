@@ -119,6 +119,7 @@ if(APPLE)
     target_link_libraries(
         pact-provider
         PRIVATE
+        "$<LINK_LIBRARY:FRAMEWORK,SystemConfiguration>"
         "$<LINK_LIBRARY:FRAMEWORK,Security>"
         "$<LINK_LIBRARY:FRAMEWORK,CoreFoundation>"
         "$<LINK_LIBRARY:FRAMEWORK,IOKit>"

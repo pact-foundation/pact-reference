@@ -43,31 +43,36 @@
 
 #![warn(missing_docs)]
 
-use std::{ptr, str};
 use std::any::Any;
-use std::ffi::CStr;
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::net::ToSocketAddrs;
-use std::panic::catch_unwind;
-use std::str::from_utf8;
+use std::ptr;
+use std::str::{self, from_utf8};
+use std::sync::Mutex;
 
 use chrono::Local;
 use either::Either;
 use libc::c_char;
 use onig::Regex;
-use pact_models::pact::Pact;
-use pact_models::time_utils::{parse_pattern, to_chrono_pattern};
 use rand::prelude::*;
-use serde_json::Value;
-use tracing::{error, warn};
+use serde_json::{json, Value};
+use tracing::{error, info, warn};
 use uuid::Uuid;
 
 use pact_matching::metrics::{MetricEvent, send_metrics};
-use pact_mock_server::{MANAGER, mock_server_mismatches, WritePactFileErr};
-use pact_mock_server::mock_server::MockServerConfig;
-use pact_mock_server::server_manager::ServerManager;
-use pact_models::generators::GeneratorCategory;
-use pact_models::matchingrules::{Category, MatchingRuleCategory};
+use pact_mock_server::{
+    WritePactFileErr,
+    builder::MockServerBuilder,
+    mock_server::{MockServer, MockServerConfig},
+    server_manager::ServerManager
+};
+use pact_models::{
+    generators::GeneratorCategory,
+    matchingrules::{Category, MatchingRuleCategory},
+    pact::{Pact, ReadWritePact},
+    time_utils::{parse_pattern, to_chrono_pattern}
+};
+use pact_plugin_driver::plugin_manager::get_mock_server_results;
 
 use crate::{convert_cstr, ffi_fn, safe_str};
 use crate::log::fetch_buffer_contents;
@@ -78,6 +83,17 @@ pub mod handles;
 pub mod bodies;
 mod xml;
 mod form_urlencoded;
+
+/// Mutex to protect access to the server manager
+static MANAGER: Mutex<Option<ServerManager>> = Mutex::new(None);
+
+/// Attach the mock server builder to the global server manager and spawn the
+/// mock server.
+fn attach_to_manager(builder: MockServerBuilder) -> anyhow::Result<MockServer> {
+  let mut guard = MANAGER.lock().unwrap();
+  let manager = guard.get_or_insert_with(ServerManager::new);
+  manager.spawn_mock_server(builder)
+}
 
 /// Fetch the CA Certificate used to generate the self-signed certificate for the TLS mock server.
 ///
@@ -127,7 +143,7 @@ ffi_fn! {
   /// | -5 | The address is not valid |
   ///
   #[tracing::instrument(level = "trace")]
-  fn pactffi_create_mock_server_for_transport(
+  async fn pactffi_create_mock_server_for_transport(
     pact: PactHandle,
     addr: *const c_char,
     port: u16,
@@ -160,11 +176,24 @@ ffi_fn! {
             .. transport_config.unwrap_or_default()
           };
 
-          match pact_mock_server::start_mock_server_for_transport(Uuid::new_v4().to_string(),
-            inner.pact.boxed(), socket_addr, transport.as_str(), config) {
-            Ok(ms_port) => {
+          let builder = MockServerBuilder::new()
+            .with_pact(inner.pact.boxed())
+            .with_config(config)
+            .with_id(Uuid::new_v4().to_string())
+            .bind_to(socket_addr.to_string());
+
+          let builder = match builder.with_transport(transport.as_str()) {
+            Ok(builder) => builder,
+            Err(err) => {
+              error!("Failed to configure mock server transport '{}' - {}", transport, err);
+              return -3;
+            }
+          };
+
+          match attach_to_manager(builder) {
+            Ok(mock_server) => {
               inner.mock_server_started = true;
-              ms_port
+              mock_server.port() as i32
             },
             Err(err) => {
               error!("Failed to start mock server - {}", err);
@@ -183,192 +212,267 @@ ffi_fn! {
   }
 }
 
-/// External interface to check if a mock server has matched all its requests. The port number is
-/// passed in, and if all requests have been matched, true is returned. False is returned if there
-/// is no mock server on the given port, or if any request has not been successfully matched, or
-/// the method panics.
-#[no_mangle]
-pub extern fn pactffi_mock_server_matched(mock_server_port: i32) -> bool {
-  let result = catch_unwind(|| {
-    pact_mock_server::mock_server_matched(mock_server_port)
-  });
-
-  match result {
-    Ok(val) => val,
-    Err(cause) => {
-      error!("Caught a general panic: {:?}", cause);
-      false
-    }
-  }
-}
-
-/// External interface to get all the mismatches from a mock server. The port number of the mock
-/// server is passed in, and a pointer to a C string with the mismatches in JSON format is
-/// returned.
-///
-/// **NOTE:** The JSON string for the result is allocated on the heap, and will have to be freed
-/// once the code using the mock server is complete. The [`cleanup_mock_server`](fn.cleanup_mock_server.html) function is
-/// provided for this purpose.
-///
-/// # Errors
-///
-/// If there is no mock server with the provided port number, or the function panics, a NULL
-/// pointer will be returned. Don't try to dereference it, it will not end well for you.
-///
-#[no_mangle]
-pub extern fn pactffi_mock_server_mismatches(mock_server_port: i32) -> *mut c_char {
-  let result = catch_unwind(|| {
-    let result = mock_server_mismatches(mock_server_port);
-    match result {
-      Some(str) => {
-        let s = CString::new(str).unwrap();
-        let p = s.as_ptr() as *mut _;
-        MANAGER.lock().unwrap()
-          .get_or_insert_with(ServerManager::new)
-          .store_mock_server_resource(mock_server_port as u16, s);
-        p
-      },
-      None => std::ptr::null_mut()
-    }
-  });
-
-  match result {
-    Ok(val) => val,
-    Err(cause) => {
-      error!("{}", error_message(cause, "mock_server_mismatches"));
-      std::ptr::null_mut()
-    }
-  }
-}
-
-/// External interface to cleanup a mock server. This function will try terminate the mock server
-/// with the given port number and cleanup any memory allocated for it. Returns true, unless a
-/// mock server with the given port number does not exist, or the function panics.
-#[no_mangle]
-pub extern fn pactffi_cleanup_mock_server(mock_server_port: i32) -> bool {
-  let result = catch_unwind(|| {
-    let id = pact_mock_server::find_mock_server_by_port(mock_server_port as u16, &|_, id, mock_server| {
-      let interactions = match mock_server {
-        Either::Left(ms) => {
-          let pact = ms.pact.as_ref();
-          pact.interactions().len()
-        },
-        Either::Right(ms) => ms.pact.interactions.len()
-      };
-      send_metrics(MetricEvent::ConsumerTestRun {
-        interactions,
-        test_framework: "pact_ffi".to_string(),
-        app_name: "pact_ffi".to_string(),
-        app_version: env!("CARGO_PKG_VERSION").to_string()
-      });
-      id.clone()
-    });
-    if let Some(id) = id {
-      pact_mock_server::shutdown_mock_server_by_id(id.as_str())
-    } else {
-      false
-    }
-  });
-
-  match result {
-    Ok(val) => val,
-    Err(cause) => {
-      error!("Caught a general panic: {:?}", cause);
-      false
-    }
-  }
-}
-
-/// External interface to trigger a mock server to write out its pact file. This function should
-/// be called if all the consumer tests have passed. The directory to write the file to is passed
-/// as the second parameter. If a NULL pointer is passed, the current working directory is used.
-///
-/// If overwrite is true, the file will be overwritten with the contents of the current pact.
-/// Otherwise, it will be merged with any existing pact file.
-///
-/// Returns 0 if the pact file was successfully written. Returns a positive code if the file can
-/// not be written, or there is no mock server running on that port or the function panics.
-///
-/// # Errors
-///
-/// Errors are returned as positive values.
-///
-/// | Error | Description |
-/// |-------|-------------|
-/// | 1 | A general panic was caught |
-/// | 2 | The pact file was not able to be written |
-/// | 3 | A mock server with the provided port was not found |
-#[no_mangle]
-pub extern fn pactffi_write_pact_file(mock_server_port: i32, directory: *const c_char, overwrite: bool) -> i32 {
-  let result = catch_unwind(|| {
-    let dir = path_from_dir(directory, None);
-    let path = dir.map(|path| path.into_os_string().into_string().unwrap_or_default());
-
-    pact_mock_server::write_pact_file(mock_server_port, path, overwrite)
-  });
-
-  match result {
-    Ok(val) => match val {
-      Ok(_) => 0,
-      Err(err) => match err {
-        WritePactFileErr::IOError => 2,
-        WritePactFileErr::NoMockServer => 3
-      }
-    },
-    Err(cause) => {
-      log::error!("Caught a general panic: {:?}", cause);
-      1
-    }
-  }
-}
-
-/// Fetch the logs for the mock server. This needs the memory buffer log sink to be setup before
-/// the mock server is started. Returned string will be freed with the `cleanup_mock_server`
-/// function call.
-///
-/// Will return a NULL pointer if the logs for the mock server can not be retrieved.
-#[no_mangle]
-pub extern fn pactffi_mock_server_logs(mock_server_port: i32) -> *const c_char {
-  let result = catch_unwind(|| {
-    let mut guard = MANAGER.lock().unwrap();
-    let manager = guard.get_or_insert_with(ServerManager::new);
-    let logs = manager.find_mock_server_by_port_mut(mock_server_port as u16, &|mock_server| {
-      fetch_buffer_contents(&mock_server.id)
-    });
-    match logs {
-      Some(bytes) => {
-        match from_utf8(&bytes) {
-          Ok(contents) => match CString::new(contents.to_string()) {
-            Ok(c_str) => {
-              let p = c_str.as_ptr();
-              manager.store_mock_server_resource(mock_server_port as u16, c_str);
-              p
-            },
-            Err(err) => {
-              error!("Failed to copy in-memory log buffer - {}", err);
-              ptr::null()
+ffi_fn! {
+    /// External interface to check if a mock server has matched all its requests. The port number is
+    /// passed in, and if all requests have been matched, true is returned. False is returned if there
+    /// is no mock server on the given port, or if any request has not been successfully matched, or
+    /// the method panics.
+    #[tracing::instrument(level = "trace")]
+    fn pactffi_mock_server_matched(mock_server_port: i32) -> bool {
+        let mut guard = MANAGER.lock().unwrap();
+        let manager = guard.get_or_insert_with(ServerManager::new);
+        manager.find_mock_server_by_port(mock_server_port as u16, &|_, _, mock_server| {
+          match mock_server {
+            Either::Left(mock_server) => mock_server.mismatches().is_empty(),
+            Either::Right(plugin_mock_server) => {
+              match futures::executor::block_on(get_mock_server_results(&plugin_mock_server.mock_server_details)) {
+                Ok(results) => results.is_empty(),
+                Err(err) => {
+                  error!("Request to plugin to get matching results failed - {}", err);
+                  false
+                }
+              }
             }
           }
-          Err(err) => {
-            error!("Failed to convert in-memory log buffer to UTF-8 = {}", err);
-            ptr::null()
-          }
-        }
-      }
-      None => {
-        error!("No mock server found for port {}", mock_server_port);
-        ptr::null()
-      }
+        }).unwrap_or(false)
     }
-  });
+    {
+        false
+    }
+}
 
-  match result {
-    Ok(val) => val,
-    Err(cause) => {
-      error!("Caught a general panic: {:?}", cause);
-      ptr::null()
+ffi_fn! {
+    /// External interface to get all the mismatches from a mock server. The port number of the mock
+    /// server is passed in, and a pointer to a C string with the mismatches in JSON format is
+    /// returned.
+    ///
+    /// **NOTE:** The JSON string for the result is allocated on the heap, and will have to be freed
+    /// once the code using the mock server is complete. The [`cleanup_mock_server`](fn.cleanup_mock_server.html) function is
+    /// provided for this purpose.
+    ///
+    /// # Errors
+    ///
+    /// If there is no mock server with the provided port number, or the function panics, a NULL
+    /// pointer will be returned. Don't try to dereference it, it will not end well for you.
+    ///
+    #[tracing::instrument(level = "trace")]
+    fn pactffi_mock_server_mismatches(mock_server_port: i32) -> *mut c_char {
+        let mut guard = MANAGER.lock().unwrap();
+        let manager = guard.get_or_insert_with(ServerManager::new);
+        let mismatches = manager.find_mock_server_by_port(mock_server_port as u16, &|_, _, mock_server| {
+            match mock_server {
+                Either::Left(mock_server) => {
+                    serde_json::Value::Array(
+                        mock_server.mismatches()
+                        .iter()
+                        .map(|mismatch| mismatch.to_json())
+                        .collect()
+                    ).to_string()
+                }
+                Either::Right(plugin_mock_server) => {
+                    match futures::executor::block_on(get_mock_server_results(
+                        &plugin_mock_server.mock_server_details,
+                    )) {
+                        Ok(results) => json!(results
+                            .iter()
+                            .map(|item| {
+                                json!({
+                                    "path": item.path,
+                                    "error": item.error,
+                                    "mismatches": item.mismatches.iter().map(|mismatch| {
+                                    json!({
+                                        "expected": mismatch.expected,
+                                        "actual": mismatch.actual,
+                                        "mismatch": mismatch.mismatch,
+                                        "path": mismatch.path,
+                                        "diff": mismatch.diff.clone().unwrap_or_default()
+                                    })
+                                    }).collect::<Vec<_>>()
+                                })
+                            })
+                            .collect::<Vec<_>>())
+                            .to_string(),
+                        Err(err) => {
+                            error!("Request to plugin to get matching results failed - {}", err);
+                            json!({
+                                "error": format!("Request to plugin to get matching results failed - {}", err)
+                            })
+                            .to_string()
+                        }
+                    }
+                }
+            }
+        });
+
+        match mismatches {
+            Some(str) => {
+                match CString::new(str) {
+                Ok(s) => {
+                    let p = s.as_ptr() as *mut _;
+                    manager.store_mock_server_resource(mock_server_port as u16, s);
+                    p
+                }
+                Err(err) => {
+                    error!("Failed to copy mismatches result - {}", err);
+                    ptr::null_mut()
+                }
+                }
+            }
+            None => ptr::null_mut()
+        }
+    } {
+        std::ptr::null_mut()
     }
-  }
+}
+
+ffi_fn! {
+    /// External interface to cleanup a mock server. This function will try terminate the mock server
+    /// with the given port number and cleanup any memory allocated for it. Returns true, unless a
+    /// mock server with the given port number does not exist, or the function panics.
+    fn pactffi_cleanup_mock_server(mock_server_port: i32) -> bool {
+        let mut guard = MANAGER.lock().unwrap();
+        let manager = guard.get_or_insert_with(ServerManager::new);
+        let id = manager.find_mock_server_by_port(mock_server_port as u16, &|_, id, mock_server| {
+            let interactions = match mock_server {
+                Either::Left(ms) => ms.pact.interactions().len(),
+                Either::Right(ms) => ms.pact.interactions.len()
+            };
+            send_metrics(MetricEvent::ConsumerTestRun {
+                interactions,
+                test_framework: "pact_ffi".to_string(),
+                app_name: "pact_ffi".to_string(),
+                app_version: env!("CARGO_PKG_VERSION").to_string()
+            });
+            id.clone()
+        });
+        if let Some(id) = id {
+            manager.shutdown_mock_server_by_id(id)
+        } else {
+            false
+        }
+    }
+    {
+        false
+    }
+}
+
+ffi_fn! {
+    /// External interface to trigger a mock server to write out its pact file. This function should
+    /// be called if all the consumer tests have passed. The directory to write the file to is passed
+    /// as the second parameter. If a NULL pointer is passed, the current working directory is used.
+    ///
+    /// If overwrite is true, the file will be overwritten with the contents of the current pact.
+    /// Otherwise, it will be merged with any existing pact file.
+    ///
+    /// Returns 0 if the pact file was successfully written. Returns a positive code if the file can
+    /// not be written, or there is no mock server running on that port or the function panics.
+    ///
+    /// # Errors
+    ///
+    /// Errors are returned as positive values.
+    ///
+    /// | Error | Description |
+    /// |-------|-------------|
+    /// | 1 | A general panic was caught |
+    /// | 2 | The pact file was not able to be written |
+    /// | 3 | A mock server with the provided port was not found |
+    fn pactffi_write_pact_file(mock_server_port: i32, directory: *const c_char, overwrite: bool) -> i32 {
+        let dir = path_from_dir(directory, None);
+        let path = dir.map(|path| path.into_os_string().into_string().unwrap_or_default());
+
+        let mut guard = MANAGER.lock().unwrap();
+        let manager = guard.get_or_insert_with(ServerManager::new);
+        let directory = path.clone();
+        let write_result = manager.find_mock_server_by_port(mock_server_port as u16, &|_, _, mock_server| {
+            match mock_server {
+                Either::Left(mock_server) => {
+                    mock_server.write_pact(&directory, overwrite)
+                    .map(|_| ())
+                    .map_err(|err| {
+                        error!("Failed to write pact to file - {}", err);
+                        WritePactFileErr::IOError
+                    })
+                }
+                Either::Right(plugin_mock_server) => {
+                    let mut pact = plugin_mock_server.pact.clone();
+                    pact.add_md_version("mockserver", option_env!("CARGO_PKG_VERSION").unwrap_or("unknown"));
+                    let pact_file_name = ReadWritePact::default_file_name(&pact);
+                    let filename = match directory.clone() {
+                        Some(path) => {
+                            let mut path = std::path::PathBuf::from(path);
+                            path.push(pact_file_name);
+                            path
+                        },
+                        None => std::path::PathBuf::from(pact_file_name)
+                    };
+
+                    info!("Writing pact out to '{}'", filename.display());
+                    match pact_models::pact::write_pact(pact.boxed(), filename.as_path(), pact_models::PactSpecification::V4, overwrite) {
+                        Ok(_) => Ok(()),
+                        Err(err) => {
+                            warn!("Failed to write pact to file - {}", err);
+                            Err(WritePactFileErr::IOError)
+                        }
+                    }
+                }
+            }
+        });
+
+        match write_result {
+            None => 3,
+            Some(Ok(())) => 0,
+            Some(Err(err)) => match err {
+                WritePactFileErr::IOError => 2,
+                WritePactFileErr::NoMockServer => 3
+            }
+        }
+    }
+    {
+        1
+    }
+}
+
+ffi_fn! {
+    /// Fetch the logs for the mock server. This needs the memory buffer log sink to be setup before
+    /// the mock server is started. Returned string will be freed with the `cleanup_mock_server`
+    /// function call.
+    ///
+    /// Will return a NULL pointer if the logs for the mock server can not be retrieved.
+    fn pactffi_mock_server_logs(mock_server_port: i32) -> *const c_char {
+        let mut guard = MANAGER.lock().unwrap();
+        let manager = guard.get_or_insert_with(ServerManager::new);
+        let logs = manager.find_mock_server_by_port_mut(mock_server_port as u16, &|mock_server| {
+            fetch_buffer_contents(&mock_server.id)
+        });
+        match logs {
+            Some(bytes) => {
+                match from_utf8(&bytes) {
+                    Ok(contents) => match CString::new(contents.to_string()) {
+                        Ok(c_str) => {
+                            let p = c_str.as_ptr();
+                            manager.store_mock_server_resource(mock_server_port as u16, c_str);
+                            p
+                        },
+                        Err(err) => {
+                            error!("Failed to copy in-memory log buffer - {}", err);
+                            ptr::null()
+                        }
+                    }
+                    Err(err) => {
+                        error!("Failed to convert in-memory log buffer to UTF-8 = {}", err);
+                        ptr::null()
+                    }
+                }
+            }
+            None => {
+                error!("No mock server found for port {}", mock_server_port);
+                ptr::null()
+            }
+        }
+    }
+    {
+        ptr::null()
+    }
 }
 
 fn error_message(err: Box<dyn Any>, method: &str) -> String {
