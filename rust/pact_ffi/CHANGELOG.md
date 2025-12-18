@@ -1,5 +1,22 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 0.5.0 - 2.0 Mock server + removed some deprecated functions
+
+* 2eacbdb7 - chore: Bump minor version of pact_ffi (Ronald Holshausen, Thu Dec 18 15:05:22 2025 +1100)
+* 9d1a12a8 - feat(ffi): upgrade mock server to v2 (JP-Ellis, Tue Dec 16 10:25:23 2025 +1100)
+* aa27f5ed - chore(ffi): allow async fns in ffi_fn macro (JP-Ellis, Fri Dec 12 11:45:26 2025 +1100)
+* 2def693d - chore!: remove deprecated mock server functions (JP-Ellis, Fri Sep 5 16:04:46 2025 +1000)
+* cc9e68e9 - chore(ffi): add multipart test (JP-Ellis, Thu Nov 20 11:23:39 2025 +1100)
+* eaaee9de - chore: Upgrade pact_models to 1.3.7 (Ronald Holshausen, Tue Sep 16 13:57:37 2025 +1000)
+* be5584f9 - docs: improve convenience log fns (JP-Ellis, Tue Sep 9 15:44:27 2025 +1000)
+* ff964960 - chore: Update pact_models to 1.3.6 (Ronald Holshausen, Wed Jul 30 09:50:09 2025 +1000)
+* 1cb9a5ac - chore: Update pact_models to 1.3.5 (Ronald Holshausen, Mon Jul 28 10:44:30 2025 +1000)
+* 6fbee65f - chore(pact_ffi): Fix flaky test (Ronald Holshausen, Mon Jul 28 10:37:53 2025 +1000)
+* a5175b70 - chore: Ignore flaky test (Ronald Holshausen, Mon Jul 28 10:13:53 2025 +1000)
+* 68ec6875 - feat: parameterize delay in use plugin method (Andrew Marshall, Thu Jul 17 10:22:22 2025 +0100)
+* 0c8187dc - Merge branch 'pact_ffi/0.4.28' (Ronald Holshausen, Thu Jul 17 16:04:12 2025 +1000)
+* 01052fd4 - bump version to 0.4.29 (Ronald Holshausen, Thu Jul 17 15:10:53 2025 +1000)
+
 # 0.4.28 - Maintenance Release
 
 * 4fc0136c - chore: Upgrade pact_verifier to 1.3.2 (Ronald Holshausen, Fri Jun 20 11:33:58 2025 +1000)
