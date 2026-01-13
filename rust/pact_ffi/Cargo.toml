@@ -18,10 +18,8 @@ ansi_term = "0.12.1"
 anyhow = "1.0.100"
 bytes = "1.11.0"
 chrono = "0.4.42"
-chrono-tz = "0.10.4"
 clap = "2.34.0"
 either = "1.15.0"
-env_logger = "0.11.8"
 futures = "0.3.31"
 itertools = "0.14.0"
 lazy_static = "1.5.0"
@@ -48,7 +46,6 @@ serde_urlencoded = "0.7.1"
 sxd-document = "0.3.2"
 thiserror = "1.0.63"
 tokio = { version = "1.49.0", features = ["full"] }
-tokio-rustls = "0.26.4"
 tracing = "0.1.41" # This needs to be the same version across all the libs (i.e. plugin driver)
 tracing-core = "0.1.33"  # This needs to be the same version across all the pact libs (i.e. plugin driver)
 tracing-log = "0.2.0"
@@ -59,7 +56,6 @@ zeroize = "1.8.2"
 [dev-dependencies]
 expectest = "0.12.0"
 hamcrest2 = "0.3.0"
-home = "0.5.12"
 pretty_assertions = "1.4.1"
 quickcheck = "1.0.3"
 reqwest = { version = "0.13.1", default-features = false, features = ["rustls", "blocking", "json", "multipart"] }
