@@ -1,5 +1,16 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 0.5.1 - Bugfix Release
+
+* 93b0d736 - chore(pact_ffi): Cleanup some compiler warnings (Ronald Holshausen, Tue Jan 13 15:42:57 2026 +1100)
+* afbcd605 - fix(pact_ffi): Update to mockserver 2.0 crate dropped support for mock servers from plugins #510 (Ronald Holshausen, Tue Jan 13 15:31:27 2026 +1100)
+* 42d201f3 - chore(pact_ffi): Update thiserror crate (Ronald Holshausen, Tue Jan 13 15:18:24 2026 +1100)
+* 365fe4a1 - chore(pact_ffi): Add "C" ABI to all FFI functions (Ronald Holshausen, Tue Jan 13 15:15:17 2026 +1100)
+* 9501b86d - chore(pact_ffi): Update rand and rand_regex crates (Ronald Holshausen, Tue Jan 13 14:44:34 2026 +1100)
+* 89254a9e - chore(pact_ffi): Remove unused dependencies (Ronald Holshausen, Tue Jan 13 14:05:43 2026 +1100)
+* 6f9b0737 - chore(pact_ffi): Update dependencies (Ronald Holshausen, Tue Jan 13 12:00:59 2026 +1100)
+* c171b42b - bump version to 0.5.1 (Ronald Holshausen, Thu Dec 18 15:09:42 2025 +1100)
+
 # 0.5.0 - 2.0 Mock server + removed some deprecated functions
 
 * 2eacbdb7 - chore: Bump minor version of pact_ffi (Ronald Holshausen, Thu Dec 18 15:05:22 2025 +1100)
