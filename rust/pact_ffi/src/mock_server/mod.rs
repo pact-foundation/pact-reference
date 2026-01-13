@@ -104,7 +104,7 @@ fn attach_to_manager(builder: MockServerBuilder) -> anyhow::Result<MockServer> {
 ///
 /// An empty string indicates an error reading the pem file.
 #[no_mangle]
-pub extern fn pactffi_get_tls_ca_certificate() -> *mut c_char  {
+pub extern "C" fn pactffi_get_tls_ca_certificate() -> *mut c_char  {
   let cert_file = include_str!("ca.pem");
   let cert_str = CString::new(cert_file).unwrap_or_default();
 
@@ -504,7 +504,7 @@ pub enum StringResult {
 /// returned. If the format string pointer is not a valid pointer or is not a NULL-terminated string,
 /// this will lead to undefined behaviour.
 #[no_mangle]
-pub unsafe extern fn pactffi_generate_datetime_string(format: *const c_char) -> StringResult {
+pub unsafe extern "C" fn pactffi_generate_datetime_string(format: *const c_char) -> StringResult {
   if format.is_null() {
     let error = CString::new("generate_datetime_string: format is NULL").unwrap();
     StringResult::Failed(error.into_raw())
@@ -539,7 +539,7 @@ pub unsafe extern fn pactffi_generate_datetime_string(format: *const c_char) -> 
 /// Both the regex and example pointers must be valid pointers to NULL-terminated strings. Invalid
 /// pointers will result in undefined behaviour.
 #[no_mangle]
-pub unsafe extern fn pactffi_check_regex(regex: *const c_char, example: *const c_char) -> bool {
+pub unsafe extern "C" fn pactffi_check_regex(regex: *const c_char, example: *const c_char) -> bool {
   if regex.is_null() {
     false
   } else {
@@ -586,7 +586,7 @@ pub fn generate_regex_value_internal(regex: &str) -> Result<String, String> {
 /// The regex pointer must be a valid pointer to a NULL-terminated string. Invalid pointers will
 /// result in undefined behaviour.
 #[no_mangle]
-pub unsafe extern fn pactffi_generate_regex_value(regex: *const c_char) -> StringResult {
+pub unsafe extern "C" fn pactffi_generate_regex_value(regex: *const c_char) -> StringResult {
   if regex.is_null() {
     let error = CString::new("generate_regex_value: regex is NULL").unwrap();
     StringResult::Failed(error.into_raw())
@@ -621,7 +621,7 @@ pub unsafe extern fn pactffi_generate_regex_value(regex: *const c_char) -> Strin
 /// will result in undefined behaviour.
 #[no_mangle]
 #[deprecated(since = "0.1.0", note = "Use pactffi_string_delete instead")]
-pub unsafe extern fn pactffi_free_string(s: *mut c_char) {
+pub unsafe extern "C" fn pactffi_free_string(s: *mut c_char) {
   if s.is_null() {
     return;
   }

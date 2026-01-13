@@ -428,7 +428,7 @@ impl MessageHandle {
 /// Returns a new `PactHandle`. The handle will need to be freed with the `pactffi_free_pact_handle`
 /// method to release its resources.
 #[no_mangle]
-pub extern fn pactffi_new_pact(consumer_name: *const c_char, provider_name: *const c_char) -> PactHandle {
+pub extern "C" fn pactffi_new_pact(consumer_name: *const c_char, provider_name: *const c_char) -> PactHandle {
   let consumer = convert_cstr("consumer_name", consumer_name).unwrap_or("Consumer");
   let provider = convert_cstr("provider_name", provider_name).unwrap_or("Provider");
   PactHandle::new(consumer, provider)
@@ -461,7 +461,7 @@ fn find_interaction_with_description(pact: &V4Pact, description: &str) -> Option
 ///
 /// Returns a new `InteractionHandle`.
 #[no_mangle]
-pub extern fn pactffi_new_interaction(pact: PactHandle, description: *const c_char) -> InteractionHandle {
+pub extern "C" fn pactffi_new_interaction(pact: PactHandle, description: *const c_char) -> InteractionHandle {
   if let Some(description) = convert_cstr("description", description) {
     pact.with_pact(&|_, inner| {
       let interaction = SynchronousHttp {
@@ -490,7 +490,7 @@ pub extern fn pactffi_new_interaction(pact: PactHandle, description: *const c_ch
 ///
 /// Returns a new `InteractionHandle`.
 #[no_mangle]
-pub extern fn pactffi_new_message_interaction(pact: PactHandle, description: *const c_char) -> InteractionHandle {
+pub extern "C" fn pactffi_new_message_interaction(pact: PactHandle, description: *const c_char) -> InteractionHandle {
   if let Some(description) = convert_cstr("description", description) {
     pact.with_pact(&|_, inner| {
       let interaction = AsynchronousMessage {
@@ -519,7 +519,7 @@ pub extern fn pactffi_new_message_interaction(pact: PactHandle, description: *co
 ///
 /// Returns a new `InteractionHandle`.
 #[no_mangle]
-pub extern fn pactffi_new_sync_message_interaction(pact: PactHandle, description: *const c_char) -> InteractionHandle {
+pub extern "C" fn pactffi_new_sync_message_interaction(pact: PactHandle, description: *const c_char) -> InteractionHandle {
   if let Some(description) = convert_cstr("description", description) {
     pact.with_pact(&|_, inner| {
       let interaction = SynchronousMessage {
@@ -545,7 +545,7 @@ pub extern fn pactffi_new_sync_message_interaction(pact: PactHandle, description
 ///
 /// * `description` - The interaction description. It needs to be unique for each interaction.
 #[no_mangle]
-pub extern fn pactffi_upon_receiving(interaction: InteractionHandle, description: *const c_char) -> bool {
+pub extern "C" fn pactffi_upon_receiving(interaction: InteractionHandle, description: *const c_char) -> bool {
   if let Some(description) = convert_cstr("description", description) {
     interaction.with_interaction(&|_, mock_server_started, inner| {
       inner.set_description(description);
@@ -561,7 +561,7 @@ pub extern fn pactffi_upon_receiving(interaction: InteractionHandle, description
 ///
 /// * `description` - The provider state description. It needs to be unique.
 #[no_mangle]
-pub extern fn pactffi_given(interaction: InteractionHandle, description: *const c_char) -> bool {
+pub extern "C" fn pactffi_given(interaction: InteractionHandle, description: *const c_char) -> bool {
   if let Some(description) = convert_cstr("description", description) {
     interaction.with_interaction(&|_, mock_server_started, inner| {
       inner.provider_states_mut().push(ProviderState::default(&description.to_string()));
@@ -619,7 +619,7 @@ ffi_fn! {
 /// * `name` - Parameter name.
 /// * `value` - Parameter value as JSON.
 #[no_mangle]
-pub extern fn pactffi_given_with_param(interaction: InteractionHandle, description: *const c_char,
+pub extern "C" fn pactffi_given_with_param(interaction: InteractionHandle, description: *const c_char,
                                        name: *const c_char, value: *const c_char) -> bool {
   if let Some(description) = convert_cstr("description", description) {
     if let Some(name) = convert_cstr("name", name) {
@@ -664,7 +664,7 @@ pub extern fn pactffi_given_with_param(interaction: InteractionHandle, descripti
 /// Returns 3 if any of the C strings are not valid.
 ///
 #[no_mangle]
-pub extern fn pactffi_given_with_params(
+pub extern "C" fn pactffi_given_with_params(
   interaction: InteractionHandle,
   description: *const c_char,
   params: *const c_char
@@ -715,7 +715,7 @@ pub extern fn pactffi_given_with_params(
 /// ```
 /// See [IntegrationJson.md](https://github.com/pact-foundation/pact-reference/blob/master/rust/pact_ffi/IntegrationJson.md)
 #[no_mangle]
-pub extern fn pactffi_with_request(
+pub extern "C" fn pactffi_with_request(
   interaction: InteractionHandle,
   method: *const c_char,
   path: *const c_char
@@ -753,7 +753,7 @@ pub extern fn pactffi_with_request(
 /// **DEPRECATED:** Use `pactffi_with_query_parameter_v2`, which deals with multiple values correctly
 #[no_mangle]
 #[deprecated]
-pub extern fn pactffi_with_query_parameter(
+pub extern "C" fn pactffi_with_query_parameter(
   interaction: InteractionHandle,
   name: *const c_char,
   index: size_t,
@@ -863,7 +863,7 @@ pub extern fn pactffi_with_query_parameter(
 /// parameter is not NULL, it must point to a valid NULL terminated string.
 /// ```
 #[no_mangle]
-pub extern fn pactffi_with_query_parameter_v2(
+pub extern "C" fn pactffi_with_query_parameter_v2(
   interaction: InteractionHandle,
   name: *const c_char,
   index: size_t,
@@ -1107,7 +1107,7 @@ pub(crate) fn process_xml(body: String, matching_rules: &mut MatchingRuleCategor
 /// * `pact` - Handle to a Pact model
 /// * `version` - the spec version to use
 #[no_mangle]
-pub extern fn pactffi_with_specification(pact: PactHandle, version: PactSpecification) -> bool {
+pub extern "C" fn pactffi_with_specification(pact: PactHandle, version: PactSpecification) -> bool {
   pact.with_pact(&|_, inner| {
     inner.specification_version = version.into();
     !inner.mock_server_started
@@ -1136,7 +1136,7 @@ const PROTECTED_NAMES: [&str; 2] = ["pactRust", "pactSpecification"];
 /// * `name` - the key to set
 /// * `value` - the value to set
 #[no_mangle]
-pub extern fn pactffi_with_pact_metadata(
+pub extern "C" fn pactffi_with_pact_metadata(
   pact: PactHandle,
   namespace: *const c_char,
   name: *const c_char,
@@ -1221,7 +1221,7 @@ pub extern fn pactffi_with_pact_metadata(
   /// strings, or `NULL` for the value parameter if the metadata key should be
   /// removed.
 #[no_mangle]
-pub extern fn pactffi_with_metadata(
+pub extern "C" fn pactffi_with_metadata(
   interaction: InteractionHandle,
   key: *const c_char,
   value: *const c_char,
@@ -1327,7 +1327,7 @@ pub extern fn pactffi_with_metadata(
 /// **DEPRECATED:** Use `pactffi_with_header_v2`, which deals with multiple values correctly
 #[deprecated]
 #[no_mangle]
-pub extern fn pactffi_with_header(
+pub extern "C" fn pactffi_with_header(
   interaction: InteractionHandle,
   part: InteractionPart,
   name: *const c_char,
@@ -1437,7 +1437,7 @@ pub extern fn pactffi_with_header(
 /// # Safety
 /// The name and value parameters must be valid pointers to NULL terminated strings.
 #[no_mangle]
-pub extern fn pactffi_with_header_v2(
+pub extern "C" fn pactffi_with_header_v2(
   interaction: InteractionHandle,
   part: InteractionPart,
   name: *const c_char,
@@ -1623,7 +1623,7 @@ ffi_fn! {
 ///
 /// * `status` - the response status. Defaults to 200.
 #[no_mangle]
-pub extern fn pactffi_response_status(interaction: InteractionHandle, status: c_ushort) -> bool {
+pub extern "C" fn pactffi_response_status(interaction: InteractionHandle, status: c_ushort) -> bool {
   interaction.with_interaction(&|_, mock_server_started, inner| {
     if let Some(reqres) = inner.as_v4_http_mut() {
       reqres.response.status = status;
@@ -1652,7 +1652,7 @@ pub extern fn pactffi_response_status(interaction: InteractionHandle, status: c_
 /// # Safety
 /// The status parameter must be valid pointers to NULL terminated strings.
 #[no_mangle]
-pub extern fn pactffi_response_status_v2(interaction: InteractionHandle, status: *const c_char) -> bool {
+pub extern "C" fn pactffi_response_status_v2(interaction: InteractionHandle, status: *const c_char) -> bool {
   let status = convert_cstr("status", status).unwrap_or("200");
   interaction.with_interaction(&|_, mock_server_started, inner| {
     if let Some(reqres) = inner.as_v4_http_mut() {
@@ -1977,7 +1977,7 @@ pub extern "C" fn pactffi_with_body(
 /// Returns false if the interaction or Pact can't be modified (i.e. the mock server for it has
 /// already started) or an error has occurred.
 #[no_mangle]
-pub extern fn pactffi_with_binary_body(
+pub extern "C" fn pactffi_with_binary_body(
   interaction: InteractionHandle,
   part: InteractionPart,
   content_type: *const c_char,
@@ -2080,7 +2080,7 @@ pub extern fn pactffi_with_binary_body(
 /// already started) or an error has occurred.
 #[no_mangle]
 #[deprecated(note = "Use `pactffi_with_binary_body` and `pactffi_with_matching_rules` instead")]
-pub extern fn pactffi_with_binary_file(
+pub extern "C" fn pactffi_with_binary_file(
   interaction: InteractionHandle,
   part: InteractionPart,
   content_type: *const c_char,
@@ -2371,7 +2371,7 @@ fn add_content_type_matching_rule_to_body(is_supported: bool, matching_rules: &m
 /// Returns an error if the interaction or Pact can't be modified (i.e. the mock server for it has
 /// already started), the interaction is not an HTTP interaction or some other error occurs.
 #[no_mangle]
-pub extern fn pactffi_with_multipart_file_v2(
+pub extern "C" fn pactffi_with_multipart_file_v2(
   interaction: InteractionHandle,
   part: InteractionPart,
   content_type: *const c_char,
@@ -2462,7 +2462,7 @@ pub extern fn pactffi_with_multipart_file_v2(
 /// Returns an error if the interaction or Pact can't be modified (i.e. the mock server for it has
 /// already started), the interaction is not an HTTP interaction or some other error occurs.
 #[no_mangle]
-pub extern fn pactffi_with_multipart_file(
+pub extern "C" fn pactffi_with_multipart_file(
   interaction: InteractionHandle,
   part: InteractionPart,
   content_type: *const c_char,
@@ -2789,7 +2789,7 @@ ffi_fn! {
 /// Returns a new `MessagePactHandle`. The handle will need to be freed with the `pactffi_free_message_pact_handle`
 /// function to release its resources.
 #[no_mangle]
-pub extern fn pactffi_new_message_pact(consumer_name: *const c_char, provider_name: *const c_char) -> MessagePactHandle {
+pub extern "C" fn pactffi_new_message_pact(consumer_name: *const c_char, provider_name: *const c_char) -> MessagePactHandle {
   let consumer = convert_cstr("consumer_name", consumer_name).unwrap_or("Consumer");
   let provider = convert_cstr("provider_name", provider_name).unwrap_or("Provider");
   MessagePactHandle::new(consumer, provider)
@@ -2801,7 +2801,7 @@ pub extern fn pactffi_new_message_pact(consumer_name: *const c_char, provider_na
 ///
 /// Returns a new `MessageHandle`.
 #[no_mangle]
-pub extern fn pactffi_new_message(pact: MessagePactHandle, description: *const c_char) -> MessageHandle {
+pub extern "C" fn pactffi_new_message(pact: MessagePactHandle, description: *const c_char) -> MessageHandle {
   if let Some(description) = convert_cstr("description", description) {
     pact.with_pact(&|_, inner, _| {
       let message = AsynchronousMessage {
@@ -2820,7 +2820,7 @@ pub extern fn pactffi_new_message(pact: MessagePactHandle, description: *const c
 ///
 /// * `description` - The message description. It needs to be unique for each message.
 #[no_mangle]
-pub extern fn pactffi_message_expects_to_receive(message: MessageHandle, description: *const c_char) {
+pub extern "C" fn pactffi_message_expects_to_receive(message: MessageHandle, description: *const c_char) {
   if let Some(description) = convert_cstr("description", description) {
     message.with_message(&|_, inner, _| {
       inner.set_description(description);
@@ -2832,7 +2832,7 @@ pub extern fn pactffi_message_expects_to_receive(message: MessageHandle, descrip
 ///
 /// * `description` - The provider state description. It needs to be unique for each message
 #[no_mangle]
-pub extern fn pactffi_message_given(message: MessageHandle, description: *const c_char) {
+pub extern "C" fn pactffi_message_given(message: MessageHandle, description: *const c_char) {
   if let Some(description) = convert_cstr("description", description) {
     message.with_message(&|_, inner, _| {
       inner.provider_states_mut().push(ProviderState::default(&description.to_string()));
@@ -2849,7 +2849,7 @@ pub extern fn pactffi_message_given(message: MessageHandle, description: *const 
 /// * `name` - Parameter name.
 /// * `value` - Parameter value as JSON.
 #[no_mangle]
-pub extern fn pactffi_message_given_with_param(message: MessageHandle, description: *const c_char,
+pub extern "C" fn pactffi_message_given_with_param(message: MessageHandle, description: *const c_char,
                                                name: *const c_char, value: *const c_char) {
   if let Some(description) = convert_cstr("description", description) {
     if let Some(name) = convert_cstr("name", name) {
@@ -2887,7 +2887,7 @@ pub extern fn pactffi_message_given_with_param(message: MessageHandle, descripti
 /// * `size` - number of bytes in the message body to read. This is not required for text bodies (JSON, XML, etc.).
 #[no_mangle]
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub extern fn pactffi_message_with_contents(message_handle: MessageHandle, content_type: *const c_char, body: *const u8, size: size_t) {
+pub extern "C" fn pactffi_message_with_contents(message_handle: MessageHandle, content_type: *const c_char, body: *const u8, size: size_t) {
   let content_type = convert_cstr("content_type", content_type).unwrap_or("text/plain");
   trace!("pactffi_message_with_contents(message_handle: {:?}, content_type: {:?}, body: {:?}, size: {})", message_handle, content_type, body, size);
 
@@ -2921,7 +2921,7 @@ pub extern fn pactffi_message_with_contents(message_handle: MessageHandle, conte
 /// * `value` - metadata value.
 #[no_mangle]
 #[deprecated(note = "Replaced with `pactffi_with_metadata`")]
-pub extern fn pactffi_message_with_metadata(message_handle: MessageHandle, key: *const c_char, value: *const c_char) {
+pub extern "C" fn pactffi_message_with_metadata(message_handle: MessageHandle, key: *const c_char, value: *const c_char) {
   if let Some(key) = convert_cstr("key", key) {
     let value = convert_cstr("value", value).unwrap_or_default();
     message_handle.with_message(&|_, inner, _| {
@@ -2950,7 +2950,7 @@ pub extern fn pactffi_message_with_metadata(message_handle: MessageHandle, key: 
 /// The key and value parameters must be valid pointers to NULL terminated strings.
 #[no_mangle]
 #[deprecated(note = "Replaced with `pactffi_with_metadata`")]
-pub extern fn pactffi_message_with_metadata_v2(message_handle: MessageHandle, key: *const c_char, value: *const c_char) {
+pub extern "C" fn pactffi_message_with_metadata_v2(message_handle: MessageHandle, key: *const c_char, value: *const c_char) {
   if let Some(key) = convert_cstr("key", key) {
     let value = convert_cstr("value", value).unwrap_or_default();
     trace!("pactffi_message_with_metadata_v2(message_handle: {:?}, key: {:?}, value: {})", message_handle, key, value);
@@ -2987,7 +2987,7 @@ pub extern fn pactffi_message_with_metadata_v2(message_handle: MessageHandle, ke
 /// This function must only ever be called from a foreign language. Calling it from a Rust function
 /// that has a Tokio runtime in its call stack can result in a deadlock.
 #[no_mangle]
-pub extern fn pactffi_message_reify(message_handle: MessageHandle) -> *const c_char {
+pub extern "C" fn pactffi_message_reify(message_handle: MessageHandle) -> *const c_char {
   let res = message_handle.with_message(&|_, inner, spec_version| {
     trace!("pactffi_message_reify(message: {:?}, spec_version: {})", inner, spec_version);
     if let Some(message) = inner.as_v4_async_message() {
@@ -3035,7 +3035,7 @@ pub extern fn pactffi_message_reify(message_handle: MessageHandle) -> *const c_c
 /// | 1 | The pact file was not able to be written |
 /// | 2 | The message pact for the given handle was not found |
 #[no_mangle]
-pub extern fn pactffi_write_message_pact_file(pact: MessagePactHandle, directory: *const c_char, overwrite: bool) -> i32 {
+pub extern "C" fn pactffi_write_message_pact_file(pact: MessagePactHandle, directory: *const c_char, overwrite: bool) -> i32 {
   let result = pact.with_pact(&|_, inner, spec_version| {
     let filename = path_from_dir(directory, Some(inner.default_file_name().as_str()));
     write_pact(inner.boxed(), &filename.unwrap_or_else(|| PathBuf::from(inner.default_file_name().as_str())), spec_version, overwrite)
@@ -3063,7 +3063,7 @@ pub extern fn pactffi_write_message_pact_file(pact: MessagePactHandle, directory
 /// * `name` - the key to set
 /// * `value` - the value to set
 #[no_mangle]
-pub extern fn pactffi_with_message_pact_metadata(pact: MessagePactHandle, namespace: *const c_char, name: *const c_char, value: *const c_char) {
+pub extern "C" fn pactffi_with_message_pact_metadata(pact: MessagePactHandle, namespace: *const c_char, name: *const c_char, value: *const c_char) {
   pact.with_pact(&|_, inner, _| {
     let namespace = convert_cstr("namespace", namespace).unwrap_or_default();
     let name = convert_cstr("name", name).unwrap_or_default();
@@ -3163,7 +3163,7 @@ ffi_fn! {
 /// InteractionHandle that can be used for both HTTP and message interactions.
 #[no_mangle]
 #[deprecated(note = "Replaced with new_message_interaction")]
-pub extern fn pactffi_new_async_message(pact: PactHandle, description: *const c_char) -> MessageHandle {
+pub extern "C" fn pactffi_new_async_message(pact: PactHandle, description: *const c_char) -> MessageHandle {
   if let Some(description) = convert_cstr("description", description) {
     pact.with_pact(&|_, inner| {
       let message = AsynchronousMessage {
@@ -3187,7 +3187,7 @@ pub extern fn pactffi_new_async_message(pact: PactHandle, description: *const c_
 /// * `1` - The handle is not valid or does not refer to a valid Pact. Could be that it was previously deleted.
 ///
 #[no_mangle]
-pub extern fn pactffi_free_pact_handle(pact: PactHandle) -> c_uint {
+pub extern "C" fn pactffi_free_pact_handle(pact: PactHandle) -> c_uint {
   let mut handles = PACT_HANDLES.lock().unwrap();
   trace!("pactffi_free_pact_handle - removing pact with index {}", pact.pact_ref);
   handles.remove(&pact.pact_ref).map(|_| 0).unwrap_or(1)
@@ -3202,7 +3202,7 @@ pub extern fn pactffi_free_pact_handle(pact: PactHandle) -> c_uint {
 /// * `1` - The handle is not valid or does not refer to a valid Pact. Could be that it was previously deleted.
 ///
 #[no_mangle]
-pub extern fn pactffi_free_message_pact_handle(pact: MessagePactHandle) -> c_uint {
+pub extern "C" fn pactffi_free_message_pact_handle(pact: MessagePactHandle) -> c_uint {
   let mut handles = PACT_HANDLES.lock().unwrap();
   handles.remove(&pact.pact_ref).map(|_| 0).unwrap_or(1)
 }

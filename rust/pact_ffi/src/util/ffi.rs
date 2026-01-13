@@ -11,7 +11,7 @@ macro_rules! ffi_fn {
         #[no_mangle]
         #[allow(clippy::or_fun_call)]
         #[allow(clippy::not_unsafe_ptr_arg_deref)]
-        pub extern fn $name($($arg: $arg_ty),*) -> $ret {
+        pub extern "C" fn $name($($arg: $arg_ty),*) -> $ret {
             use $crate::error::catch_panic;
 
             ::tracing::debug!("{}::{} FFI function invoked", module_path!(), stringify!($name));
@@ -38,7 +38,7 @@ macro_rules! ffi_fn {
         #[no_mangle]
         #[allow(clippy::or_fun_call)]
         #[allow(clippy::not_unsafe_ptr_arg_deref)]
-        pub extern fn $name($($arg: $arg_ty),*) -> $ret {
+        pub extern "C" fn $name($($arg: $arg_ty),*) -> $ret {
             use $crate::error::catch_panic;
 
             ::tracing::debug!("{}::{} FFI function invoked", module_path!(), stringify!($name));

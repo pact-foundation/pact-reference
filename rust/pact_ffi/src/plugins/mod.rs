@@ -130,7 +130,7 @@ ffi_fn! {
 ///
 /// When an error errors, LAST_ERROR will contain the error message.
 #[no_mangle]
-pub extern fn pactffi_using_plugin(pact: PactHandle, plugin_name: *const c_char, plugin_version: *const c_char) -> c_uint {
+pub extern "C" fn pactffi_using_plugin(pact: PactHandle, plugin_name: *const c_char, plugin_version: *const c_char) -> c_uint {
   let result = pactffi_using_plugin_with_delay(pact, plugin_name, plugin_version, 500);
   result
 }
@@ -182,7 +182,7 @@ ffi_fn! {
 /// When an error errors, LAST_ERROR will contain the error message.
 #[no_mangle]
 #[allow(clippy::not_unsafe_ptr_arg_deref)]
-pub extern fn pactffi_interaction_contents(
+pub extern "C" fn pactffi_interaction_contents(
   interaction: InteractionHandle,
   part: InteractionPart,
   content_type: *const c_char,

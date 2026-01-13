@@ -58,7 +58,7 @@ pub extern "C" fn pactffi_version() -> *const c_char {
 ///
 /// log_env_var must be a valid NULL terminated UTF-8 string.
 #[no_mangle]
-pub unsafe extern fn pactffi_init(log_env_var: *const c_char) {
+pub unsafe extern "C" fn pactffi_init(log_env_var: *const c_char) {
     let log_env_var = if !log_env_var.is_null() {
         let c_str = CStr::from_ptr(log_env_var);
         match c_str.to_str() {

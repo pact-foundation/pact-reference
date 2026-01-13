@@ -47,7 +47,7 @@ pub mod handle;
 /// Exported functions are inherently unsafe. Deal.
 #[no_mangle]
 #[deprecated(since = "0.1.0", note = "use the handle based interface instead. See pact_ffi/src/verifier/handle.rs")]
-pub unsafe extern fn pactffi_verify(args: *const c_char) -> i32 {
+pub unsafe extern "C" fn pactffi_verify(args: *const c_char) -> i32 {
   if args.is_null() {
     return 2;
   }
