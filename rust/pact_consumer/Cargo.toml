@@ -26,9 +26,7 @@ colour = ["dep:yansi"]
 anyhow = "1.0.100"
 async-trait = "0.1.89"
 bytes = "1.11.0"
-futures = "0.3.31"
 itertools = "0.14.0"
-lazy_static = "1.5.0"
 maplit = "1.0.2"
 pact_matching = { version = "~2.0.2", path = "../pact_matching", default-features = false }
 pact_mock_server = { version = "~2.1.3", default-features = false }
@@ -39,13 +37,10 @@ serde_json = "1.0.149"
 termsize = "0.1.9"
 tokio = { version = "1.49.0", features = ["full"] }
 tracing = "0.1.44"
-tracing-core = "0.1.36"
 url = "2.5.8"
-uuid = { version = "1.19.0", features = ["v4"] }
 yansi = { version = "1.0.1", optional = true }
 
 [dev-dependencies]
-quickcheck = "1.0.3"
 env_logger = "0.11.8"
 expectest = "0.12.0"
 reqwest = { version = "0.13.1", default-features = false, features = ["rustls", "blocking", "json"] }
