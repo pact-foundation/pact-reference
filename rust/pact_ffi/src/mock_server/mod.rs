@@ -43,7 +43,6 @@
 
 #![warn(missing_docs)]
 
-use std::any::Any;
 use std::ffi::{CStr, CString};
 use std::net::ToSocketAddrs;
 use std::ptr;
@@ -477,16 +476,6 @@ ffi_fn! {
     {
         ptr::null()
     }
-}
-
-fn error_message(err: Box<dyn Any>, method: &str) -> String {
-  if let Some(err) = err.downcast_ref::<&str>() {
-    format!("{} failed with an error - {}", method, err)
-  } else if let Some(err) = err.downcast_ref::<String>() {
-    format!("{} failed with an error - {}", method, err)
-  } else {
-    format!("{} failed with an unknown error", method)
-  }
 }
 
 #[repr(C)]

@@ -408,7 +408,7 @@ fn setup_contents(
               .thread_name("ffi-setup_contents")
               .build()
               .expect("Could not start a Tokio runtime");
-            let result = runtime.block_on(matcher.configure_interation(&content_type, map));
+            let result = runtime.block_on(matcher.configure_interaction(&content_type, map));
             match result {
               Ok((contents, plugin_config)) => {
                 debug!("Interaction contents = {:?}", contents);

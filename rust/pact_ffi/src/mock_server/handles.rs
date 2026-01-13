@@ -4449,6 +4449,11 @@ mod tests {
 
     expect!(result_1).to(be_false());
     expect!(result_2).to(be_false());
+
+    expect!(pact.metadata.get("pactRust").unwrap()).to(be_equal_to(&json!({
+      "ffi": env!("CARGO_PKG_VERSION")
+    })));
+    expect!(pact.metadata.get("pactSpecification")).to(be_none());
   }
 
   #[test]
