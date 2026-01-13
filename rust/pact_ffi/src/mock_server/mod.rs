@@ -54,7 +54,7 @@ use chrono::Local;
 use either::Either;
 use libc::c_char;
 use onig::Regex;
-use rand::prelude::*;
+use rand::Rng;
 use serde_json::{json, Value};
 use tracing::{error, info, warn};
 use uuid::Uuid;
@@ -568,15 +568,13 @@ pub fn generate_regex_value_internal(regex: &str) -> Result<String, String> {
   let mut parser = regex_syntax::ParserBuilder::new().unicode(false).build();
   match parser.parse(regex) {
     Ok(hir) => {
-      let mut rnd = rand::thread_rng();
-      let gen = rand_regex::Regex::with_hir(hir, 20).unwrap();
-      let result: String = rnd.sample(gen);
-      Ok(result)
+      let mut rnd = rand::rng();
+      match rand_regex::Regex::with_hir(hir, 20) {
+        Ok(re) => Ok(rnd.sample(re)),
+        Err(err) => Err(format!("generate_regex_value: '{}' is not a valid regular expression - {}", regex, err))
+      }
     },
-    Err(err) => {
-      let error = format!("generate_regex_value: '{}' is not a valid regular expression - {}", regex, err);
-      Err(error)
-    }
+    Err(err) => Err(format!("generate_regex_value: '{}' is not a valid regular expression - {}", regex, err))
   }
 }
 
