@@ -5,7 +5,7 @@ use libc::{c_char, c_uchar};
 use pact_models::matchingrules::MatchingRule;
 use serde_json::Value;
 
-use pact_matching::matchers::Matches;
+use pact_matching::matchingrules::Matches;
 
 use crate::{as_ref, ffi_fn, safe_str};
 use crate::util::string;

@@ -89,7 +89,7 @@ static MANAGER: Mutex<Option<ServerManager>> = Mutex::new(None);
 
 /// Attach the mock server builder to the global server manager and spawn the
 /// mock server.
-fn attach_to_manager(builder: MockServerBuilder) -> anyhow::Result<MockServer> {
+fn attach_to_manager(builder: MockServerBuilder) -> anyhow::Result<Either<MockServer, (String, u16)>> {
   let mut guard = MANAGER.lock().unwrap();
   let manager = guard.get_or_insert_with(ServerManager::new);
   manager.spawn_mock_server(builder)
@@ -191,9 +191,13 @@ ffi_fn! {
           };
 
           match attach_to_manager(builder) {
-            Ok(mock_server) => {
+            Ok(Either::Left(mock_server)) => {
               inner.mock_server_started = true;
               mock_server.port() as i32
+            },
+            Ok(Either::Right((_id, port))) => {
+              inner.mock_server_started = true;
+              port as i32
             },
             Err(err) => {
               error!("Failed to start mock server - {}", err);

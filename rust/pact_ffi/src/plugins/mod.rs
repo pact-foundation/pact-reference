@@ -74,7 +74,7 @@ ffi_fn! {
       .ok_or(())
       .or_else(|_| {
         pact_mock_server::configure_core_catalogue();
-        pact_matching::matchers::configure_core_catalogue();
+        pact_matching::matchingrules::configure_core_catalogue();
 
         let result = RUNTIME.block_on(async {
           let result = load_plugin(&dependency).await;
