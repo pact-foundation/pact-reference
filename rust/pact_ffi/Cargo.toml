@@ -44,7 +44,7 @@ serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 serde_urlencoded = "0.7.1"
 sxd-document = "0.3.2"
-thiserror = "1.0.63"
+thiserror = "2.0.17"
 tokio = { version = "1.49.0", features = ["full"] }
 tracing = "0.1.41" # This needs to be the same version across all the libs (i.e. plugin driver)
 tracing-core = "0.1.33"  # This needs to be the same version across all the pact libs (i.e. plugin driver)
