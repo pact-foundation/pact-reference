@@ -73,10 +73,8 @@ use pact_ffi::mock_server::handles::{
 use pact_ffi::mock_server::handles::pactffi_with_matching_rules;
 use pact_ffi::mock_server::pactffi_mock_server_matched;
 use pact_ffi::verifier::{
-  OptionsFlags,
   pactffi_verifier_add_directory_source,
   pactffi_verifier_add_file_source,
-  pactffi_verifier_cli_args,
   pactffi_verifier_execute,
   pactffi_verifier_new_for_application,
   pactffi_verifier_output,
@@ -649,18 +647,6 @@ fn message_consumer_with_matchers_and_generators_test() {
   expect!(Regex::new("[\\d\\w]+").unwrap().is_match(message.get("metadata").unwrap().get("message-queue-name").unwrap().to_string().as_str())).to(be_true());
   let res = pactffi_write_message_pact_file(message_pact_handle.clone(), file_path.as_ptr(), true);
   expect!(res).to(be_eq(0));
-}
-
-#[test]
-fn pactffi_verifier_cli_args_test() {
-    let data = pactffi_verifier_cli_args();
-    let c_str: &CStr = unsafe { CStr::from_ptr(data) };
-    let str_slice: &str = c_str.to_str().unwrap();
-
-    let options_flags: OptionsFlags = serde_json::from_str(str_slice).unwrap();
-
-    assert!(options_flags.options.len() > 0);
-    assert!(options_flags.flags.len() > 0);
 }
 
 /// Get the path to one of our sample *.json files.
