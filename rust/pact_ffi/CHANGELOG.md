@@ -1,5 +1,11 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 0.5.2 - Bugfix Release
+
+* 7473d61f - chore(pact_ffi): Remove the deprecated Clap-based FFI functions (Ronald Holshausen, Thu Jan 15 09:39:00 2026 +1100)
+* f0fc2a93 - fix(pact_ffi): update mock server status functions to use the server manager Tokio runtime #511 (Ronald Holshausen, Wed Jan 14 16:51:19 2026 +1100)
+* a6bdccd7 - bump version to 0.5.2 (Ronald Holshausen, Tue Jan 13 16:15:59 2026 +1100)
+
 # 0.5.1 - Bugfix Release
 
 * 93b0d736 - chore(pact_ffi): Cleanup some compiler warnings (Ronald Holshausen, Tue Jan 13 15:42:57 2026 +1100)
