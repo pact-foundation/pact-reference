@@ -224,20 +224,8 @@ ffi_fn! {
     fn pactffi_mock_server_matched(mock_server_port: i32) -> bool {
         let mut guard = MANAGER.lock().unwrap();
         let manager = guard.get_or_insert_with(ServerManager::new);
-        manager.find_mock_server_by_port(mock_server_port as u16, &|_, _, mock_server| {
-          match mock_server {
-            Either::Left(mock_server) => mock_server.mismatches().is_empty(),
-            Either::Right(plugin_mock_server) => {
-              match futures::executor::block_on(get_mock_server_results(&plugin_mock_server.mock_server_details)) {
-                Ok(results) => results.is_empty(),
-                Err(err) => {
-                  error!("Request to plugin to get matching results failed - {}", err);
-                  false
-                }
-              }
-            }
-          }
-        }).unwrap_or(false)
+        manager.mock_server_matched_by_port(mock_server_port as u16)
+          .unwrap_or(false)
     }
     {
         false
@@ -262,69 +250,31 @@ ffi_fn! {
     fn pactffi_mock_server_mismatches(mock_server_port: i32) -> *mut c_char {
         let mut guard = MANAGER.lock().unwrap();
         let manager = guard.get_or_insert_with(ServerManager::new);
-        let mismatches = manager.find_mock_server_by_port(mock_server_port as u16, &|_, _, mock_server| {
-            match mock_server {
-                Either::Left(mock_server) => {
-                    serde_json::Value::Array(
-                        mock_server.mismatches()
-                        .iter()
-                        .map(|mismatch| mismatch.to_json())
-                        .collect()
-                    ).to_string()
-                }
-                Either::Right(plugin_mock_server) => {
-                    match futures::executor::block_on(get_mock_server_results(
-                        &plugin_mock_server.mock_server_details,
-                    )) {
-                        Ok(results) => json!(results
-                            .iter()
-                            .map(|item| {
-                                json!({
-                                    "path": item.path,
-                                    "error": item.error,
-                                    "mismatches": item.mismatches.iter().map(|mismatch| {
-                                    json!({
-                                        "expected": mismatch.expected,
-                                        "actual": mismatch.actual,
-                                        "mismatch": mismatch.mismatch,
-                                        "path": mismatch.path,
-                                        "diff": mismatch.diff.clone().unwrap_or_default()
-                                    })
-                                    }).collect::<Vec<_>>()
-                                })
-                            })
-                            .collect::<Vec<_>>())
-                            .to_string(),
-                        Err(err) => {
-                            error!("Request to plugin to get matching results failed - {}", err);
-                            json!({
-                                "error": format!("Request to plugin to get matching results failed - {}", err)
-                            })
-                            .to_string()
-                        }
-                    }
-                }
-            }
-        });
+        let mismatches = manager.mock_server_mismatches_by_port(mock_server_port as u16);
 
         match mismatches {
-            Some(str) => {
+            Ok(Some(results)) => {
+                let str = Value::Array(results).to_string();
                 match CString::new(str) {
-                Ok(s) => {
-                    let p = s.as_ptr() as *mut _;
-                    manager.store_mock_server_resource(mock_server_port as u16, s);
-                    p
-                }
-                Err(err) => {
-                    error!("Failed to copy mismatches result - {}", err);
-                    ptr::null_mut()
-                }
+                  Ok(s) => {
+                      let p = s.as_ptr() as *mut _;
+                      manager.store_mock_server_resource(mock_server_port as u16, s);
+                      p
+                  }
+                  Err(err) => {
+                      error!("Failed to copy mismatches result - {}", err);
+                      ptr::null_mut()
+                  }
                 }
             }
-            None => ptr::null_mut()
+            Ok(None) => ptr::null_mut(),
+            Err(err) => {
+              error!("Request to plugin to get matching results failed - {}", err);
+              ptr::null_mut()
+            }
         }
     } {
-        std::ptr::null_mut()
+        ptr::null_mut()
     }
 }
 

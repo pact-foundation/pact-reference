@@ -71,6 +71,7 @@ use pact_ffi::mock_server::handles::{
   PactHandle,
 };
 use pact_ffi::mock_server::handles::pactffi_with_matching_rules;
+use pact_ffi::mock_server::pactffi_mock_server_matched;
 use pact_ffi::verifier::{
   OptionsFlags,
   pactffi_verifier_add_directory_source,
@@ -485,6 +486,7 @@ fn http_consumer_feature_test() {
   };
 
   thread::sleep(Duration::from_millis(100)); // Give mock server some time to update events
+  let status = pactffi_mock_server_matched(port);
   let mismatches = unsafe {
     CStr::from_ptr(pactffi_mock_server_mismatches(port)).to_string_lossy().into_owned()
   };
@@ -492,6 +494,7 @@ fn http_consumer_feature_test() {
   pactffi_write_pact_file(port, file_path.as_ptr(), true);
   pactffi_cleanup_mock_server(port);
 
+  expect!(status).to(be_true());
   expect!(mismatches).to(be_equal_to("[]"));
 }
 
