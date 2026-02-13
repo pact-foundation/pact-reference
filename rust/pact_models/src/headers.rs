@@ -70,4 +70,45 @@ mod tests {
     let parsed = parse_header("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) QtWebEngine/6.6.3 Chrome/112.0.5615.213 Safari/537.36");
     expect!(parsed).to(be_equal_to(vec!["Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) QtWebEngine/6.6.3 Chrome/112.0.5615.213 Safari/537.36"]));
   }
+
+  // ========== REPRODUCTION TESTS FOR ISSUE: pact-js#1058 ==========
+  // See: https://github.com/pact-foundation/pact-js/issues/1058
+  //
+  // These tests demonstrate the bug where custom headers containing commas
+  // (like JSON values) are incorrectly split.
+
+  #[test]
+  fn parse_custom_header_with_json_value_bug_demonstration() {
+    // This test DEMONSTRATES THE BUG - it shows the CURRENT (incorrect) behavior
+    // A custom header with JSON containing commas should NOT be split
+    let parsed = parse_header(
+      "X-Custom-Header",
+      r#"{"id":"asd-asdasd-sd","additionalInfo":"some additional string"}"#
+    );
+
+    // CURRENT BUGGY BEHAVIOR: Header is incorrectly split at the comma
+    // This assertion passes with the current code, but it SHOULD NOT - this is the bug!
+    expect!(parsed.len()).to(be_greater_than(1)); // Bug: splits into multiple values
+    expect!(parsed).to(be_equal_to(vec![
+      r#"{"id":"asd-asdasd-sd""#,                     // First fragment - invalid JSON!
+      r#""additionalInfo":"some additional string"}"# // Second fragment - invalid JSON!
+    ]));
+  }
+
+  #[test]
+  #[ignore] // This test represents the EXPECTED behavior, ignored until bug is fixed
+  fn parse_custom_header_should_not_split_unknown_headers() {
+    // EXPECTED BEHAVIOR: Unknown/custom headers should NOT be split by comma
+    // They should be treated as single values (like Pact-JVM does after fix 8c5b0b1)
+    let parsed = parse_header(
+      "X-Custom-Header",
+      r#"{"id":"asd-asdasd-sd","additionalInfo":"some additional string"}"#
+    );
+
+    // After the fix, this should be the behavior:
+    expect!(parsed.len()).to(be_equal_to(1));
+    expect!(parsed).to(be_equal_to(vec![
+      r#"{"id":"asd-asdasd-sd","additionalInfo":"some additional string"}"#
+    ]));
+  }
 }
