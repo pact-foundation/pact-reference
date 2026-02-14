@@ -596,7 +596,7 @@ mod tests {
     let result = headers_from_json(&headers);
     expect!(result.unwrap()).to(be_equal_to(hashmap! {
       "A".to_string() => vec!["B".to_string()],
-      "B".to_string() => vec!["A".to_string(), "B".to_string(), "C".to_string()],
+      "B".to_string() => vec!["A, B, C".to_string()],
       "C".to_string() => vec!["B".to_string()],
       "Date".to_string() => vec!["Sun, 12 Mar 2023 01:21:35 GMT".to_string()]
     }));

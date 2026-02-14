@@ -26,12 +26,12 @@ pub static MULTI_VALUE_HEADERS: [&str; 12] = [
 ];
 
 /// Tries to parse the header value into multiple values, taking into account headers that should
-/// not be split.
+/// not be split. Only known multi-value headers (per RFC 7230/9110) are split on commas.
 pub fn parse_header(name: &str, value: &str) -> Vec<String> {
-  if SINGLE_VALUE_HEADERS.contains(&name.to_lowercase().as_str()) {
-    vec![ value.trim().to_string() ]
-  } else {
+  if MULTI_VALUE_HEADERS.contains(&name.to_lowercase().as_str()) {
     value.split(',').map(|v| v.trim().to_string()).collect()
+  } else {
+    vec![ value.trim().to_string() ]
   }
 }
 
