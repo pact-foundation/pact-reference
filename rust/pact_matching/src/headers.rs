@@ -91,7 +91,14 @@ pub(crate) fn match_header_value(
   } else if PARAMETERISED_HEADERS.contains(&key.to_lowercase().as_str()) {
     match_parameter_header(expected, actual, key, "header")
   } else {
-    Matches::matches_with(&expected.to_string(), &actual.to_string(), &MatchingRule::Equality, false)
+    // Normalize whitespace around commas for comparison, since RFC 7230 allows optional whitespace
+    // after commas in header values. This ensures "a,b" matches "a, b".
+    let normalize_comma_whitespace = |s: &str| -> String {
+      s.split(',').map(|v| v.trim()).collect::<Vec<_>>().join(",")
+    };
+    let normalized_expected = normalize_comma_whitespace(expected);
+    let normalized_actual = normalize_comma_whitespace(actual);
+    Matches::matches_with(&normalized_expected, &normalized_actual, &MatchingRule::Equality, false)
       .map_err(|err| {
         if single_value {
           vec![format!("{}", err)]

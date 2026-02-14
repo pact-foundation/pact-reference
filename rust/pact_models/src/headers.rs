@@ -9,13 +9,48 @@ pub static SINGLE_VALUE_HEADERS: [&str; 7] = [
   "last-modified"
 ];
 
+/// HTTP headers that are known to support multiple comma-separated values per RFC 7230/9110.
+/// Only these headers should be parsed into multiple values; unknown headers should NOT be split
+/// to avoid breaking values that legitimately contain commas (e.g., JSON-encoded values).
+/// See: https://github.com/pact-foundation/pact-js/issues/1058
+pub static MULTI_VALUE_HEADERS: [&str; 28] = [
+  "accept",
+  "accept-charset",
+  "accept-encoding",
+  "accept-language",
+  "accept-ranges",
+  "access-control-allow-headers",
+  "access-control-allow-methods",
+  "access-control-expose-headers",
+  "access-control-request-headers",
+  "allow",
+  "cache-control",
+  "connection",
+  "content-encoding",
+  "content-language",
+  "expect",
+  "if-match",
+  "if-none-match",
+  "pragma",
+  "proxy-authenticate",
+  "te",
+  "trailer",
+  "transfer-encoding",
+  "upgrade",
+  "vary",
+  "via",
+  "warning",
+  "www-authenticate",
+  "x-forwarded-for"
+];
+
 /// Tries to parse the header value into multiple values, taking into account headers that should
-/// not be split.
+/// not be split. Only known multi-value headers (per RFC 7230/9110) are split on commas.
 pub fn parse_header(name: &str, value: &str) -> Vec<String> {
-  if SINGLE_VALUE_HEADERS.contains(&name.to_lowercase().as_str()) {
-    vec![ value.trim().to_string() ]
-  } else {
+  if MULTI_VALUE_HEADERS.contains(&name.to_lowercase().as_str()) {
     value.split(',').map(|v| v.trim().to_string()).collect()
+  } else {
+    vec![ value.trim().to_string() ]
   }
 }
 
