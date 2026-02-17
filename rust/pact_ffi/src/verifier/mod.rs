@@ -358,7 +358,7 @@ ffi_fn! {
 ffi_fn! {
     /// Sets whether redirects should be automatically followed. Setting the `follow` parameter
     /// to zero will disable following redirects.
-    fn pactffi_verifier_set_follow_redircts(
+    fn pactffi_verifier_set_follow_redirects(
       handle: *mut handle::VerifierHandle,
       follow: c_uchar
     ) {
