@@ -70,4 +70,17 @@ mod tests {
     let parsed = parse_header("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) QtWebEngine/6.6.3 Chrome/112.0.5615.213 Safari/537.36");
     expect!(parsed).to(be_equal_to(vec!["Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) QtWebEngine/6.6.3 Chrome/112.0.5615.213 Safari/537.36"]));
   }
+
+  /// Verifies that custom headers containing JSON (with commas) are not split into multiple values.
+  /// See: https://github.com/pact-foundation/pact-reference/commit/6a985b9d0e512973a18943d3eaacae564a773c74
+  /// This test covers the original bug from Pact JS.
+  #[test]
+  fn parse_custom_header_should_not_split_unknown_headers() {
+    // JSON header value containing commas
+    let header_name = "x-custom-json";
+    let header_value = "{\"foo\":\"bar,baz\",\"arr\":[1,2,3]}";
+    let parsed = parse_header(header_name, header_value);
+    // Should not split into multiple values
+    expect!(parsed).to(be_equal_to(vec![header_value.to_string()]));
+  }
 }
