@@ -25,7 +25,7 @@ colour = ["dep:yansi"]
 [dependencies]
 anyhow = "1.0.100"
 async-trait = "0.1.89"
-bytes = "1.11.0"
+bytes = "1.11.1"
 itertools = "0.14.0"
 maplit = "1.0.2"
 pact_matching = { version = "~2.0.2", path = "../pact_matching", default-features = false }
