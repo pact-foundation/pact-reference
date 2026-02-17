@@ -334,6 +334,11 @@ impl VerifierHandle {
   pub fn add_custom_header(&mut self, header_name: &str, header_value: &str) {
     self.verification_options.custom_headers.insert(header_name.to_string(), header_value.to_string());
   }
+
+  /// Sets whether redirects should be automatically followed
+  pub fn follow_redirects(&mut self, follow: bool) {
+    self.verification_options.follow_redirects = follow;
+  }
 }
 
 impl Default for VerifierHandle {

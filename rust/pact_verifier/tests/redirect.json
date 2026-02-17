@@ -1,0 +1,23 @@
+{
+  "provider": {
+    "name": "NoFollowRedirectProvider"
+  },
+  "consumer": {
+    "name": "Consumer"
+  },
+  "interactions": [
+    {
+      "description": "request that receives a redirect",
+      "request": {
+        "method": "GET",
+        "path": "/myapp/test"
+      },
+      "response": {
+        "status": 302,
+        "headers": {
+          "Location": "/myapp/test2"
+        }
+      }
+    }
+  ]
+}

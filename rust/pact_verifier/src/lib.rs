@@ -709,6 +709,10 @@ pub(crate) fn configure_http_client<F: RequestFilterExecutor>(
     client_builder = client_builder.default_headers(headers);
   }
 
+  if !options.follow_redirects {
+    client_builder = client_builder.redirect(reqwest::redirect::Policy::none());
+  }
+
   client_builder.build().map_err(|err| anyhow!(err))
 }
 
@@ -988,7 +992,9 @@ pub struct VerificationOptions<F> where F: RequestFilterExecutor {
   /// Exit verification run on first failure
   pub exit_on_first_failure: bool,
   /// Only execute the interactions that failed on the previous verifier run
-  pub run_last_failed_only: bool
+  pub run_last_failed_only: bool,
+  /// If redirects should be automatically followed
+  pub follow_redirects: bool
 }
 
 impl <F: RequestFilterExecutor> Default for VerificationOptions<F> {
@@ -1001,7 +1007,8 @@ impl <F: RequestFilterExecutor> Default for VerificationOptions<F> {
       coloured_output: true,
       no_pacts_is_error: true,
       exit_on_first_failure: false,
-      run_last_failed_only: false
+      run_last_failed_only: false,
+      follow_redirects: true
     }
   }
 }

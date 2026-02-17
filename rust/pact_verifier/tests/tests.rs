@@ -1210,3 +1210,53 @@ async fn verifying_a_pact_with_exit_first_set() {
     .collect_vec()
   ).to(be_equal_to(vec!["first pact interaction"]));
 }
+
+#[test_log::test(tokio::test)]
+async fn verify_pact_with_redirects() {
+  let server = PactBuilderAsync::new("consumer", "redirects")
+    .interaction("request that receives a redirect", "", |mut i| async move {
+      i.test_name("verify_pact_with_redirects");
+      i.request.method("GET");
+      i.request.path("/myapp/test");
+      i.response
+        .status(302)
+        .header("Location", "/myapp/test2");
+      i
+    })
+    .await
+    .start_mock_server(None, None);
+
+  #[allow(deprecated)]
+  let provider = ProviderInfo {
+    name: "NoFollowRedirectProvider".to_string(),
+    host: "127.0.0.1".to_string(),
+    port: server.url().port(),
+    transports: vec![ ProviderTransport {
+      transport: "HTTP".to_string(),
+      port: server.url().port(),
+      path: None,
+      scheme: Some("http".to_string())
+    } ],
+    .. ProviderInfo::default()
+  };
+
+  let pact_file = fixture_path("redirect.json");
+  let pact = read_pact(pact_file.as_path()).unwrap();
+  let options: VerificationOptions<NullRequestFilterExecutor> = VerificationOptions {
+    follow_redirects: false,
+    .. VerificationOptions::default()
+  };
+  let provider_states = Arc::new(DummyProviderStateExecutor{});
+
+  let result = verify_pact_internal(
+    &provider,
+    &FilterInfo::None,
+    pact,
+    &options,
+    &provider_states,
+    false,
+    Duration::default()
+  ).await;
+
+  expect!(result.unwrap().results.get(0).unwrap().result.as_ref()).to(be_ok());
+}
