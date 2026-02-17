@@ -1455,6 +1455,9 @@ mod tests {
     let client = HALClientBuilder::builder().with_url(pact_broker.url(), None).build();
     let expected_requests = client.retries as usize;
     let result = client.put_json(pact_broker.url().as_str(), "{}").await;
+
+    sleep(Duration::from_millis(100)).await;
+
     expect!(result.clone()).to(be_err());
     expect!(pact_broker.metrics().requests).to(be_equal_to(expected_requests ));
   }
