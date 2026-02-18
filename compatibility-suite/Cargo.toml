@@ -12,7 +12,7 @@ cucumber = "0.21.1"
 itertools = "0.14.0"
 lazy_static = "1.4.0"
 maplit = "1.0.2"
-pact_models = { version = "~1.3.7" }
+pact_models = { version = "~1.3.8" }
 pact_matching = { version = "~2.0.2" }
 pact_mock_server = { version = "~2.1.2" }
 pact_verifier = { version = "~1.3.2" }
@@ -29,7 +29,7 @@ tracing-subscriber = { version = "0.3.19", features = ["env-filter", "tracing-lo
 uuid = { version = "1.5.0", features = ["v4"] }
 
 [patch.crates-io]
-pact_models = { version = "1.3.6", path = "../rust/pact_models" }
+pact_models = { version = "1.3.8", path = "../rust/pact_models" }
 pact_matching = { version = "2.0.2", path = "../rust/pact_matching" }
 
 [[test]]
