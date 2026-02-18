@@ -1,5 +1,12 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 2.0.3 - Bugfix Release
+
+* 650a2582 - chore: Update pact_models to 1.3.8 (Ronald Holshausen, Wed Feb 18 12:19:37 2026 +1100)
+* 2e7fe4a5 - fix: only split known multi-value HTTP headers on commas (Matt Fellows, Sat Feb 14 21:55:07 2026 +1100)
+* fa52876a - chore: Fix compatability tests after update for wasm32-wasip2 target (Ronald Holshausen, Wed Sep 17 12:03:27 2025 +1000)
+* 44b28cfc - bump version to 2.0.3 (Ronald Holshausen, Wed Sep 17 10:31:10 2025 +1000)
+
 # 2.0.2 - Support the wasm32-wasip2 target
 
 * b95b30dd - chore(pact_matching): Support compiling with wasm32-wasip2 target (Ronald Holshausen, Wed Sep 17 10:14:50 2025 +1000)
