@@ -547,6 +547,8 @@ fn http_xml_consumer_feature_test() {
     }
   };
 
+  thread::sleep(Duration::from_millis(100)); // Give mock server some time to update events
+
   let mismatches = unsafe {
     CStr::from_ptr(pactffi_mock_server_mismatches(port)).to_string_lossy().into_owned()
   };
