@@ -2715,7 +2715,7 @@ dependencies = [
  "quickcheck",
  "regex",
  "reqwest 0.12.28",
- "rstest 0.24.0",
+ "rstest 0.26.1",
  "serde",
  "serde_json",
  "serde_with",
