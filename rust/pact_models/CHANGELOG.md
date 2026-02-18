@@ -1,5 +1,13 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.3.8 - Bugfix Release
+
+* a65303bd - chore(pact_models): Upgrade rand and rand_regex (Ronald Holshausen, Wed Feb 18 12:03:42 2026 +1100)
+* 9d4b31fe - chore(pact_models): Update dependencies (Ronald Holshausen, Wed Feb 18 11:41:57 2026 +1100)
+* e6714426 - wip: add test for not splitting JSON in headers (Matt Fellows, Tue Feb 17 21:55:35 2026 +1100)
+* 2e7fe4a5 - fix: only split known multi-value HTTP headers on commas (Matt Fellows, Sat Feb 14 21:55:07 2026 +1100)
+* 52a7af7f - bump version to 1.3.8 (Ronald Holshausen, Tue Sep 16 13:35:40 2025 +1000)
+
 # 1.3.7 - Support wasm32-wasip2 target
 
 * 183a8c74 - fix(pact-models): Support compiling with wasm32-wasip2 target (Ronald Holshausen, Tue Sep 16 13:06:38 2025 +1000)
