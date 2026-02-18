@@ -163,7 +163,7 @@ impl HttpRequest {
 
   /// Returns the entry for a header key. This will do a case-insensitive search. Note that the
   /// original case of the header will be retained.
-  fn header_entry<H: Into<String>>(&mut self, header_name: H) -> Entry<String, Vec<String>> {
+  fn header_entry<H: Into<String>>(&mut self, header_name: H) -> Entry<'_, String, Vec<String>> {
     let header_name = header_name.into();
     if let Some(key) = self.lookup_header_key(header_name.as_str()) {
       let headers = self.headers_mut();
@@ -595,7 +595,7 @@ impl HttpResponse {
 
   /// Returns the entry for a header key. This will do a case-insensitive search. Note that the
   /// original case of the header will be retained.
-  fn header_entry<H: Into<String>>(&mut self, header_name: H) -> Entry<String, Vec<String>> {
+  fn header_entry<H: Into<String>>(&mut self, header_name: H) -> Entry<'_, String, Vec<String>> {
     let header_name = header_name.into();
     if let Some(key) = self.lookup_header_key(header_name.as_str()) {
       let headers = self.headers_mut();

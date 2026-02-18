@@ -356,8 +356,8 @@ mod tests {
        |   ╭─[ expression:1:1 ]
        |   │
        | 1 │ not valid
-       |   │ ┬ \u{0020}
-       |   │ ╰── Expected one of now, midnight, noon, 1-12 o'clock, +, -, next or last here
+       |   │ ─┬ \u{0020}
+       |   │  ╰── Expected one of now, midnight, noon, 1-12 o'clock, +, -, next or last here
        |───╯
        |
       ".trim_margin_with("|").unwrap(),

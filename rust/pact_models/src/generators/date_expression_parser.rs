@@ -410,8 +410,8 @@ mod tests {
           |   ╭─[ expression:1:1 ]
           |   │
           | 1 │ not valid
-          |   │ ┬ \u{0020}
-          |   │ ╰── Expected one of now, today, yesterday, tomorrow, +, -, next or last here
+          |   │ ─┬ \u{0020}
+          |   │  ╰── Expected one of now, today, yesterday, tomorrow, +, -, next or last here
           |───╯
           |
           ".trim_margin_with("|").unwrap(),
