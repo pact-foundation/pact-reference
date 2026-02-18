@@ -6,6 +6,7 @@ use std::io::Read;
 use std::path::PathBuf;
 use std::ptr::null;
 use std::str::from_utf8;
+use std::thread::sleep;
 use std::time::Duration;
 
 use bytes::Bytes;
@@ -114,7 +115,12 @@ fn post_to_mock_server_with_mismatches() {
   client.post(format!("http://127.0.0.1:{}/path", port).as_str())
     .header(CONTENT_TYPE, "application/json")
     .body(r#"{"foo":"no-very-bar"}"#)
-    .send().expect("Sent POST request to mock server");
+    .send()
+    .expect("Sent POST request to mock server")
+    .text()
+    .expect("Failed to read response body");
+
+  sleep(Duration::from_millis(100));
 
   let mismatches = unsafe {
     CStr::from_ptr(pactffi_mock_server_mismatches(port)).to_string_lossy().into_owned()
