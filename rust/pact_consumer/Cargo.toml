@@ -28,7 +28,7 @@ async-trait = "0.1.89"
 bytes = "1.11.1"
 itertools = "0.14.0"
 maplit = "1.0.2"
-pact_matching = { version = "~2.0.2", path = "../pact_matching", default-features = false }
+pact_matching = { version = "~2.0.3", path = "../pact_matching", default-features = false }
 pact_mock_server = { version = "~2.2.0", default-features = false }
 pact_models = { version = "~1.3.8", default-features = false }
 pact-plugin-driver = { version = "~0.7.5", optional = true, default-features = false }
