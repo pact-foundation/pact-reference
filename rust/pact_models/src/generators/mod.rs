@@ -12,7 +12,7 @@ use anyhow::anyhow;
 use itertools::Itertools;
 use maplit::hashmap;
 #[cfg(not(target_family = "wasm"))] use onig::{Captures, Regex};
-use rand::distributions::Alphanumeric;
+use rand::distr::Alphanumeric;
 use rand::prelude::*;
 #[cfg(target_family = "wasm")] use regex::{Captures, Regex};
 use serde::{Deserialize, Serialize};
@@ -785,7 +785,7 @@ pub fn generate_value_from_context(expression: &str, context: &HashMap<&str, Val
 
 const DIGIT_CHARSET: &str = "0123456789";
 pub fn generate_decimal(digits: usize) -> String {
-  let mut rnd = rand::thread_rng();
+  let mut rnd = rand::rng();
   let chars: Vec<char> = DIGIT_CHARSET.chars().collect();
   match digits {
     0 => "".to_string(),
@@ -800,7 +800,7 @@ pub fn generate_decimal(digits: usize) -> String {
         let chars = DIGIT_CHARSET[1..].chars();
         sample.insert(0, chars.choose(&mut rnd).unwrap());
       }
-      let pos = rnd.gen_range(1..digits - 1);
+      let pos = rnd.random_range(1..digits - 1);
       let selected_digits = if pos != 1 && sample.starts_with('0') {
         &sample[1..(digits + 1)]
       } else {
@@ -816,7 +816,7 @@ pub fn generate_decimal(digits: usize) -> String {
 
 const HEX_CHARSET: &str = "0123456789ABCDEF";
 pub fn generate_hexadecimal(digits: usize) -> String {
-  let mut rnd = rand::thread_rng();
+  let mut rnd = rand::rng();
   HEX_CHARSET.chars().choose_multiple(&mut rnd, digits).iter().join("")
 }
 
@@ -828,7 +828,7 @@ impl GenerateValue<u16> for Generator {
     _matcher: &Box<dyn VariantMatcher + Send + Sync>
   ) -> anyhow::Result<u16> {
     match self {
-      &Generator::RandomInt(min, max) => Ok(rand::thread_rng().gen_range(min as u16..(max as u16).saturating_add(1))),
+      &Generator::RandomInt(min, max) => Ok(rand::rng().random_range(min as u16..(max as u16).saturating_add(1))),
       &Generator::ProviderStateGenerator(ref exp, ref dt) => {
         // Provider state values may come under a "providerState" key
         let provider_state_config = if let Some(Object(psc)) = context.get("providerState") {
@@ -850,7 +850,7 @@ impl GenerateValue<u16> for Generator {
 }
 
 pub fn generate_ascii_string(size: usize) -> String {
-  rand::thread_rng().sample_iter(&Alphanumeric).map(char::from).take(size).collect()
+  rand::rng().sample_iter(&Alphanumeric).map(char::from).take(size).collect()
 }
 
 fn strip_anchors(regex: &str) -> &str {
@@ -881,9 +881,9 @@ impl GenerateValue<String> for Generator {
     context: &HashMap<&str, Value>,
     _matcher: &Box<dyn VariantMatcher + Send + Sync>
   ) -> anyhow::Result<String> {
-    let mut rnd = rand::thread_rng();
+    let mut rnd = rand::rng();
     let result = match self {
-      Generator::RandomInt(min, max) => Ok(format!("{}", rnd.gen_range(*min..max.saturating_add(1)))),
+      Generator::RandomInt(min, max) => Ok(format!("{}", rnd.random_range(*min..max.saturating_add(1)))),
       Generator::Uuid(format) => match format.unwrap_or_default() {
         UuidFormat::Simple => Ok(Uuid::new_v4().as_simple().to_string()),
         UuidFormat::LowerCaseHyphenated => Ok(Uuid::new_v4().as_hyphenated().to_string()),
@@ -986,7 +986,7 @@ impl GenerateValue<String> for Generator {
           Err(anyhow!("DateTime generators require the 'datetime' feature to be enabled"))
         }
       }
-      Generator::RandomBoolean => Ok(format!("{}", rnd.r#gen::<bool>())),
+      Generator::RandomBoolean => Ok(format!("{}", rnd.random::<bool>())),
       Generator::ProviderStateGenerator(exp, dt) => {
         // Provider state values may come under a "providerState" key
         let provider_state_config = if let Some(Object(psc)) = context.get("providerState") {
@@ -1044,7 +1044,7 @@ impl GenerateValue<Value> for Generator {
     debug!(context = ?context, "Generating value from {:?}", self);
     let result = match self {
       Generator::RandomInt(min, max) => {
-        let rand_int = rand::thread_rng().gen_range(*min..max.saturating_add(1));
+        let rand_int = rand::rng().random_range(*min..max.saturating_add(1));
         match value {
           Value::String(_) => Ok(json!(format!("{}", rand_int))),
           Value::Number(_) => Ok(json!(rand_int)),
@@ -1075,7 +1075,7 @@ impl GenerateValue<Value> for Generator {
         match parser.parse(strip_anchors(regex)) {
           Ok(hir) => {
             match rand_regex::Regex::with_hir(hir, 20) {
-              Ok(r) => Ok(json!(thread_rng().sample::<String, _>(r))),
+              Ok(r) => Ok(json!(rand::rng().sample::<String, _>(r))),
               Err(err) => {
                 warn!("Failed to generate a value from regular expression - {}", err);
                 Err(anyhow!("Failed to generate a value from regular expression - {}", err))
@@ -1163,7 +1163,7 @@ impl GenerateValue<Value> for Generator {
           Err(anyhow!("DateTime generators require the 'datetime' feature to be enabled"))
         }
       },
-      Generator::RandomBoolean => Ok(json!(rand::thread_rng().r#gen::<bool>())),
+      Generator::RandomBoolean => Ok(json!(rand::rng().random::<bool>())),
       Generator::ProviderStateGenerator(exp, dt) => {
         // Provider state values may come under a "providerState" key
         let provider_state_config = if let Some(Object(psc)) = context.get("providerState") {
