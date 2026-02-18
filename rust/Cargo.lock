@@ -171,9 +171,9 @@ dependencies = [
 
 [[package]]
 name = "async-compression"
-version = "0.4.39"
+version = "0.4.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68650b7df54f0293fd061972a0fb05aaf4fc0879d3b3d21a638a182c5c543b9f"
+checksum = "7d67d43201f4d20c78bcda740c142ca52482d81da80681533d33bf3f0596c8e2"
 dependencies = [
  "compression-codecs",
  "compression-core",
@@ -217,9 +217,9 @@ dependencies = [
 
 [[package]]
 name = "aws-lc-rs"
-version = "1.15.4"
+version = "1.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b7b6141e96a8c160799cc2d5adecd5cbbe5054cb8c7c4af53da0f83bb7ad256"
+checksum = "d9a7b350e3bb1767102698302bc37256cbd48422809984b98d292c40e2579aa9"
 dependencies = [
  "aws-lc-sys",
  "zeroize",
@@ -327,9 +327,9 @@ dependencies = [
 
 [[package]]
 name = "bumpalo"
-version = "3.19.1"
+version = "3.20.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5dd9dc738b7a8311c7ade152424974d8115f2cdad61e8dab8dac9f2362298510"
+checksum = "5c6f81257d10a0f602a294ae4182251151ff97dbb504ef9afcdda4a64b24d9b4"
 
 [[package]]
 name = "byteorder"
@@ -494,9 +494,9 @@ dependencies = [
 
 [[package]]
 name = "compression-codecs"
-version = "0.4.36"
+version = "0.4.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "00828ba6fd27b45a448e57dbfe84f1029d4c9f26b368157e9a448a5f49a2ec2a"
+checksum = "eb7b51a7d9c967fc26773061ba86150f19c50c0d65c887cb1fbe295fd16619b7"
 dependencies = [
  "compression-core",
  "flate2",
@@ -2442,7 +2442,7 @@ dependencies = [
  "itertools",
  "maplit",
  "pact-plugin-driver",
- "pact_matching 2.0.3",
+ "pact_matching 2.0.4",
  "pact_mock_server",
  "pact_models",
  "pretty_assertions",
@@ -2483,7 +2483,7 @@ dependencies = [
  "onig",
  "os_info",
  "pact-plugin-driver",
- "pact_matching 2.0.3",
+ "pact_matching 2.0.4",
  "pact_mock_server",
  "pact_models",
  "pact_verifier",
@@ -2514,9 +2514,9 @@ dependencies = [
 
 [[package]]
 name = "pact_matching"
-version = "2.0.2"
+version = "2.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "165581424d22a96b8f62bdb9fc61ac07e34130d80106ca31c33a1ec5bed2a4ca"
+checksum = "2473329ff8cb3847fbf0b6b54e89488eb901a608cc88b7b70ed41497fc63dd62"
 dependencies = [
  "ansi_term",
  "anyhow",
@@ -2557,7 +2557,7 @@ dependencies = [
 
 [[package]]
 name = "pact_matching"
-version = "2.0.3"
+version = "2.0.4"
 dependencies = [
  "ansi_term",
  "anyhow",
@@ -2623,7 +2623,7 @@ dependencies = [
  "lazy_static",
  "maplit",
  "pact-plugin-driver",
- "pact_matching 2.0.2",
+ "pact_matching 2.0.3",
  "pact_models",
  "rcgen",
  "rustls",
@@ -2709,7 +2709,7 @@ dependencies = [
  "mime",
  "pact-plugin-driver",
  "pact_consumer",
- "pact_matching 2.0.3",
+ "pact_matching 2.0.4",
  "pact_models",
  "pretty_assertions",
  "quickcheck",
