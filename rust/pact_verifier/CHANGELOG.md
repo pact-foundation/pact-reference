@@ -1,5 +1,16 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.3.4 - Maintenance Release
+
+* ea571fbe - chore(pact_verifier): Update dependencies (Ronald Holshausen, Thu Feb 19 10:44:44 2026 +1100)
+* 0c9a0b27 - chore: Update pact_matching to 2.0.3 (Ronald Holshausen, Thu Feb 19 10:16:12 2026 +1100)
+* 650a2582 - chore: Update pact_models to 1.3.8 (Ronald Holshausen, Wed Feb 18 12:19:37 2026 +1100)
+* 485b3ac7 - chore: Fix for flaky test failing in CI (Ronald Holshausen, Wed Feb 18 09:26:45 2026 +1100)
+* 2afc3c85 - feat: Add option to disable verifier following redirects #513 (Ronald Holshausen, Tue Feb 17 12:11:50 2026 +1100)
+* b59751b2 - chore: Upgrade pact_matching to 2.0.2 (Ronald Holshausen, Wed Sep 17 10:34:34 2025 +1000)
+* eaaee9de - chore: Upgrade pact_models to 1.3.7 (Ronald Holshausen, Tue Sep 16 13:57:37 2025 +1000)
+* 4d7f186c - bump version to 1.3.4 (Ronald Holshausen, Wed Aug 20 09:38:11 2025 +1000)
+
 # 1.3.3 - Maintenance Release
 
 * a77b53c8 - chore: Update pact_matching to 2.0.1 (Ronald Holshausen, Fri Aug 1 09:16:28 2025 +1000)
