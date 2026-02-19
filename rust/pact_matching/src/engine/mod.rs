@@ -537,7 +537,7 @@ impl DoMatch<&NodeValue> for MatchingRule {
           (NodeValue::UINT(e), NodeValue::UINT(a)) => {
             self.match_value(*e, *a, cascaded, show_types)
           }
-          _ => Err(anyhow!("Matching rules can not be applied to {} values", actual_value.value_type()))
+          _ => Err(anyhow!("{} matching rules can not be applied to {} values", self.name(), actual_value.value_type()))
         }
       }
     }
