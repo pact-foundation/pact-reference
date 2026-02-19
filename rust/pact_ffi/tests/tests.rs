@@ -2107,6 +2107,8 @@ fn include_matcher_in_query_parameters() {
   let result = client.get(format!("http://127.0.0.1:{}/request?item=subway", port).as_str())
     .send();
 
+  sleep(Duration::from_millis(100));
+
   let mismatches = unsafe {
     CStr::from_ptr(pactffi_mock_server_mismatches(port)).to_string_lossy().into_owned()
   };
