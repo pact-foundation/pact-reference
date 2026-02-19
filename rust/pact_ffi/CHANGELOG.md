@@ -1,5 +1,18 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 0.5.3 - Maintenance Release
+
+* f818fe62 - chore: Fix flaky test on CI (Ronald Holshausen, Thu Feb 19 11:23:18 2026 +1100)
+* 1d9105de - chore: Update pact_verifier to 1.3.4 (Ronald Holshausen, Thu Feb 19 11:08:03 2026 +1100)
+* 6e8261e7 - chore: Fix flaky test on CI (Ronald Holshausen, Thu Feb 19 10:20:26 2026 +1100)
+* 0c9a0b27 - chore: Update pact_matching to 2.0.3 (Ronald Holshausen, Thu Feb 19 10:16:12 2026 +1100)
+* 57db8afc - chore: Fix flaky test on CI (Ronald Holshausen, Wed Feb 18 16:19:11 2026 +1100)
+* 650a2582 - chore: Update pact_models to 1.3.8 (Ronald Holshausen, Wed Feb 18 12:19:37 2026 +1100)
+* 3b1ed897 - feat: Add option to disable verifier following redirects #513 (Ronald Holshausen, Tue Feb 17 12:13:06 2026 +1100)
+* 2afc3c85 - feat: Add option to disable verifier following redirects #513 (Ronald Holshausen, Tue Feb 17 12:11:50 2026 +1100)
+* 55be8997 - chore(pact_consumer): update bytes to 1.11.1 to resolve RUSTSEC-2026-0007 chore(pact_ffi): update bytes to 1.11.1 to resolve RUSTSEC-2026-0007 (Andrew Tecey, Mon Feb 9 14:25:43 2026 +0000)
+* b8ecf51d - bump version to 0.5.3 (Ronald Holshausen, Thu Jan 15 09:58:31 2026 +1100)
+
 # 0.5.2 - Bugfix Release
 
 * 7473d61f - chore(pact_ffi): Remove the deprecated Clap-based FFI functions (Ronald Holshausen, Thu Jan 15 09:39:00 2026 +1100)
