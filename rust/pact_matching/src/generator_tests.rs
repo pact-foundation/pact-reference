@@ -334,3 +334,203 @@ async fn applies_body_generator_to_the_copy_of_the_message() {
   expect!(&body["a"]).to_not(be_equal_to(&json!(100)));
   expect!(&body["b"]).to(be_equal_to(&json!("B")));
 }
+
+#[tokio::test]
+async fn applies_random_array_generator_to_request_body() {
+  let request = HttpRequest {
+    body: OptionalBody::Present(r#"{"items": [{"name": "xxx", "price": 12, "count": 2}]}"#.into(), Some(JSON.clone()), None),
+    generators: generators! { "BODY" => { "$.items" => Generator::RandomArray(2, 4) } },
+    .. HttpRequest::default()
+  };
+  let generated_request = generate_request(&request, &GeneratorTestMode::Provider, &hashmap!{}).await;
+  let body: Value = serde_json::from_str(generated_request.body.display_string().as_str()).unwrap();
+  let items = body["items"].as_array().unwrap();
+  expect!(items.len()).to(be_ge(2));
+  expect!(items.len()).to(be_le(4));
+  let first_item = &items[0];
+  for item in items {
+    expect!(item).to(be_equal_to(first_item));
+  }
+}
+
+#[tokio::test]
+async fn applies_random_array_generator_to_response_body() {
+  let response = HttpResponse {
+    body: OptionalBody::Present(r#"{"items": [{"name": "yyy", "price": 6, "count": 2}]}"#.into(), Some(JSON.clone()), None),
+    generators: generators! { "BODY" => { "$.items" => Generator::RandomArray(2, 4) } },
+    .. HttpResponse::default()
+  };
+  let generated_response = generate_response(&response, &GeneratorTestMode::Consumer, &hashmap!{}).await;
+  let body: Value = serde_json::from_str(generated_response.body.display_string().as_str()).unwrap();
+  let items = body["items"].as_array().unwrap();
+  expect!(items.len()).to(be_ge(2));
+  expect!(items.len()).to(be_le(4));
+  let first_item = &items[0];
+  for item in items {
+    expect!(item).to(be_equal_to(first_item));
+  }
+}
+
+#[tokio::test]
+async fn applies_random_array_generator_with_nested_generators_to_request_body() {
+  let request = HttpRequest {
+    body: OptionalBody::Present(r#"{"items": [{"name": "xxx", "price": 12, "count": 2}]}"#.into(), Some(JSON.clone()), None),
+    generators: generators! {
+      "BODY" => {
+        "$.items" => Generator::RandomArray(2, 4),
+        "$.items[*].name" => Generator::RandomString(5),
+        "$.items[*].price" => Generator::RandomInt(1, 100),
+        "$.items[*].count" => Generator::RandomInt(1, 10)
+      }
+    },
+    .. HttpRequest::default()
+  };
+  let generated_request = generate_request(&request, &GeneratorTestMode::Provider, &hashmap!{}).await;
+  let body: Value = serde_json::from_str(generated_request.body.display_string().as_str()).unwrap();
+  let items = body["items"].as_array().unwrap();
+  expect!(items.len()).to(be_ge(2));
+  expect!(items.len()).to(be_le(4));
+  for i in 1..items.len() {
+    expect!(&items[i]).not_to(be_equal_to(&items[i - 1]));
+  }
+}
+
+#[tokio::test]
+async fn applies_random_array_generator_with_nested_generators_to_response_body() {
+  let response = HttpResponse {
+    body: OptionalBody::Present(r#"{"items": [{"name": "yyy", "price": 6, "count": 2}]}"#.into(), Some(JSON.clone()), None),
+    generators: generators! {
+      "BODY" => {
+        "$.items" => Generator::RandomArray(2, 4),
+        "$.items[*].name" => Generator::RandomString(5),
+        "$.items[*].price" => Generator::RandomInt(1, 100),
+        "$.items[*].count" => Generator::RandomInt(1, 10)
+      }
+    },
+    .. HttpResponse::default()
+  };
+  let generated_response = generate_response(&response, &GeneratorTestMode::Consumer, &hashmap!{}).await;
+  let body: Value = serde_json::from_str(generated_response.body.display_string().as_str()).unwrap();
+  let items = body["items"].as_array().unwrap();
+  expect!(items.len()).to(be_ge(2));
+  expect!(items.len()).to(be_le(4));
+  for i in 1..items.len() {
+    expect!(&items[i]).not_to(be_equal_to(&items[i - 1]));
+  }
+}
+
+#[tokio::test]
+async fn applies_nested_array_generator_to_request_body() {
+  let request = HttpRequest {
+    body: OptionalBody::Present(r#"{"items": [{"subitems": [{"value": 1}]}]}"#.into(), Some(JSON.clone()), None),
+    generators: generators! {
+      "BODY" => {
+        "$.items" => Generator::RandomArray(2, 3),
+        "$.items[*].subitems" => Generator::RandomArray(2, 3),
+        "$.items[*].subitems[*].value" => Generator::RandomInt(1, 1000)
+      }
+    },
+    .. HttpRequest::default()
+  };
+  let generated_request = generate_request(&request, &GeneratorTestMode::Provider, &hashmap!{}).await;
+  let body: Value = serde_json::from_str(generated_request.body.display_string().as_str()).unwrap();
+  let items = body["items"].as_array().unwrap();
+  expect!(items.len()).to(be_ge(2));
+  expect!(items.len()).to(be_le(3));
+  for i in 1..items.len() {
+    expect!(&items[i]).not_to(be_equal_to(&items[i - 1]));
+    let subitems_curr = items[i]["subitems"].as_array().unwrap();
+    let subitems_prev = items[i - 1]["subitems"].as_array().unwrap();
+    expect!(subitems_curr).not_to(be_equal_to(subitems_prev));
+    for j in 1..subitems_curr.len() {
+      expect!(&subitems_curr[j]).not_to(be_equal_to(&subitems_curr[j - 1]));
+    }
+  }
+}
+
+#[tokio::test]
+async fn applies_random_array_generator_with_exact_bound() {
+  let request = HttpRequest {
+    body: OptionalBody::Present(r#"{"items": [{"value": 1}]}"#.into(), Some(JSON.clone()), None),
+    generators: generators! { "BODY" => { "$.items" => Generator::RandomArray(3, 3) } },
+    .. HttpRequest::default()
+  };
+  let generated_request = generate_request(&request, &GeneratorTestMode::Provider, &hashmap!{}).await;
+  let body: Value = serde_json::from_str(generated_request.body.display_string().as_str()).unwrap();
+  let items = body["items"].as_array().unwrap();
+  expect!(items.len()).to(be_equal_to(3));
+}
+
+#[tokio::test]
+async fn applies_random_array_generator_with_min_max_zero() {
+  let request = HttpRequest {
+    body: OptionalBody::Present(r#"{"items": [{"value": 1}]}"#.into(), Some(JSON.clone()), None),
+    generators: generators! { "BODY" => { "$.items" => Generator::RandomArray(0, 0) } },
+    .. HttpRequest::default()
+  };
+  let generated_request = generate_request(&request, &GeneratorTestMode::Provider, &hashmap!{}).await;
+  let body: Value = serde_json::from_str(generated_request.body.display_string().as_str()).unwrap();
+  let items = body["items"].as_array().unwrap();
+  expect!(items.len()).to(be_equal_to(0));
+}
+
+#[tokio::test]
+async fn applies_random_array_generator_to_root_level_array() {
+  let request = HttpRequest {
+    body: OptionalBody::Present(r#"[{"value": 1}]"#.into(), Some(JSON.clone()), None),
+    generators: generators! { "BODY" => { "$" => Generator::RandomArray(2, 4) } },
+    .. HttpRequest::default()
+  };
+  let generated_request = generate_request(&request, &GeneratorTestMode::Provider, &hashmap!{}).await;
+  let body: Value = serde_json::from_str(generated_request.body.display_string().as_str()).unwrap();
+  let items = body.as_array().unwrap();
+  expect!(items.len()).to(be_ge(2));
+  expect!(items.len()).to(be_le(4));
+}
+
+#[tokio::test]
+async fn applies_random_array_generator_to_empty_array() {
+  let request = HttpRequest {
+    body: OptionalBody::Present(r#"{"items": []}"#.into(), Some(JSON.clone()), None),
+    generators: generators! { "BODY" => { "$.items" => Generator::RandomArray(2, 4) } },
+    .. HttpRequest::default()
+  };
+  let generated_request = generate_request(&request, &GeneratorTestMode::Provider, &hashmap!{}).await;
+  let body: Value = serde_json::from_str(generated_request.body.display_string().as_str()).unwrap();
+  let items = body["items"].as_array().unwrap();
+  expect!(items.len()).to(be_ge(2));
+  expect!(items.len()).to(be_le(4));
+  for item in items {
+    expect!(item).to(be_equal_to(&json!({})));
+  }
+}
+
+#[tokio::test]
+async fn applies_multiple_independent_array_generators() {
+  let request = HttpRequest {
+    body: OptionalBody::Present(r#"{"items": [{"value": 1}], "other": [{"x": 2}]}"#.into(), Some(JSON.clone()), None),
+    generators: generators! {
+      "BODY" => {
+        "$.items" => Generator::RandomArray(2, 3),
+        "$.other" => Generator::RandomArray(3, 4)
+      }
+    },
+    .. HttpRequest::default()
+  };
+  let generated_request = generate_request(&request, &GeneratorTestMode::Provider, &hashmap!{}).await;
+  let body: Value = serde_json::from_str(generated_request.body.display_string().as_str()).unwrap();
+  let items = body["items"].as_array().unwrap();
+  let other = body["other"].as_array().unwrap();
+  expect!(items.len()).to(be_ge(2));
+  expect!(items.len()).to(be_le(3));
+  expect!(other.len()).to(be_ge(3));
+  expect!(other.len()).to(be_le(4));
+  let first_item = &items[0];
+  let first_other = &other[0];
+  for item in items {
+    expect!(item).to(be_equal_to(first_item));
+  }
+  for item in other {
+    expect!(item).to(be_equal_to(first_other));
+  }
+}

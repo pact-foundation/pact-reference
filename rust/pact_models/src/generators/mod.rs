@@ -116,6 +116,24 @@ impl FromStr for UuidFormat {
   }
 }
 
+/// Processing category of generator that determines processing order
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum GeneratorProcessingCategory {
+  /// Structure generators that modify the shape of data (e.g., Array)
+  Structure,
+  /// Data generators that generate values for existing fields
+  Data,
+}
+
+impl GeneratorProcessingCategory {
+  pub fn priority(&self) -> u8 {
+    match self {
+      GeneratorProcessingCategory::Structure => 0,
+      GeneratorProcessingCategory::Data => 1,
+    }
+  }
+}
+
 /// Trait to represent a generator
 #[derive(Debug, Clone, Eq)]
 pub enum Generator {
@@ -144,7 +162,9 @@ pub enum Generator {
   /// Generates a URL with the mock server as the base URL
   MockServerURL(String, String),
   /// List of variants which can have embedded generators
-  ArrayContains(Vec<(usize, MatchingRuleCategory, HashMap<DocPath, Generator>)>)
+  ArrayContains(Vec<(usize, MatchingRuleCategory, HashMap<DocPath, Generator>)>),
+  /// Generates an array with a random number of items between min and max
+  RandomArray(u16, u16)
 }
 
 impl Generator {
@@ -194,6 +214,7 @@ impl Generator {
         }
       }
       Generator::MockServerURL(example, regex) => Some(json!({ "type": "MockServerURL", "example": example, "regex": regex })),
+      Generator::RandomArray(min, max) => Some(json!({ "type": "RandomArray", "min": min, "max": max })),
       _ => None
     }
   }
@@ -224,6 +245,11 @@ impl Generator {
           .map(|dt| DataType::from(dt.clone())))),
       "MockServerURL" => Some(Generator::MockServerURL(get_field_as_string("example", map).unwrap_or_default(),
                                                        get_field_as_string("regex", map).unwrap_or_default())),
+      "RandomArray" => {
+        let min = <u16>::json_to_number(map, "min", 1);
+        let max = <u16>::json_to_number(map, "max", 5);
+        Some(Generator::RandomArray(min, max))
+      }
       _ => {
         warn!("'{}' is not a valid generator type", gen_type);
         None
@@ -256,6 +282,7 @@ impl Generator {
       Generator::ProviderStateGenerator(_, _) => "ProviderState",
       Generator::MockServerURL(_, _) => "MockServerURL",
       Generator::ArrayContains(_) => "ArrayContains",
+      Generator::RandomArray(_, _) => "RandomArray",
     }.to_string()
   }
 
@@ -312,7 +339,16 @@ impl Generator {
             (key.to_string(), g.to_json().unwrap())
           }).collect())])
         }).collect()
-      }
+      },
+      Generator::RandomArray(min, max) => hashmap!{ "min" => json!(min), "max" => json!(max) }
+    }
+  }
+
+  /// Returns the processing category of this generator (Structure or Data)
+  pub fn processing_category(&self) -> GeneratorProcessingCategory {
+    match self {
+      Generator::RandomArray(_, _) => GeneratorProcessingCategory::Structure,
+      _ => GeneratorProcessingCategory::Data,
     }
   }
 
@@ -368,6 +404,10 @@ impl Hash for Generator {
           }
         }
       }
+      Generator::RandomArray(min, max) => {
+        min.hash(state);
+        max.hash(state);
+      }
       Generator::Uuid(format) => format.hash(state),
       _ => ()
     }
@@ -389,6 +429,7 @@ impl PartialEq for Generator {
       (Generator::MockServerURL(ex1, re1), Generator::MockServerURL(ex2, re2)) => ex1 == ex2 && re1 == re2,
       (Generator::ArrayContains(variants1), Generator::ArrayContains(variants2)) => variants1 == variants2,
       (Generator::Uuid(format), Generator::Uuid(format2)) => format == format2,
+      (Generator::RandomArray(min1, max1), Generator::RandomArray(min2, max2)) => min1 == min2 && max1 == max2,
       _ => mem::discriminant(self) == mem::discriminant(other)
     }
   }
@@ -1016,7 +1057,8 @@ impl GenerateValue<String> for Generator {
       } else {
         Err(anyhow!("MockServerURL: can not generate a value as there is no mock server details in the test context"))
       },
-      Generator::ArrayContains(_) => Err(anyhow!("can only use ArrayContains with lists"))
+      Generator::ArrayContains(_) => Err(anyhow!("can only use ArrayContains with lists")),
+      Generator::RandomArray(_, _) => Err(anyhow!("can only use Array generator with arrays"))
     };
     debug!("Generator = {:?}, Generated value = {:?}", self, result);
     result
@@ -1217,6 +1259,18 @@ impl GenerateValue<Value> for Generator {
         }
         _ => Err(anyhow!("can only use ArrayContains with lists"))
       }
+      Generator::RandomArray(min, max) => match value {
+        Value::Array(template) => {
+          if *min > *max {
+            return Err(anyhow!("RandomArray: invalid bounds - min ({}) is greater than max ({})", min, max));
+          }
+          let length = rand::rng().random_range(*min..max.saturating_add(1));
+          let template_item = template.first().cloned().unwrap_or_else(|| json!({}));
+          let result = (0..length).map(|_| template_item.clone()).collect();
+          Ok(Value::Array(result))
+        }
+        _ => Err(anyhow!("can only use Array generator with arrays, got: {:?}", value))
+      }
     };
     debug!("Generated value = {:?}", result);
     result
@@ -1237,12 +1291,14 @@ impl ContentTypeHandler<Value> for JsonHandler {
     context: &HashMap<&str, Value>,
     matcher: &Box<dyn VariantMatcher + Send + Sync>
   ) -> Result<OptionalBody, String> {
-    for (key, generator) in generators {
-      if generator.corresponds_to_mode(mode) {
-        debug!("Applying generator {:?} to key {}", generator, key);
-        self.apply_key(key, generator, context, matcher);
-      }
-    };
+    let mut filtered: Vec<_> = generators.iter()
+      .filter(|(_, g)| g.corresponds_to_mode(mode))
+      .collect();
+    filtered.sort_by_key(|(_, g)| g.processing_category().priority());
+    for (key, generator) in filtered {
+      debug!("Applying generator {:?} (category: {:?}) to key {}", generator, generator.processing_category(), key);
+      self.apply_key(key, generator, context, matcher);
+    }
     Ok(OptionalBody::Present(self.value.to_string().into(), Some("application/json".into()), None))
   }
 
@@ -2421,7 +2477,102 @@ mod tests2 {
   #[case(Generator::ProviderStateGenerator("".to_string(), None), "ProviderState")]
   #[case(Generator::MockServerURL("".to_string(), "".to_string()), "MockServerURL")]
   #[case(Generator::ArrayContains(vec![]), "ArrayContains")]
+  #[case(Generator::RandomArray(2, 5), "RandomArray")]
   fn generator_name_test(#[case] generator: Generator, #[case] name: &str) {
     expect!(generator.name()).to(be_equal_to(name));
+  }
+
+  use crate::generators::{ContentTypeHandler, GenerateValue, GeneratorTestMode, JsonHandler, NoopVariantMatcher, VariantMatcher};
+  use crate::path_exp::DocPath;
+
+  #[test]
+  fn random_array_generator_from_json_test() {
+    expect!(Generator::from_map("RandomArray", &serde_json::Map::new())).to(be_some().value(Generator::RandomArray(1, 5)));
+    expect!(Generator::from_map("RandomArray", &json!({ "min": 2 }).as_object().unwrap())).to(be_some().value(Generator::RandomArray(2, 5)));
+    expect!(Generator::from_map("RandomArray", &json!({ "max": 10 }).as_object().unwrap())).to(be_some().value(Generator::RandomArray(1, 10)));
+    expect!(Generator::from_map("RandomArray", &json!({ "min": 2, "max": 5 }).as_object().unwrap())).to(be_some().value(Generator::RandomArray(2, 5)));
+  }
+
+  #[test]
+  fn random_array_generator_to_json_test() {
+    expect!(Generator::RandomArray(2, 5).to_json().unwrap()).to(be_equal_to(json!({ "type": "RandomArray", "min": 2, "max": 5 })));
+  }
+
+  #[test]
+  fn random_array_generator_values_test() {
+    expect!(Generator::RandomArray(2, 5).values()).to(be_equal_to(hashmap! { "min" => json!(2), "max" => json!(5) }));
+  }
+
+  #[test]
+  fn random_array_generator_generates_array_with_random_length() {
+    let generator = Generator::RandomArray(2, 4);
+    let template = json!([{"name": "xxx", "price": 12}]);
+    let result = generator.generate_value(&template, &hashmap!{}, &NoopVariantMatcher.boxed()).unwrap();
+    let array = result.as_array().unwrap();
+    expect!(array.len()).to(be_ge(2));
+    expect!(array.len()).to(be_le(4));
+  }
+
+  #[test]
+  fn random_array_generator_generates_unique_items() {
+    let generator = Generator::RandomArray(3, 3);
+    let template = json!([{"name": "xxx", "price": 12}]);
+    let result = generator.generate_value(&template, &hashmap!{}, &NoopVariantMatcher.boxed()).unwrap();
+    let array = result.as_array().unwrap();
+    expect!(array.len()).to(be_equal_to(3));
+    for item in array {
+      expect!(item["name"].clone()).to(be_equal_to(json!("xxx")));
+      expect!(item["price"].clone()).to(be_equal_to(json!(12)));
+    }
+  }
+
+  #[test]
+  fn random_array_generator_with_nested_generators() {
+    let body = json!({ "items": [{"name": "xxx", "price": 12, "count": 2}] });
+    let mut handler = JsonHandler { value: body };
+    let generators = hashmap!{
+      DocPath::new_unwrap("$.items") => Generator::RandomArray(2, 4),
+      DocPath::new_unwrap("$.*[*].name") => Generator::RandomString(5),
+      DocPath::new_unwrap("$.*[*].price") => Generator::RandomInt(1, 100),
+      DocPath::new_unwrap("$.*[*].count") => Generator::RandomInt(1, 10),
+    };
+    handler.process_body(&generators, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed()).unwrap();
+    let items = handler.value["items"].as_array().unwrap();
+    expect!(items.len()).to(be_ge(2));
+    expect!(items.len()).to(be_le(4));
+    for i in 1..items.len() {
+      expect!(&items[i]).not_to(be_equal_to(&items[i - 1]));
+    }
+  }
+
+  #[test]
+  fn random_array_generator_with_empty_template() {
+    let generator = Generator::RandomArray(2, 3);
+    let template = json!([]);
+    let result = generator.generate_value(&template, &hashmap!{}, &NoopVariantMatcher.boxed()).unwrap();
+    let array = result.as_array().unwrap();
+    expect!(array.len()).to(be_ge(2));
+    expect!(array.len()).to(be_le(3));
+    for item in array {
+      expect!(item).to(be_equal_to(&json!({})));
+    }
+  }
+
+  #[test]
+  fn random_array_generator_error_on_invalid_bounds() {
+    let generator = Generator::RandomArray(5, 3);
+    let template = json!([{"value": 1}]);
+    expect!(generator.generate_value(&template, &hashmap!{}, &NoopVariantMatcher.boxed())).to(be_err());
+  }
+
+  #[rstest]
+  #[case(json!("string"), "string")]
+  #[case(json!(123), "number")]
+  #[case(json!({"name": "xxx"}), "object")]
+  #[case(json!(null), "null")]
+  #[case(json!(true), "bool")]
+  fn random_array_generator_error_on_non_array(#[case] value: Value, #[case] _type: &str) {
+    let generator = Generator::RandomArray(2, 3);
+    expect!(generator.generate_value(&value, &hashmap!{}, &NoopVariantMatcher.boxed())).to(be_err());
   }
 }
