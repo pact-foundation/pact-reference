@@ -543,7 +543,7 @@ pub trait ContentTypeHandler<T> {
   fn apply_key(
     &mut self,
     key: &DocPath,
-    generator: &dyn GenerateValue<T>,
+    generator: &Generator,
     context: &HashMap<&str, Value>,
     matcher: &Box<dyn VariantMatcher + Send + Sync>
   );
@@ -1305,7 +1305,7 @@ impl ContentTypeHandler<Value> for JsonHandler {
   fn apply_key(
     &mut self,
     key: &DocPath,
-    generator: &dyn GenerateValue<Value>,
+    generator: &Generator,
     context: &HashMap<&str, Value>,
     matcher: &Box<dyn VariantMatcher + Send + Sync>,
   ) {

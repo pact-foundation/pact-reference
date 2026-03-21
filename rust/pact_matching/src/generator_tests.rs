@@ -420,7 +420,7 @@ async fn applies_random_array_generator_with_nested_generators_to_response_body(
 }
 
 #[tokio::test]
-async fn applies_nested_array_generator_to_request_body() {
+async fn applies_nested_random_array_generator() {
   let request = HttpRequest {
     body: OptionalBody::Present(r#"{"items": [{"subitems": [{"value": 1}]}]}"#.into(), Some(JSON.clone()), None),
     generators: generators! {
@@ -449,7 +449,7 @@ async fn applies_nested_array_generator_to_request_body() {
 }
 
 #[tokio::test]
-async fn applies_random_array_generator_with_exact_bound() {
+async fn applies_random_array_generator_with_same_min_max() {
   let request = HttpRequest {
     body: OptionalBody::Present(r#"{"items": [{"value": 1}]}"#.into(), Some(JSON.clone()), None),
     generators: generators! { "BODY" => { "$.items" => Generator::RandomArray(3, 3) } },
@@ -462,16 +462,14 @@ async fn applies_random_array_generator_with_exact_bound() {
 }
 
 #[tokio::test]
-async fn applies_random_array_generator_with_min_max_zero() {
+async fn cant_applies_random_array_generator_with_min_max_zero() {
   let request = HttpRequest {
     body: OptionalBody::Present(r#"{"items": [{"value": 1}]}"#.into(), Some(JSON.clone()), None),
     generators: generators! { "BODY" => { "$.items" => Generator::RandomArray(0, 0) } },
     .. HttpRequest::default()
   };
   let generated_request = generate_request(&request, &GeneratorTestMode::Provider, &hashmap!{}).await;
-  let body: Value = serde_json::from_str(generated_request.body.display_string().as_str()).unwrap();
-  let items = body["items"].as_array().unwrap();
-  expect!(items.len()).to(be_equal_to(0));
+  expect!(generated_request.body).to(be_equal_to(OptionalBody::Present(r#"{"items":[{"value":1}]}"#.into(), Some("application/json".into()), None)));
 }
 
 #[tokio::test]
@@ -489,20 +487,14 @@ async fn applies_random_array_generator_to_root_level_array() {
 }
 
 #[tokio::test]
-async fn applies_random_array_generator_to_empty_array() {
+async fn cant_applies_random_array_generator_to_empty_array() {
   let request = HttpRequest {
     body: OptionalBody::Present(r#"{"items": []}"#.into(), Some(JSON.clone()), None),
     generators: generators! { "BODY" => { "$.items" => Generator::RandomArray(2, 4) } },
     .. HttpRequest::default()
   };
   let generated_request = generate_request(&request, &GeneratorTestMode::Provider, &hashmap!{}).await;
-  let body: Value = serde_json::from_str(generated_request.body.display_string().as_str()).unwrap();
-  let items = body["items"].as_array().unwrap();
-  expect!(items.len()).to(be_ge(2));
-  expect!(items.len()).to(be_le(4));
-  for item in items {
-    expect!(item).to(be_equal_to(&json!({})));
-  }
+  expect!(generated_request.body).to(be_equal_to(OptionalBody::Present(r#"{"items":[]}"#.into(), Some("application/json".into()), None)));
 }
 
 #[tokio::test]
@@ -532,5 +524,157 @@ async fn applies_multiple_independent_array_generators() {
   }
   for item in other {
     expect!(item).to(be_equal_to(first_other));
+  }
+}
+
+#[cfg(feature = "xml")]
+mod xml_tests {
+  use super::*;
+  use pact_models::content_types::XML;
+
+  fn count_xml_elements(body: &str, tag: &str) -> usize {
+    let open_tag_with_space = format!("<{} ", tag);
+    let open_tag_with_bracket = format!("<{}>", tag);
+    let self_close_tag = format!("<{}/", tag);
+    body.split(&open_tag_with_space).count() - 1
+      + body.split(&open_tag_with_bracket).count() - 1
+      + body.split(&self_close_tag).count() - 1
+  }
+
+  fn count_substring(body: &str, pattern: &str) -> usize {
+    body.split(pattern).count() - 1
+  }
+
+  #[tokio::test]
+  async fn applies_random_array_generator_to_xml_request_body() {
+    let request = HttpRequest {
+      body: OptionalBody::Present("<items><item name='xxx' price='12'/></items>".into(), Some(XML.clone()), None),
+      generators: generators! { "BODY" => { "$.items.item" => Generator::RandomArray(2, 4) } },
+      .. HttpRequest::default()
+    };
+    let generated_request = generate_request(&request, &GeneratorTestMode::Provider, &hashmap!{}).await;
+    let body_str = generated_request.body.display_string();
+
+    let item_count = count_xml_elements(&body_str, "item");
+    expect!(item_count).to(be_ge(2));
+    expect!(item_count).to(be_le(4));
+  }
+
+  #[tokio::test]
+  async fn applies_random_array_generator_to_xml_response_body() {
+    let response = HttpResponse {
+      body: OptionalBody::Present("<items><item name='yyy' price='6'/></items>".into(), Some(XML.clone()), None),
+      generators: generators! { "BODY" => { "$.items.item" => Generator::RandomArray(2, 4) } },
+      .. HttpResponse::default()
+    };
+    let generated_response = generate_response(&response, &GeneratorTestMode::Consumer, &hashmap!{}).await;
+    let body_str = generated_response.body.display_string();
+
+    let item_count = count_xml_elements(&body_str, "item");
+    expect!(item_count).to(be_ge(2));
+    expect!(item_count).to(be_le(4));
+  }
+
+  #[tokio::test]
+  async fn applies_random_array_generator_with_same_min_max_to_xml() {
+    let request = HttpRequest {
+      body: OptionalBody::Present("<items><item value='1'/></items>".into(), Some(XML.clone()), None),
+      generators: generators! { "BODY" => { "$.items.item" => Generator::RandomArray(3, 3) } },
+      .. HttpRequest::default()
+    };
+    let generated_request = generate_request(&request, &GeneratorTestMode::Provider, &hashmap!{}).await;
+    let body_str = generated_request.body.display_string();
+
+    let item_count = count_xml_elements(&body_str, "item");
+    expect!(item_count).to(be_equal_to(3));
+  }
+
+  #[tokio::test]
+  async fn applies_random_array_generator_with_nested_generators_to_xml() {
+    let request = HttpRequest {
+      body: OptionalBody::Present("<items><item name='xxx' price='12'/></items>".into(), Some(XML.clone()), None),
+      generators: generators! {
+        "BODY" => {
+          "$.items.item" => Generator::RandomArray(2, 4),
+          "$.items.item['@name']" => Generator::RandomString(5)
+        }
+      },
+      .. HttpRequest::default()
+    };
+    let generated_request = generate_request(&request, &GeneratorTestMode::Provider, &hashmap!{}).await;
+    let body_str = generated_request.body.display_string();
+
+    let item_count = count_xml_elements(&body_str, "item");
+    expect!(item_count).to(be_ge(2));
+    expect!(item_count).to(be_le(4));
+
+    let name_count = count_substring(&body_str, "name='");
+    expect!(name_count).to(be_ge(2));
+  }
+
+  #[tokio::test]
+  async fn applies_random_array_generator_with_nested_elements_to_xml() {
+    let request = HttpRequest {
+      body: OptionalBody::Present("<people><person id='1'><address city='NYC'/></person></people>".into(), Some(XML.clone()), None),
+      generators: generators! { "BODY" => { "$.people.person" => Generator::RandomArray(2, 2) } },
+      .. HttpRequest::default()
+    };
+    let generated_request = generate_request(&request, &GeneratorTestMode::Provider, &hashmap!{}).await;
+    let body_str = generated_request.body.display_string();
+
+    let person_count = count_xml_elements(&body_str, "person");
+    let address_count = count_xml_elements(&body_str, "address");
+
+    expect!(person_count).to(be_equal_to(2));
+    expect!(address_count).to(be_equal_to(2));
+  }
+
+  #[tokio::test]
+  async fn applies_multiple_independent_array_generators_to_xml() {
+    let request = HttpRequest {
+      body: OptionalBody::Present("<root><items><item value='1'/></items><other><entry x='2'/></other></root>".into(), Some(XML.clone()), None),
+      generators: generators! {
+        "BODY" => {
+          "$.root.items.item" => Generator::RandomArray(2, 3),
+          "$.root.other.entry" => Generator::RandomArray(3, 4)
+        }
+      },
+      .. HttpRequest::default()
+    };
+    let generated_request = generate_request(&request, &GeneratorTestMode::Provider, &hashmap!{}).await;
+    let body_str = generated_request.body.display_string();
+
+    let item_count = count_xml_elements(&body_str, "item");
+    let entry_count = count_xml_elements(&body_str, "entry");
+
+    expect!(item_count).to(be_ge(2));
+    expect!(item_count).to(be_le(3));
+    expect!(entry_count).to(be_ge(3));
+    expect!(entry_count).to(be_le(4));
+  }
+
+  #[tokio::test]
+  async fn applies_nested_random_array_generator_to_xml() {
+    let request = HttpRequest {
+      body: OptionalBody::Present("<items><item><subitems><subitem value='1'/></subitems></item></items>".into(), Some(XML.clone()), None),
+      generators: generators! {
+        "BODY" => {
+          "$.items.item" => Generator::RandomArray(2, 3),
+          "$.items.item.subitems.subitem" => Generator::RandomArray(2, 3),
+          "$.items.item.subitems.subitem['@value']" => Generator::RandomInt(1, 1000)
+        }
+      },
+      .. HttpRequest::default()
+    };
+    let generated_request = generate_request(&request, &GeneratorTestMode::Provider, &hashmap!{}).await;
+    let body_str = generated_request.body.display_string();
+
+    let item_count = count_xml_elements(&body_str, "item");
+    expect!(item_count).to(be_ge(2));
+    expect!(item_count).to(be_le(3));
+
+    let subitem_count = count_xml_elements(&body_str, "subitem");
+    expect!(subitem_count).to(be_ge(4));
+    expect!(subitem_count).to(be_le(9));
   }
 }
