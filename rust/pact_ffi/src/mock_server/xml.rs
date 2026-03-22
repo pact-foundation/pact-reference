@@ -266,7 +266,7 @@ fn duplicate_element<'a>(doc: Document<'a>, el: &Element<'a>) -> Element<'a> {
   for child in el.children() {
     match child {
       ChildOfElement::Element(el) => element.append_child(duplicate_element(doc, &el)),
-      ChildOfElement::Text(txt) => element.append_child(txt),
+      ChildOfElement::Text(txt) => element.append_child(doc.create_text(txt.text())),
       _ => ()
     }
   }
