@@ -664,7 +664,7 @@ fn http_xml_consumer_with_examples_and_content_test() {
     Ok(res) => {
       expect!(res.status()).to(be_eq(200));
       expect!(res.headers().get("Content-Type").unwrap()).to(be_eq("application/xml"));
-      expect!(res.text().unwrap_or_default()).to(be_equal_to("<?xml version='1.0'?><items><item><name>Item 1</name><price>10</price></item><item><name/><price/></item><item><name/><price/></item>Item list</items>"));
+      expect!(res.text().unwrap_or_default()).to(be_equal_to("<?xml version='1.0'?><items><item><name>Item 1</name><price>10</price></item><item><name>Item 1</name><price>10</price></item><item><name>Item 1</name><price>10</price></item>Item list</items>"));
     },
     Err(_) => {
       panic!("expected 200 response but request failed");
