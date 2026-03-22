@@ -626,6 +626,64 @@ fn message_xml_consumer_feature_test() {
 }
 
 #[test]
+fn http_xml_consumer_with_examples_and_content_test() {
+  let consumer_name = CString::new("http-consumer").unwrap();
+  let provider_name = CString::new("http-provider").unwrap();
+  let pact_handle = pactffi_new_pact(consumer_name.as_ptr(), provider_name.as_ptr());
+  let description = CString::new("request_with_examples_and_content").unwrap();
+  let interaction = pactffi_new_interaction(pact_handle.clone(), description.as_ptr());
+  let accept = CString::new("Accept").unwrap();
+  let content_type = CString::new("Content-Type").unwrap();
+  let response_body_with_matchers = CString::new(r#"{"version":"1.0","charset":"UTF-8","root":{"name":"items","children":[{"pact:matcher:type":"type","value":{"name":"item","children":[{"name":"name","children":[{"matcher":{"pact:matcher:type":"type"},"content":"Item 1"}],"attributes":[]},{"name":"price","children":[{"matcher":{"pact:matcher:type":"integer"},"content":10}],"attributes":[]}],"attributes":{}},"examples":3},{"content":"Item list"}],"attributes":{}}}"#).unwrap();
+  let address = CString::new("127.0.0.1").unwrap();
+  let description = CString::new("a request to test xml with examples and content").unwrap();
+  let method = CString::new("GET").unwrap();
+  let path = CString::new("/items").unwrap();
+  let header = CString::new("application/xml").unwrap();
+
+  let tmp = TempDir::new().unwrap();
+  let tmp_path = tmp.path().to_string_lossy().to_string();
+  let file_path = CString::new(tmp_path.as_str()).unwrap();
+
+  pactffi_upon_receiving(interaction.clone(), description.as_ptr());
+  pactffi_with_request(interaction.clone(), method.as_ptr(), path.as_ptr());
+  pactffi_with_header(interaction.clone(), InteractionPart::Request, accept.as_ptr(), 0, header.as_ptr());
+  pactffi_with_header(interaction.clone(), InteractionPart::Response, content_type.as_ptr(), 0, header.as_ptr());
+  pactffi_with_body(interaction.clone(), InteractionPart::Response, header.as_ptr(), response_body_with_matchers.as_ptr());
+  pactffi_response_status(interaction.clone(), 200);
+  let port = pactffi_create_mock_server_for_transport(pact_handle.clone(), address.as_ptr(), 0, null(), null());
+
+  expect!(port).to(be_greater_than(0));
+
+  let client = Client::default();
+  let result = client.get(format!("http://127.0.0.1:{}/items", port).as_str())
+    .header("Accept", "application/xml")
+    .send();
+
+  match result {
+    Ok(res) => {
+      expect!(res.status()).to(be_eq(200));
+      expect!(res.headers().get("Content-Type").unwrap()).to(be_eq("application/xml"));
+      expect!(res.text().unwrap_or_default()).to(be_equal_to("<?xml version='1.0'?><items><item><name>Item 1</name><price>10</price></item><item><name>Item 1</name><price>10</price></item><item><name>Item 1</name><price>10</price></item>Item list</items>"));
+    },
+    Err(_) => {
+      panic!("expected 200 response but request failed");
+    }
+  };
+
+  thread::sleep(Duration::from_millis(100));
+
+  let mismatches = unsafe {
+    CStr::from_ptr(pactffi_mock_server_mismatches(port)).to_string_lossy().into_owned()
+  };
+
+  pactffi_write_pact_file(port, file_path.as_ptr(), true);
+  pactffi_cleanup_mock_server(port);
+
+  expect!(mismatches).to(be_equal_to("[]"));
+}
+
+#[test]
 fn message_consumer_with_matchers_and_generators_test() {
   let consumer_name = CString::new("message-consumer").unwrap();
   let provider_name = CString::new("message-provider").unwrap();
