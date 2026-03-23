@@ -1261,11 +1261,17 @@ impl GenerateValue<Value> for Generator {
       }
       Generator::RandomArray(min, max) => match value {
         Value::Array(template) => {
+          if *min < 1 {
+            return Err(anyhow!("RandomArray: min ({}) must be >= 1", min));
+          }
           if *min > *max {
-            return Err(anyhow!("RandomArray: invalid bounds - min ({}) is greater than max ({})", min, max));
+            return Err(anyhow!("RandomArray: min ({}) must be <= max ({})", min, max));
+          }
+          if template.is_empty() {
+            return Err(anyhow!("RandomArray: at least 1 item is required in the array to clone"));
           }
           let length = rand::rng().random_range(*min..max.saturating_add(1));
-          let template_item = template.first().cloned().unwrap_or_else(|| json!({}));
+          let template_item = template.first().cloned().unwrap();
           let result = (0..length).map(|_| template_item.clone()).collect();
           Ok(Value::Array(result))
         }
@@ -2546,21 +2552,22 @@ mod tests2 {
   }
 
   #[test]
-  fn random_array_generator_with_empty_template() {
+  fn random_array_generator_error_on_empty_template() {
     let generator = Generator::RandomArray(2, 3);
     let template = json!([]);
-    let result = generator.generate_value(&template, &hashmap!{}, &NoopVariantMatcher.boxed()).unwrap();
-    let array = result.as_array().unwrap();
-    expect!(array.len()).to(be_ge(2));
-    expect!(array.len()).to(be_le(3));
-    for item in array {
-      expect!(item).to(be_equal_to(&json!({})));
-    }
+    expect!(generator.generate_value(&template, &hashmap!{}, &NoopVariantMatcher.boxed())).to(be_err());
   }
 
   #[test]
   fn random_array_generator_error_on_invalid_bounds() {
     let generator = Generator::RandomArray(5, 3);
+    let template = json!([{"value": 1}]);
+    expect!(generator.generate_value(&template, &hashmap!{}, &NoopVariantMatcher.boxed())).to(be_err());
+  }
+
+  #[test]
+  fn random_array_generator_error_on_min_less_than_one() {
+    let generator = Generator::RandomArray(0, 3);
     let template = json!([{"value": 1}]);
     expect!(generator.generate_value(&template, &hashmap!{}, &NoopVariantMatcher.boxed())).to(be_err());
   }

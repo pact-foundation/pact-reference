@@ -204,8 +204,12 @@ fn xml_attribute_name(attr: Attribute) -> String {
 }
 
 fn duplicate_elements<'a>(el: &Element<'a>, key: &DocPath, min: u16, max: u16) {
+  if min < 1 {
+    error!("RandomArray: min ({}) must be >= 1", min);
+    return;
+  }
   if min > max {
-    error!("RandomArray: invalid bounds - min ({}) is greater than max ({})", min, max);
+    error!("RandomArray: min ({}) must be <= max ({})", min, max);
     return;
   }
 
@@ -227,6 +231,7 @@ fn duplicate_elements<'a>(el: &Element<'a>, key: &DocPath, min: u16, max: u16) {
   }).collect();
 
   if matching_children.is_empty() {
+    error!("RandomArray: at least 1 item is required in the array to clone");
     return;
   }
 
@@ -969,7 +974,7 @@ mod tests {
   }
 
   #[test]
-  fn applies_random_array_generator_with_exact_count() {
+  fn applies_random_array_generator_with_static_count() {
     let p = Package::new();
     let d = p.as_document();
     let r = d.create_element("items");
@@ -989,7 +994,7 @@ mod tests {
   }
 
   #[test]
-  fn applies_random_array_generator_with_nested_elements() {
+  fn applies_random_array_generator_to_clone_element_with_text() {
     let p = Package::new();
     let d = p.as_document();
     let r = d.create_element("root");
@@ -1012,7 +1017,7 @@ mod tests {
   }
 
   #[test]
-  fn applies_random_array_generator_with_cloned_attributes_and_text() {
+  fn applies_random_array_generator_to_clone_element_with_attribute() {
     let p = Package::new();
     let d = p.as_document();
     let r = d.create_element("people");
@@ -1067,7 +1072,7 @@ mod tests {
   }
 
   #[test]
-  fn applies_random_array_generator_with_min_max_zero() {
+  fn applies_random_array_generator_with_min_max_one() {
     let p = Package::new();
     let d = p.as_document();
     let r = d.create_element("items");
@@ -1080,7 +1085,7 @@ mod tests {
     let mut xml_handler = XmlHandler { value: d };
 
     let result = xml_handler.process_body(&hashmap!{
-      DocPath::new_unwrap("$.items.item") => Generator::RandomArray(0, 0)
+      DocPath::new_unwrap("$.items.item") => Generator::RandomArray(1, 1)
     }, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher.boxed());
 
     expect!(result.unwrap()).to(be_equal_to(OptionalBody::Present("<?xml version='1.0'?><items><item value='1'/></items>".into(), Some("application/xml".into()), None)));
