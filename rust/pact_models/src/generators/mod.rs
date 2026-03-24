@@ -620,6 +620,13 @@ impl Generators {
   }
 
   fn to_json(&self) -> Value {
+    self.to_json_filtered(|_| true)
+  }
+
+  fn to_json_filtered<F>(&self, filter: F) -> Value
+  where
+    F: Fn(&Generator) -> bool,
+  {
     let json_attr = self.categories.iter()
       .fold(serde_json::Map::new(), |mut map, (name, category)| {
       let cat: String = name.clone().into();
@@ -627,9 +634,11 @@ impl Generators {
         GeneratorCategory::PATH | GeneratorCategory::METHOD | GeneratorCategory::STATUS => {
           match category.get(&DocPath::empty()).or_else(|| category.get(&DocPath::root())) {
             Some(generator) => {
-              let json = generator.to_json();
-              if let Some(json) = json {
-                map.insert(cat.clone(), json);
+              if filter(generator) {
+                let json = generator.to_json();
+                if let Some(json) = json {
+                  map.insert(cat.clone(), json);
+                }
               }
             },
             None => ()
@@ -638,24 +647,32 @@ impl Generators {
         GeneratorCategory::HEADER | GeneratorCategory::QUERY => {
           let mut generators = serde_json::Map::new();
           for (key, val) in category {
-            let json = val.to_json();
-            if let Some(json) = json {
-              let name = key.first_field().map(|v| v.to_string())
-                .unwrap_or_else(|| key.to_string());
-              generators.insert(name, json);
+            if filter(val) {
+              let json = val.to_json();
+              if let Some(json) = json {
+                let name = key.first_field().map(|v| v.to_string())
+                  .unwrap_or_else(|| key.to_string());
+                generators.insert(name, json);
+              }
             }
           }
-          map.insert(cat.clone(), Value::Object(generators));
+          if !generators.is_empty() {
+            map.insert(cat.clone(), Value::Object(generators));
+          }
         },
         _ => {
           let mut generators = serde_json::Map::new();
           for (key, val) in category {
-            let json = val.to_json();
-            if let Some(json) = json {
-              generators.insert(String::from(key), json);
+            if filter(val) {
+              let json = val.to_json();
+              if let Some(json) = json {
+                generators.insert(String::from(key), json);
+              }
             }
           }
-          map.insert(cat.clone(), Value::Object(generators));
+          if !generators.is_empty() {
+            map.insert(cat.clone(), Value::Object(generators));
+          }
         }
       }
       map
@@ -759,7 +776,8 @@ pub fn generators_from_json(value: &Value) -> anyhow::Result<Generators> {
 /// Generates a Value structure for the provided generators
 pub fn generators_to_json(generators: &Generators, spec_version: &PactSpecification) -> Value {
   match spec_version {
-    PactSpecification::V3 | PactSpecification::V4 => generators.to_json(),
+    PactSpecification::V3 | PactSpecification::V4 => generators.to_json_filtered(|g| !matches!(g, Generator::RandomArray(_, _))),
+    PactSpecification::V4_1 => generators.to_json(),
     _ => Value::Null
   }
 }
@@ -2437,7 +2455,8 @@ mod tests2 {
   use serde_json::{json, Value};
 
   use crate::expression_parser::DataType;
-  use crate::generators::{generate_value_from_context, Generator};
+  use crate::generators::{generate_value_from_context, Generator, GeneratorCategory, Generators, generators_to_json};
+  use crate::PactSpecification;
 
   #[rstest]
   //     expression, value,          data_type,               expected
@@ -2581,5 +2600,48 @@ mod tests2 {
   fn random_array_generator_error_on_non_array(#[case] value: Value, #[case] _type: &str) {
     let generator = Generator::RandomArray(2, 3);
     expect!(generator.generate_value(&value, &hashmap!{}, &NoopVariantMatcher.boxed())).to(be_err());
+  }
+
+  #[test]
+  fn generators_to_json_excludes_random_array_for_v3() {
+    let mut generators = Generators::default();
+    generators.add_generator_with_subcategory(&GeneratorCategory::BODY, DocPath::new_unwrap("$.items"), Generator::RandomArray(2, 4));
+    generators.add_generator_with_subcategory(&GeneratorCategory::BODY, DocPath::new_unwrap("$.name"), Generator::RandomString(5));
+
+    let json_v3 = generators_to_json(&generators, &PactSpecification::V3);
+    expect!(json_v3).to(be_equal_to(json!({
+      "body": {
+        "$.name": {"size": 5, "type": "RandomString"}
+      }
+    })));
+  }
+
+  #[test]
+  fn generators_to_json_excludes_random_array_for_v4() {
+    let mut generators = Generators::default();
+    generators.add_generator_with_subcategory(&GeneratorCategory::BODY, DocPath::new_unwrap("$.items"), Generator::RandomArray(2, 4));
+    generators.add_generator_with_subcategory(&GeneratorCategory::BODY, DocPath::new_unwrap("$.name"), Generator::RandomString(5));
+
+    let json_v4 = generators_to_json(&generators, &PactSpecification::V4);
+    expect!(json_v4).to(be_equal_to(json!({
+      "body": {
+        "$.name": {"size": 5, "type": "RandomString"}
+      }
+    })));
+  }
+
+  #[test]
+  fn generators_to_json_includes_random_array_for_v4_1() {
+    let mut generators = Generators::default();
+    generators.add_generator_with_subcategory(&GeneratorCategory::BODY, DocPath::new_unwrap("$.items"), Generator::RandomArray(2, 4));
+    generators.add_generator_with_subcategory(&GeneratorCategory::BODY, DocPath::new_unwrap("$.name"), Generator::RandomString(5));
+
+    let json_v4_1 = generators_to_json(&generators, &PactSpecification::V4_1);
+    expect!(json_v4_1).to(be_equal_to(json!({
+      "body": {
+        "$.items": {"max": 4, "min": 2, "type": "RandomArray"},
+        "$.name": {"size": 5, "type": "RandomString"}
+      }
+    })));
   }
 }
