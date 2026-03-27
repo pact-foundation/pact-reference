@@ -7,7 +7,7 @@
 > Pact implementation written in Rust.
 
 This project provides a Pact implementation written in Rust. It supports the [V3 Pact specification](https://github.com/pact-foundation/pact-specification/tree/version-3)
-and [V4 Pact specification](https://github.com/pact-foundation/pact-specification/tree/version-4) and provides shared 
+and [V4 Pact specification](https://github.com/pact-foundation/pact-specification/tree/version-4) and provides shared
 libraries that can be used in other languages via foreign function interfaces (FFI).
 
 Note: The mock server crates have moved to https://github.com/pact-foundation/pact-core-mock-server.
@@ -16,18 +16,18 @@ Note: The mock server crates have moved to https://github.com/pact-foundation/pa
 
 ### Rust Projects
 
-The project crates are published to crates.io, and you can use them directly. 
+The project crates are published to crates.io, and you can use them directly.
 
 #### Consumer Projects
 
 For a Rust consumer, refer to the [pact_consumer](./pact_consumer) crate.
 
-You can find examples where the [integration to the Pact Broker](https://github.com/pact-foundation/pact-reference/blob/master/rust/pact_verifier/tests/tests.rs) is tested using 
+You can find examples where the [integration to the Pact Broker](https://github.com/pact-foundation/pact-reference/blob/master/rust/pact_verifier/tests/tests.rs) is tested using
 Pact tests written with the `pact_consumer` crate.
 
 #### Verifying Providers
 
-To verify a provider, you can use the verifier CLI tool. See [Pact Verifier CLI](./pact_verifier_cli).
+To verify a provider, you can use the verifier CLI tool. See [Pact Verifier](./pact_verifier).
 
 ### FFI Interface
 
