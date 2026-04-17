@@ -108,6 +108,7 @@
 //! There is a grammar for the definitions in [ANTLR4 format](https://github.com/pact-foundation/pact-plugins/blob/main/docs/matching-rule-definition.g4).
 //!
 
+use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::char::REPLACEMENT_CHARACTER;
 use std::str::from_utf8;
@@ -123,8 +124,9 @@ use tracing::{instrument, trace, warn};
 use crate::expression_parser::DataType;
 use crate::generators::Generator;
 use crate::generators::Generator::ProviderStateGenerator;
-use crate::matchingrules::MatchingRule;
+use crate::matchingrules::{MatchingRule, MatchingRuleCategory, RuleLogic};
 use crate::matchingrules::MatchingRule::{MaxType, MinType, NotEmpty};
+use crate::path_exp::DocPath;
 
 /// Type to associate with an expression element
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -288,6 +290,9 @@ enum MatcherDefinitionToken {
   #[token("atMost")]
   AtMost,
 
+  #[token("arrayContains")]
+  ArrayContains,
+
   #[token("(")]
   LeftBracket,
 
@@ -352,7 +357,8 @@ pub fn is_matcher_def(v: &str) -> bool {
     if let Some(Ok(token)) = next {
       if token == MatcherDefinitionToken::Matching || token == MatcherDefinitionToken::NotEmpty ||
         token == MatcherDefinitionToken::EachKey || token == MatcherDefinitionToken::EachValue ||
-        token == MatcherDefinitionToken::AtLeast || token == MatcherDefinitionToken::AtMost {
+        token == MatcherDefinitionToken::AtLeast || token == MatcherDefinitionToken::AtMost ||
+        token == MatcherDefinitionToken::ArrayContains {
         true
       } else {
         false
@@ -378,10 +384,10 @@ fn matching_definition(lex: &mut Lexer<MatcherDefinitionToken>, v: &str) -> anyh
 
   let remainder = lex.remainder();
   if !remainder.is_empty() {
-    Err(anyhow!("expected not more tokens, got '{}' with '{}' remaining", lex.slice(), remainder))
-  } else {
-    Ok(value)
+    return Err(anyhow!("expected not more tokens, got '{}' with '{}' remaining", lex.slice(), remainder));
   }
+
+  Ok(value)
 }
 
 // matchingDefinitionExp returns [ MatchingRuleDefinition value ] :
@@ -449,6 +455,9 @@ fn matching_definition_exp(lex: &mut Lexer<MatcherDefinitionToken>, v: &str) -> 
         generator: None,
         expression: v.to_string()
       })
+    } else if token == &MatcherDefinitionToken::ArrayContains {
+      let definition = parse_array_contains(lex, v)?;
+      Ok(definition)
     } else {
       let mut buffer = BytesMut::new().writer();
       let span = lex.span();
@@ -456,7 +465,7 @@ fn matching_definition_exp(lex: &mut Lexer<MatcherDefinitionToken>, v: &str) -> 
         .with_config(Config::default().with_color(false))
         .with_message(format!("Expected a type of matching rule definition, but got '{}'", lex.slice()))
         .with_label(Label::new(("expression", span)).with_message("Expected a matching rule definition here"))
-        .with_note("valid matching rule definitions are: matching, notEmpty, eachKey, eachValue, atLeast, atMost")
+        .with_note("valid matching rule definitions are: matching, notEmpty, eachKey, eachValue, atLeast, atMost, arrayContains")
         .finish();
       report.write(("expression", Source::from(v)), &mut buffer)?;
       let message = from_utf8(&*buffer.get_ref())?.to_string();
@@ -469,7 +478,7 @@ fn matching_definition_exp(lex: &mut Lexer<MatcherDefinitionToken>, v: &str) -> 
       .with_config(Config::default().with_color(false))
       .with_message(format!("Expected a type of matching rule definition but got the end of the expression"))
       .with_label(Label::new(("expression", span)).with_message("Expected a matching rule definition here"))
-      .with_note("valid matching rule definitions are: matching, notEmpty, eachKey, eachValue, atLeast, atMost")
+      .with_note("valid matching rule definitions are: matching, notEmpty, eachKey, eachValue, atLeast, atMost, arrayContains")
       .finish();
     report.write(("expression", Source::from(v)), &mut buffer)?;
     let message = from_utf8(&*buffer.get_ref())?.to_string();
@@ -499,6 +508,88 @@ fn parse_each_value(lex: &mut Lexer<MatcherDefinitionToken>, v: &str) -> anyhow:
     } else {
       Err(anyhow!(error_message(lex, v, "Expected a closing bracket", "Expected a closing bracket before this")?))
     }
+  } else {
+    let mut buffer = BytesMut::new().writer();
+    let span = lex.span();
+    let report = Report::build(ReportKind::Error, ("expression", span.start..span.start))
+      .with_config(Config::default().with_color(false))
+      .with_message(format!("Expected an opening bracket, got '{}'", lex.slice()))
+      .with_label(Label::new(("expression", span)).with_message("Expected an opening bracket before this"))
+      .finish();
+    report.write(("expression", Source::from(v)), &mut buffer)?;
+    let message = from_utf8(&*buffer.get_ref())?.to_string();
+    Err(anyhow!(message))
+  }
+}
+
+// LEFT_BRACKET matchingDefinitionExp ( COMMA matchingDefinitionExp )* RIGHT_BRACKET
+fn parse_array_contains(lex: &mut Lexer<MatcherDefinitionToken>, v: &str) -> anyhow::Result<MatchingRuleDefinition> {
+  let next = lex.next()
+    .ok_or_else(|| end_of_expression(v, "an opening bracket"))?;
+  if let Ok(MatcherDefinitionToken::LeftBracket) = next {
+    let first = matching_definition_exp(lex, v)?;
+    let mut inner_results = vec![first];
+
+    // Parse comma-separated additional expressions
+    loop {
+      let next = lex.next().ok_or_else(|| end_of_expression(v, "a closing bracket or comma"))?;
+      match next {
+        Ok(MatcherDefinitionToken::RightBracket) => break,
+        Ok(MatcherDefinitionToken::Comma) => {
+          let next_exp = matching_definition_exp(lex, v)?;
+          inner_results.push(next_exp);
+        }
+        _ => {
+          return Err(anyhow!(error_message(lex, v, "Expected a closing bracket or comma", "Expected a closing bracket or comma before this")?));
+        }
+      }
+    }
+
+    // Each inner expression becomes one entry in the rules vec:
+    // - Inline matchers (Left): resolved into an ArrayContains variant
+    // - References (Right): kept as-is for plugin-level resolution
+    // Mixed is allowed: arrayContains(matching(equalTo, 'X'), matching($'ref'))
+    let mut rules: Vec<Either<MatchingRule, MatchingReference>> = Vec::new();
+    let mut inline_variants = Vec::new();
+    let mut first_value = None;
+    let mut variant_index = 0usize;
+
+    for result in inner_results {
+      if first_value.is_none() && !result.value.is_empty() {
+        first_value = Some(result.value.clone());
+      }
+      match result.rules.first() {
+        Some(Either::Left(matching_rule)) => {
+          let mut category = MatchingRuleCategory::empty("body");
+          category.add_rule(DocPath::root(), matching_rule.clone(), RuleLogic::And);
+          let generators: HashMap<DocPath, Generator> = result.generator
+            .map(|g| {
+              let mut map = HashMap::new();
+              map.insert(DocPath::root(), g);
+              map
+            })
+            .unwrap_or_default();
+          inline_variants.push((variant_index, category, generators));
+        }
+        Some(Either::Right(reference)) => {
+          rules.push(Either::Right(reference.clone()));
+        }
+        None => {}
+      }
+      variant_index += 1;
+    }
+
+    if !inline_variants.is_empty() {
+      rules.insert(0, Either::Left(MatchingRule::ArrayContains(inline_variants)));
+    }
+
+    Ok(MatchingRuleDefinition {
+      value: first_value.unwrap_or_default(),
+      value_type: ValueType::Unknown,
+      rules,
+      generator: None,
+      expression: v.to_string(),
+    })
   } else {
     let mut buffer = BytesMut::new().writer();
     let span = lex.span();
@@ -1128,6 +1219,7 @@ mod test {
   use crate::generators::Generator::{Date, DateTime, Time};
   use crate::matchingrules::MatchingRule;
   use crate::matchingrules::MatchingRule::{Regex, Type};
+  use crate::path_exp::DocPath;
 
   use super::*;
 
@@ -1587,7 +1679,7 @@ mod test {
             |   │    │\u{0020}
             |   │    ╰─ Expected a matching rule definition here
             |   │\u{0020}
-            |   │ Note: valid matching rule definitions are: matching, notEmpty, eachKey, eachValue, atLeast, atMost
+            |   │ Note: valid matching rule definitions are: matching, notEmpty, eachKey, eachValue, atLeast, atMost, arrayContains
             |───╯
             |
             ".trim_margin().unwrap()));
@@ -1602,7 +1694,7 @@ mod test {
             |   │ ──────┬────── \u{0020}
             |   │       ╰──────── Expected a matching rule definition here
             |   │\u{0020}
-            |   │ Note: valid matching rule definitions are: matching, notEmpty, eachKey, eachValue, atLeast, atMost
+            |   │ Note: valid matching rule definitions are: matching, notEmpty, eachKey, eachValue, atLeast, atMost, arrayContains
             |───╯
             |
             ".trim_margin().unwrap()));
@@ -2116,5 +2208,117 @@ mod test {
   #[case("eachKey(matching(regex, '\\d+', '')), eachValue(matching(regex, '(\\w|\\s)+', '')), atLeast(1)", true)]
   fn is_matcher_def_test(#[case] expression: &str, #[case] expected: bool) {
     expect!(is_matcher_def(expression)).to(be_equal_to(expected));
+  }
+
+  #[test]
+  fn is_matcher_def_array_contains() {
+    assert!(is_matcher_def("arrayContains(matching(equalTo, 'PUBLIC'))"));
+    assert!(is_matcher_def("arrayContains(matching(equalTo, 'A'), matching(equalTo, 'B'))"));
+    assert!(!is_matcher_def("notArrayContains"));
+  }
+
+  #[test]
+  fn parse_array_contains_single_variant() {
+    let result = parse_matcher_def("arrayContains(matching(equalTo, 'PUBLIC'))").unwrap();
+    assert_eq!(result.rules.len(), 1);
+    match &result.rules[0] {
+      Either::Left(MatchingRule::ArrayContains(variants)) => {
+        assert_eq!(variants.len(), 1);
+        let (index, rules, _generators) = &variants[0];
+        assert_eq!(*index, 0);
+        let rule_list = rules.rules.get(&DocPath::root()).expect("should have root path rule");
+        assert_eq!(rule_list.rules.len(), 1);
+        assert_eq!(rule_list.rules[0], MatchingRule::Equality);
+      }
+      _ => panic!("Expected ArrayContains rule, got {:?}", result.rules[0]),
+    }
+    assert_eq!(result.value, "PUBLIC");
+  }
+
+  #[test]
+  fn parse_array_contains_multi_variant() {
+    let result = parse_matcher_def("arrayContains(matching(equalTo, 'PUBLIC'), matching(equalTo, 'PRIVATE_LINK'))").unwrap();
+    assert_eq!(result.rules.len(), 1);
+    match &result.rules[0] {
+      Either::Left(MatchingRule::ArrayContains(variants)) => {
+        assert_eq!(variants.len(), 2);
+        assert_eq!(variants[0].0, 0);
+        assert_eq!(variants[1].0, 1);
+      }
+      _ => panic!("Expected ArrayContains rule"),
+    }
+    assert_eq!(result.value, "PUBLIC");
+  }
+
+  #[test]
+  fn parse_array_contains_with_reference() {
+    let result = parse_matcher_def("arrayContains(matching($'publicEntry'))").unwrap();
+    assert_eq!(result.rules.len(), 1);
+    match &result.rules[0] {
+      Either::Right(reference) => {
+        assert_eq!(reference.name, "publicEntry");
+      }
+      _ => panic!("Expected a reference, got {:?}", result.rules[0]),
+    }
+  }
+
+  #[test]
+  fn parse_array_contains_with_multiple_references() {
+    let result = parse_matcher_def("arrayContains(matching($'entry1'), matching($'entry2'))").unwrap();
+    assert_eq!(result.rules.len(), 2);
+    match (&result.rules[0], &result.rules[1]) {
+      (Either::Right(r1), Either::Right(r2)) => {
+        assert_eq!(r1.name, "entry1");
+        assert_eq!(r2.name, "entry2");
+      }
+      _ => panic!("Expected two references"),
+    }
+  }
+
+  #[test]
+  fn parse_array_contains_with_regex() {
+    let result = parse_matcher_def("arrayContains(matching(regex, 'PUBLIC|PRIVATE.*', 'PUBLIC'))").unwrap();
+    assert_eq!(result.rules.len(), 1);
+    match &result.rules[0] {
+      Either::Left(MatchingRule::ArrayContains(variants)) => {
+        assert_eq!(variants.len(), 1);
+        let rule_list = variants[0].1.rules.get(&DocPath::root()).unwrap();
+        match &rule_list.rules[0] {
+          MatchingRule::Regex(re) => assert_eq!(re, "PUBLIC|PRIVATE.*"),
+          other => panic!("Expected Regex, got {:?}", other),
+        }
+      }
+      _ => panic!("Expected ArrayContains"),
+    }
+    assert_eq!(result.value, "PUBLIC");
+  }
+
+  #[test]
+  fn parse_array_contains_empty_is_error() {
+    let result = parse_matcher_def("arrayContains()");
+    assert!(result.is_err());
+  }
+
+  #[test]
+  fn parse_array_contains_combined_with_at_least() {
+    let result = parse_matcher_def("atLeast(2), arrayContains(matching(equalTo, 'PUBLIC'))").unwrap();
+    assert!(result.rules.iter().any(|r| matches!(r, Either::Left(MatchingRule::MinType(2)))));
+    assert!(result.rules.iter().any(|r| matches!(r, Either::Left(MatchingRule::ArrayContains(_)))));
+  }
+
+  #[test]
+  fn parse_array_contains_combined_with_each_value() {
+    let result = parse_matcher_def("eachValue(matching(type, 'X')), arrayContains(matching(equalTo, 'PUBLIC'))").unwrap();
+    assert!(result.rules.iter().any(|r| matches!(r, Either::Left(MatchingRule::EachValue(_)))));
+    assert!(result.rules.iter().any(|r| matches!(r, Either::Left(MatchingRule::ArrayContains(_)))));
+  }
+
+  #[test]
+  fn parse_array_contains_mixed_inline_and_reference() {
+    let result = parse_matcher_def("arrayContains(matching(equalTo, 'X'), matching($'ref'))").unwrap();
+    // Should have ArrayContains with 1 inline variant + 1 reference
+    assert!(result.rules.iter().any(|r| matches!(r, Either::Left(MatchingRule::ArrayContains(_)))));
+    assert!(result.rules.iter().any(|r| matches!(r, Either::Right(_))));
+    assert_eq!(result.value, "X");
   }
 }
