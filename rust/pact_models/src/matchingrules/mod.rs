@@ -476,11 +476,14 @@ impl MatchingRule {
     }
   }
 
-  /// If this matching rule is a values matcher (ignores keys in maps)
+  /// If this matching rule is a values matcher (ignores keys in maps).
+  /// ArrayContains is included because, like EachValue, it applies to the
+  /// collection as a whole rather than to individual elements.
   pub fn is_values_matcher(&self) -> bool {
     match self {
       MatchingRule::Values => true,
       MatchingRule::EachValue(_) => true,
+      MatchingRule::ArrayContains(_) => true,
       _ => false
     }
   }

@@ -217,7 +217,7 @@ pub fn matchers_from_integration_json(m: &Map<String, Value>) -> anyhow::Result<
         }
         _ => {
           let val = json_to_string(value);
-          if val != "eachKey" && val != "eachValue" && val != "notEmpty" && is_matcher_def(val.as_str()) {
+          if val != "eachKey" && val != "eachValue" && val != "notEmpty" && val != "arrayContains" && is_matcher_def(val.as_str()) {
             let mut rules = vec![];
             let def = parse_matcher_def(val.as_str())?;
             for rule in def.rules {
