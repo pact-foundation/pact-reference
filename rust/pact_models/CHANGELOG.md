@@ -1,5 +1,10 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.3.9 - add arrayContains expression to matching rule definition parser
+
+* c90ffaea - feat: add arrayContains expression to matching rule definition parser (Stan Vodetskyi, Fri Apr 17 12:41:47 2026 -0700)
+* 47533664 - bump version to 1.3.9 (Ronald Holshausen, Wed Feb 18 12:13:20 2026 +1100)
+
 # 1.3.8 - Bugfix Release
 
 * a65303bd - chore(pact_models): Upgrade rand and rand_regex (Ronald Holshausen, Wed Feb 18 12:03:42 2026 +1100)
