@@ -51,3 +51,4 @@ tokio-test = "0.4.5"
 test-log = { version = "0.2.19", features = ["trace"] }
 tracing-subscriber = { version = "0.3.22", features = ["env-filter", "tracing-log", "fmt"] }
 pretty_assertions = "1.4.1"
+proclaim-it = "0.0.1"

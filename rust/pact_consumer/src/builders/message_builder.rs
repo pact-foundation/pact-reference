@@ -1,10 +1,10 @@
 //! Builder for constructing Asynchronous message interactions
 
 use std::collections::hash_map::Entry;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use bytes::Bytes;
-use maplit::hashmap;
+use maplit::{btreemap, hashmap};
 use pact_models::content_types::ContentType;
 use pact_models::json_utils::json_to_string;
 use pact_models::matchingrules::MatchingRuleCategory;
@@ -119,7 +119,8 @@ pub struct MessageInteractionBuilder {
   /// Contents of the message. This will include the payload as well as any metadata
   pub message_contents: InteractionContents,
   #[allow(dead_code)] contents_plugin: Option<PactPluginManifest>,
-  #[allow(dead_code)] plugin_config: HashMap<String, PluginConfiguration>
+  #[allow(dead_code)] plugin_config: HashMap<String, PluginConfiguration>,
+  references: Option<BTreeMap<String, BTreeMap<String, Value>>>
 }
 
 impl MessageInteractionBuilder {
@@ -135,7 +136,8 @@ impl MessageInteractionBuilder {
       pending: None,
       message_contents: Default::default(),
       contents_plugin: None,
-      plugin_config: Default::default()
+      plugin_config: Default::default(),
+      references: None
     }
   }
 
@@ -179,6 +181,38 @@ impl MessageInteractionBuilder {
   /// page, and potentially in the test output.
   pub fn test_name<G: Into<String>>(&mut self, name: G) -> &mut Self {
     self.test_name = Some(name.into());
+    self
+  }
+
+  /// Sets an external reference for the interaction.  The reference will be stored in the Pact
+  /// file comments under the group. For instance, you could store the AsyncAPI operation ID that
+  /// the interaction corresponds to as an external reference.
+  /// ```
+  /// # let mut builder = pact_consumer::builders::MessageInteractionBuilder::new("test");
+  /// builder.reference("asyncapi", "operationId", "createUser");
+  /// ```
+  pub fn reference<G: Into<String>, N: Into<String>, J: Into<Value>>(
+    &mut self,
+    group: G,
+    name: N,
+    value: J
+  ) -> &mut Self {
+    if let Some(references) = self.references.as_mut() {
+      match references.entry(group.into()) {
+        std::collections::btree_map::Entry::Vacant(entry) => {
+          entry.insert(btreemap! { name.into() => value.into() });
+        }
+        std::collections::btree_map::Entry::Occupied(mut entry) => {
+          entry.get_mut().insert(name.into(), value.into());
+        }
+      }
+    } else {
+      self.references = Some(btreemap!{
+        group.into() => btreemap!{
+          name.into() => value.into()
+        }
+      });
+    }
     self
   }
 
@@ -235,6 +269,17 @@ impl MessageInteractionBuilder {
     let metadata = self.message_contents.metadata.as_ref()
       .map(|md| md.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
       .unwrap_or_default();
+
+    let mut comments = hashmap! {
+      "text".to_string() => json!(self.comments),
+      "testname".to_string() => json!(self.test_name)
+    };
+    if let Some(references) = &self.references {
+      comments.insert("references".to_string(), references.iter()
+        .map(|(k, v)| (k.clone(), json!(v)))
+        .collect());
+    }
+
     AsynchronousMessage {
       id: None,
       key: self.key.clone(),
@@ -246,10 +291,7 @@ impl MessageInteractionBuilder {
         matching_rules: rules,
         generators: self.message_contents.generators.as_ref().cloned().unwrap_or_default()
       },
-      comments: hashmap!{
-        "text".to_string() => json!(self.comments),
-        "testname".to_string() => json!(self.test_name)
-      },
+      comments,
       pending: self.pending.unwrap_or(false),
       plugin_config,
       interaction_markup,
@@ -299,7 +341,7 @@ impl MessageInteractionBuilder {
             self.setup_core_matcher(&ct, &contents_hashmap, Some(content_matcher));
           } else {
             debug!("Plugin matcher, will get the plugin to provide the interaction contents");
-            match content_matcher.configure_interation(&ct, contents_hashmap).await {
+            match content_matcher.configure_interaction(&ct, contents_hashmap).await {
               Ok((contents, plugin_config)) => {
                 if let Some(contents) = contents.first() {
                   self.message_contents = InteractionContents::from(contents);
@@ -464,7 +506,8 @@ impl MessageInteractionBuilder {
 mod tests {
   use expectest::prelude::*;
   use maplit::hashmap;
-  use serde_json::json;
+  use proclaim_it::assert_that;
+  use serde_json::{json, Value};
 
   use crate::builders::MessageInteractionBuilder;
 
@@ -480,5 +523,28 @@ mod tests {
       "b".to_string() => json!("b"),
       "c".to_string() => json!([1, 2, 3])
     }));
+  }
+
+  #[test]
+  fn supports_setting_external_references() {
+    let message = MessageInteractionBuilder::new("test")
+      .reference("asyncapi", "operationId", "test")
+      .reference("openapi", "operationId", "test2")
+      .build();
+
+    assert_that! {
+      message.comments == hashmap! {
+        "references".to_string() => json!({
+            "asyncapi": {
+              "operationId": "test"
+            },
+            "openapi": {
+              "operationId": "test2"
+            }
+        }),
+        "text".to_string() => json!([]),
+        "testname".to_string() => Value::Null
+      }
+    }
   }
 }

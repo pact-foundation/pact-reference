@@ -2492,6 +2492,7 @@ dependencies = [
  "pact_mock_server",
  "pact_models",
  "pretty_assertions",
+ "proclaim-it",
  "rand 0.8.6",
  "regex",
  "reqwest 0.13.3",
@@ -3036,6 +3037,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8fd00f0bb2e90d81d1044c2b32617f68fcb9fa3bb7640c23e9c748e53fb30934"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "proclaim-it"
+version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4129e92975bbdd549cffbd30f3d18de01589cff090b460c2f51936c8760d2f20"
+dependencies = [
+ "pretty_assertions",
+ "proclaim-it-macros",
+]
+
+[[package]]
+name = "proclaim-it-macros"
+version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6f70e1526805403908fcc6186adaeda499acc5fa9ea22b9e42d2b395d9e2a0c4"
+dependencies = [
+ "pretty_assertions",
+ "proc-macro2 1.0.106",
+ "quote 1.0.45",
+ "syn 2.0.117",
 ]
 
 [[package]]
