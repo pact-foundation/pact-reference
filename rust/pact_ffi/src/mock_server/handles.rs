@@ -1795,9 +1795,10 @@ fn process_body(
 ///   embedded in the body. See
 ///   [IntegrationJson.md](https://github.com/pact-foundation/pact-reference/blob/master/rust/pact_ffi/IntegrationJson.md)
 ///
-/// If the `content_type` is determined as follows, whichever is first:
+/// The payload's content type is determined as follows, whichever is first:
 ///
-/// - The `content_type` argument to this function
+/// - The `content_type` argument to this function if provided. If the provided
+///   value fails to parse, and error is logged and it will be ignored.
 /// - The `Content-Type` header for HTTP interaction, or `contentType` metadata
 ///   entry for message interactions.
 /// - From automatic detection of the body contents.
@@ -1819,11 +1820,7 @@ fn process_body(
 ///
 /// # Error Handling
 ///
-/// If the contents is a NULL pointer, it will set the body contents as null. If
-/// the content type is a null pointer, or can't be parsed, it will set the
-/// content type as TEXT. Returns false if the interaction or Pact can't be
-/// modified (i.e. the mock server for it has already started) or an error has
-/// occurred.
+/// If the contents is a NULL pointer, it will set the body contents as null.
 #[no_mangle]
 pub extern "C" fn pactffi_with_body(
     interaction: InteractionHandle,
@@ -1838,8 +1835,19 @@ pub extern "C" fn pactffi_with_body(
         content_type,
         body
     );
-    let content_type =
-        convert_cstr("content_type", content_type).map(|ct| ContentType::parse(ct).unwrap());
+    let content_type = convert_cstr("content_type", content_type).and_then(|ct| {
+        match ContentType::parse(ct) {
+            Ok(parsed) => Some(parsed),
+            Err(err) => {
+                error!(
+                    "Failed to parse '{}' as a content type ({}), falling back to auto-detection",
+                    ct,
+                    err,
+                );
+                None
+            }
+        }
+    });
     trace!(?content_type);
     let content_type_header = "Content-Type".to_string();
     let body = convert_cstr("body", body).unwrap_or_default();
@@ -4485,5 +4493,43 @@ mod tests {
       interaction.request.body.value(),
       None
     )
+  }
+
+  #[test]
+  fn pactffi_with_body_with_invalid_content_type_does_not_panic() {
+    let pact_handle = PactHandle::new("WithBodyInvalidCtC", "WithBodyInvalidCtP");
+    let description = CString::new("interaction with matcher as content type").unwrap();
+    let i_handle = pactffi_new_interaction(pact_handle, description.as_ptr());
+
+    // Replicates what pact-js passes when a regex matcher is set on Content-Type:
+    // contentTypeFromHeaders returned the full matcher JSON blob instead of the
+    // example value, and pactffi_with_body would panic trying to parse it as a
+    // MIME type. The documented contract says it should fall back gracefully.
+    let matcher_blob = CString::new(
+      r#"{"pact:matcher:type":"regex","regex":"^application\\/json","value":"application/json"}"#
+    ).unwrap();
+    let body = CString::new(r#"{"id":"123"}"#).unwrap();
+
+    let result = pactffi_with_body(
+      i_handle,
+      InteractionPart::Request,
+      matcher_blob.as_ptr(),
+      body.as_ptr(),
+    );
+
+    let interaction = i_handle
+      .with_interaction(&|_, _, inner| inner.as_v4_http().unwrap())
+      .unwrap();
+
+    pactffi_free_pact_handle(pact_handle);
+
+    // Should not panic; function must return true and fall back gracefully
+    expect!(result).to(be_true());
+    // Body should be present
+    expect!(interaction.request.body.value()).to(be_some());
+    // Content-Type should be auto-detected as JSON from the body contents
+    let headers = interaction.request.headers.unwrap();
+    expect!(headers.get("Content-Type").unwrap().first().unwrap())
+      .to(be_equal_to(&JSON.to_string()));
   }
 }
