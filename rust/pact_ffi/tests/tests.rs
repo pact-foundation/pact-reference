@@ -38,6 +38,7 @@ use pact_ffi::mock_server::{
 use pact_ffi::mock_server::handles::{
   InteractionPart,
   pact_default_file_name,
+  pactffi_add_interaction_reference,
   pactffi_add_text_comment,
   pactffi_free_pact_handle,
   pactffi_given_with_params,
@@ -423,6 +424,59 @@ fn add_text_comment() {
   interaction.with_interaction(&|_, _, i| {
     let interaction = i.as_v4_http().unwrap();
     assert_eq!(interaction.comments["text"], json!(["hello", "world"]));
+  });
+}
+
+#[test]
+fn add_interaction_reference() {
+  let consumer_name = CString::new("consumer").unwrap();
+  let provider_name = CString::new("provider").unwrap();
+  let pact_handle = pactffi_new_pact(consumer_name.as_ptr(), provider_name.as_ptr());
+  let description = CString::new("add_interaction_reference").unwrap();
+  let interaction = pactffi_new_interaction(pact_handle, description.as_ptr());
+
+  let group = CString::new("asyncapi").unwrap();
+  let name = CString::new("operationId").unwrap();
+  let value = CString::new("createUser").unwrap();
+
+  assert!(pactffi_add_interaction_reference(interaction, group.as_ptr(), name.as_ptr(), value.as_ptr()));
+
+  interaction.with_interaction(&|_, _, i| {
+    let interaction = i.as_v4_http().unwrap();
+    assert_eq!(
+      interaction.comments["references"],
+      json!({"asyncapi": {"operationId": "createUser"}})
+    );
+  });
+
+  // Adding a second entry in the same group
+  let name2 = CString::new("messageId").unwrap();
+  let value2 = CString::new("userCreated").unwrap();
+  assert!(pactffi_add_interaction_reference(interaction, group.as_ptr(), name2.as_ptr(), value2.as_ptr()));
+
+  interaction.with_interaction(&|_, _, i| {
+    let interaction = i.as_v4_http().unwrap();
+    assert_eq!(
+      interaction.comments["references"],
+      json!({"asyncapi": {"operationId": "createUser", "messageId": "userCreated"}})
+    );
+  });
+
+  // Adding an entry in a different group
+  let group2 = CString::new("openapi").unwrap();
+  let name3 = CString::new("operationId").unwrap();
+  let value3 = CString::new("listUsers").unwrap();
+  assert!(pactffi_add_interaction_reference(interaction, group2.as_ptr(), name3.as_ptr(), value3.as_ptr()));
+
+  interaction.with_interaction(&|_, _, i| {
+    let interaction = i.as_v4_http().unwrap();
+    assert_eq!(
+      interaction.comments["references"],
+      json!({
+        "asyncapi": {"operationId": "createUser", "messageId": "userCreated"},
+        "openapi": {"operationId": "listUsers"}
+      })
+    );
   });
 }
 
