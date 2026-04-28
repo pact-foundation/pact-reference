@@ -185,7 +185,7 @@ impl RequestBuilder {
             match definition {
               Value::Object(attributes) => {
                 let map = attributes.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
-                match matcher.configure_interation(&content_type, map).await {
+                match matcher.configure_interaction(&content_type, map).await {
                   Ok((contents, plugin_config)) => {
                     debug!("Interaction contents = {:?}", contents);
                     debug!("Interaction plugin_config = {:?}", plugin_config);

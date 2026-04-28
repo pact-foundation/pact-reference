@@ -258,7 +258,7 @@ impl SyncMessageInteractionBuilder {
             debug!("Content matcher is a core matcher, will use the internal implementation");
             self.setup_core_matcher(Some(ct.clone()), &contents_hashmap, Some(content_matcher));
           } else {
-            match content_matcher.configure_interation(&ct, contents_hashmap).await {
+            match content_matcher.configure_interaction(&ct, contents_hashmap).await {
               Ok((contents, plugin_config)) => {
                 if let Some(interaction) = contents.iter().find(|i| i.part_name == "request") {
                   self.request_contents = InteractionContents::from(&interaction);
@@ -599,7 +599,7 @@ mod tests {
   use pact_models::path_exp::DocPath;
   use pact_models::v4::message_parts::MessageContents;
 
-  use crate::builders::{MessageInteractionBuilder, SyncMessageInteractionBuilder};
+  use crate::builders::SyncMessageInteractionBuilder;
 
   #[test]
   fn supports_setting_metadata_values() {

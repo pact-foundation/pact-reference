@@ -253,7 +253,7 @@ mod plugin_tests {
   use proclaim_it::assert_that;
   use serde_json::{json, Value};
 
-  use crate::builders::{InteractionBuilder, MessageInteractionBuilder};
+  use crate::builders::InteractionBuilder;
 
   #[test]
   fn plugin_config_merges_config_from_request_and_response_parts() {
