@@ -121,7 +121,7 @@ impl InteractionBuilder {
   /// the interaction corresponds to as an external reference.
   /// ```
   /// # let mut builder = pact_consumer::builders::InteractionBuilder::new("test", "");
-  /// builder.reference("asyncapi", "operationId", "createUser");
+  /// builder.reference("openapi", "operationId", "createUser");
   /// ```
   pub fn reference<G: Into<String>, N: Into<String>, J: Into<Value>>(
     &mut self,
