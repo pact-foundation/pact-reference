@@ -31,6 +31,7 @@ use pact_models::v4::synch_http::SynchronousHttp;
 /// This is supposed to be a doctest in mod, but it's breaking there, so
 /// we have an executable copy here.
 #[test_log::test(tokio::test)]
+#[ignore] // this sets an environment variable, which affects other tests
 async fn mock_server_passing_validation() -> anyhow::Result<()> {
     let output_dir = output_dir("target/pact_dir");
     unsafe { env::set_var("PACT_OUTPUT_DIR", &output_dir); }

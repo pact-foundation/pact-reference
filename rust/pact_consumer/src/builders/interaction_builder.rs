@@ -1,6 +1,6 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
-use maplit::hashmap;
+use maplit::{btreemap, hashmap};
 use serde_json::{json, Value};
 use tracing::debug;
 use pact_models::json_utils::json_deep_merge;
@@ -35,7 +35,9 @@ pub struct InteractionBuilder {
     pub interaction_type: String,
 
     /// Any configuration provided by plugins that needs to be persisted to the Pact metadata
-    pub plugin_configuration: HashMap<String, Value>
+    pub plugin_configuration: HashMap<String, Value>,
+
+    references: Option<BTreeMap<String, BTreeMap<String, Value>>>
 }
 
 impl InteractionBuilder {
@@ -52,7 +54,8 @@ impl InteractionBuilder {
       transport: None,
       request: RequestBuilder::default(),
       response: ResponseBuilder::default(),
-      plugin_configuration: Default::default()
+      plugin_configuration: Default::default(),
+      references: None
     }
   }
 
@@ -113,6 +116,33 @@ impl InteractionBuilder {
     self
   }
 
+  /// Sets an external reference for the interaction.  The reference will be stored in the Pact
+  /// file comments under the group. For instance, you could store the OpenAPI operation ID that
+  /// the interaction corresponds to as an external reference.
+  /// ```
+  /// # let mut builder = pact_consumer::builders::InteractionBuilder::new("test", "");
+  /// builder.reference("asyncapi", "operationId", "createUser");
+  ///
+  pub fn reference<G: Into<String>, J: Into<Value>>(&mut self, group: G, name: G, value: J) -> &mut Self {
+    if let Some(references) = self.references.as_mut() {
+      match references.entry(group.into()) {
+        std::collections::btree_map::Entry::Vacant(entry) => {
+          entry.insert(btreemap! { name.into() => value.into() });
+        }
+        std::collections::btree_map::Entry::Occupied(mut entry) => {
+          entry.get_mut().insert(name.into(), value.into());
+        }
+      }
+    } else {
+      self.references = Some(btreemap!{
+        group.into() => btreemap!{
+          name.into() => value.into()
+        }
+      });
+    }
+    self
+  }
+
   /// Sets the protocol transport for this interaction. This would be required when there are
   /// different types of interactions in the Pact file (i.e. HTTP and messages).
   pub fn transport<G: Into<String>>(&mut self, name: G) -> &mut Self {
@@ -136,6 +166,17 @@ impl InteractionBuilder {
     debug!("Building V4 HTTP interaction: {:?}", self);
 
     let markup = self.request.interaction_markup().merge(self.response.interaction_markup());
+
+    let mut comments = hashmap! {
+      "text".to_string() => json!(self.comments),
+      "testname".to_string() => json!(self.test_name)
+    };
+    if let Some(references) = &self.references {
+      comments.insert("references".to_string(), references.iter()
+        .map(|(k, v)| (k.clone(), json!(v)))
+        .collect());
+    }
+
     SynchronousHttp {
       id: None,
       key: self.key.clone(),
@@ -143,10 +184,7 @@ impl InteractionBuilder {
       provider_states: self.provider_states.clone(),
       request: self.request.build_v4(),
       response: self.response.build_v4(),
-      comments: hashmap!{
-        "text".to_string() => json!(self.comments),
-        "testname".to_string() => json!(self.test_name)
-      },
+      comments,
       pending: self.pending.unwrap_or(false),
       plugin_config: self.plugin_config(),
       interaction_markup: markup,
@@ -212,9 +250,10 @@ mod plugin_tests {
   use expectest::prelude::*;
   use maplit::hashmap;
   use pact_plugin_driver::content::PluginConfiguration;
-  use serde_json::json;
+  use proclaim_it::assert_that;
+  use serde_json::{json, Value};
 
-  use crate::builders::InteractionBuilder;
+  use crate::builders::{InteractionBuilder, MessageInteractionBuilder};
 
   #[test]
   fn plugin_config_merges_config_from_request_and_response_parts() {
@@ -258,5 +297,28 @@ mod plugin_tests {
         })
       }
     }));
+  }
+
+  #[test]
+  fn supports_setting_external_references() {
+    let interaction = InteractionBuilder::new("test", "")
+      .reference("asyncapi", "operationId", "test")
+      .reference("openapi", "operationId", "test2")
+      .build_v4();
+
+    assert_that! {
+      interaction.comments == hashmap! {
+        "references".to_string() => json!({
+            "asyncapi": {
+              "operationId": "test"
+            },
+            "openapi": {
+              "operationId": "test2"
+            }
+        }),
+        "text".to_string() => json!([]),
+        "testname".to_string() => Value::Null
+      }
+    }
   }
 }
