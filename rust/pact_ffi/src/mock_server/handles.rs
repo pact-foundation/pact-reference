@@ -2650,6 +2650,78 @@ ffi_fn!{
   }
 }
 
+ffi_fn!{
+  /// Add an external reference to the interaction. The reference will be stored in the Pact
+  /// file comments under the `references` key, grouped by `group`. For instance, you could
+  /// store the AsyncAPI operation ID that the interaction corresponds to as an external reference.
+  ///
+  /// * `interaction` - Interaction handle to add the reference to.
+  /// * `group` - Group name for the reference (e.g. `"asyncapi"`).
+  /// * `name` - Name of the reference entry within the group (e.g. `"operationId"`).
+  /// * `value` - Value of the reference. This may be any valid JSON value (parsed automatically),
+  ///   or a plain string if JSON parsing fails.
+  ///
+  /// This function will return `true` if the reference was successfully added. All parameters
+  /// must be valid UTF-8 null-terminated strings.
+  ///
+  /// # Safety
+  ///
+  /// All parameters must be valid pointers to NULL terminated UTF-8 strings.
+  fn pactffi_add_interaction_reference(interaction: InteractionHandle, group: *const c_char, name: *const c_char, value: *const c_char) -> bool {
+    let group = match convert_cstr("group", group) {
+      Some(group) => group,
+      None => {
+        error!("add_interaction_reference: Group value is not valid (NULL or non-UTF-8)");
+        return Err(anyhow!("Group value is not valid (NULL or non-UTF-8)"));
+      }
+    };
+    let name = match convert_cstr("name", name) {
+      Some(name) => name,
+      None => {
+        error!("add_interaction_reference: Name value is not valid (NULL or non-UTF-8)");
+        return Err(anyhow!("Name value is not valid (NULL or non-UTF-8)"));
+      }
+    };
+    let value: serde_json::Value = match convert_cstr("value", value) {
+      Some(value) => match serde_json::from_str(value) {
+        Ok(value) => value,
+        Err(_) => serde_json::Value::String(value.to_string()),
+      },
+      None => {
+        error!("add_interaction_reference: Value is not valid (NULL or non-UTF-8)");
+        return Err(anyhow!("Value is not valid (NULL or non-UTF-8)"));
+      }
+    };
+
+    interaction.with_interaction(&|_, _, inner| {
+      let references = inner.comments_mut()
+        .entry("references".to_string())
+        .or_insert_with(|| serde_json::Value::Object(serde_json::Map::new()));
+      match references {
+        serde_json::Value::Object(map) => {
+          let group_entry = map
+            .entry(group.to_string())
+            .or_insert_with(|| serde_json::Value::Object(serde_json::Map::new()));
+          match group_entry {
+            serde_json::Value::Object(group_map) => {
+              group_map.insert(name.to_string(), value.clone());
+            }
+            other => {
+              *other = serde_json::json!({ name: value });
+            }
+          }
+        }
+        other => {
+          *other = serde_json::json!({ group: { name: value } });
+        }
+      }
+      Ok(())
+    }).unwrap_or(Err(anyhow!("Not value to unwrap"))).is_ok()
+  } {
+    false
+  }
+}
+
 fn convert_ptr_to_body(body: *const u8, size: size_t, content_type: Option<ContentType>) -> OptionalBody {
   if body.is_null() {
     OptionalBody::Null
