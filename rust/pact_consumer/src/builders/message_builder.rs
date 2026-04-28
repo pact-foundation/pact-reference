@@ -190,7 +190,7 @@ impl MessageInteractionBuilder {
   /// ```
   /// # let mut builder = pact_consumer::builders::MessageInteractionBuilder::new("test");
   /// builder.reference("asyncapi", "operationId", "createUser");
-  ///
+  /// ```
   pub fn reference<G: Into<String>, J: Into<Value>>(&mut self, group: G, name: G, value: J) -> &mut Self {
     if let Some(references) = self.references.as_mut() {
       match references.entry(group.into()) {

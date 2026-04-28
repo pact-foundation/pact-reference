@@ -109,9 +109,9 @@ impl SyncMessageInteractionBuilder {
   /// file comments under the group. For instance, you could store the AsyncAPI operation ID that
   /// the interaction corresponds to as an external reference.
   /// ```
-  /// # let mut builder = pact_consumer::builders::MessageInteractionBuilder::new("test");
+  /// # let mut builder = pact_consumer::builders::SyncMessageInteractionBuilder::new("test");
   /// builder.reference("asyncapi", "operationId", "createUser");
-  ///
+  /// ```
   pub fn reference<G: Into<String>, J: Into<Value>>(&mut self, group: G, name: G, value: J) -> &mut Self {
     if let Some(references) = self.references.as_mut() {
       match references.entry(group.into()) {
