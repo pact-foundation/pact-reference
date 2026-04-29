@@ -16,7 +16,7 @@ pact_models = { version = "~1.3.10" }
 pact_matching = { version = "~2.0.3" }
 pact_mock_server = { version = "~2.1.2" }
 pact_verifier = { version = "~1.3.4" }
-pact_consumer = { version = "~1.4.1" }
+pact_consumer = { version = "~1.4.3" }
 regex = "1.10.2"
 reqwest = { version = "0.12.3", default-features = false, features = ["rustls-tls-native-roots", "json"] }
 rocket = { version = "0.5.0", features = ["json"] }
