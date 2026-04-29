@@ -302,9 +302,16 @@ impl MatchingRule {
       MatchingRule::ContentType(ct) => hashmap!{ "value" => Value::String(ct.clone()) },
       MatchingRule::ArrayContains(variants) => hashmap! { "variants" =>
         variants.iter().map(|(variant, rules, gens)| {
-          Value::Array(vec![json!(variant), rules.to_v3_json(), Value::Object(gens.iter().map(|(key, g)| {
-            (key.to_string(), g.to_json().unwrap())
-          }).collect())])
+          let mut v = json!({
+            "index": variant,
+            "rules": rules.to_v3_json()
+          });
+          if !gens.is_empty() {
+            v["generators"] = Value::Object(gens.iter().map(|(key, g)| {
+              (key.to_string(), g.to_json().unwrap())
+            }).collect());
+          }
+          v
         }).collect()
       },
       MatchingRule::Values => empty,
@@ -2844,5 +2851,23 @@ mod tests {
         MatchingRule::EachKey(MatchingRuleDefinition::new("another_key".to_string(), ValueType::Unknown, MatchingRule::Type, None, "".to_string()))
       ]}
     )
+  }
+
+  #[test]
+  fn array_contains_values_round_trip() {
+    // Regression test: MatchingRule::values() is used by pact-plugin-driver to encode
+    // matching rules over the gRPC plugin protocol. The variants must serialise in a
+    // form that MatchingRule::create() can deserialise — i.e. as objects with
+    // `index` / `rules` / `generators` keys, not as arrays.
+    let original = MatchingRule::ArrayContains(vec![
+      (0, matchingrules_list! { "body"; "$.foo" => [ MatchingRule::Equality ] }, HashMap::default()),
+      (1, matchingrules_list! { "body"; "$.bar" => [ MatchingRule::Type ] }, HashMap::default()),
+    ]);
+
+    let values = original.values();
+    let attributes = json!({ "variants": values["variants"].clone() });
+    let restored = MatchingRule::create("arrayContains", &attributes).unwrap();
+
+    expect!(restored).to(be_equal_to(original));
   }
 }
