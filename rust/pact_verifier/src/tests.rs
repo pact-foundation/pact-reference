@@ -5,6 +5,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
+use insta::assert_snapshot;
+
 use anyhow::anyhow;
 use async_trait::async_trait;
 use expectest::prelude::*;
@@ -1170,4 +1172,74 @@ async fn support_passing_provider_state_params_to_provider_state_generator() {
 
   let result = super::verify_interaction(&provider, interaction, &pact.boxed(), &verification_options, &provider_states).await;
   expect!(result).to(be_ok());
+}
+
+#[test]
+fn process_comments_with_references_displays_grouped_entries() {
+  let interaction = SynchronousHttp {
+    comments: hashmap! {
+      "references".to_string() => json!({
+        "asyncapi": {
+          "operationId": "publishOrder"
+        }
+      })
+    },
+    ..SynchronousHttp::default()
+  };
+  let mut output = vec![];
+  super::process_comments(&interaction, &mut output);
+  assert_snapshot!(output.join("\n"));
+}
+
+#[test]
+fn process_comments_with_multiple_reference_groups() {
+  let interaction = SynchronousHttp {
+    comments: hashmap! {
+      "references".to_string() => json!({
+        "asyncapi": {
+          "operationId": "publishOrder"
+        },
+        "openapi": {
+          "operationId": "getOrder",
+          "path": "/orders/{id}"
+        }
+      })
+    },
+    ..SynchronousHttp::default()
+  };
+  let mut output = vec![];
+  super::process_comments(&interaction, &mut output);
+  assert_snapshot!(output.join("\n"));
+}
+
+#[test]
+fn process_comments_with_references_combined_with_text_and_testname() {
+  let interaction = SynchronousHttp {
+    comments: hashmap! {
+      "testname".to_string() => json!("a consumer test"),
+      "text".to_string() => json!(["a comment"]),
+      "references".to_string() => json!({
+        "asyncapi": {
+          "operationId": "publishOrder"
+        }
+      })
+    },
+    ..SynchronousHttp::default()
+  };
+  let mut output = vec![];
+  super::process_comments(&interaction, &mut output);
+  assert_snapshot!(output.join("\n"));
+}
+
+#[test]
+fn process_comments_with_no_references_produces_no_references_section() {
+  let interaction = SynchronousHttp {
+    comments: hashmap! {
+      "text".to_string() => json!(["a comment"])
+    },
+    ..SynchronousHttp::default()
+  };
+  let mut output = vec![];
+  super::process_comments(&interaction, &mut output);
+  assert_snapshot!(output.join("\n"));
 }

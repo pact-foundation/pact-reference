@@ -61,6 +61,7 @@ expectest = "0.12.0"
 pact_consumer = { version = "~1.4.2", path = "../pact_consumer" }
 pretty_assertions = "1.4.1"
 quickcheck = "1.1.0"
+insta = "1.43.1"
 rstest = "0.26.1"
 test-log = { version = "0.2.19", features = ["trace"] }
 tracing-subscriber = { version = "0.3.22", features = ["env-filter", "tracing-log", "fmt"] }

@@ -1,0 +1,8 @@
+---
+source: pact_verifier/src/tests.rs
+assertion_line: 1244
+expression: "output.join(\"\\n\")"
+---
+
+  Comments:
+a comment
