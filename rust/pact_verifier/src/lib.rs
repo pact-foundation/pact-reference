@@ -1628,7 +1628,7 @@ pub async fn verify_pact_internal<'a, F: RequestFilterExecutor, S: ProviderState
   Ok(VerificationResult { results: errors, output: output.clone() })
 }
 
-fn process_comments(interaction: &dyn V4Interaction, output: &mut Vec<String>) {
+pub(crate) fn process_comments(interaction: &dyn V4Interaction, output: &mut Vec<String>) {
   let comments = interaction.comments();
   if !comments.is_empty() {
     if let Some(testname) = comments.get("testname") {
@@ -1652,6 +1652,20 @@ fn process_comments(interaction: &dyn V4Interaction, output: &mut Vec<String>) {
           output.push(String::default());
         }
         _ => {}
+      }
+    }
+    if let Some(Value::Object(references)) = comments.get("references") {
+      if !references.is_empty() {
+        output.push("\n  References:".to_string());
+        for (group, group_value) in references {
+          output.push(format!("    {}:", group));
+          if let Value::Object(group_map) = group_value {
+            for (name, value) in group_map {
+              output.push(format!("      {}: {}", name, json_to_string(value)));
+            }
+          }
+        }
+        output.push(String::default());
       }
     }
   }

@@ -1,0 +1,15 @@
+---
+source: pact_verifier/src/tests.rs
+assertion_line: 1231
+expression: "output.join(\"\\n\")"
+---
+
+  Test Name: a consumer test
+
+  Comments:
+a comment
+
+
+  References:
+    asyncapi:
+      operationId: publishOrder

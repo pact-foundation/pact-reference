@@ -1,0 +1,9 @@
+---
+source: pact_verifier/src/tests.rs
+assertion_line: 1191
+expression: "output.join(\"\\n\")"
+---
+
+  References:
+    asyncapi:
+      operationId: publishOrder

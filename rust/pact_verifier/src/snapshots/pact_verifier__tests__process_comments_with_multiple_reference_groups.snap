@@ -1,0 +1,12 @@
+---
+source: pact_verifier/src/tests.rs
+assertion_line: 1212
+expression: "output.join(\"\\n\")"
+---
+
+  References:
+    asyncapi:
+      operationId: publishOrder
+    openapi:
+      operationId: getOrder
+      path: /orders/{id}
