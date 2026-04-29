@@ -1,5 +1,22 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.4.3 - Maintenance Release
+
+* 9cf0855e - chore(pact_consumer): Correct doc comment (Ronald Holshausen, Tue Apr 28 16:08:01 2026 +1000)
+* e427d2b6 - chore(pact_consumer): Correct the signature of the new reference functions (Ronald Holshausen, Tue Apr 28 16:06:49 2026 +1000)
+* d396c15f - chore(pact_consumer): Fix code blocks in doc comments (Ronald Holshausen, Tue Apr 28 15:44:24 2026 +1000)
+* aed31218 - chore(pact_consumer): Cleanup compiler warnings (Ronald Holshausen, Tue Apr 28 15:03:24 2026 +1000)
+* 5ed88c09 - feat(pact_consumer): Add a function to the consumer DSLs to capture external references (Ronald Holshausen, Tue Apr 28 14:56:45 2026 +1000)
+* 0c9a0b27 - chore: Update pact_matching to 2.0.3 (Ronald Holshausen, Thu Feb 19 10:16:12 2026 +1100)
+* 650a2582 - chore: Update pact_models to 1.3.8 (Ronald Holshausen, Wed Feb 18 12:19:37 2026 +1100)
+* 55be8997 - chore(pact_consumer): update bytes to 1.11.1 to resolve RUSTSEC-2026-0007 chore(pact_ffi): update bytes to 1.11.1 to resolve RUSTSEC-2026-0007 (Andrew Tecey, Mon Feb 9 14:25:43 2026 +0000)
+* afbcd605 - fix(pact_ffi): Update to mockserver 2.0 crate dropped support for mock servers from plugins #510 (Ronald Holshausen, Tue Jan 13 15:31:27 2026 +1100)
+* 5608d1ae - chore(pact_consumer): Remove unused dependencies (Ronald Holshausen, Tue Jan 13 11:50:07 2026 +1100)
+* 7e5ae7e4 - chore(pact_consumer): Update dependencies (Ronald Holshausen, Tue Jan 13 11:43:18 2026 +1100)
+* b59751b2 - chore: Upgrade pact_matching to 2.0.2 (Ronald Holshausen, Wed Sep 17 10:34:34 2025 +1000)
+* eaaee9de - chore: Upgrade pact_models to 1.3.7 (Ronald Holshausen, Tue Sep 16 13:57:37 2025 +1000)
+* 868379d8 - bump version to 1.4.3 (Ronald Holshausen, Fri Aug 1 09:36:59 2025 +1000)
+
 # 1.4.2 - Maintenance Release
 
 * a77b53c8 - chore: Update pact_matching to 2.0.1 (Ronald Holshausen, Fri Aug 1 09:16:28 2025 +1000)
