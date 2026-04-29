@@ -1,5 +1,10 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.3.10 - Bugfix Release
+
+* bf2fc778 - fix: ArrayContains variants must serialise as objects in values() (Stan Vodetskyi, Tue Apr 28 14:25:11 2026 -0700)
+* 03d7ae43 - bump version to 1.3.10 (Ronald Holshausen, Tue Apr 28 09:38:11 2026 +1000)
+
 # 1.3.9 - add arrayContains expression to matching rule definition parser
 
 * c90ffaea - feat: add arrayContains expression to matching rule definition parser (Stan Vodetskyi, Fri Apr 17 12:41:47 2026 -0700)
