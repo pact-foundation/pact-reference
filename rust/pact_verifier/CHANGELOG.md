@@ -1,5 +1,12 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.3.5 - Maintenance Release
+
+* 620632a2 - feat(pact_verifier): Display any references in the verifier output (#528) (Ronald Holshausen, Thu Apr 30 09:12:59 2026 +1000)
+* 22d7c32d - chore: Update pact_consumer to 1.4.3 (Ronald Holshausen, Wed Apr 29 17:22:31 2026 +1000)
+* 27c4aa20 - chore: Update pact_models to 1.3.10 (Ronald Holshausen, Wed Apr 29 17:20:36 2026 +1000)
+* 3a587b09 - bump version to 1.3.5 (Ronald Holshausen, Thu Feb 19 11:01:06 2026 +1100)
+
 # 1.3.4 - Maintenance Release
 
 * ea571fbe - chore(pact_verifier): Update dependencies (Ronald Holshausen, Thu Feb 19 10:44:44 2026 +1100)
