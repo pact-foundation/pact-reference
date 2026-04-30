@@ -106,7 +106,7 @@ pub fn setup_app() -> Command {
       .env("PACT_VERIFIER_HTML_REPORT")
       .action(ArgAction::Set)
       .value_parser(NonEmptyStringValueParser::new())
-      .help("Generate a HTML report of the verification"))
+      .help("Generate an HTML report of the verification"))
     .arg(Arg::new("no-colour")
       .long("no-colour")
       .action(ArgAction::SetTrue)
