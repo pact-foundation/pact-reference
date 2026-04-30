@@ -13,7 +13,7 @@ Logging options:
       --compact-log          Emit logs optimized for short line lengths.
   -j, --json <json-file>     Generate a JSON report of the verification [env: PACT_VERIFIER_JSON_REPORT=]
   -x, --junit <junit-file>   Generate a JUnit XML report of the verification (requires the junit feature) [env: PACT_VERIFIER_JUNIT_REPORT=]
-      --html <html-file>     Generate a HTML report of the verification [env: PACT_VERIFIER_HTML_REPORT=]
+      --html <html-file>     Generate an HTML report of the verification [env: PACT_VERIFIER_HTML_REPORT=]
       --no-colour            Disables ANSI escape codes in the output [aliases: --no-color]
 
 Loading pacts options:
