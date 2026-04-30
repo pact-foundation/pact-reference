@@ -1,5 +1,18 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 0.5.4 - Maintenance Release
+
+* 28c540cd - chore: Update pact_verifier to 1.3.5 (Ronald Holshausen, Thu Apr 30 10:04:40 2026 +1000)
+* 27c4aa20 - chore: Update pact_models to 1.3.10 (Ronald Holshausen, Wed Apr 29 17:20:36 2026 +1000)
+* 2955ac00 - Merge pull request #526 from pact-foundation/feat-ffi-add-reference (Ronald Holshausen, Wed Apr 29 09:22:09 2026 +1000)
+* e046f386 - chore(pact_ffi): Add pactffi_add_interaction_reference to capture external references for an interaction (Ronald Holshausen, Tue Apr 28 16:03:46 2026 +1000)
+* b78dae2d - fix: remove panic on invalid content type (JP-Ellis, Tue Apr 28 13:55:53 2026 +1000)
+* c90ffaea - feat: add arrayContains expression to matching rule definition parser (Stan Vodetskyi, Fri Apr 17 12:41:47 2026 -0700)
+* 04810be2 - test(pact_ffi): Fill content for xml elements that's not the first (tien.xuan.vo, Sun Mar 22 20:08:38 2026 +0700)
+* f9f86bcd - fix(pact_ffi): Fix xml second example empty (tien.xuan.vo, Sun Mar 22 19:10:02 2026 +0700)
+* 3d289f52 - test(pact_ffi): Test xml content (tien.xuan.vo, Sun Mar 22 19:57:16 2026 +0700)
+* 0f04596d - bump version to 0.5.4 (Ronald Holshausen, Thu Feb 19 11:46:41 2026 +1100)
+
 # 0.5.3 - Maintenance Release
 
 * f818fe62 - chore: Fix flaky test on CI (Ronald Holshausen, Thu Feb 19 11:23:18 2026 +1100)
