@@ -1,0 +1,4 @@
+error: invalid value 'invalid' for '--loglevel <loglevel>'
+  [possible values: error, warn, info, debug, trace, none]
+
+For more information, try '--help'.

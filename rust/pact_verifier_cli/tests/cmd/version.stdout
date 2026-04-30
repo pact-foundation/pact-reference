@@ -1,0 +1,4 @@
+pact verifier version   : v[CLIVERSION]
+pact specification      : v4.0
+models version          : v[..]
+

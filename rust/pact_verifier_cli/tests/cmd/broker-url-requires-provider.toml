@@ -1,0 +1,3 @@
+bin.name = "pact-verifier"
+args = ["-b", "http://broker.example.com"]
+status.code = 2

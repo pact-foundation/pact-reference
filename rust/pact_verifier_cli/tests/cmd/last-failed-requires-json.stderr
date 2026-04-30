@@ -1,0 +1,6 @@
+error: the following required arguments were not provided:
+  --json <json-file>
+
+Usage: pact-verifier --json <json-file> --file <file> --last-failed
+
+For more information, try '--help'.

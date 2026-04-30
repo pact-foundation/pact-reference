@@ -1,0 +1,5 @@
+error: the argument '--filter-state <filter-state>' cannot be used with '--filter-no-state'
+
+Usage: pact-verifier --file <file> --filter-state <filter-state>
+
+For more information, try '--help'.

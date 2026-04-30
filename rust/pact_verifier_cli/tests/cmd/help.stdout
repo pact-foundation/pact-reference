@@ -1,0 +1,197 @@
+Standalone pact verifier for provider pact verification
+
+Usage: pact-verifier [OPTIONS]
+
+Options:
+      --help
+          Print help and exit
+
+  -v, --version
+          Print version information and exit
+
+Logging options:
+  -l, --loglevel <loglevel>
+          Log level to emit log events at (defaults to warn)
+
+          Possible values:
+          - error: error
+          - warn:  warn
+          - info:  info
+          - debug: debug
+          - trace: trace
+          - none:  none
+
+      --pretty-log
+          Emits excessively pretty, multi-line logs, optimized for human readability
+
+      --full-log
+          This emits human-readable, single-line logs for each event that occurs, with the current span context displayed before the formatted representation of the event
+
+      --compact-log
+          Emit logs optimized for short line lengths
+
+  -j, --json <json-file>
+          Generate a JSON report of the verification
+          
+          [env: PACT_VERIFIER_JSON_REPORT=]
+
+  -x, --junit <junit-file>
+          Generate a JUnit XML report of the verification (requires the junit feature)
+          
+          [env: PACT_VERIFIER_JUNIT_REPORT=]
+
+      --no-colour
+          Disables ANSI escape codes in the output
+          
+          [aliases: --no-color]
+
+Loading pacts options:
+  -f, --file <file>
+          Pact file to verify (can be repeated)
+
+  -d, --dir <dir>
+          Directory of pact files to verify (can be repeated)
+
+  -u, --url <url>
+          URL of pact file to verify (can be repeated)
+
+  -b, --broker-url <broker-url>
+          URL of the pact broker to fetch pacts from to verify (requires the provider name parameter)
+          
+          [env: PACT_BROKER_BASE_URL=]
+
+      --webhook-callback-url <webhook-callback-url>
+          URL of a Pact to verify via a webhook callback. Requires the broker-url to be set
+          
+          [env: PACT_WEBHOOK_CALLBACK_URL=]
+
+      --ignore-no-pacts-error
+          Do not fail if no pacts are found to verify
+
+Authentication options:
+      --user <user>
+          Username to use when fetching pacts from URLS
+          
+          [env: PACT_BROKER_USERNAME=]
+
+      --password <password>
+          Password to use when fetching pacts from URLS
+          
+          [env: PACT_BROKER_PASSWORD=]
+
+  -t, --token <token>
+          Bearer token to use when fetching pacts from URLS
+          
+          [env: PACT_BROKER_TOKEN=]
+
+Provider options:
+  -h, --hostname <hostname>
+          Provider hostname (defaults to localhost)
+          
+          [env: PACT_PROVIDER_HOSTNAME=]
+
+  -p, --port <port>
+          Provider port (defaults to protocol default 80/443)
+          
+          [env: PACT_PROVIDER_PORT=]
+
+      --transport <transport>
+          Provider protocol transport to use (http, https, grpc, etc.)
+          
+          [env: PACT_PROVIDER_TRANSPORT=]
+          [default: http]
+
+      --transports <transports>
+          Allows multiple protocol transports to be configured (http, https, grpc, etc.) with their associated port numbers separated by a colon. For example, use --transports http:8080 grpc:5555 to configure both
+
+  -n, --provider-name <provider-name>
+          Provider name (defaults to provider)
+          
+          [env: PACT_PROVIDER_NAME=]
+
+      --base-path <base-path>
+          Base path to add to all requests
+          
+          [env: PACT_PROVIDER_BASE_PATH=]
+
+      --request-timeout <request-timeout>
+          Sets the HTTP request timeout in milliseconds for requests to the target API and for state change requests
+          
+          [env: PACT_PROVIDER_REQUEST_TIMEOUT=]
+
+  -H, --header <custom-header>
+          Add a custom header to be included in the calls to the provider. Values must be in the form KEY=VALUE, where KEY and VALUE contain ASCII characters (32-127) only. Can be repeated
+
+      --disable-ssl-verification
+          Disables validation of SSL certificates
+
+Provider state options:
+  -s, --state-change-url <state-change-url>
+          URL to post state change requests to
+          
+          [env: PACT_PROVIDER_STATE_CHANGE_URL=]
+
+      --state-change-as-query
+          State change request data will be sent as query parameters instead of in the request body
+          
+          [env: PACT_PROVIDER_STATE_CHANGE_AS_QUERY=]
+
+      --state-change-teardown
+          State change teardown requests are to be made after each interaction
+          
+          [env: PACT_PROVIDER_STATE_CHANGE_TEARDOWN=]
+
+Filtering interactions:
+      --filter-description <filter-description>
+          Only validate interactions whose descriptions match this filter (regex format)
+          
+          [env: PACT_DESCRIPTION=]
+
+      --filter-state <filter-state>
+          Only validate interactions whose provider states match this filter (regex format)
+          
+          [env: PACT_PROVIDER_STATE=]
+
+      --filter-no-state
+          Only validate interactions that have no defined provider state
+          
+          [env: PACT_PROVIDER_NO_STATE=]
+
+  -c, --filter-consumer <filter-consumer>
+          Consumer name to filter the pacts to be verified (can be repeated)
+
+Publishing options:
+      --publish
+          Enables publishing of verification results back to the Pact Broker. Requires the broker-url and provider-version parameters
+
+      --provider-version <provider-version>
+          Provider version that is being verified. This is required when publishing results
+
+      --build-url <build-url>
+          URL of the build to associate with the published verification results
+
+      --provider-tags <provider-tags>
+          Provider tags to use when publishing results. Accepts comma-separated values
+
+      --provider-branch <provider-branch>
+          Provider branch to use when publishing results
+
+Pact Broker options:
+      --consumer-version-tags <consumer-version-tags>
+          Consumer tags to use when fetching pacts from the Broker. Accepts comma-separated values
+
+      --consumer-version-selectors <consumer-version-selectors>
+          Consumer version selectors to use when fetching pacts from the Broker. Accepts a JSON string as per https://docs.pact.io/pact_broker/advanced_topics/consumer_version_selectors/. Can be repeated
+
+      --enable-pending
+          Enables Pending Pacts
+
+      --include-wip-pacts-since <include-wip-pacts-since>
+          Allow pacts that don't match given consumer selectors (or tags) to  be verified, without causing the overall task to fail. For more information, see https://pact.io/wip
+
+Development options:
+      --exit-on-first-error
+          Stops the verifier at the first failure
+
+      --last-failed
+          Only runs the interactions that failed on the previous verifier run. Requires --json-file to have been set

@@ -1,0 +1,3 @@
+bin.name = "pact-verifier"
+args = ["--help"]
+status.code = 0

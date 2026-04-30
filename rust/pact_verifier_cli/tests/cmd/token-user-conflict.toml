@@ -1,0 +1,3 @@
+bin.name = "pact-verifier"
+args = ["-f", "test.pact", "--user", "alice", "--token", "tok"]
+status.code = 2

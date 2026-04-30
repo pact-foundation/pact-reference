@@ -1,0 +1,3 @@
+bin.name = "pact-verifier"
+args = ["-f", "test.pact", "--last-failed"]
+status.code = 2

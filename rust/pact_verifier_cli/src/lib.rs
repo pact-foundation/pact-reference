@@ -1,17 +1,17 @@
 //! # Standalone Pact Verifier
 //!
-//! This project provides a command line interface to verify pact files against a running provider. It is a single 
+//! This project provides a command line interface to verify pact files against a running provider. It is a single
 //! executable binary. It implements all the Pact specifications up to [V4](https://github.com/pact-foundation/pact-specification/tree/version-4).
 //!
 //! [Online rust docs](https://docs.rs/pact_verifier_cli/)
 //!
-//! The Pact Verifier works by taking all the interactions (requests and responses) from a number of pact files. For each 
+//! The Pact Verifier works by taking all the interactions (requests and responses) from a number of pact files. For each
 //! interaction, it will make the request defined in the pact to a running service provider and check the response received
 //! back against the one defined in the pact file. All mismatches will then be reported.
 //!
 //! ## Command line interface
 //!
-//! The pact verifier is bundled as a single binary executable `pact-verifier`. Running this without any options 
+//! The pact verifier is bundled as a single binary executable `pact-verifier`. Running this without any options
 //! displays the standard help.
 //!
 //! ```console
@@ -121,7 +121,7 @@
 //!
 //! ### Log Level
 //!
-//! You can control the log level with the `-l, --loglevel <loglevel>` option. It defaults to warn, and the options that 
+//! You can control the log level with the `-l, --loglevel <loglevel>` option. It defaults to warn, and the options that
 //! you can specify are: error, warn, info, debug, trace, none.
 //!
 //! ### Pact File Sources
@@ -138,7 +138,7 @@
 //! #### Verifying a Pact via a webhook callback
 //!
 //! The Pact Broker allows for Pacts to be verified via a callback that supplies the URL to the Pact to verify. To verify
-//! just the Pact from the webhook call, use the `--webhook-callback-url` set to the supplied URL in conjunction with the 
+//! just the Pact from the webhook call, use the `--webhook-callback-url` set to the supplied URL in conjunction with the
 //! `--broker-url` option.
 //!
 //! ### Provider Options
@@ -179,14 +179,14 @@
 //!
 //! ### State change requests
 //!
-//! [Provider states](https://docs.pact.io/getting_started/provider_states) are a mechanism to define the state that the 
+//! [Provider states](https://docs.pact.io/getting_started/provider_states) are a mechanism to define the state that the
 //! provider needs to be in to be able to verify a particular request. This is achieved by setting a state change URL that
 //! will receive a POST request with the provider state before the actual request is made.
 //!
 //! *NOTE:* For verifying messages fetched via HTTP, the provider state is also passed in the request to fetch the message,
 //! so the state change URL is not required.
 //!
-//! For example, if a Pact file being verified has a provider state *"a user exists in the database"* and the provider state 
+//! For example, if a Pact file being verified has a provider state *"a user exists in the database"* and the provider state
 //! URL is set to `http://localhost:8080/provider-state`, then the following request would be made before the interaction
 //! is verified:
 //!
@@ -207,16 +207,16 @@
 //! #### `-s, --state-change-url <state-change-url>`
 //!
 //! This sets the absolute URL that the POST requests will be made to before each actual request. If this value is not
-//! set, the state change request will not be made. 
+//! set, the state change request will not be made.
 //!
 //! #### `--state-change-as-query`
 //!
-//! By default, the state for the state change request will be sent as a JSON document in the body of the request. This 
+//! By default, the state for the state change request will be sent as a JSON document in the body of the request. This
 //! option forces it to be sent as query parameters instead.
 //!
 //! #### `--state-change-teardown`
 //!
-//! This option will cause the verifier to also make a tear down request after the main request is made. It will receive a 
+//! This option will cause the verifier to also make a tear down request after the main request is made. It will receive a
 //! field in the body or a query parameter named `action` with the value `teardown`.
 //!
 //! #### `--consumer-version-selectors`
@@ -389,16 +389,16 @@
 //! Pact files that require plugins can be verified with version 0.9.0-beta.0+. For details on how plugins work, see the
 //! [Pact plugin project](https://github.com/pact-foundation/pact-plugins).
 //!
-//! Each required plugin is defined in the `plugins` section in the Pact metadata in the Pact file. The plugins will be 
-//! loaded from the plugin directory. By default, this is `~/.pact/plugins` or the value of the `PACT_PLUGIN_DIR` environment 
-//! variable. Each plugin required by the Pact file must be installed there. You will need to follow the installation 
+//! Each required plugin is defined in the `plugins` section in the Pact metadata in the Pact file. The plugins will be
+//! loaded from the plugin directory. By default, this is `~/.pact/plugins` or the value of the `PACT_PLUGIN_DIR` environment
+//! variable. Each plugin required by the Pact file must be installed there. You will need to follow the installation
 //! instructions for each plugin, but the default is to unpack the plugin into a sub-directory `<plugin-name>-<plugin-version>`
 //! (i.e., for the Protobuf plugin 0.0.0 it will be `protobuf-0.0.0`). The plugin manifest file must be present for the
 //! plugin to be able to be loaded.
 //!
 //! ### Verifying both HTTP and message interactions
 //!
-//! V4 Pact files can support both HTTP and message-based interactions in the same file. In this case, the be able to 
+//! V4 Pact files can support both HTTP and message-based interactions in the same file. In this case, the be able to
 //! handle the verification for both types of interactions you need to use the `--transports <transports>` option. This will
 //! allow configuring different ports to send the different requests to.
 //!
@@ -415,8 +415,8 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::anyhow;
-use clap::ArgMatches;
 use clap::error::ErrorKind;
+use clap::Parser;
 use log::LevelFilter;
 use maplit::hashmap;
 use serde_json::Value;
@@ -431,18 +431,15 @@ use pact_verifier::callback_executors::HttpRequestProviderStateExecutor;
 use pact_verifier::metrics::VerificationMetrics;
 use pact_verifier::selectors::{consumer_tags_to_selectors, json_to_selectors};
 
+use crate::args::CliArgs;
+
 pub mod args;
 mod reports;
 
 /// Handles the command line arguments from the running process
 pub async fn handle_cli() -> Result<(), i32> {
-  let app = args::setup_app();
-  let matches = app
-    .arg_required_else_help(true)
-    .try_get_matches();
-
-  match matches {
-    Ok(results) => handle_matches(&results).await,
+  match CliArgs::try_parse() {
+    Ok(args) => handle_matches(&args).await,
     Err(ref err) => {
       match err.kind() {
         ErrorKind::DisplayHelp => {
@@ -462,59 +459,58 @@ pub async fn handle_cli() -> Result<(), i32> {
   }
 }
 
-pub fn process_verifier_command(args: &ArgMatches) -> Result<(), ExitCode>  {
-    tokio::runtime::Runtime::new().unwrap().block_on(async {
-        let res = handle_matches(args).await;
-        match res {
-            Ok(()) => Ok(()),
-            Err(code) => Err(ExitCode::from(code as u8)),
-        }
-    })
+/// Entry point for running the verifier from parsed CLI arguments
+pub fn process_verifier_command(args: &CliArgs) -> Result<(), ExitCode> {
+  tokio::runtime::Runtime::new().unwrap().block_on(async {
+    let res = handle_matches(args).await;
+    match res {
+      Ok(()) => Ok(()),
+      Err(code) => Err(ExitCode::from(code as u8)),
+    }
+  })
 }
 
-pub async fn handle_matches(matches: &ArgMatches) -> Result<(), i32> {
-  let coloured_output = setup_output(matches);
+/// Runs the verification with the given CLI arguments
+pub async fn handle_matches(args: &CliArgs) -> Result<(), i32> {
+  let coloured_output = setup_output(args);
 
-  let provider = configure_provider(matches);
-  let source = pact_source(matches);
-  let filter = interaction_filter(matches);
+  let provider = configure_provider(args);
+  let source = pact_source(args);
+  let filter = interaction_filter(args);
   let provider_state_executor = Arc::new(HttpRequestProviderStateExecutor {
-    state_change_url: matches.get_one::<String>("state-change-url").cloned(),
-    state_change_body: !matches.get_flag("state-change-as-query"),
-    state_change_teardown: matches.get_flag("state-change-teardown"),
+    state_change_url: args.states.state_change_url.clone(),
+    state_change_body: !args.states.state_change_as_query,
+    state_change_teardown: args.states.state_change_teardown,
     .. HttpRequestProviderStateExecutor::default()
   });
 
   let mut custom_headers = hashmap!{};
-  if let Some(headers) = matches.get_many::<String>("custom-header") {
-    for header in headers {
-      let (key, value) = header.split_once('=').ok_or_else(|| {
-        error!("Custom header values must be in the form KEY=VALUE, where KEY and VALUE contain ASCII characters (32-127) only.");
-        3
-      })?;
-      custom_headers.insert(key.to_string(), value.to_string());
-    }
+  for header in &args.provider.custom_header {
+    let (key, value) = header.split_once('=').ok_or_else(|| {
+      error!("Custom header values must be in the form KEY=VALUE, where KEY and VALUE contain ASCII characters (32-127) only.");
+      3
+    })?;
+    custom_headers.insert(key.to_string(), value.to_string());
   }
 
   let verification_options = VerificationOptions {
     request_filter: None::<Arc<NullRequestFilterExecutor>>,
-    disable_ssl_verification: matches.get_flag("disable-ssl-verification"),
-    request_timeout: matches.get_one::<u64>("request-timeout").map(|v| *v).unwrap_or(5000),
+    disable_ssl_verification: args.provider.disable_ssl_verification,
+    request_timeout: args.provider.request_timeout.unwrap_or(5000),
     custom_headers,
     coloured_output,
-    no_pacts_is_error: !matches.get_flag("ignore-no-pacts-error"),
-    exit_on_first_failure: matches.get_flag("exit-first"),
-    run_last_failed_only: matches.get_flag("last-failed"),
+    no_pacts_is_error: !args.source.ignore_no_pacts_error,
+    exit_on_first_failure: args.development.exit_first,
+    run_last_failed_only: args.development.last_failed,
     .. VerificationOptions::default()
   };
 
-  let publish_options = if matches.get_flag("publish") {
+  let publish_options = if args.publishing.publish {
     Some(PublishOptions {
-      provider_version: matches.get_one::<String>("provider-version").cloned(),
-      build_url: matches.get_one::<String>("build-url").cloned(),
-      provider_tags: matches.get_many::<String>("provider-tags")
-        .map_or_else(Vec::new, |tags| tags.map(|tag| tag.clone()).collect()),
-      provider_branch: matches.get_one::<String>("provider-branch").cloned()
+      provider_version: args.publishing.provider_version.clone(),
+      build_url: args.publishing.build_url.clone(),
+      provider_tags: args.publishing.provider_tags.clone(),
+      provider_branch: args.publishing.provider_branch.clone()
     })
   } else {
     None
@@ -529,7 +525,7 @@ pub async fn handle_matches(matches: &ArgMatches) -> Result<(), i32> {
     provider,
     source,
     filter,
-    matches.get_many::<String>("filter-consumer").unwrap_or_default().map(|v| v.to_string()).collect::<Vec<_>>(),
+    args.filtering.filter_consumer.clone(),
     &verification_options,
     publish_options.as_ref(),
     &provider_state_executor,
@@ -544,14 +540,14 @@ pub async fn handle_matches(matches: &ArgMatches) -> Result<(), i32> {
       2
     })
     .and_then(|result| {
-      if let Some(json_file) = matches.get_one::<String>("json-file") {
+      if let Some(json_file) = &args.logging.json_file {
         if let Err(err) = reports::write_json_report(&result, json_file.as_str()) {
           error!("Failed to write JSON report to '{json_file}' - {err}");
           return Err(2)
         }
       }
 
-      if let Some(_junit_file) = matches.get_one::<String>("junit-file") {
+      if let Some(_junit_file) = &args.logging.junit_file {
         #[cfg(feature = "junit")]
         if let Err(err) = reports::write_junit_report(&result, _junit_file.as_str(), &provider_name) {
           error!("Failed to write JUnit report to '{_junit_file}' - {err}");
@@ -602,9 +598,9 @@ fn load_last_failed_filter(file_name: &String) -> anyhow::Result<Vec<FilterById>
   }
 }
 
-fn setup_output(matches: &ArgMatches) -> bool {
-  let coloured_output = !matches.get_flag("no-colour");
-  let level = matches.get_one::<String>("loglevel").cloned().unwrap_or("warn".to_string());
+fn setup_output(args: &CliArgs) -> bool {
+  let coloured_output = !args.logging.no_colour;
+  let level = args.logging.loglevel.as_ref().map(|l| l.to_string()).unwrap_or("warn".to_string());
   let log_level = match level.as_str() {
     "none" => LevelFilter::Off,
     _ => LevelFilter::from_str(level.as_str()).unwrap()
@@ -613,11 +609,11 @@ fn setup_output(matches: &ArgMatches) -> bool {
     .with_max_level(log_level)
     .init();
 
-  if matches.get_flag("pretty-log") {
+  if args.logging.pretty_log {
     setup_pretty_log(level.as_str(), coloured_output);
-  } else if matches.get_flag("full-log") {
+  } else if args.logging.full_log {
     setup_default_log(level.as_str(), coloured_output);
-  } else if matches.get_flag("compact-log") {
+  } else if args.logging.compact_log {
     setup_compact_log(level.as_str(), coloured_output);
   } else {
     setup_default_log(level.as_str(), coloured_output);
@@ -668,97 +664,88 @@ fn setup_pretty_log(level: &str, coloured_output: bool) {
 }
 
 #[allow(deprecated)]
-pub(crate) fn configure_provider(matches: &ArgMatches) -> ProviderInfo {
-  // It is ok to unwrap values here, as they have all been validated by the CLI parser
-  let transports = matches.get_many::<(String, u16, Option<String>)>("transports")
-    .map(|values| {
-      values.map(|(transport, port, base_path)| {
-        ProviderTransport {
-          transport: transport.to_string(),
-          port: Some(*port),
-          path: base_path.clone(),
-          scheme: None
-        }
-      }).collect()
-    }).unwrap_or_default();
+pub(crate) fn configure_provider(args: &CliArgs) -> ProviderInfo {
+  let transports = args.provider.transports.iter()
+    .map(|(transport, port, base_path)| {
+      ProviderTransport {
+        transport: transport.to_string(),
+        port: Some(*port),
+        path: base_path.clone(),
+        scheme: None
+      }
+    }).collect();
   ProviderInfo {
-    host: matches.get_one::<String>("hostname").cloned().unwrap_or("localhost".to_string()),
-    port: matches.get_one::<u16>("port").map(|p| *p),
-    path: matches.get_one::<String>("base-path").cloned().unwrap_or_default(),
-    protocol: matches.get_one::<String>("transport").cloned().unwrap_or("http".to_string()),
-    name: matches.get_one::<String>("provider-name").cloned().unwrap_or("provider".to_string()),
+    host: args.provider.hostname.clone().unwrap_or("localhost".to_string()),
+    port: args.provider.port,
+    path: args.provider.base_path.clone().unwrap_or_default(),
+    protocol: args.provider.transport.clone(),
+    name: args.provider.provider_name.clone().unwrap_or("provider".to_string()),
     transports,
     ..ProviderInfo::default()
   }
 }
 
+/// Prints the version information for the CLI
 pub fn print_version() {
   println!("pact verifier version   : v{}", clap::crate_version!());
   println!("pact specification      : v{}", PactSpecification::V4.version_str());
   println!("models version          : v{}", PACT_RUST_VERSION.unwrap_or_default());
 }
 
-fn pact_source(matches: &ArgMatches) -> Vec<PactSource> {
+fn pact_source(args: &CliArgs) -> Vec<PactSource> {
   let mut sources = vec![];
 
-  if let Some(webhook_url) = matches.get_one::<String>("webhook-callback-url") {
-    let broker_url = matches.get_one::<String>("broker-url").unwrap();
-    let auth = matches.get_one::<String>("user").map(|user| {
-      HttpAuth::User(user.clone(), matches.get_one::<String>("password").cloned())
-    }).or_else(|| matches.get_one::<String>("token").map(|t| HttpAuth::Token(t.clone())));
+  if let Some(webhook_url) = &args.source.webhook_callback_url {
+    let broker_url = args.source.broker_url.as_deref().unwrap();
+    let auth = args.auth.user.as_ref().map(|user| {
+      HttpAuth::User(user.clone(), args.auth.password.clone())
+    }).or_else(|| args.auth.token.as_ref().map(|t| HttpAuth::Token(t.clone())));
     sources.push(PactSource::WebhookCallbackUrl {
       pact_url: webhook_url.clone(),
-      broker_url: broker_url.clone(),
+      broker_url: broker_url.to_string(),
       auth
     });
   } else {
-    if let Some(values) = matches.get_many::<String>("file") {
-      sources.extend(values.map(|v| PactSource::File(v.clone())).collect::<Vec<PactSource>>());
-    };
+    for file in &args.source.file {
+      sources.push(PactSource::File(file.clone()));
+    }
 
-    if let Some(values) = matches.get_many::<String>("dir") {
-      sources.extend(values.map(|v| PactSource::Dir(v.clone())).collect::<Vec<PactSource>>());
-    };
+    for dir in &args.source.dir {
+      sources.push(PactSource::Dir(dir.clone()));
+    }
 
-    if let Some(values) = matches.get_many::<String>("url") {
-      sources.extend(values.map(|v| {
-        if let Some(user) = matches.get_one::<String>("user") {
-          PactSource::URL(v.clone(), Some(HttpAuth::User(user.clone(),
-                                                         matches.get_one::<String>("password").map(|p| p.clone()))))
-        } else if let Some(token) = matches.get_one::<String>("token") {
-          PactSource::URL(v.clone(), Some(HttpAuth::Token(token.clone())))
+    for url in &args.source.url {
+      let source = if let Some(user) = &args.auth.user {
+        PactSource::URL(url.clone(), Some(HttpAuth::User(user.clone(), args.auth.password.clone())))
+      } else if let Some(token) = &args.auth.token {
+        PactSource::URL(url.clone(), Some(HttpAuth::Token(token.clone())))
+      } else {
+        PactSource::URL(url.clone(), None)
+      };
+      sources.push(source);
+    }
+
+    if let Some(broker_url) = &args.source.broker_url {
+      let name = args.provider.provider_name.clone().unwrap_or_default();
+      let auth = args.auth.user.as_ref().map(|user| {
+        HttpAuth::User(user.clone(), args.auth.password.clone())
+      }).or_else(|| args.auth.token.as_ref().map(|t| HttpAuth::Token(t.clone())));
+
+      let source = if !args.broker.consumer_version_selectors.is_empty() || !args.broker.consumer_version_tags.is_empty() {
+        let pending = args.broker.enable_pending;
+        let wip = args.broker.include_wip_pacts_since.clone();
+        let provider_tags = args.publishing.provider_tags.clone();
+        let provider_branch = args.publishing.provider_branch.clone();
+
+        let selectors = if !args.broker.consumer_version_selectors.is_empty() {
+          json_to_selectors(args.broker.consumer_version_selectors.clone())
         } else {
-          PactSource::URL(v.clone(), None)
-        }
-      }).collect::<Vec<PactSource>>());
-    };
-
-    if let Some(broker_url) = matches.get_one::<String>("broker-url") {
-      let name = matches.get_one::<String>("provider-name").cloned().unwrap_or_default();
-      let auth = matches.get_one::<String>("user").map(|user| {
-        HttpAuth::User(user.clone(), matches.get_one::<String>("password").cloned())
-      }).or_else(|| matches.get_one::<String>("token").map(|t| HttpAuth::Token(t.clone())));
-
-      let source = if matches.contains_id("consumer-version-selectors") || matches.contains_id("consumer-version-tags") {
-        let pending = matches.get_flag("enable-pending");
-        let wip = matches.get_one::<String>("include-wip-pacts-since").cloned();
-        let provider_tags = matches.get_many::<String>("provider-tags")
-          .map_or_else(Vec::new, |tags| tags.map(|tag| tag.clone()).collect());
-        let provider_branch = matches.get_one::<String>("provider-branch").cloned();
-
-        let selectors = if matches.contains_id("consumer-version-selectors") {
-          matches.get_many::<Value>("consumer-version-selectors")
-            .map_or_else(Vec::new, |s| json_to_selectors(s.into_iter().cloned().collect::<Vec<_>>()))
-        } else if matches.contains_id("consumer-version-tags") {
-          matches.get_many::<String>("consumer-version-tags")
-            .map_or_else(Vec::new, |tags| consumer_tags_to_selectors(tags.map(|v| v.as_str()).collect::<Vec<_>>()))
-        } else {
-          vec![]
+          consumer_tags_to_selectors(args.broker.consumer_version_tags.iter().map(|v| v.as_str()).collect::<Vec<_>>())
         };
 
         PactSource::BrokerWithDynamicConfiguration {
           provider_name: name,
-          broker_url: broker_url.into(),
+          broker_url: broker_url.clone(),
           enable_pending: pending,
           include_wip_pacts_since: wip,
           provider_tags,
@@ -768,19 +755,19 @@ fn pact_source(matches: &ArgMatches) -> Vec<PactSource> {
           links: vec![]
         }
       } else {
-        PactSource::BrokerUrl(name, broker_url.to_string(), auth, vec![])
+        PactSource::BrokerUrl(name, broker_url.clone(), auth, vec![])
       };
       sources.push(source);
-    };
+    }
   }
 
   sources
 }
 
-fn interaction_filter(matches: &ArgMatches) -> FilterInfo {
-  if matches.get_flag("last-failed") {
+fn interaction_filter(args: &CliArgs) -> FilterInfo {
+  if args.development.last_failed {
     warn!("--last-failed is set, so will only validation interactions that previously failed");
-    if let Some(json_file) = matches.get_one::<String>("json-file") {
+    if let Some(json_file) = &args.logging.json_file {
       load_last_failed_filter(json_file)
         .map(|ids| {
           if ids.is_empty() {
@@ -798,26 +785,29 @@ fn interaction_filter(matches: &ArgMatches) -> FilterInfo {
       warn!("--last-failed is ignored as --json-file is not set");
       FilterInfo::None
     }
-  } else if matches.contains_id("filter-description") &&
-    (matches.contains_id("filter-state") || matches.get_flag("filter-no-state")) {
-    if let Some(state) = matches.get_one::<String>("filter-state") {
-      FilterInfo::DescriptionAndState(matches.get_one::<String>("filter-description").unwrap().clone(),
-                                      state.clone())
+  } else if args.filtering.filter_description.is_some() &&
+    (args.filtering.filter_state.is_some() || args.filtering.filter_no_state) {
+    if let Some(state) = &args.filtering.filter_state {
+      FilterInfo::DescriptionAndState(
+        args.filtering.filter_description.as_deref().unwrap().to_string(),
+        state.clone()
+      )
     } else {
-      FilterInfo::DescriptionAndState(matches.get_one::<String>("filter-description").unwrap().clone(),
-                                      String::new())
+      FilterInfo::DescriptionAndState(
+        args.filtering.filter_description.as_deref().unwrap().to_string(),
+        String::new()
+      )
     }
-  } else if let Some(desc) = matches.get_one::<String>("filter-description") {
+  } else if let Some(desc) = &args.filtering.filter_description {
     FilterInfo::Description(desc.clone())
-  } else if let Some(state) = matches.get_one::<String>("filter-state") {
+  } else if let Some(state) = &args.filtering.filter_state {
     FilterInfo::State(state.clone())
-  } else if matches.get_flag("filter-no-state") {
+  } else if args.filtering.filter_no_state {
     FilterInfo::State(String::new())
   } else {
     FilterInfo::None
   }
 }
-
 
 
 #[cfg(windows)]
@@ -828,6 +818,7 @@ pub fn init_windows() {
 }
 
 #[cfg(not(windows))]
+/// No-op on non-Windows platforms
 pub fn init_windows() { }
 
 #[cfg(test)]
@@ -835,21 +826,21 @@ mod tests {
   use std::fs::File;
   use std::io::Write;
 
+  use clap::Parser;
   use expectest::prelude::*;
-
   use rstest::rstest;
   use serde_json::json;
   use tempfile::TempDir;
-  use pact_verifier::{FilterInfo, FilterById};
 
-  use crate::{args, configure_provider};
+  use pact_verifier::{FilterById, FilterInfo};
+
+  use crate::args::CliArgs;
+  use crate::configure_provider;
 
   #[test]
-  #[allow(deprecated)]
   fn parse_provider_args_defaults() {
-    let args = args::setup_app();
-    let matches = args.get_matches_from(vec!["test", "-f", "test"]);
-    let provider = configure_provider(&matches);
+    let args = CliArgs::try_parse_from(["test", "-f", "test"]).unwrap();
+    let provider = configure_provider(&args);
 
     expect!(provider.host).to(be_equal_to("localhost"));
     expect!(provider.port).to(be_none());
@@ -859,14 +850,12 @@ mod tests {
   }
 
   #[test]
-  #[allow(deprecated)]
   fn parse_provider_args() {
-    let args = args::setup_app();
-    let matches = args.get_matches_from(vec![
+    let args = CliArgs::try_parse_from([
       "test", "-f", "test", "-h", "test.com", "-p", "1234", "-n", "test", "--transport", "https",
       "--base-path", "/base/path"
-    ]);
-    let provider = configure_provider(&matches);
+    ]).unwrap();
+    let provider = configure_provider(&args);
 
     expect!(provider.host).to(be_equal_to("test.com"));
     expect!(provider.port).to(be_some().value(1234));
@@ -876,13 +865,9 @@ mod tests {
   }
 
   #[test]
-  #[allow(deprecated)]
   fn parse_provider_args_with_old_alias() {
-    let args = args::setup_app();
-    let matches = args.get_matches_from(vec![
-      "test", "-f", "test", "--scheme", "https"
-    ]);
-    let provider = configure_provider(&matches);
+    let args = CliArgs::try_parse_from(["test", "-f", "test", "--scheme", "https"]).unwrap();
+    let provider = configure_provider(&args);
 
     expect!(provider.protocol).to(be_equal_to("https"));
   }
@@ -899,9 +884,8 @@ mod tests {
     case(&["--last-failed", "--json", "run2"], FilterInfo::None)
   )]
   fn interaction_filter_test(#[case] options: &[&str], #[case] result: FilterInfo) {
-    let app = args::setup_app();
-    let mut args = vec!["test", "-f", "test"];
-    args.extend_from_slice(options);
+    let mut args_vec: Vec<&str> = vec!["test", "-f", "test"];
+    args_vec.extend_from_slice(options);
 
     let tmp_dir = TempDir::new().unwrap();
     let file_path1 = tmp_dir.path().join("run1.json");
@@ -944,15 +928,15 @@ mod tests {
     });
     tmp_file.write_all(json_contents.to_string().as_bytes()).unwrap();
 
-    let len = args.len();
-    if args[len - 1] == "run1" {
-      args[len - 1] = file_path1.to_str().unwrap()
+    let len = args_vec.len();
+    if args_vec[len - 1] == "run1" {
+      args_vec[len - 1] = file_path1.to_str().unwrap()
     }
-    if args[len - 1] == "run2" {
-      args[len - 1] = file_path2.to_str().unwrap()
+    if args_vec[len - 1] == "run2" {
+      args_vec[len - 1] = file_path2.to_str().unwrap()
     }
 
-    let matches = app.get_matches_from(args);
-    expect!(super::interaction_filter(&matches)).to(be_equal_to(result));
+    let args = CliArgs::try_parse_from(&args_vec).unwrap();
+    expect!(super::interaction_filter(&args)).to(be_equal_to(result));
   }
 }

@@ -1,0 +1,5 @@
+error: the argument '--user <user>' cannot be used with '--token <token>'
+
+Usage: pact-verifier --file <file> --user <user>
+
+For more information, try '--help'.

@@ -1,0 +1,6 @@
+error: the following required arguments were not provided:
+  --provider-name <provider-name>
+
+Usage: pact-verifier --provider-name <provider-name> --broker-url <broker-url>
+
+For more information, try '--help'.
