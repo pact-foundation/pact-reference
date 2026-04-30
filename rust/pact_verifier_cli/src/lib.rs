@@ -462,7 +462,7 @@ pub async fn handle_cli() -> Result<(), i32> {
   }
 }
 
-/// Run the verifier parsed arguments with a new Token runtime
+/// Run the verifier parsed arguments with a new Tokio runtime
 pub fn process_verifier_command(args: &ArgMatches) -> Result<(), ExitCode>  {
     tokio::runtime::Runtime::new().unwrap().block_on(async {
         let res = handle_matches(args).await;

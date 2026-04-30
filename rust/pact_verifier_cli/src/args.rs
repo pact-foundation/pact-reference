@@ -1,4 +1,4 @@
-//! Command Line Aruments for the Verifier
+//! Command Line Arguments for the Verifier
 
 use clap::{Arg, ArgAction, ArgGroup, Command, command};
 use clap::builder::{FalseyValueParser, NonEmptyStringValueParser, PossibleValuesParser};
