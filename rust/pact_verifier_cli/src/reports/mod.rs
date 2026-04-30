@@ -7,11 +7,41 @@ use std::path::PathBuf;
 #[cfg(feature = "junit")] use strip_ansi_escapes;
 use serde_json::Value;
 use tracing::debug;
+use xrust::{Error, ErrorKind, Item, Node, SequenceTrait};
+use xrust::parser::ParseError;
+use xrust::parser::xml::parse;
+use xrust::transform::context::StaticContextBuilder;
+use xrust::trees::smite::RNode;
+use xrust::xslt::from_document;
 
 #[cfg(feature = "junit")] use pact_verifier::{interaction_mismatch_output, MismatchResult};
 use pact_verifier::verification_result::VerificationExecutionResult;
 
 mod xml;
+
+const XSLT: &str = include_str!("verification-report.xsl");
+
+fn node_from_str(s: &str) -> Result<RNode, Error> {
+  parse(RNode::new_document(), s, Some(|_: &_| Err(ParseError::MissingNameSpace)))
+}
+
+fn apply_xslt(xml_str: &str) -> anyhow::Result<String> {
+  let doc = parse(RNode::new_document(), xml_str, Some(|_: &_| Err(ParseError::MissingNameSpace)))?;
+  let xslt_doc = parse(RNode::new_document(), XSLT, Some(|_: &_| Err(ParseError::MissingNameSpace)))?;
+
+  let mut static_context = StaticContextBuilder::new()
+    .message(|_| Ok(()))
+    .fetcher(|_| Err(Error::new(ErrorKind::NotImplemented, "not implemented")))
+    .parser(|_| Err::<RNode, Error>(Error::new(ErrorKind::NotImplemented, "not implemented")))
+    .build();
+
+  let mut ctxt = from_document(xslt_doc, None, node_from_str, |_| Ok(String::new()))?;
+  ctxt.context(vec![Item::Node(doc)], 0);
+  ctxt.result_document(RNode::new_document());
+  let seq = ctxt.evaluate(&mut static_context)?;
+
+  Ok(seq.to_xml())
+}
 
 pub(crate) fn write_json_report(result: &VerificationExecutionResult, file_name: &str) -> anyhow::Result<()> {
   debug!("Writing JSON result of the verification to '{file_name}'");
@@ -96,11 +126,15 @@ pub(crate) fn write_html_report(
   } else {
     parent.join(filename).with_extension("xml")
   };
+
+  let xml_str = xml::to_xml_string(result, provider)?;
+
   debug!("Writing XML report of the verification to '{}'", xml_path.display());
-  let mut xml_file = File::create(&xml_path)?;
-  xml::write_xml_report(&mut xml_file, result, provider)?;
+  File::create(&xml_path)?.write_all(xml_str.as_bytes())?;
 
   debug!("Writing HTML report of the verification to '{file_name}'");
+  let html = apply_xslt(&xml_str)?;
+  File::create(file_name)?.write_all(html.as_bytes())?;
 
   Ok(())
 }

@@ -1,6 +1,3 @@
-use std::fs::File;
-use std::io::BufWriter;
-
 use quick_xml::se::to_utf8_io_writer;
 use serde::Serialize;
 use pact_matching::Mismatch;
@@ -244,14 +241,14 @@ impl From<&Mismatch> for XmlMismatch {
   }
 }
 
-pub(crate) fn write_xml_report(
-  f: &mut File,
+pub(crate) fn to_xml_string(
   result: &VerificationExecutionResult,
   provider: &str
-) -> anyhow::Result<()> {
+) -> anyhow::Result<String> {
   let report = XmlReport::from((provider, result));
-  to_utf8_io_writer(&mut BufWriter::new(f), &report)?;
-  Ok(())
+  let mut buf = Vec::new();
+  to_utf8_io_writer(&mut buf, &report)?;
+  Ok(String::from_utf8(buf)?)
 }
 
 #[cfg(test)]

@@ -33,6 +33,7 @@ pact_matching = { version = "~2.0.4", path = "../pact_matching", default-feature
 pact_models = { version = "~1.3.10", default-features = false }
 pact_verifier = { version = "~1.3.5", path = "../pact_verifier", default-features = false }
 quick-xml = { version = "0.39.2", features = ["serde", "serialize"] }
+xrust = "2.0.3"
 regex = "1.11.1"
 reqwest = { version = "0.12.20", default-features = false, features = ["rustls-tls-native-roots", "blocking", "json"] }
 serde = "1.0.228"
