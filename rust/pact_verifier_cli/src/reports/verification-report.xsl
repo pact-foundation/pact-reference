@@ -13,103 +13,134 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
         <title>Pact Verification Report &#8212; <xsl:value-of select="provider"/></title>
         <style>
+/* ============================================================
+   PACT VERIFICATION REPORT — light, editorial, print-first
+   ============================================================ */
+
 :root {
-  --pass:        #166534;
-  --pass-bg:     #dcfce7;
-  --fail:        #991b1b;
-  --fail-bg:     #fee2e2;
-  --pending:     #92400e;
-  --pending-bg:  #fef3c7;
-  --info:        #1e40af;
-  --info-bg:     #dbeafe;
-  --header:      #1e1b4b;
-  --text:        #111827;
-  --muted:       #6b7280;
-  --border:      #e5e7eb;
-  --surface:     #ffffff;
-  --bg:          #f3f4f6;
-  --radius:      8px;
-  --shadow:      0 1px 3px rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.08);
+  --pass:             #166534;
+  --pass-bg:          #f0fdf4;
+  --pass-border:      #86efac;
+  --fail:             #991b1b;
+  --fail-bg:          #fff5f5;
+  --fail-border:      #fca5a5;
+  --pending:          #78350f;
+  --pending-bg:       #fffbeb;
+  --pending-border:   #fcd34d;
+  --info:             #1d4ed8;
+  --info-bg:          #eff6ff;
+  --info-border:      #bfdbfe;
+  --accent:           #e11d48;
+  --text:             #1c1917;
+  --text-secondary:   #57534e;
+  --text-muted:       #a8a29e;
+  --border:           #e7e5e4;
+  --surface:          #ffffff;
+  --bg:               #f9f8f6;
+  --font-serif:       'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+  --font-sans:        -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono:        'Courier New', Courier, 'Lucida Console', monospace;
+  --radius:           6px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-sans);
   background: var(--bg);
   color: var(--text);
-  line-height: 1.55;
-  min-height: 100vh;
+  line-height: 1.6;
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* ── Header ─────────────────────────────────────── */
-.site-header {
-  background: var(--header);
-  color: #fff;
-  padding: 1.25rem 2rem 1rem;
+/* ── Header ──────────────────────────────────────── */
+.report-header {
+  background: var(--surface);
+  border-top: 5px solid var(--accent);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2rem;
 }
-.header-inner {
-  max-width: 1100px;
+.report-header-inner {
+  max-width: 1060px;
   margin: 0 auto;
+  padding: 1.75rem 1.5rem 1.5rem;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 1rem;
   flex-wrap: wrap;
-  gap: .75rem;
 }
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: .85rem;
+.report-meta {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.35rem;
 }
-.pact-badge {
-  background: #e11d48;
-  color: #fff;
-  font-size: .8rem;
-  font-weight: 800;
-  letter-spacing: .2em;
-  padding: .2em .6em;
-  border-radius: 4px;
-  flex-shrink: 0;
+.report-title {
+  font-family: var(--font-serif);
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
 }
-.header-left h1 { font-size: 1.2rem; font-weight: 600; }
-.provider-name {
-  max-width: 1100px;
-  margin: .55rem auto 0;
-  font-size: .875rem;
-  opacity: .7;
+.report-subtitle {
+  margin-top: 0.3rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
 }
 
-/* ── Badges ──────────────────────────────────────── */
-.badge {
-  display: inline-block;
-  padding: .3em .85em;
-  border-radius: 999px;
+/* ── Status stamp ────────────────────────────────── */
+.status-stamp {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  border: 2px solid;
+  border-radius: var(--radius);
   font-weight: 700;
-  font-size: .8rem;
-  letter-spacing: .04em;
-  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  flex-shrink: 0;
+  min-width: 6.5rem;
+  text-align: center;
 }
-.badge-lg    { font-size: .95rem; padding: .35em 1.1em; }
-.badge-pass    { background: var(--pass-bg);    color: var(--pass);    }
-.badge-fail    { background: var(--fail-bg);    color: var(--fail);    }
-.badge-pending { background: var(--pending-bg); color: var(--pending); }
+.status-stamp.pass {
+  color: var(--pass);
+  border-color: var(--pass-border);
+  background: var(--pass-bg);
+}
+.status-stamp.fail {
+  color: var(--fail);
+  border-color: var(--fail-border);
+  background: var(--fail-bg);
+}
+.stamp-icon { font-size: 1.35rem; line-height: 1; margin-bottom: 0.15rem; }
+.stamp-text { font-size: 0.75rem; }
 
 /* ── Page layout ─────────────────────────────────── */
-main {
-  max-width: 1100px;
+.page-wrap {
+  max-width: 1060px;
   margin: 0 auto;
-  padding: 2rem 1.5rem;
+  padding: 0 1.5rem 2.5rem;
   display: flex;
   flex-direction: column;
   gap: 2rem;
 }
+
+/* ── Section headings ────────────────────────────── */
 section h2 {
-  font-size: .72rem;
+  font-size: 0.6875rem;
   font-weight: 700;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  letter-spacing: .1em;
-  color: var(--muted);
+  color: var(--text-muted);
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
   margin-bottom: 1rem;
 }
 
@@ -117,219 +148,318 @@ section h2 {
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
-}
-.stat-card {
-  background: var(--surface);
+  gap: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1.25rem 1.5rem;
-  box-shadow: var(--shadow);
-  text-align: center;
+  background: var(--surface);
+  overflow: hidden;
 }
+.stat-card {
+  padding: 1.4rem 1.25rem 1.6rem;
+  text-align: center;
+  position: relative;
+}
+.stat-card + .stat-card { border-left: 1px solid var(--border); }
+.stat-card::after {
+  content: '';
+  display: block;
+  height: 3px;
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  background: var(--border);
+}
+.stat-card.pass::after    { background: var(--pass-border); }
+.stat-card.fail::after    { background: var(--fail-border); }
+.stat-card.pending::after { background: var(--pending-border); }
 .stat-value {
-  font-size: 2.25rem;
+  font-family: var(--font-serif);
+  font-size: 2.5rem;
   font-weight: 700;
   line-height: 1;
-  margin-bottom: .3rem;
+  margin-bottom: 0.3rem;
+  color: var(--text);
 }
-.stat-label {
-  font-size: .72rem;
-  text-transform: uppercase;
-  letter-spacing: .09em;
-  color: var(--muted);
-}
-.stat-card.pass    .stat-value { color: var(--pass);    }
-.stat-card.fail    .stat-value { color: var(--fail);    }
+.stat-card.pass    .stat-value { color: var(--pass); }
+.stat-card.fail    .stat-value { color: var(--fail); }
 .stat-card.pending .stat-value { color: var(--pending); }
+.stat-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
 
 /* ── Notice cards ────────────────────────────────── */
 .notice {
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
   background: var(--info-bg);
-  border-left: 4px solid #3b82f6;
+  border: 1px solid var(--info-border);
+  border-left: 3px solid var(--info);
   border-radius: var(--radius);
-  padding: .75rem 1rem;
+  padding: 0.7rem 1rem;
+  font-size: 0.875rem;
   color: var(--info);
-  font-size: .9rem;
 }
-.notice + .notice { margin-top: .5rem; }
+.notice + .notice { margin-top: 0.5rem; }
+.notice-icon { flex-shrink: 0; margin-top: 0.05rem; }
 
 /* ── Error / Pending cards ───────────────────────── */
 .error-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
   overflow: hidden;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
+  page-break-inside: avoid;
+  break-inside: avoid;
 }
 .error-card:last-child { margin-bottom: 0; }
+.error-card.fail    { border-left: 4px solid var(--fail-border); }
+.error-card.pending { border-left: 4px solid var(--pending-border); }
 
 .error-card-head {
   display: flex;
   align-items: center;
-  gap: .6rem;
-  padding: .8rem 1.2rem;
+  gap: 0.65rem;
+  padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--border);
-  background: #fafafa;
 }
-.error-card.fail    .error-card-head { border-left: 4px solid var(--fail);  }
-.error-card.pending .error-card-head { border-left: 4px solid #f59e0b;       }
+.error-card.fail    .error-card-head { background: var(--fail-bg); }
+.error-card.pending .error-card-head { background: var(--pending-bg); }
+
+.error-kind-tag {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.2em 0.55em;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.error-card.fail    .error-kind-tag { background: var(--fail-border);    color: var(--fail); }
+.error-card.pending .error-kind-tag { background: var(--pending-border); color: var(--pending); }
 
 .error-card-title {
   font-weight: 600;
-  font-size: .93rem;
+  font-size: 0.9rem;
+  color: var(--text);
   word-break: break-all;
 }
-.error-card-body { padding: 1rem 1.2rem; }
+.error-card-body { padding: 1rem; }
 
 /* ── Error message (type=error) ──────────────────── */
 .error-msg {
-  font-family: ui-monospace, 'Cascadia Code', 'Fira Code', Consolas, monospace;
-  font-size: .84rem;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  background: var(--fail-bg);
+  border: 1px solid var(--fail-border);
   border-radius: 4px;
-  padding: .65rem .9rem;
-  color: #991b1b;
-  word-break: break-all;
+  padding: 0.65rem 0.9rem;
+  color: var(--fail);
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+.error-card.pending .error-msg {
+  background: var(--pending-bg);
+  border-color: var(--pending-border);
+  color: var(--pending);
 }
 
 /* ── Mismatch detail table ───────────────────────── */
 .mismatch-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: .86rem;
+  font-size: 0.8125rem;
+  table-layout: fixed;
 }
 .mismatch-table th {
   text-align: left;
-  padding: .5rem .8rem;
-  font-size: .7rem;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.625rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: .07em;
-  color: var(--muted);
-  border-bottom: 2px solid var(--border);
-  white-space: nowrap;
+  letter-spacing: 0.09em;
+  color: var(--text-muted);
+  background: #fafaf9;
+  border-bottom: 1px solid var(--border);
 }
 .mismatch-table td {
-  padding: .55rem .8rem;
+  padding: 0.5rem 0.75rem;
   vertical-align: top;
   border-bottom: 1px solid var(--border);
 }
 .mismatch-table tr:last-child td { border-bottom: none; }
-.mismatch-table tr:hover td { background: #fafafa; }
-.col-type     { width: 8rem; }
-.col-location { width: 11rem; }
+.mismatch-table tr:nth-child(even) td { background: #fafaf9; }
+.col-type     { width: 7rem; }
+.col-location { width: 10rem; }
 
 /* ── Type chip ───────────────────────────────────── */
 .type-chip {
   display: inline-block;
-  font-size: .67rem;
+  font-size: 0.625rem;
   font-weight: 700;
-  letter-spacing: .05em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  padding: .15em .55em;
-  border-radius: 4px;
+  padding: 0.2em 0.5em;
+  border-radius: 3px;
   white-space: nowrap;
 }
-.error-card.fail    .type-chip { background: var(--fail-bg);    color: var(--fail);    }
-.error-card.pending .type-chip { background: var(--pending-bg); color: var(--pending); }
+.error-card.fail    .type-chip { background: var(--fail-bg);    color: var(--fail);    border: 1px solid var(--fail-border); }
+.error-card.pending .type-chip { background: var(--pending-bg); color: var(--pending); border: 1px solid var(--pending-border); }
 
 /* ── Inline code ─────────────────────────────────── */
 code {
-  font-family: ui-monospace, 'Cascadia Code', 'Fira Code', Consolas, monospace;
-  font-size: .82em;
-  background: #f3f4f6;
-  padding: .1em .35em;
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  background: #f5f5f4;
+  padding: 0.1em 0.35em;
   border-radius: 3px;
   word-break: break-all;
+  border: 1px solid var(--border);
 }
-.val-expected { color: var(--pass); }
-.val-actual   { color: var(--fail); }
+.val-expected { color: var(--pass); background: var(--pass-bg); border-color: var(--pass-border); }
+.val-actual   { color: var(--fail); background: var(--fail-bg); border-color: var(--fail-border); }
 
 /* ── Interaction results table ───────────────────── */
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
   overflow: hidden;
 }
 .results-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: .875rem;
+  font-size: 0.875rem;
 }
 .results-table th {
   text-align: left;
-  padding: .65rem 1rem;
-  font-size: .7rem;
+  padding: 0.55rem 1rem;
+  font-size: 0.6875rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: .07em;
-  color: var(--muted);
-  border-bottom: 2px solid var(--border);
-  background: #fafafa;
+  letter-spacing: 0.09em;
+  color: var(--text-muted);
+  background: #fafaf9;
+  border-bottom: 1px solid var(--border);
 }
 .results-table td {
-  padding: .65rem 1rem;
+  padding: 0.6rem 1rem;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
 }
 .results-table tr:last-child td { border-bottom: none; }
-.results-table tr:hover td { background: #fafafa; }
+.results-table tr:hover td { background: #fafaf9; }
 .duration {
-  color: var(--muted);
-  font-size: .8rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
+/* ── Status badge ────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.2em 0.6em;
+  border-radius: 3px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.badge-pass    { background: var(--pass-bg);    color: var(--pass);    border: 1px solid var(--pass-border); }
+.badge-fail    { background: var(--fail-bg);    color: var(--fail);    border: 1px solid var(--fail-border); }
+.badge-pending { background: var(--pending-bg); color: var(--pending); border: 1px solid var(--pending-border); }
+
 /* ── Footer ──────────────────────────────────────── */
 footer {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem;
   text-align: center;
-  padding: 1.5rem;
-  font-size: .8rem;
-  color: var(--muted);
+  font-size: 0.75rem;
+  color: var(--text-muted);
   border-top: 1px solid var(--border);
-  margin-top: auto;
 }
-footer a { color: #e11d48; text-decoration: none; }
+footer a { color: var(--accent); text-decoration: none; }
 footer a:hover { text-decoration: underline; }
 
 /* ── Responsive ──────────────────────────────────── */
 @media (max-width: 640px) {
   .stat-grid { grid-template-columns: repeat(2, 1fr); }
-  main { padding: 1.25rem 1rem; }
-  .site-header { padding: 1rem; }
-  .mismatch-table { font-size: .8rem; }
+  .stat-card + .stat-card { border-left: none; border-top: 1px solid var(--border); }
+  .stat-grid .stat-card:nth-child(2n+1) { border-left: none; }
+  .stat-grid .stat-card:nth-child(2n)   { border-left: 1px solid var(--border); }
+  .mismatch-table { font-size: 0.75rem; }
   .col-location { width: auto; }
+  .report-title { font-size: 1.5rem; }
+  .page-wrap { padding: 0 1rem 2rem; }
+}
+
+/* ── Print ───────────────────────────────────────── */
+@media print {
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  body { background: #fff; font-size: 11pt; }
+
+  .report-header { box-shadow: none; border-top-width: 4pt; margin-bottom: 1.25rem; }
+  .page-wrap { padding: 0; max-width: none; gap: 1.25rem; }
+
+  section h2 { font-size: 7pt; }
+
+  .stat-grid { border: 1pt solid var(--border); }
+  .stat-card { padding: 1rem 1rem 1.25rem; }
+  .stat-value { font-size: 2rem; }
+
+  .error-card { break-inside: avoid; page-break-inside: avoid; margin-bottom: 0.5rem; }
+  .error-card-body { padding: 0.75rem; }
+
+  section { break-inside: avoid; page-break-inside: avoid; }
+  .card { break-inside: avoid; page-break-inside: avoid; }
+  .results-table tr { break-inside: avoid; page-break-inside: avoid; }
+
+  .mismatch-table tr:hover td,
+  .results-table tr:hover td { background: inherit; }
+
+  footer { margin-top: 1.5rem; }
 }
         </style>
       </head>
       <body>
 
         <!-- ── Header ─────────────────────────────────── -->
-        <header class="site-header">
-          <div class="header-inner">
-            <div class="header-left">
-              <span class="pact-badge">PACT</span>
-              <h1>Verification Report</h1>
+        <div class="report-header">
+          <div class="report-header-inner">
+            <div>
+              <div class="report-meta">Pact &#183; Verification Report</div>
+              <h1 class="report-title"><xsl:value-of select="provider"/></h1>
+              <p class="report-subtitle">Provider Contract Verification</p>
             </div>
             <xsl:choose>
               <xsl:when test="result = 'true'">
-                <span class="badge badge-pass badge-lg">&#10003; PASSED</span>
+                <div class="status-stamp pass">
+                  <div class="stamp-icon">&#10003;</div>
+                  <div class="stamp-text">Passed</div>
+                </div>
               </xsl:when>
               <xsl:otherwise>
-                <span class="badge badge-fail badge-lg">&#10007; FAILED</span>
+                <div class="status-stamp fail">
+                  <div class="stamp-icon">&#10007;</div>
+                  <div class="stamp-text">Failed</div>
+                </div>
               </xsl:otherwise>
             </xsl:choose>
           </div>
-          <p class="provider-name">Provider: <xsl:value-of select="provider"/></p>
-        </header>
+        </div>
 
-        <main>
+        <div class="page-wrap">
 
           <!-- ── Summary cards ──────────────────────── -->
           <section>
@@ -368,7 +498,8 @@ footer a:hover { text-decoration: underline; }
               <h2>Notices</h2>
               <xsl:for-each select="notices/notice">
                 <div class="notice">
-                  <xsl:value-of select="entry[key = 'text']/value"/>
+                  <span class="notice-icon">&#8505;</span>
+                  <span><xsl:value-of select="entry[key = 'text']/value"/></span>
                 </div>
               </xsl:for-each>
             </section>
@@ -421,10 +552,10 @@ footer a:hover { text-decoration: underline; }
                               <span class="badge badge-pending">Pending</span>
                             </xsl:when>
                             <xsl:when test="result = 'OK'">
-                              <span class="badge badge-pass">Passed</span>
+                              <span class="badge badge-pass">&#10003; Passed</span>
                             </xsl:when>
                             <xsl:otherwise>
-                              <span class="badge badge-fail">Failed</span>
+                              <span class="badge badge-fail">&#10007; Failed</span>
                             </xsl:otherwise>
                           </xsl:choose>
                         </td>
@@ -440,7 +571,7 @@ footer a:hover { text-decoration: underline; }
             </section>
           </xsl:if>
 
-        </main>
+        </div>
 
         <footer>
           Generated by <a href="https://pact.io">Pact</a> &#183; pact_verifier_cli
@@ -459,6 +590,12 @@ footer a:hover { text-decoration: underline; }
     <xsl:param name="style">fail</xsl:param>
     <div class="error-card {$style}">
       <div class="error-card-head">
+        <span class="error-kind-tag">
+          <xsl:choose>
+            <xsl:when test="$style = 'pending'">Pending</xsl:when>
+            <xsl:otherwise>Failure</xsl:otherwise>
+          </xsl:choose>
+        </span>
         <span class="error-card-title">
           <xsl:value-of select="interaction"/>
         </span>
