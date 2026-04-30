@@ -1,6 +1,6 @@
 use std::fs;
 use std::fs::File;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::PathBuf;
 
 #[cfg(feature = "junit")] use junit_report::{ReportBuilder, TestCaseBuilder, TestSuiteBuilder};
@@ -25,9 +25,18 @@ fn node_from_str(s: &str) -> Result<RNode, Error> {
   parse(RNode::new_document(), s, Some(|_: &_| Err(ParseError::MissingNameSpace)))
 }
 
-fn apply_xslt(xml_str: &str) -> anyhow::Result<String> {
+fn apply_xslt(xml_str: &str, xslt: Option<&String>) -> anyhow::Result<String> {
   let doc = parse(RNode::new_document(), xml_str, Some(|_: &_| Err(ParseError::MissingNameSpace)))?;
-  let xslt_doc = parse(RNode::new_document(), XSLT, Some(|_: &_| Err(ParseError::MissingNameSpace)))?;
+
+  let mut s = String::new();
+  let xslt_doc = if let Some(xslt) = xslt {
+    let mut f = File::open(xslt)?;
+    f.read_to_string(&mut s)?;
+    s.as_str()
+  } else {
+    XSLT
+  };
+  let xslt_doc = parse(RNode::new_document(), xslt_doc, Some(|_: &_| Err(ParseError::MissingNameSpace)))?;
 
   let mut static_context = StaticContextBuilder::new()
     .message(|_| Ok(()))
@@ -105,7 +114,8 @@ pub(crate) fn write_junit_report(result: &VerificationExecutionResult, file_name
 pub(crate) fn write_html_report(
   result: &VerificationExecutionResult,
   file_name: &str,
-  provider: &str
+  provider: &str,
+  xslt: Option<&String>
 ) -> anyhow::Result<()> {
   let path = PathBuf::from(file_name);
   let parent = if let Some(parent) = path.parent() {
@@ -133,7 +143,7 @@ pub(crate) fn write_html_report(
   File::create(&xml_path)?.write_all(xml_str.as_bytes())?;
 
   debug!("Writing HTML report of the verification to '{file_name}'");
-  let html = apply_xslt(&xml_str)?;
+  let html = apply_xslt(&xml_str, xslt)?;
   File::create(file_name)?.write_all(html.as_bytes())?;
 
   Ok(())

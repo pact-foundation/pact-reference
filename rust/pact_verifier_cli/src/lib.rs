@@ -565,7 +565,8 @@ pub async fn handle_matches(matches: &ArgMatches) -> Result<(), i32> {
       }
 
       if let Some(html_file) = matches.get_one::<String>("html-file") {
-        if let Err(err) = reports::write_html_report(&result, html_file.as_str(), &provider_name) {
+        if let Err(err) = reports::write_html_report(&result, html_file.as_str(),
+          &provider_name, matches.get_one::<String>("html-file-xslt")) {
           error!("Failed to write HTML report to '{html_file}' - {err}");
           return Err(2)
         }
