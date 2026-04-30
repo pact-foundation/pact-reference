@@ -1,0 +1,5 @@
+---
+source: pact_verifier_cli/src/reports/xml.rs
+expression: "to_xml(&result, \"My Provider\")"
+---
+<report><provider>My Provider</provider><result>false</result><errors><error><interaction>GET /foo returns 200</interaction><mismatch type="mismatches"><mismatches><mismatch type="StatusMismatch"><description>Expected status 200 but was 404</description><expected>200</expected><actual>404</actual></mismatch><mismatch type="BodyMismatch"><description>Expected 100 but got 200</description><expected>100</expected><actual>200</actual><path>$.price</path></mismatch></mismatches></mismatch></error></errors></report>

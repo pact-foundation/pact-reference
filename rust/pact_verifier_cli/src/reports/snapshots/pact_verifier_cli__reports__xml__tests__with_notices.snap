@@ -1,0 +1,5 @@
+---
+source: pact_verifier_cli/src/reports/xml.rs
+expression: "to_xml(&result, \"My Provider\")"
+---
+<report><provider>My Provider</provider><result>true</result><notices><notice><entry><key>text</key><value>This pact is being verified because it is the latest version</value></entry><entry><key>type</key><value>info</value></entry></notice></notices></report>

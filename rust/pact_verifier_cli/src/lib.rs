@@ -462,6 +462,7 @@ pub async fn handle_cli() -> Result<(), i32> {
   }
 }
 
+/// Run the verifier parsed arguments with a new Tokio runtime
 pub fn process_verifier_command(args: &ArgMatches) -> Result<(), ExitCode>  {
     tokio::runtime::Runtime::new().unwrap().block_on(async {
         let res = handle_matches(args).await;
@@ -472,6 +473,7 @@ pub fn process_verifier_command(args: &ArgMatches) -> Result<(), ExitCode>  {
     })
 }
 
+/// Process the parsed arguments
 pub async fn handle_matches(matches: &ArgMatches) -> Result<(), i32> {
   let coloured_output = setup_output(matches);
 
@@ -560,6 +562,14 @@ pub async fn handle_matches(matches: &ArgMatches) -> Result<(), i32> {
 
         #[cfg(not(feature = "junit"))]
         warn!("junit feature is not enabled, ignoring junit-file option");
+      }
+
+      if let Some(html_file) = matches.get_one::<String>("html-file") {
+        if let Err(err) = reports::write_html_report(&result, html_file.as_str(),
+          &provider_name, matches.get_one::<String>("html-file-xslt")) {
+          error!("Failed to write HTML report to '{html_file}' - {err}");
+          return Err(2)
+        }
       }
 
       if result.result { Ok(()) } else { Err(1) }
@@ -819,7 +829,7 @@ fn interaction_filter(matches: &ArgMatches) -> FilterInfo {
 }
 
 
-
+/// Initialise ANSI terminal support (Windows only)
 #[cfg(windows)]
 pub fn init_windows() {
   if let Err(err) = ansi_term::enable_ansi_support() {
@@ -827,6 +837,7 @@ pub fn init_windows() {
   }
 }
 
+/// Initialise ANSI terminal support (Windows only)
 #[cfg(not(windows))]
 pub fn init_windows() { }
 

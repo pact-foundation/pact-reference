@@ -7,13 +7,15 @@ Options:
   -v, --version  Print version information and exit
 
 Logging options:
-  -l, --loglevel <loglevel>  Log level to emit log events at (defaults to warn) [possible values: error, warn, info, debug, trace, none]
-      --pretty-log           Emits excessively pretty, multi-line logs, optimized for human readability.
-      --full-log             This emits human-readable, single-line logs for each event that occurs, with the current span context displayed before the formatted representation of the event.
-      --compact-log          Emit logs optimized for short line lengths.
-  -j, --json <json-file>     Generate a JSON report of the verification [env: PACT_VERIFIER_JSON_REPORT=]
-  -x, --junit <junit-file>   Generate a JUnit XML report of the verification (requires the junit feature) [env: PACT_VERIFIER_JUNIT_REPORT=]
-      --no-colour            Disables ANSI escape codes in the output [aliases: --no-color]
+  -l, --loglevel <loglevel>    Log level to emit log events at (defaults to warn) [possible values: error, warn, info, debug, trace, none]
+      --pretty-log             Emits excessively pretty, multi-line logs, optimized for human readability.
+      --full-log               This emits human-readable, single-line logs for each event that occurs, with the current span context displayed before the formatted representation of the event.
+      --compact-log            Emit logs optimized for short line lengths.
+  -j, --json <json-file>       Generate a JSON report of the verification [env: PACT_VERIFIER_JSON_REPORT=]
+  -x, --junit <junit-file>     Generate a JUnit XML report of the verification (requires the junit feature) [env: PACT_VERIFIER_JUNIT_REPORT=]
+      --html <html-file>       Generate an HTML report of the verification [env: PACT_VERIFIER_HTML_REPORT=]
+      --xslt <html-file-xslt>  XSLT to use when generating the HTML report of the verification
+      --no-colour              Disables ANSI escape codes in the output [aliases: --no-color]
 
 Loading pacts options:
   -f, --file <file>
