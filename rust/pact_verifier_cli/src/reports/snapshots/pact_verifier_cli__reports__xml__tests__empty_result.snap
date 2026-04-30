@@ -1,0 +1,5 @@
+---
+source: pact_verifier_cli/src/reports/xml.rs
+expression: "to_xml(&VerificationExecutionResult::new(), \"My Provider\")"
+---
+<report><provider>My Provider</provider><result>true</result></report>

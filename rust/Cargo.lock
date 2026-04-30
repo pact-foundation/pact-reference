@@ -1748,7 +1748,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06c3a3342e6720a82d7d179f380e9841b73a1dd49344e33959fdfe571ce56b55"
 dependencies = [
  "derive-getters",
- "quick-xml",
+ "quick-xml 0.31.0",
  "strip-ansi-escapes",
  "time",
 ]
@@ -2807,17 +2807,20 @@ dependencies = [
  "ansi_term",
  "anyhow",
  "clap",
- "env_logger",
  "expectest",
+ "insta",
  "junit-report",
  "lazy_static",
  "log",
  "maplit",
+ "pact_matching 2.0.4",
  "pact_models",
  "pact_verifier",
+ "quick-xml 0.39.2",
  "regex",
  "reqwest 0.12.28",
  "rstest 0.24.0",
+ "serde",
  "serde_json",
  "strip-ansi-escapes",
  "tempfile",
@@ -3144,6 +3147,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1004a344b30a54e2ee58d66a71b32d2db2feb0a31f9a2d302bf0536f15de2a33"
 dependencies = [
  "memchr",
+]
+
+[[package]]
+name = "quick-xml"
+version = "0.39.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "958f21e8e7ceb5a1aa7fa87fab28e7c75976e0bfe7e23ff069e0a260f894067d"
+dependencies = [
+ "memchr",
+ "serde",
 ]
 
 [[package]]

@@ -1,3 +1,5 @@
+//! Command Line Aruments for the Verifier
+
 use clap::{Arg, ArgAction, ArgGroup, Command, command};
 use clap::builder::{FalseyValueParser, NonEmptyStringValueParser, PossibleValuesParser};
 use lazy_static::lazy_static;
@@ -48,7 +50,7 @@ fn transport_value(v: &str) -> Result<(String, u16, Option<String>), String> {
   }
 }
 
-pub fn setup_app() -> Command {
+pub(crate) fn setup_app() -> Command {
   command!()
     .disable_version_flag(true)
     .disable_help_flag(true)
@@ -99,6 +101,12 @@ pub fn setup_app() -> Command {
       .action(ArgAction::Set)
       .value_parser(NonEmptyStringValueParser::new())
       .help("Generate a JUnit XML report of the verification (requires the junit feature)"))
+    .arg(Arg::new("html-file")
+      .long("html")
+      .env("PACT_VERIFIER_HTML_REPORT")
+      .action(ArgAction::Set)
+      .value_parser(NonEmptyStringValueParser::new())
+      .help("Generate a HTML report of the verification"))
     .arg(Arg::new("no-colour")
       .long("no-colour")
       .action(ArgAction::SetTrue)

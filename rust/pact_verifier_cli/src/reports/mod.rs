@@ -1,5 +1,7 @@
+use std::fs;
 use std::fs::File;
 use std::io::Write;
+use std::path::PathBuf;
 
 #[cfg(feature = "junit")] use junit_report::{ReportBuilder, TestCaseBuilder, TestSuiteBuilder};
 #[cfg(feature = "junit")] use strip_ansi_escapes;
@@ -8,6 +10,8 @@ use tracing::debug;
 
 #[cfg(feature = "junit")] use pact_verifier::{interaction_mismatch_output, MismatchResult};
 use pact_verifier::verification_result::VerificationExecutionResult;
+
+mod xml;
 
 pub(crate) fn write_json_report(result: &VerificationExecutionResult, file_name: &str) -> anyhow::Result<()> {
   debug!("Writing JSON result of the verification to '{file_name}'");
@@ -65,5 +69,38 @@ pub(crate) fn write_junit_report(result: &VerificationExecutionResult, file_name
   report_builder.add_testsuite(test_suite.build());
   let report = report_builder.build();
   report.write_xml(&mut f)?;
+  Ok(())
+}
+
+pub(crate) fn write_html_report(
+  result: &VerificationExecutionResult,
+  file_name: &str,
+  provider: &str
+) -> anyhow::Result<()> {
+  let path = PathBuf::from(file_name);
+  let parent = if let Some(parent) = path.parent() {
+    parent
+  } else {
+    return Err(anyhow::anyhow!("No parent directory found for {}", file_name));
+  };
+  fs::create_dir_all(parent)?;
+
+  let filename = if let Some(filename) = path.file_name() {
+    filename
+  } else {
+    return Err(anyhow::anyhow!("Failed to get file name of '{}'", path.display()));
+  };
+
+  let xml_path = if let Some(_extension) = path.extension() {
+    path.with_extension("xml")
+  } else {
+    parent.join(filename).with_extension("xml")
+  };
+  debug!("Writing XML report of the verification to '{}'", xml_path.display());
+  let mut xml_file = File::create(&xml_path)?;
+  xml::write_xml_report(&mut xml_file, result, provider)?;
+
+  debug!("Writing HTML report of the verification to '{file_name}'");
+
   Ok(())
 }
