@@ -308,6 +308,7 @@ impl ExecutionPlanInterpreter {
         "join-with" => self.execute_join(action, value_resolver, node, &action_path),
         "error" => self.execute_error(action, value_resolver, node, &action_path),
         "header:parse" => self.execute_header_parse(action, value_resolver, node, &action_path),
+        "header:normalize-commas" => self.execute_normalize_comma_whitespace(action, value_resolver, node, &action_path),
         "for-each" => self.execute_for_each(value_resolver, node, &action_path),
         _ => {
           ExecutionPlanNode {
@@ -2058,6 +2059,46 @@ impl ExecutionPlanInterpreter {
           children: node.children.clone()
         }
       }
+    }
+  }
+
+  fn execute_normalize_comma_whitespace(
+    &mut self,
+    _action: &str,
+    value_resolver: &dyn ValueResolver,
+    node: &ExecutionPlanNode,
+    action_path: &Vec<String>
+  ) -> ExecutionPlanNode {
+    let (children, values) = match self.evaluate_children(value_resolver, node, action_path, true) {
+      Ok(value) => value,
+      Err(value) => return value
+    };
+
+    let normalize = |s: &str| -> String {
+      s.split(',').map(|v| v.trim()).collect::<Vec<_>>().join(",")
+    };
+
+    let results = values.iter()
+      .map(|v| {
+        let v = v.as_value().unwrap_or_default();
+        match v {
+          NodeValue::STRING(s) => NodeValue::STRING(normalize(&s)),
+          NodeValue::SLIST(list) => NodeValue::SLIST(list.iter().map(|s| normalize(s)).collect()),
+          _ => v.clone()
+        }
+      })
+      .collect_vec();
+
+    let result = if results.len() == 1 {
+      results[0].clone()
+    } else {
+      NodeValue::LIST(results)
+    };
+
+    ExecutionPlanNode {
+      node_type: node.node_type.clone(),
+      result: Some(NodeResult::VALUE(result)),
+      children
     }
   }
 

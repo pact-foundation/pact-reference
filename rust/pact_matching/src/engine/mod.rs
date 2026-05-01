@@ -1922,11 +1922,19 @@ fn setup_header_plan<T: HttpPart>(
             }
           }
         } else {
+          // RFC 7230: optional whitespace after commas in header values is insignificant,
+          // so normalize both sides before equality comparison.
+          let normalized_value = if let NodeValue::STRING(s) = &item_value {
+            NodeValue::STRING(s.split(',').map(|v| v.trim()).collect::<Vec<_>>().join(","))
+          } else {
+            item_value.clone()
+          };
           item_node.add(ExecutionPlanNode::annotation(format!("{}={}", key, item_value.to_string())));
           let mut item_check = ExecutionPlanNode::action("match:equality");
           item_check
-            .add(ExecutionPlanNode::value_node(item_value))
-            .add(ExecutionPlanNode::resolve_value(doc_path.join(key)))
+            .add(ExecutionPlanNode::value_node(normalized_value))
+            .add(ExecutionPlanNode::action("header:normalize-commas")
+              .add(ExecutionPlanNode::resolve_value(doc_path.join(key))))
             .add(ExecutionPlanNode::value_node(NodeValue::NULL))
             .add(ExecutionPlanNode::value_node(context.config.show_types_in_errors));
           presence_check.add(item_check);
