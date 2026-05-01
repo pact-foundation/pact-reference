@@ -1,5 +1,29 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.3.1 - Feature Release
+
+* 75243a7e - chore(pact_verifier_cli): Correct the version of pact_matching in Cargo.toml (Ronald Holshausen, Fri May 1 10:12:07 2026 +1000)
+* ed565c70 - Revert "update changelog for release 1.3.1" (Ronald Holshausen, Fri May 1 10:10:09 2026 +1000)
+* ef98f42c - update changelog for release 1.3.1 (Ronald Holshausen, Fri May 1 10:07:44 2026 +1000)
+* 38b42e65 - chore(pact_verifier_cli): Correct the version after the last release (Ronald Holshausen, Fri May 1 09:59:33 2026 +1000)
+* d14e629b - chore(pact_verifier_cli): update CLI snapshots after adding the new parameters (Ronald Holshausen, Fri May 1 09:31:39 2026 +1000)
+* 27851b31 - feat(pact_verifier_cli): Add CLI option to pass in the XSLT to render the report (Ronald Holshausen, Thu Apr 30 17:05:12 2026 +1000)
+* e8b6397e - chore(pact_verifier_cli): cleanup typos in comments (Ronald Holshausen, Thu Apr 30 16:39:42 2026 +1000)
+* 8daa8953 - chore(pact_verifier_cli): Correct CLI help text grammer (Ronald Holshausen, Thu Apr 30 16:37:39 2026 +1000)
+* 32ea2095 - chore(pact_verifier_cli): Correct CLI help text grammer (Ronald Holshausen, Thu Apr 30 16:36:08 2026 +1000)
+* 8ee97b41 - chore(pact_verifier_cli): CLI functions must be public as they are used in other projects (Ronald Holshausen, Thu Apr 30 16:21:22 2026 +1000)
+* 510cb0b7 - feat(pact_verifier_cli): create print friendly version of HTML report (Ronald Holshausen, Thu Apr 30 16:13:11 2026 +1000)
+* 845da49b - feat(pact_verifier_cli): Implement the XML -> XML + XSLT -> generated HTML report (Ronald Holshausen, Thu Apr 30 15:43:28 2026 +1000)
+* edd1db4e - feat(pact_verifier_cli): Add CLI option to generate HTML report and first generate an XML report (Ronald Holshausen, Thu Apr 30 14:58:32 2026 +1000)
+* 28c540cd - chore: Update pact_verifier to 1.3.5 (Ronald Holshausen, Thu Apr 30 10:04:40 2026 +1000)
+* 27c4aa20 - chore: Update pact_models to 1.3.10 (Ronald Holshausen, Wed Apr 29 17:20:36 2026 +1000)
+* 77b6e4c8 - Merge pull request #519 from pact-foundation/fix/docker_platform (Yousaf Nabi, Tue Mar 17 11:41:49 2026 +0000)
+* f991275b - fix: workflow for docker publishing #518 (Yousaf Nabi, Mon Feb 23 17:50:49 2026 +0000)
+* 1d9105de - chore: Update pact_verifier to 1.3.4 (Ronald Holshausen, Thu Feb 19 11:08:03 2026 +1100)
+* 650a2582 - chore: Update pact_models to 1.3.8 (Ronald Holshausen, Wed Feb 18 12:19:37 2026 +1100)
+* 780063fc - chore(pact_verifier): bump time to 0.3.47 to resolve RUSTSEC-2026-0009 (Andrew Tecey, Mon Feb 9 15:04:09 2026 +0000)
+* 9952456c - chore(docker): ghcr publish [ci skip] (Yousaf Nabi, Fri Oct 31 18:51:24 2025 +0000)
+
 # 1.3.0 - [Feature Release]
 
 * 63b8ce48 - chore: rename docker image to pact-verifier (Yousaf Nabi, Fri Oct 31 16:27:29 2025 +0000)
