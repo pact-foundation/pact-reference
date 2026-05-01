@@ -153,7 +153,7 @@ fn json_with_boolean() {
 fn json_with_empty_array() {
   let path = vec!["$".to_string()];
   let builder = JsonPlanBuilder::new();
-  let context = PlanMatchingContext::default().for_body();;
+  let context = PlanMatchingContext::default().for_body();
   let content = Bytes::copy_from_slice(Value::Array(vec![]).to_string().as_bytes());
   let node = builder.build_plan(&content, &context).unwrap();
 
@@ -221,7 +221,7 @@ fn json_with_empty_array() {
 fn json_with_array() {
   let path = vec!["$".to_string()];
   let builder = JsonPlanBuilder::new();
-  let context = PlanMatchingContext::default().for_body();;
+  let context = PlanMatchingContext::default().for_body();
   let content = Bytes::copy_from_slice(json!([1, 2, 3]).to_string().as_bytes());
   let node = builder.build_plan(&content, &context).unwrap();
 

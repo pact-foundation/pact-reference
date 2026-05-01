@@ -1604,6 +1604,7 @@ fn match_list_contents<T: Display + Debug + PartialEq + Clone + Sized>(
 }
 
 #[cfg(test)]
+#[allow(deprecated)]
 mod tests {
   use std::collections::{BTreeSet, HashMap, HashSet};
   use std::sync::RwLock;
