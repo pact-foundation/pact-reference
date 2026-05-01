@@ -19,6 +19,7 @@ pub mod json;
 /// Trait for implementations of builders for different types of bodies
 pub trait PlanBodyBuilder: Debug {
   /// If this builder supports a namespace for nodes.
+  #[allow(dead_code)]
   fn namespace(&self) -> Option<String> {
     None
   }

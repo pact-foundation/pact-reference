@@ -34,6 +34,7 @@ pub struct ExecutionPlanInterpreter {
 
 impl ExecutionPlanInterpreter {
   /// Creates a new interpreter
+  #[allow(dead_code)]
   pub fn new() -> Self {
     ExecutionPlanInterpreter {
       value_stack: vec![],

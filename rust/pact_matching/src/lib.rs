@@ -403,7 +403,7 @@ use crate::generators::bodies::generators_process_body;
 use crate::generators::DefaultVariantMatcher;
 use crate::headers::{match_header_value, match_headers};
 #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))] use crate::json::match_json;
-use crate::matchingrules::{DisplayForMismatch, DoMatch, match_values, Matches};
+use crate::matchingrules::{DisplayForMismatch, DoMatch, match_values};
 #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))] use crate::plugin_support::{InteractionPart, setup_plugin_config};
 use crate::query::match_query_maps;
 
@@ -1545,8 +1545,8 @@ pub fn match_path(expected: &str, actual: &str, context: &(dyn MatchingContext +
   let matcher_result = if context.matcher_is_defined(&path) {
     match_values(&path, &context.select_best_matcher(&path), expected.to_string(), actual.to_string())
   } else {
-    expected.matches_with(actual, &MatchingRule::Equality, false).map_err(|err| vec![err])
-      .map_err(|errors| errors.iter().map(|err| err.to_string()).collect())
+    MatchingRule::Equality.match_value(expected, actual, false, false)
+      .map_err(|err| vec![err.to_string()])
   };
   matcher_result.map_err(|messages| messages.iter().map(|message| {
     Mismatch::PathMismatch {
@@ -1830,7 +1830,7 @@ pub async fn match_request<'a>(
     }
     Ok(executed_plan.into())
   } else {
-    let mut result = RequestMatchResult::default();
+    let result;
 
     #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))]
     {
@@ -2110,7 +2110,7 @@ fn match_metadata_value(
     headers::match_parameter_header(expected.as_str().unwrap_or_default(), actual.as_str().unwrap_or_default(),
       key, "metadata", 0, true)
   } else {
-    expected.matches_with(actual, &MatchingRule::Equality, false).map_err(|err| vec![err.to_string()])
+    MatchingRule::Equality.match_value(expected, actual, false, false).map_err(|err| vec![err.to_string()])
   };
   matcher_result.map_err(|messages| {
     messages.iter().map(|message| {

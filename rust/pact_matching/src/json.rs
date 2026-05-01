@@ -25,9 +25,10 @@ use crate::matchingrules::{
   compare_maps_with_matchingrule,
   DoMatch,
   match_values,
-  Matches,
   value_for_mismatch
 };
+#[allow(deprecated)]
+use crate::matchingrules::Matches;
 
 lazy_static! {
   static ref DEC_REGEX: Regex = Regex::new(r"\d+\.\d+").unwrap();
@@ -59,18 +60,21 @@ fn value_of(json: &Value) -> String {
   }.to_string()
 }
 
+#[allow(deprecated)]
 impl Matches<Value> for Value {
   fn matches_with(&self, actual: Value, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
     self.matches_with(&actual, matcher, cascaded)
   }
 }
 
+#[allow(deprecated)]
 impl Matches<&Value> for &Value {
   fn matches_with(&self, actual: &Value, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
     (*self).matches_with(actual, matcher, cascaded)
   }
 }
 
+#[allow(deprecated)]
 impl Matches<&Value> for Value {
   fn matches_with(&self, actual: &Value, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
     matcher.match_value(self, actual, cascaded, true)
@@ -542,7 +546,7 @@ fn compare_values(
     debug!("compare_values: Calling match_values for path {}", path);
     match_values(path, &context.select_best_matcher(&path), expected, actual)
   } else {
-    expected.matches_with(actual, &MatchingRule::Equality, false)
+    MatchingRule::Equality.match_value(expected, actual, false, true)
       .map_err(|err| vec![err.to_string()])
   };
   debug!("compare_values: Comparing '{:?}' to '{:?}' at path '{}' -> {:?}", expected, actual, path.to_string(), matcher_result);

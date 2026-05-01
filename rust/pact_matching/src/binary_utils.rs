@@ -30,7 +30,9 @@ use serde_json::Value;
 
 use crate::{MatchingContext, Mismatch};
 #[cfg(feature = "multipart")] use crate::{BodyMatchResult, CoreMatchingContext, HeaderMatchingContext};
-use crate::matchingrules::{match_values, Matches};
+use crate::matchingrules::{DoMatch, match_values};
+#[allow(deprecated)]
+use crate::matchingrules::Matches;
 
 /// Compares the binary data using a magic test and comparing the resulting detected content
 /// type against the expected content type
@@ -139,7 +141,7 @@ pub fn match_octet_stream(
       })
     } else {
       let results = matchers.rules.iter().map(|rule|
-        expected_body.matches_with(&actual_body, rule, matchers.cascaded)).collect::<Vec<anyhow::Result<()>>>();
+        rule.match_value(&expected_body, &actual_body, matchers.cascaded, false)).collect::<Vec<anyhow::Result<()>>>();
       match matchers.rule_logic {
         RuleLogic::And => for result in results {
           if let Err(err) = result {
@@ -488,7 +490,7 @@ fn match_field(
     debug!("Calling match_values for path $.{}", key);
     match_values(&path, &context.select_best_matcher(&path), expected_str.as_str(), actual_str.as_str())
   } else {
-    expected_str.matches_with(actual_str.as_str(), &MatchingRule::Equality, false).map_err(|err|
+    MatchingRule::Equality.match_value(expected_str.as_str(), actual_str.as_str(), false, false).map_err(|err|
       vec![format!("MIME part '{}': {}", key, err)]
     )
   };
@@ -544,7 +546,7 @@ pub(crate) fn match_headers(
       } else if key == "content-disposition" {
         Ok(())
       } else {
-        expected_value_str.matches_with(actual_value_str.as_str(), &MatchingRule::Equality, false).map_err(|err|
+        MatchingRule::Equality.match_value(expected_value_str.as_str(), actual_value_str.as_str(), false, false).map_err(|err|
           vec![format!("header '{}': {}", key, err)]
         )
       };
@@ -589,6 +591,7 @@ fn first(bytes: &[u8], len: usize) -> &[u8] {
 }
 
 #[cfg(feature = "multipart")]
+#[allow(deprecated)]
 impl Matches<&MimeFile> for &MimeFile {
   fn matches_with(&self, actual: &MimeFile, matcher: &MatchingRule, _cascaded: bool) -> anyhow::Result<()> {
     debug!("FilePart: comparing binary data to '{:?}' using {:?}", actual.content_type, matcher);

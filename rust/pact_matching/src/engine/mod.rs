@@ -2166,6 +2166,7 @@ pub(crate) fn escape(s: &str) -> String {
   }
 }
 
+#[allow(dead_code)]
 pub(crate) fn unescape(s: &str) -> String {
   if s.is_empty() || s == "''" {
     "".to_string()

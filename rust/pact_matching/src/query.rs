@@ -9,7 +9,7 @@ use pact_models::path_exp::DocPath;
 use tracing::debug;
 
 use crate::{MatchingContext, merge_result, Mismatch, CommonMismatch};
-use crate::matchingrules::{compare_lists_with_matchingrules, match_values, Matches};
+use crate::matchingrules::{compare_lists_with_matchingrules, DoMatch, match_values};
 
 /// Match the query parameters as Maps
 pub(crate) fn match_query_maps(
@@ -101,7 +101,7 @@ fn compare_query_parameter_value(
     match_values(&index_path, &context.select_best_matcher(&index_path),
       expected.to_string(), actual.to_string())
   } else {
-    expected.matches_with(actual, &MatchingRule::Equality, false)
+    MatchingRule::Equality.match_value(expected, actual, false, false)
       .map_err(|_error| vec![
         format!("Expected query parameter '{}' with value '{}' but was '{}'",
           path.to_vec().last().cloned().unwrap_or_else(|| "??".to_string()),

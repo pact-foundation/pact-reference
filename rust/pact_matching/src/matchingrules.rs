@@ -146,6 +146,7 @@ pub(crate) fn display<T: Display>(value: &[T]) -> String {
 pub trait Matches<A: Clone> {
   /// If the actual value matches self given the matching rule
   #[deprecated(since = "0.9.2", note="Use matches_with instead")]
+  #[allow(deprecated)]
   fn matches(&self, actual: &A, matcher: &MatchingRule) -> anyhow::Result<()> {
     self.matches_with(actual.clone(), matcher, false)
   }
@@ -154,6 +155,7 @@ pub trait Matches<A: Clone> {
   fn matches_with(&self, actual: A, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()>;
 }
 
+#[allow(deprecated)]
 impl Matches<String> for String {
   #[instrument(level = "trace")]
   fn matches_with(&self, actual: String, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
@@ -161,6 +163,7 @@ impl Matches<String> for String {
   }
 }
 
+#[allow(deprecated)]
 impl Matches<&String> for String {
   #[instrument(level = "trace")]
   fn matches_with(&self, actual: &String, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
@@ -168,6 +171,7 @@ impl Matches<&String> for String {
   }
 }
 
+#[allow(deprecated)]
 impl Matches<&String> for &String {
   #[instrument(level = "trace")]
   fn matches_with(&self, actual: &String, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
@@ -175,6 +179,7 @@ impl Matches<&String> for &String {
   }
 }
 
+#[allow(deprecated)]
 impl Matches<&str> for String {
   #[instrument(level = "trace")]
   fn matches_with(&self, actual: &str, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
@@ -182,6 +187,7 @@ impl Matches<&str> for String {
   }
 }
 
+#[allow(deprecated)]
 impl Matches<&str> for &str {
   #[instrument(level = "trace")]
   fn matches_with(&self, actual: &str, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
@@ -189,6 +195,7 @@ impl Matches<&str> for &str {
   }
 }
 
+#[allow(deprecated)]
 impl Matches<u64> for String {
   #[instrument(level = "trace")]
   fn matches_with(&self, actual: u64, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
@@ -196,6 +203,7 @@ impl Matches<u64> for String {
   }
 }
 
+#[allow(deprecated)]
 impl Matches<u64> for &str {
   #[instrument(level = "trace")]
   fn matches_with(&self, actual: u64, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
@@ -238,6 +246,7 @@ impl Matches<u64> for &str {
   }
 }
 
+#[allow(deprecated)]
 impl Matches<u64> for u64 {
   #[instrument(level = "trace")]
   fn matches_with(&self, actual: u64, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
@@ -245,6 +254,7 @@ impl Matches<u64> for u64 {
   }
 }
 
+#[allow(deprecated)]
 impl Matches<f64> for u64 {
   #[instrument(level = "trace")]
   fn matches_with(&self, actual: f64, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
@@ -286,6 +296,7 @@ impl Matches<f64> for u64 {
   }
 }
 
+#[allow(deprecated)]
 impl Matches<f64> for f64 {
   #[allow(clippy::float_cmp)]
   #[instrument(level = "trace")]
@@ -334,6 +345,7 @@ impl Matches<f64> for f64 {
   }
 }
 
+#[allow(deprecated)]
 impl Matches<u64> for f64 {
   #[instrument(level = "trace")]
   fn matches_with(&self, actual: u64, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
@@ -375,6 +387,7 @@ impl Matches<u64> for f64 {
   }
 }
 
+#[allow(deprecated)]
 impl Matches<u16> for String {
   #[instrument(level = "trace")]
   fn matches_with(&self, actual: u16, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
@@ -383,6 +396,7 @@ impl Matches<u16> for String {
   }
 }
 
+#[allow(deprecated)]
 impl Matches<u16> for &str {
   #[instrument(level = "trace")]
   fn matches_with(&self, actual: u16, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
@@ -391,6 +405,7 @@ impl Matches<u16> for &str {
   }
 }
 
+#[allow(deprecated)]
 impl Matches<u16> for u16 {
   #[instrument(level = "trace")]
   fn matches_with(&self, actual: u16, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
@@ -399,6 +414,7 @@ impl Matches<u16> for u16 {
   }
 }
 
+#[allow(deprecated)]
 impl Matches<i64> for String {
   #[instrument(level = "trace")]
   fn matches_with(&self, actual: i64, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
@@ -407,6 +423,7 @@ impl Matches<i64> for String {
   }
 }
 
+#[allow(deprecated)]
 impl Matches<i64> for &str {
   #[instrument(level = "trace")]
   fn matches_with(&self, actual: i64, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
@@ -448,6 +465,7 @@ impl Matches<i64> for &str {
   }
 }
 
+#[allow(deprecated)]
 impl Matches<i64> for i64 {
   #[instrument(level = "trace")]
   fn matches_with(&self, actual: i64, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
@@ -494,6 +512,7 @@ impl Matches<i64> for i64 {
   }
 }
 
+#[allow(deprecated)]
 impl Matches<i32> for String {
   #[instrument(level = "trace")]
   fn matches_with(&self, actual: i32, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
@@ -501,6 +520,7 @@ impl Matches<i32> for String {
   }
 }
 
+#[allow(deprecated)]
 impl Matches<i32> for &str {
   #[instrument(level = "trace")]
   fn matches_with(&self, actual: i32, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
@@ -508,6 +528,7 @@ impl Matches<i32> for &str {
   }
 }
 
+#[allow(deprecated)]
 impl Matches<i32> for i32 {
   #[instrument(level = "trace")]
   fn matches_with(&self, actual: i32, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
@@ -515,6 +536,7 @@ impl Matches<i32> for i32 {
   }
 }
 
+#[allow(deprecated)]
 impl Matches<bool> for bool {
   #[instrument(level = "trace")]
   fn matches_with(&self, actual: bool, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
@@ -551,6 +573,7 @@ impl Matches<bool> for bool {
   }
 }
 
+#[allow(deprecated)]
 impl Matches<Bytes> for Bytes {
   #[instrument(level = "trace")]
   fn matches_with(&self, actual: Bytes, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
@@ -558,6 +581,7 @@ impl Matches<Bytes> for Bytes {
   }
 }
 
+#[allow(deprecated)]
 impl Matches<&Bytes> for Bytes {
   #[instrument(level = "trace")]
   fn matches_with(&self, actual: &Bytes, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
@@ -565,42 +589,49 @@ impl Matches<&Bytes> for Bytes {
   }
 }
 
+#[allow(deprecated)]
 impl <T: Debug + Display + PartialEq> Matches<&[T]> for &[T] {
   fn matches_with(&self, actual: &[T], matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
     matcher.match_value(*self, actual, cascaded, false)
   }
 }
 
+#[allow(deprecated)]
 impl <T: Debug + Display + PartialEq + Clone> Matches<&Vec<T>> for &Vec<T> {
   fn matches_with(&self, actual: &Vec<T>, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
     matcher.match_value(self.as_slice(), actual.as_slice(), cascaded, false)
   }
 }
 
+#[allow(deprecated)]
 impl Matches<Vec<u8>> for Vec<u8> {
   fn matches_with(&self, actual: Vec<u8>, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
     matcher.match_value(self.as_slice(), actual.as_slice(), cascaded, false)
   }
 }
 
+#[allow(deprecated)]
 impl Matches<&Vec<u8>> for Vec<u8> {
   fn matches_with(&self, actual: &Vec<u8>, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
     matcher.match_value(self.as_slice(), actual.as_slice(), cascaded, false)
   }
 }
 
+#[allow(deprecated)]
 impl Matches<&[u8]> for Vec<u8> {
   fn matches_with(&self, actual: &[u8], matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
     matcher.match_value(self.as_slice(), actual, cascaded, false)
   }
 }
 
+#[allow(deprecated)]
 impl Matches<&[u8]> for &Vec<u8> {
   fn matches_with(&self, actual: &[u8], matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
     matcher.match_value(self.as_slice(), actual, cascaded, false)
   }
 }
 
+#[allow(deprecated)]
 impl <T: Debug + Display + Clone + PartialEq> Matches<&BTreeMap<String, T>> for BTreeMap<String, T> {
   fn matches_with(&self, actual: &BTreeMap<String, T>, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
     debug!("map -> map: comparing [String -> {}] to [String -> {}] using {:?}", std::any::type_name::<T>(),
@@ -1049,7 +1080,7 @@ impl <T: Debug + PartialEq> DoMatch<&BTreeMap<String, T>> for MatchingRule {
     expected_value: &BTreeMap<String, T>,
     actual_value: &BTreeMap<String, T>,
     cascaded: bool,
-    show_types: bool
+    _show_types: bool
   ) -> anyhow::Result<()> {
     debug!("map -> map: comparing [String -> {}] to [String -> {}] using {:?}", std::any::type_name::<T>(),
       std::any::type_name::<T>(), self);
@@ -1221,6 +1252,7 @@ impl <T: Display> DisplayForMismatch for BTreeSet<T> {
 
 
 /// Match the provided values using the path and matching rules
+#[allow(deprecated)]
 pub fn match_values<E, A>(path: &DocPath, matching_rules: &RuleList, expected: E, actual: A) -> Result<(), Vec<String>>
 where E: Matches<A>, A: Clone {
   trace!("match_values: {} -> {}", std::any::type_name::<E>(), std::any::type_name::<A>());
@@ -1285,7 +1317,7 @@ pub fn match_strings(
     debug!("Calling match_values for path {}", path);
     match_values(&path, &context.select_best_matcher(&path), expected, actual)
   } else {
-    expected.matches_with(actual, &MatchingRule::Equality, false).map_err(|err|
+    MatchingRule::Equality.match_value(expected, actual, false, false).map_err(|err|
     vec![format!("String '{}': {}", path, err)]
     )
   };
@@ -1356,7 +1388,7 @@ pub fn compare_maps_with_matchingrule<T: Display + Debug + Clone + PartialEq>(
       }
     }
   } else {
-    if let Err(mismatch) = expected.matches_with(actual, rule, cascaded) {
+    if let Err(mismatch) = rule.match_value(expected, actual, cascaded, false) {
       result = merge_result(result, Err(vec![CommonMismatch {
         path: path.to_string(),
         expected: expected.for_mismatch(),

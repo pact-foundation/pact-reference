@@ -17,7 +17,9 @@ use pact_models::xml_utils::parse_bytes;
 use tracing::debug;
 
 use crate::MatchingContext;
-use crate::matchingrules::{DoMatch, match_values, Matches};
+use crate::matchingrules::{DoMatch, match_values};
+#[allow(deprecated)]
+use crate::matchingrules::Matches;
 use super::DiffConfig;
 use super::Mismatch;
 
@@ -88,6 +90,7 @@ fn name(name: QName) -> String {
   }
 }
 
+#[allow(deprecated)]
 impl Matches<&Element<'_>> for &Element<'_> {
   fn matches_with(&self, actual: &Element, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
     matcher.match_value(*self, actual, cascaded, false)
@@ -234,7 +237,7 @@ fn compare_element(
     debug!("calling match_values {:?} on {:?}", path, actual);
     match_values(path, &context.select_best_matcher(&path), expected, actual)
   } else {
-    expected.matches_with(actual, &MatchingRule::Equality, false).map_err(|err| vec![err.to_string()])
+    MatchingRule::Equality.match_value(expected, actual, false, false).map_err(|err| vec![err.to_string()])
   };
   debug!("Comparing '{:?}' to '{:?}' at path '{}' -> {:?}", expected, actual, path, matcher_result);
   match matcher_result {
@@ -433,7 +436,7 @@ fn compare_text(
     let matcher_result = if context.matcher_is_defined(&p) {
       match_values(&p, &context.select_best_matcher(&p), expected_text.trim(), actual_text.trim())
     } else {
-      expected_text.matches_with(actual_text.trim(), &MatchingRule::Equality, false)
+      MatchingRule::Equality.match_value(expected_text.trim(), actual_text.trim(), false, false)
         .map_err(|err| vec![err.to_string()])
     };
     debug!("Comparing text '{}' to '{}' at path '{}' -> {:?}", expected_text, actual_text,
@@ -459,7 +462,7 @@ fn compare_value(
   let matcher_result = if context.matcher_is_defined(path) {
     match_values(path, &context.select_best_matcher(&path), expected, actual)
   } else {
-    expected.matches_with(actual, &MatchingRule::Equality, false).map_err(|err| vec![err.to_string()])
+    MatchingRule::Equality.match_value(expected, actual, false, false).map_err(|err| vec![err.to_string()])
   };
   debug!("Comparing '{}' to '{}' at path '{}' -> {:?}", expected, actual, path, matcher_result);
   matcher_result.map_err(|messages| {
