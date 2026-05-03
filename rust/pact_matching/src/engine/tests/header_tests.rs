@@ -64,9 +64,7 @@ fn match_headers_with_expected_headers() {
           ),
           %match:equality (
             'b',
-            %header:normalize-commas (
-              $.headers['HEADER-X']
-            ),
+            $.headers['HEADER-X'],
             NULL,
             BOOL(false)
           )
@@ -105,9 +103,7 @@ fn match_headers_with_expected_headers() {
           ) => BOOL(false),
           %match:equality (
             'b',
-            %header:normalize-commas (
-              $.headers['HEADER-X']
-            ),
+            $.headers['HEADER-X'],
             NULL,
             BOOL(false)
           )
@@ -151,9 +147,7 @@ fn match_headers_with_expected_headers() {
           ) => BOOL(true),
           %match:equality (
             'b' => 'b',
-            %header:normalize-commas (
-              $.headers['HEADER-X'] => 'b'
-            ) => 'b',
+            $.headers['HEADER-X'] => 'b',
             NULL => NULL,
             BOOL(false) => BOOL(false)
           ) => BOOL(true)
@@ -197,9 +191,7 @@ fn match_headers_with_expected_headers() {
           ) => BOOL(true),
           %match:equality (
             'b' => 'b',
-            %header:normalize-commas (
-              $.headers['HEADER-X'] => 'C'
-            ) => 'C',
+            $.headers['HEADER-X'] => 'C',
             NULL => NULL,
             BOOL(false) => BOOL(false)
           ) => ERROR(Expected 'C' to be equal to 'b')
@@ -244,9 +236,7 @@ fn match_headers_with_expected_headers() {
           ) => BOOL(true),
           %match:equality (
             'b' => 'b',
-            %header:normalize-commas (
-              $.headers['HEADER-X'] => 'b'
-            ) => 'b',
+            $.headers['HEADER-X'] => 'b',
             NULL => NULL,
             BOOL(false) => BOOL(false)
           ) => BOOL(true)
@@ -290,9 +280,7 @@ fn match_headers_with_expected_headers() {
           ) => BOOL(false),
           %match:equality (
             'b',
-            %header:normalize-commas (
-              $.headers['HEADER-X']
-            ),
+            $.headers['HEADER-X'],
             NULL,
             BOOL(false)
           )
@@ -355,9 +343,7 @@ fn match_headers_with_matching_rule() {
           ),
           %match:equality (
             'test',
-            %header:normalize-commas (
-              $.headers['REF-CODE']
-            ),
+            $.headers['REF-CODE'],
             NULL,
             BOOL(false)
           )
@@ -416,9 +402,7 @@ fn match_headers_with_matching_rule() {
           ) => BOOL(true),
           %match:equality (
             'test' => 'test',
-            %header:normalize-commas (
-              $.headers['REF-CODE'] => 'test'
-            ) => 'test',
+            $.headers['REF-CODE'] => 'test',
             NULL => NULL,
             BOOL(false) => BOOL(false)
           ) => BOOL(true)
@@ -477,9 +461,7 @@ fn match_headers_with_matching_rule() {
           ) => BOOL(true),
           %match:equality (
             'test' => 'test',
-            %header:normalize-commas (
-              $.headers['REF-CODE'] => 'test'
-            ) => 'test',
+            $.headers['REF-CODE'] => 'test',
             NULL => NULL,
             BOOL(false) => BOOL(false)
           ) => BOOL(true)
@@ -552,9 +534,7 @@ fn match_headers_with_values_having_different_lengths() {
           ),
           %match:equality (
             ['test', 'test2'],
-            %header:normalize-commas (
-              $.headers['REF-CODE']
-            ),
+            $.headers['REF-CODE'],
             NULL,
             BOOL(false)
           )
@@ -568,9 +548,7 @@ fn match_headers_with_values_having_different_lengths() {
           ),
           %match:equality (
             '1234',
-            %header:normalize-commas (
-              $.headers['REF-ID']
-            ),
+            $.headers['REF-ID'],
             NULL,
             BOOL(false)
           )
@@ -615,9 +593,7 @@ fn match_headers_with_values_having_different_lengths() {
           ) => BOOL(true),
           %match:equality (
             ['test', 'test2'] => ['test', 'test2'],
-            %header:normalize-commas (
-              $.headers['REF-CODE'] => ['test', 'test2']
-            ) => ['test', 'test2'],
+            $.headers['REF-CODE'] => ['test', 'test2'],
             NULL => NULL,
             BOOL(false) => BOOL(false)
           ) => BOOL(true)
@@ -631,9 +607,7 @@ fn match_headers_with_values_having_different_lengths() {
           ) => BOOL(true),
           %match:equality (
             '1234' => '1234',
-            %header:normalize-commas (
-              $.headers['REF-ID'] => '1234'
-            ) => '1234',
+            $.headers['REF-ID'] => '1234',
             NULL => NULL,
             BOOL(false) => BOOL(false)
           ) => BOOL(true)
@@ -678,9 +652,7 @@ fn match_headers_with_values_having_different_lengths() {
           ) => BOOL(true),
           %match:equality (
             ['test', 'test2'] => ['test', 'test2'],
-            %header:normalize-commas (
-              $.headers['REF-CODE'] => 'test'
-            ) => 'test',
+            $.headers['REF-CODE'] => 'test',
             NULL => NULL,
             BOOL(false) => BOOL(false)
           ) => ERROR(Expected 'test' to be equal to ['test', 'test2'])
@@ -694,9 +666,7 @@ fn match_headers_with_values_having_different_lengths() {
           ) => BOOL(true),
           %match:equality (
             '1234' => '1234',
-            %header:normalize-commas (
-              $.headers['REF-ID'] => ['1234', '1234', '4567']
-            ) => ['1234', '1234', '4567'],
+            $.headers['REF-ID'] => ['1234', '1234', '4567'],
             NULL => NULL,
             BOOL(false) => BOOL(false)
           ) => ERROR(Expected ['1234', '1234', '4567'] to be equal to '1234')
@@ -759,9 +729,7 @@ fn match_headers_with_number_type_matching_rule() {
           ),
           %match:equality (
             'test',
-            %header:normalize-commas (
-              $.headers['REF-CODE']
-            ),
+            $.headers['REF-CODE'],
             NULL,
             BOOL(false)
           )
@@ -820,9 +788,7 @@ fn match_headers_with_number_type_matching_rule() {
           ) => BOOL(true),
           %match:equality (
             'test' => 'test',
-            %header:normalize-commas (
-              $.headers['REF-CODE'] => 'test'
-            ) => 'test',
+            $.headers['REF-CODE'] => 'test',
             NULL => NULL,
             BOOL(false) => BOOL(false)
           ) => BOOL(true)
@@ -881,9 +847,7 @@ fn match_headers_with_number_type_matching_rule() {
           ) => BOOL(true),
           %match:equality (
             'test' => 'test',
-            %header:normalize-commas (
-              $.headers['REF-CODE'] => 'test'
-            ) => 'test',
+            $.headers['REF-CODE'] => 'test',
             NULL => NULL,
             BOOL(false) => BOOL(false)
           ) => BOOL(true)
@@ -942,9 +906,7 @@ fn match_headers_with_number_type_matching_rule() {
           ) => BOOL(true),
           %match:equality (
             'test' => 'test',
-            %header:normalize-commas (
-              $.headers['REF-CODE'] => 'test'
-            ) => 'test',
+            $.headers['REF-CODE'] => 'test',
             NULL => NULL,
             BOOL(false) => BOOL(false)
           ) => BOOL(true)
@@ -1003,9 +965,7 @@ fn match_headers_with_number_type_matching_rule() {
           ) => BOOL(true),
           %match:equality (
             'test' => 'test',
-            %header:normalize-commas (
-              $.headers['REF-CODE'] => 'test'
-            ) => 'test',
+            $.headers['REF-CODE'] => 'test',
             NULL => NULL,
             BOOL(false) => BOOL(false)
           ) => BOOL(true)
@@ -1082,9 +1042,7 @@ fn match_headers_with_min_type_matching_rules() {
           ),
           %match:equality (
             'test',
-            %header:normalize-commas (
-              $.headers['REF-CODE']
-            ),
+            $.headers['REF-CODE'],
             NULL,
             BOOL(false)
           )
@@ -1143,9 +1101,7 @@ fn match_headers_with_min_type_matching_rules() {
           ) => BOOL(true),
           %match:equality (
             'test' => 'test',
-            %header:normalize-commas (
-              $.headers['REF-CODE'] => 'test'
-            ) => 'test',
+            $.headers['REF-CODE'] => 'test',
             NULL => NULL,
             BOOL(false) => BOOL(false)
           ) => BOOL(true)
@@ -1204,9 +1160,7 @@ fn match_headers_with_min_type_matching_rules() {
           ) => BOOL(true),
           %match:equality (
             'test' => 'test',
-            %header:normalize-commas (
-              $.headers['REF-CODE'] => 'test'
-            ) => 'test',
+            $.headers['REF-CODE'] => 'test',
             NULL => NULL,
             BOOL(false) => BOOL(false)
           ) => BOOL(true)

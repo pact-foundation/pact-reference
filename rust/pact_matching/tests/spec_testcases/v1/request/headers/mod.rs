@@ -222,7 +222,7 @@ async fn whitespace_after_comma_different() {
           "path": "/path",
           "query": "",
           "headers": {
-            "Type": "alligators,hippos"
+            "Cache-Control": "alligators,hippos"
           }
         },
         "actual": {
@@ -230,7 +230,7 @@ async fn whitespace_after_comma_different() {
           "path": "/path",
           "query": "",
           "headers": {
-            "Type": "alligators, hippos"
+            "Cache-Control": "alligators, hippos"
           }
         }
       }

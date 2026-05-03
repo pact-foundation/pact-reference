@@ -18,7 +18,7 @@ use serde_json::Value::Object;
 use tracing::debug;
 use pact_models::bodies::OptionalBody;
 use pact_models::content_types::TEXT;
-use pact_models::headers::PARAMETERISED_HEADERS;
+use pact_models::headers::{MULTI_VALUE_HEADERS, PARAMETERISED_HEADERS};
 use pact_models::http_parts::HttpPart;
 use pact_models::matchingrules::{MatchingRule, RuleList, RuleLogic};
 use pact_models::path_exp::DocPath;
@@ -1922,21 +1922,30 @@ fn setup_header_plan<T: HttpPart>(
             }
           }
         } else {
-          // RFC 7230: optional whitespace after commas in header values is insignificant,
-          // so normalize both sides before equality comparison.
-          let normalized_value = if let NodeValue::STRING(s) = &item_value {
-            NodeValue::STRING(s.split(',').map(|v| v.trim()).collect::<Vec<_>>().join(","))
-          } else {
-            item_value.clone()
-          };
           item_node.add(ExecutionPlanNode::annotation(format!("{}={}", key, item_value.to_string())));
           let mut item_check = ExecutionPlanNode::action("match:equality");
-          item_check
-            .add(ExecutionPlanNode::value_node(normalized_value))
-            .add(ExecutionPlanNode::action("header:normalize-commas")
-              .add(ExecutionPlanNode::resolve_value(doc_path.join(key))))
-            .add(ExecutionPlanNode::value_node(NodeValue::NULL))
-            .add(ExecutionPlanNode::value_node(context.config.show_types_in_errors));
+          if MULTI_VALUE_HEADERS.contains(&key.to_lowercase().as_str()) {
+            // RFC 7230: optional whitespace after commas in header values is insignificant
+            // for known multi-value headers. Custom headers (e.g. JSON payloads) must not
+            // be normalised as commas are semantically significant there.
+            let normalized_value = if let NodeValue::STRING(s) = &item_value {
+              NodeValue::STRING(s.split(',').map(|v| v.trim()).collect::<Vec<_>>().join(","))
+            } else {
+              item_value.clone()
+            };
+            item_check
+              .add(ExecutionPlanNode::value_node(normalized_value))
+              .add(ExecutionPlanNode::action("header:normalize-commas")
+                .add(ExecutionPlanNode::resolve_value(doc_path.join(key))))
+              .add(ExecutionPlanNode::value_node(NodeValue::NULL))
+              .add(ExecutionPlanNode::value_node(context.config.show_types_in_errors));
+          } else {
+            item_check
+              .add(ExecutionPlanNode::value_node(item_value))
+              .add(ExecutionPlanNode::resolve_value(doc_path.join(key)))
+              .add(ExecutionPlanNode::value_node(NodeValue::NULL))
+              .add(ExecutionPlanNode::value_node(context.config.show_types_in_errors));
+          }
           presence_check.add(item_check);
         }
 

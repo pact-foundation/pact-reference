@@ -195,12 +195,12 @@ async fn whitespace_after_comma_different() {
         "comment": "Whitespace between comma separated headers does not matter",
         "expected" : {
           "headers": {
-            "Type": "alligators,hippos"
+            "Cache-Control": "alligators,hippos"
           }
         },
         "actual": {
           "headers": {
-            "Type": "alligators, hippos"
+            "Cache-Control": "alligators, hippos"
           }
         }
       }

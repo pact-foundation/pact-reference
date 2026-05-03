@@ -1,12 +1,12 @@
 {
   "match": true,
   "comment": "Whitespace between comma separated headers does not matter",
-  "expected" : {
+  "expected": {
     "method": "POST",
     "path": "/path",
     "query": "",
     "headers": {
-      "Type": "alligators,hippos"
+      "Cache-Control": "alligators,hippos"
     }
   },
   "actual": {
@@ -14,7 +14,7 @@
     "path": "/path",
     "query": "",
     "headers": {
-      "Type": "alligators, hippos"
+      "Cache-Control": "alligators, hippos"
     }
   }
 }
