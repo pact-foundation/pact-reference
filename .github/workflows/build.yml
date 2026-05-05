@@ -8,13 +8,17 @@ on:
     branches:
       - master
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ${{ matrix.operating-system }}
     strategy:
       fail-fast: false
       matrix:
-        operating-system: [ ubuntu-latest, windows-latest, macos-15, macos-15-intel ]
+        operating-system: ${{ fromJSON(github.event_name == 'pull_request' && '["ubuntu-latest"]' || '["ubuntu-latest","windows-latest","macos-15"]') }}
     env:
       pact_do_not_track: true
     steps:
@@ -23,6 +27,9 @@ jobs:
         with:
           toolchain: stable
           components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust -> target
       - name: Install shared mime info DB
         if: runner.os == 'macOS'
         run: brew install shared-mime-info
@@ -48,6 +55,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust -> target
       - name: Tests
         run: cargo test
         working-directory: rust
@@ -68,6 +78,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust -> target
       - run: cargo check --no-default-features
         working-directory: rust
 
@@ -78,6 +91,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-wasip2
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust -> target
       - run: cargo build --target wasm32-wasip2
         working-directory: rust/pact_models
       - run: cargo build --target wasm32-wasip2
