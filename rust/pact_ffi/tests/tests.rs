@@ -2557,3 +2557,53 @@ fn mime_multipart_with_json_and_image() {
 
   expect!(mismatches).to(be_equal_to("[]"));
 }
+
+#[test]
+#[allow(deprecated)]
+fn https_mock_server_starts_and_responds_over_tls() {
+  // Both ring (via pact_mock_server) and aws-lc-rs (via reqwest 0.13) are compiled into the test
+  // binary. Rustls panics if neither has been set as the process default, so install ring first.
+  rustls::crypto::ring::default_provider().install_default().ok();
+
+  let consumer_name = CString::new("https-consumer").unwrap();
+  let provider_name = CString::new("https-provider").unwrap();
+  let pact_handle = pactffi_new_pact(consumer_name.as_ptr(), provider_name.as_ptr());
+  let description = CString::new("an HTTPS request").unwrap();
+  let interaction = pactffi_new_interaction(pact_handle, description.as_ptr());
+  let method = CString::new("GET").unwrap();
+  let path = CString::new("/").unwrap();
+
+  pactffi_upon_receiving(interaction, description.as_ptr());
+  pactffi_with_request(interaction, method.as_ptr(), path.as_ptr());
+  pactffi_response_status(interaction, 200);
+
+  let address = CString::new("127.0.0.1").unwrap();
+  let transport = CString::new("https").unwrap();
+  let port = pactffi_create_mock_server_for_transport(
+    pact_handle, address.as_ptr(), 0, transport.as_ptr(), null()
+  );
+  expect!(port).to(be_greater_than(0));
+
+  let client = reqwest::blocking::Client::builder()
+    .danger_accept_invalid_certs(true)
+    .build()
+    .unwrap();
+  let result = client.get(format!("https://127.0.0.1:{}/", port)).send();
+
+  thread::sleep(Duration::from_millis(100));
+
+  let matched = pactffi_mock_server_matched(port);
+  let mismatches = unsafe {
+    CStr::from_ptr(pactffi_mock_server_mismatches(port)).to_string_lossy().into_owned()
+  };
+
+  pactffi_cleanup_mock_server(port);
+  pactffi_free_pact_handle(pact_handle);
+
+  match result {
+    Ok(res) => expect!(res.status()).to(be_eq(200)),
+    Err(err) => panic!("HTTPS request to mock server failed: {}", err),
+  };
+  expect!(matched).to(be_true());
+  expect!(mismatches).to(be_equal_to("[]"));
+}
