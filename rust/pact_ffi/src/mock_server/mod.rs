@@ -120,7 +120,7 @@ ffi_fn! {
   /// * `pact` - Handle to a Pact model created with created with `pactffi_new_pact`.
   /// * `addr` - Address to bind to (i.e. `127.0.0.1` or `[::1]`). Must be a valid UTF-8 NULL-terminated string, or NULL or empty, in which case the loopback adapter is used.
   /// * `port` - Port number to bind to. A value of zero will result in the operating system allocating an available port.
-  /// * `transport` - The transport to use (i.e. http, https, grpc). Must be a valid UTF-8 NULL-terminated string, or NULL or empty, in which case http will be used.
+  /// * `transport` - The transport to use (i.e. http, https, grpc). Must be a valid UTF-8 NULL-terminated string, or NULL or empty, in which case http will be used. Passing `https` will start a TLS-enabled server using a self-signed certificate; use `pactffi_get_tls_ca_certificate` to obtain the CA cert for client configuration.
   /// * `transport_config` - (OPTIONAL) Configuration for the transport as a valid JSON string. Set to NULL or empty if not required.
   ///
   /// The port of the mock server is returned.
@@ -181,12 +181,22 @@ ffi_fn! {
             .with_id(Uuid::new_v4().to_string())
             .bind_to(socket_addr.to_string());
 
-          let builder = match builder.with_transport(transport.as_str()) {
-            Ok(builder) => builder,
-            Err(err) => {
-              error!("Failed to configure mock server transport '{}' - {}", transport, err);
-              return -3;
-            }
+          let builder = match transport.as_str() {
+            "https" => match builder.with_self_signed_tls() {
+              Ok(builder) => builder,
+              Err(err) => {
+                error!("Failed to configure TLS for HTTPS mock server - {}", err);
+                return -3;
+              }
+            },
+            "http" => builder,
+            _ => match builder.with_transport(transport.as_str()) {
+              Ok(builder) => builder,
+              Err(err) => {
+                error!("Failed to configure mock server transport '{}' - {}", transport, err);
+                return -3;
+              }
+            },
           };
 
           match attach_to_manager(builder) {
