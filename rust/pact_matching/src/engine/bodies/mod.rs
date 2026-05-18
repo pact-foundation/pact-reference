@@ -10,9 +10,11 @@ use pact_models::matchingrules::{MatchingRule, RuleList};
 use pact_models::path_exp::{DocPath, PathToken};
 
 use crate::engine::{ExecutionPlanNode, NodeValue, PlanMatchingContext};
+use crate::engine::bodies::form_urlencoded::FormUrlencodedPlanBuilder;
 use crate::engine::bodies::json::JsonPlanBuilder;
 #[cfg(feature = "xml")] use crate::engine::bodies::xml::XMLPlanBuilder;
 
+pub mod form_urlencoded;
 pub mod json;
 #[cfg(feature = "xml")] pub mod xml;
 
@@ -35,6 +37,7 @@ static BODY_PLAN_BUILDERS: LazyLock<RwLock<Vec<Arc<dyn PlanBodyBuilder + Send + 
   let mut builders: Vec<Arc<dyn PlanBodyBuilder + Send + Sync>> = vec![];
 
   // TODO: Add default implementations here
+  builders.push(Arc::new(FormUrlencodedPlanBuilder::new()));
   builders.push(Arc::new(JsonPlanBuilder::new()));
   #[cfg(feature = "xml")]
   builders.push(Arc::new(XMLPlanBuilder::new()));

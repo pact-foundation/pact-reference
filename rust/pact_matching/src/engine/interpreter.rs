@@ -10,6 +10,7 @@ use maplit::hashset;
 use serde_json::{json, Value};
 use tracing::{debug, error, instrument, Level, trace};
 
+use itertools::Either;
 use pact_models::matchingrules::MatchingRule;
 use pact_models::path_exp::{DocPath, PathToken};
 #[cfg(feature = "xml")] use pact_models::xml_utils::resolve_matching_node;
@@ -264,7 +265,11 @@ impl ExecutionPlanInterpreter {
     let mut action_path = path.to_vec();
     action_path.push(action.to_string());
 
-    if action.starts_with("match:") {
+    if action == "match:each-key" {
+      self.execute_match_each_key(value_resolver, node, &action_path)
+    } else if action == "match:each-value" {
+      self.execute_match_each_value(value_resolver, node, &action_path)
+    } else if action.starts_with("match:") {
       match action.strip_prefix("match:") {
         None => {
           ExecutionPlanNode {
@@ -290,6 +295,7 @@ impl ExecutionPlanInterpreter {
         "tee" => self.execute_tee(value_resolver, node, &action_path),
         "apply" => self.execute_apply(node),
         "json:parse" => self.execute_json_parse(action, value_resolver, node, &action_path),
+        "form:parse" => self.execute_form_parse(action, value_resolver, node, &action_path),
         #[cfg(feature = "xml")]
         "xml:parse" => self.execute_xml_parse(action, value_resolver, node, &action_path),
         #[cfg(feature = "xml")]
@@ -650,6 +656,73 @@ impl ExecutionPlanInterpreter {
               .map(|json| NodeResult::VALUE(NodeValue::JSON(json)))
               .map_err(|err| anyhow!("json parse error - {}", err)),
             _ => Err(anyhow!("json:parse can not be used with {}", value.value_type()))
+          }
+        } else {
+          Ok(NodeResult::VALUE(NodeValue::NULL))
+        };
+        match result {
+          Ok(result) => {
+            ExecutionPlanNode {
+              node_type: node.node_type.clone(),
+              result: Some(result),
+              children: vec![value]
+            }
+          }
+          Err(err) => {
+            ExecutionPlanNode {
+              node_type: node.node_type.clone(),
+              result: Some(NodeResult::ERROR(err.to_string())),
+              children: vec![value]
+            }
+          }
+        }
+      }
+      Err(err) => {
+        ExecutionPlanNode {
+          node_type: node.node_type.clone(),
+          result: Some(NodeResult::ERROR(err.to_string())),
+          children: node.children.clone()
+        }
+      }
+    }
+  }
+
+  fn execute_form_parse(
+    &mut self,
+    action: &str,
+    value_resolver: &dyn ValueResolver,
+    node: &ExecutionPlanNode,
+    action_path: &Vec<String>
+  ) -> ExecutionPlanNode {
+    match self.validate_one_arg(node, action, value_resolver, &action_path) {
+      Ok(value) => {
+        let arg_value = value.value().unwrap_or_default().as_value();
+        let result = if let Some(value) = &arg_value {
+          match value {
+            NodeValue::NULL => Ok(NodeResult::VALUE(NodeValue::NULL)),
+            NodeValue::STRING(s) => {
+              serde_urlencoded::from_str::<Vec<(String, String)>>(s.as_str())
+                .map(|pairs| {
+                  let mut map: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+                  for (k, v) in pairs {
+                    map.entry(k).or_default().push(v);
+                  }
+                  NodeResult::VALUE(NodeValue::MMAP(map))
+                })
+                .map_err(|err| anyhow!("form:parse error - {}", err))
+            }
+            NodeValue::BARRAY(b) => {
+              serde_urlencoded::from_bytes::<Vec<(String, String)>>(b.as_slice())
+                .map(|pairs| {
+                  let mut map: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+                  for (k, v) in pairs {
+                    map.entry(k).or_default().push(v);
+                  }
+                  NodeResult::VALUE(NodeValue::MMAP(map))
+                })
+                .map_err(|err| anyhow!("form:parse error - {}", err))
+            }
+            _ => Err(anyhow!("form:parse can not be used with {}", value.value_type()))
           }
         } else {
           Ok(NodeResult::VALUE(NodeValue::NULL))
@@ -1299,6 +1372,174 @@ impl ExecutionPlanInterpreter {
         }
       }
       Err(err) => Err(node.clone_with_result(NodeResult::ERROR(err.to_string())))
+    }
+  }
+
+  fn execute_match_each_key(
+    &mut self,
+    value_resolver: &dyn ValueResolver,
+    node: &ExecutionPlanNode,
+    action_path: &Vec<String>
+  ) -> ExecutionPlanNode {
+    match self.validate_args(4, 0, node, "match:each-key", value_resolver, action_path) {
+      Ok((args, _)) => {
+        let actual_result = args[1].value().unwrap_or_default();
+        let matcher_params = args[2].value().unwrap_or_default()
+          .as_value().and_then(|v| v.as_json()).unwrap_or_default();
+        let show_types = args[3].value().unwrap_or_default()
+          .as_value().and_then(|v| v.as_bool()).unwrap_or_default();
+
+        match MatchingRule::create("each-key", &matcher_params) {
+          Ok(MatchingRule::EachKey(def)) => {
+            match actual_result.as_value() {
+              Some(NodeValue::JSON(Value::Object(map))) => {
+                let inner_rules: Vec<MatchingRule> = def.rules.iter()
+                  .filter_map(|r| match r { Either::Left(rule) => Some(rule.clone()), _ => None })
+                  .collect();
+                let mut child_results = args.clone();
+                let mut has_error = false;
+                for key in map.keys() {
+                  let key_node = NodeValue::STRING(key.clone());
+                  for rule in &inner_rules {
+                    if let Err(e) = rule.match_value(
+                      &NodeValue::STRING(String::new()), &key_node, false, show_types
+                    ) {
+                      has_error = true;
+                      child_results.push(ExecutionPlanNode {
+                        node_type: PlanNodeType::ACTION(format!("each-key:{}", key)),
+                        result: Some(NodeResult::ERROR(e.to_string())),
+                        children: vec![]
+                      });
+                      break;
+                    }
+                  }
+                }
+                ExecutionPlanNode {
+                  node_type: node.node_type.clone(),
+                  result: Some(NodeResult::VALUE(NodeValue::BOOL(!has_error))),
+                  children: child_results
+                }
+              }
+              _ => node.clone_with_result(NodeResult::VALUE(NodeValue::BOOL(true)))
+            }
+          }
+          Ok(_) | Err(_) => node.clone_with_result(NodeResult::ERROR(
+            "match:each-key requires an each-key matching rule".to_string()))
+        }
+      }
+      Err(err) => node.clone_with_result(NodeResult::ERROR(err.to_string()))
+    }
+  }
+
+  fn execute_match_each_value(
+    &mut self,
+    value_resolver: &dyn ValueResolver,
+    node: &ExecutionPlanNode,
+    action_path: &Vec<String>
+  ) -> ExecutionPlanNode {
+    match self.validate_args(4, 0, node, "match:each-value", value_resolver, action_path) {
+      Ok((args, _)) => {
+        let actual_result = args[1].value().unwrap_or_default();
+        let matcher_params = args[2].value().unwrap_or_default()
+          .as_value().and_then(|v| v.as_json()).unwrap_or_default();
+        let show_types = args[3].value().unwrap_or_default()
+          .as_value().and_then(|v| v.as_bool()).unwrap_or_default();
+
+        match MatchingRule::create("each-value", &matcher_params) {
+          Ok(MatchingRule::EachValue(def)) => {
+            match actual_result.as_value() {
+              Some(NodeValue::JSON(Value::Object(map))) => {
+                let inner_rules: Vec<MatchingRule> = def.rules.iter()
+                  .filter_map(|r| match r { Either::Left(rule) => Some(rule.clone()), _ => None })
+                  .collect();
+                let mut child_results = args.clone();
+                let mut has_error = false;
+                for (key, val) in map.iter() {
+                  let val_node = NodeValue::JSON(val.clone());
+                  for rule in &inner_rules {
+                    if let Err(e) = rule.match_value(
+                      &NodeValue::JSON(val.clone()), &val_node, false, show_types
+                    ) {
+                      has_error = true;
+                      child_results.push(ExecutionPlanNode {
+                        node_type: PlanNodeType::ACTION(format!("each-value:{}", key)),
+                        result: Some(NodeResult::ERROR(e.to_string())),
+                        children: vec![]
+                      });
+                      break;
+                    }
+                  }
+                }
+                ExecutionPlanNode {
+                  node_type: node.node_type.clone(),
+                  result: Some(NodeResult::VALUE(NodeValue::BOOL(!has_error))),
+                  children: child_results
+                }
+              }
+              Some(NodeValue::JSON(Value::Array(items))) => {
+                let inner_rules: Vec<MatchingRule> = def.rules.iter()
+                  .filter_map(|r| match r { Either::Left(rule) => Some(rule.clone()), _ => None })
+                  .collect();
+                let mut child_results = args.clone();
+                let mut has_error = false;
+                for (index, val) in items.iter().enumerate() {
+                  let val_node = NodeValue::JSON(val.clone());
+                  for rule in &inner_rules {
+                    if let Err(e) = rule.match_value(
+                      &NodeValue::JSON(val.clone()), &val_node, false, show_types
+                    ) {
+                      has_error = true;
+                      child_results.push(ExecutionPlanNode {
+                        node_type: PlanNodeType::ACTION(format!("each-value:{}", index)),
+                        result: Some(NodeResult::ERROR(e.to_string())),
+                        children: vec![]
+                      });
+                      break;
+                    }
+                  }
+                }
+                ExecutionPlanNode {
+                  node_type: node.node_type.clone(),
+                  result: Some(NodeResult::VALUE(NodeValue::BOOL(!has_error))),
+                  children: child_results
+                }
+              }
+              Some(NodeValue::SLIST(items)) => {
+                let inner_rules: Vec<MatchingRule> = def.rules.iter()
+                  .filter_map(|r| match r { Either::Left(rule) => Some(rule.clone()), _ => None })
+                  .collect();
+                let mut child_results = args.clone();
+                let mut has_error = false;
+                for (index, item) in items.iter().enumerate() {
+                  let item_node = NodeValue::STRING(item.clone());
+                  for rule in &inner_rules {
+                    if let Err(e) = rule.match_value(
+                      &NodeValue::STRING(item.clone()), &item_node, false, show_types
+                    ) {
+                      has_error = true;
+                      child_results.push(ExecutionPlanNode {
+                        node_type: PlanNodeType::ACTION(format!("each-value:{}", index)),
+                        result: Some(NodeResult::ERROR(e.to_string())),
+                        children: vec![]
+                      });
+                      break;
+                    }
+                  }
+                }
+                ExecutionPlanNode {
+                  node_type: node.node_type.clone(),
+                  result: Some(NodeResult::VALUE(NodeValue::BOOL(!has_error))),
+                  children: child_results
+                }
+              }
+              _ => node.clone_with_result(NodeResult::VALUE(NodeValue::BOOL(true)))
+            }
+          }
+          Ok(_) | Err(_) => node.clone_with_result(NodeResult::ERROR(
+            "match:each-value requires an each-value matching rule".to_string()))
+        }
+      }
+      Err(err) => node.clone_with_result(NodeResult::ERROR(err.to_string()))
     }
   }
 
@@ -2226,6 +2467,23 @@ impl ExecutionPlanInterpreter {
               }
             } else {
               todo!("Deal with other XML types: {}", value)
+            }
+          }
+          NodeValue::MMAP(map) => {
+            if path.is_root() {
+              Ok(NodeValue::MMAP(map.clone()))
+            } else if let Some(field) = path.first_field() {
+              if let Some(values) = map.get(field) {
+                if values.len() == 1 {
+                  Ok(NodeValue::STRING(values[0].clone()))
+                } else {
+                  Ok(NodeValue::SLIST(values.clone()))
+                }
+              } else {
+                Ok(NodeValue::NULL)
+              }
+            } else {
+              Err(anyhow!("Can not resolve '{}' from a map value", path))
             }
           }
           _ => {

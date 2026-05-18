@@ -103,14 +103,14 @@ impl JsonPlanBuilder {
             .add(ExecutionPlanNode::resolve_current_value(path))
         );
       }
-    }
 
-    for (key, value) in entries {
-      let mut item_path = path.clone();
-      item_path.push_field(key);
-      let mut item_node = ExecutionPlanNode::container(&item_path);
-      Self::process_body_node(context, value, &item_path, &mut item_node);
-      root_node.add(item_node);
+      for (key, value) in entries {
+        let mut item_path = path.clone();
+        item_path.push_field(key);
+        let mut item_node = ExecutionPlanNode::container(&item_path);
+        Self::process_body_node(context, value, &item_path, &mut item_node);
+        root_node.add(item_node);
+      }
     }
   }
 

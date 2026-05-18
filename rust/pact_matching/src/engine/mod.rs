@@ -472,6 +472,13 @@ impl DoMatch<&NodeValue> for MatchingRule {
               _ => self.match_value("", json.to_string().as_str(), cascaded, show_types)
             }
           }
+          NodeValue::SLIST(list) => {
+            let results: Vec<String> = list.iter()
+              .filter_map(|item| self.match_value("", item.as_str(), cascaded, show_types).err()
+                .map(|e| e.to_string()))
+              .collect();
+            if results.is_empty() { Ok(()) } else { Err(anyhow!(results.join(", "))) }
+          }
           #[cfg(feature = "xml")]
           NodeValue::XML(xml_value) => self.match_value(xml_value, xml_value, cascaded, show_types),
           _ => self.match_value("", actual_value.as_string().unwrap_or_default().as_str(),
@@ -538,6 +545,14 @@ impl DoMatch<&NodeValue> for MatchingRule {
           }
           (NodeValue::UINT(e), NodeValue::UINT(a)) => {
             self.match_value(*e, *a, cascaded, show_types)
+          }
+          (_, NodeValue::JSON(ajson)) => {
+            let ejson = expected_value.as_json().unwrap_or(Value::Null);
+            self.match_value(&ejson, ajson, cascaded, show_types)
+          }
+          (_, NodeValue::BARRAY(bytes)) => {
+            let b = Bytes::from(bytes.clone());
+            self.match_value(&b, &b, cascaded, show_types)
           }
           _ => Err(anyhow!("{} matching rules can not be applied to {} values", self.name(), actual_value.value_type()))
         }

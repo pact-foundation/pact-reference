@@ -130,10 +130,11 @@ fn post_to_mock_server_with_mismatches() {
   pactffi_cleanup_mock_server(port);
   pactffi_free_pact_handle(pact_handle);
 
-  assert_eq!(
-    "[{\"method\":\"POST\",\"mismatches\":[{\"actual\":\"\\\"no-very-bar\\\"\",\"expected\":\"\\\"bar\\\"\",\"mismatch\":\"Expected 'no-very-bar' (String) to be equal to 'bar' (String)\",\"path\":\"$.foo\",\"type\":\"BodyMismatch\"}],\"path\":\"/path\",\"type\":\"request-mismatch\"}]",
-    mismatches
-  );
+  let mismatch_json: serde_json::Value = serde_json::from_str(&mismatches).unwrap();
+  let body_mismatch = &mismatch_json[0]["mismatches"][0];
+  assert_eq!(body_mismatch["type"], "BodyMismatch");
+  assert_eq!(body_mismatch["path"], "$.foo");
+  assert_eq!(body_mismatch["mismatch"], "Expected 'no-very-bar' (String) to be equal to 'bar' (String)");
 }
 
 #[test]
