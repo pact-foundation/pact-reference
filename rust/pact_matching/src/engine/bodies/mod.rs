@@ -12,10 +12,12 @@ use pact_models::path_exp::{DocPath, PathToken};
 use crate::engine::{ExecutionPlanNode, NodeValue, PlanMatchingContext};
 use crate::engine::bodies::form_urlencoded::FormUrlencodedPlanBuilder;
 use crate::engine::bodies::json::JsonPlanBuilder;
+#[cfg(feature = "multipart")] use crate::engine::bodies::multipart::MultipartFormDataPlanBuilder;
 #[cfg(feature = "xml")] use crate::engine::bodies::xml::XMLPlanBuilder;
 
 pub mod form_urlencoded;
 pub mod json;
+#[cfg(feature = "multipart")] pub mod multipart;
 #[cfg(feature = "xml")] pub mod xml;
 
 /// Trait for implementations of builders for different types of bodies
@@ -37,6 +39,8 @@ static BODY_PLAN_BUILDERS: LazyLock<RwLock<Vec<Arc<dyn PlanBodyBuilder + Send + 
   let mut builders: Vec<Arc<dyn PlanBodyBuilder + Send + Sync>> = vec![];
 
   // TODO: Add default implementations here
+  #[cfg(feature = "multipart")]
+  builders.push(Arc::new(MultipartFormDataPlanBuilder::new()));
   builders.push(Arc::new(FormUrlencodedPlanBuilder::new()));
   builders.push(Arc::new(JsonPlanBuilder::new()));
   #[cfg(feature = "xml")]

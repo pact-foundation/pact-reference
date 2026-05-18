@@ -783,6 +783,57 @@ async fn parse_multipart(
   Ok(parts)
 }
 
+/// Parses a multipart body and returns a map of part names to (data, content-type) pairs.
+/// Used by the V2 matching engine to evaluate multipart bodies at execution time.
+#[cfg(feature = "multipart")]
+pub(crate) fn parse_multipart_body(
+  body: Bytes,
+  content_type_str: &str
+) -> anyhow::Result<std::collections::BTreeMap<String, (Bytes, Option<mime::Mime>)>> {
+  let mut headers_map = HashMap::new();
+  headers_map.insert("Content-Type".to_string(), vec![content_type_str.to_string()]);
+  let headers = Some(headers_map);
+
+  let (sender, receiver) = channel();
+  thread::spawn(move || {
+    let result = match tokio::runtime::Handle::try_current() {
+      Ok(rt) => {
+        rt.block_on(parse_multipart(body, &headers))
+      }
+      Err(_) => {
+        #[cfg(not(target_family = "wasm"))]
+        let mut builder = tokio::runtime::Builder::new_multi_thread();
+        #[cfg(target_family = "wasm")]
+        let mut builder = tokio::runtime::Builder::new_current_thread();
+        builder.enable_all()
+          .build()
+          .expect("Could not start a Tokio runtime")
+          .block_on(parse_multipart(body, &headers))
+      }
+    };
+    let _ = sender.send(result);
+  });
+
+  let parts = receiver.recv_timeout(Duration::from_secs(30))
+    .map_err(|err| anyhow!("Timed out waiting for multipart parse: {}", err))??;
+
+  let mut map = std::collections::BTreeMap::new();
+  for part in parts {
+    match part {
+      MimePart::Field(f) => {
+        let ct = f.headers.get(http::header::CONTENT_TYPE)
+          .and_then(|v| v.to_str().ok())
+          .and_then(|s| s.parse::<mime::Mime>().ok());
+        map.insert(f.name.clone(), (f.data, ct));
+      }
+      MimePart::File(f) => {
+        map.insert(f.name.clone(), (f.data, f.content_type));
+      }
+    }
+  }
+  Ok(map)
+}
+
 #[cfg(feature = "multipart")]
 fn get_multipart_boundary(headers: &Option<HashMap<String, Vec<String>>>) -> anyhow::Result<String> {
   let header_map = get_http_header_map(headers);

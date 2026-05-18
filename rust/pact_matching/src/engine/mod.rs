@@ -2,7 +2,7 @@
 
 use std::cell::Cell;
 use std::cmp::PartialEq;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt::{Debug, Display, Formatter};
 use std::time::Duration;
 use ansi_term::Colour::{Green, Red};
@@ -79,6 +79,8 @@ pub enum NodeValue {
   BOOL(bool),
   /// Multi-string map (String key to one or more string values)
   MMAP(HashMap<String, Vec<String>>),
+  /// Generic map (String key to NodeValue)
+  MAP(BTreeMap<String, NodeValue>),
   /// List of String values
   SLIST(Vec<String>),
   /// Byte Array
@@ -152,6 +154,23 @@ impl NodeValue {
         buffer.push(')');
         buffer
       }
+      NodeValue::MAP(map) => {
+        let mut buffer = String::new();
+        buffer.push('{');
+        let mut first = true;
+        for (key, value) in map.iter() {
+          if first {
+            first = false;
+          } else {
+            buffer.push_str(", ");
+          }
+          buffer.push_str(escape(key.as_str()).as_str());
+          buffer.push_str(": ");
+          buffer.push_str(value.str_form().as_str());
+        }
+        buffer.push('}');
+        buffer
+      }
       NodeValue::NAMESPACED(name, value) => {
         let mut buffer = String::new();
         buffer.push_str(name);
@@ -192,6 +211,7 @@ impl NodeValue {
       NodeValue::STRING(_) => "String",
       NodeValue::BOOL(_) => "Boolean",
       NodeValue::MMAP(_) => "Multi-Value String Map",
+      NodeValue::MAP(_) => "Map",
       NodeValue::SLIST(_) => "String List",
       NodeValue::BARRAY(_) => "Byte Array",
       NodeValue::NAMESPACED(_, _) => "Namespaced Value",
@@ -285,6 +305,7 @@ impl NodeValue {
       NodeValue::STRING(s) => !s.is_empty(),
       NodeValue::BOOL(b) => *b,
       NodeValue::MMAP(m) => !m.is_empty(),
+      NodeValue::MAP(m) => !m.is_empty(),
       NodeValue::SLIST(s) => !s.is_empty(),
       NodeValue::BARRAY(b) => !b.is_empty(),
       NodeValue::UINT(u) => *u != 0,
@@ -299,6 +320,11 @@ impl NodeValue {
       NodeValue::MMAP(entries) => {
         entries.iter()
           .map(|(k, v)| NodeValue::ENTRY(k.clone(), Box::new(NodeValue::SLIST(v.clone()))))
+          .collect()
+      }
+      NodeValue::MAP(entries) => {
+        entries.iter()
+          .map(|(k, v)| NodeValue::ENTRY(k.clone(), Box::new(v.clone())))
           .collect()
       }
       NodeValue::SLIST(list) => {
@@ -619,6 +645,7 @@ impl NodeResult {
         NodeValue::STRING(s) => Some(s.clone()),
         NodeValue::BOOL(b) => Some(b.to_string()),
         NodeValue::MMAP(m) => Some(format!("{:?}", m)),
+        NodeValue::MAP(m) => Some(format!("{:?}", m)),
         NodeValue::SLIST(list) => Some(format!("{:?}", list)),
         NodeValue::BARRAY(bytes) => Some(BASE64.encode(bytes)),
         NodeValue::NAMESPACED(name, value) => Some(format!("{}:{}", name, value)),
@@ -2113,20 +2140,30 @@ fn setup_body_plan<T: HttpPart>(
           context.config.show_types_in_errors
         ));
       } else {
+        let mut ct_condition_node = if content_type.main_type == "multipart" {
+          // For multipart, only check base type — the boundary parameter differs between the
+          // expected pact (fixed test boundary) and the actual request (randomly generated).
+          let base_type = format!("{}/{}", content_type.main_type, content_type.sub_type);
+          let mut node = ExecutionPlanNode::action("match:include");
+          node.add(ExecutionPlanNode::value_node(NodeValue::STRING(base_type.clone())));
+          node.add(ExecutionPlanNode::resolve_value(DocPath::new("$.content-type")?));
+          node.add(ExecutionPlanNode::value_node(NodeValue::JSON(serde_json::json!({"value": base_type}))));
+          node.add(ExecutionPlanNode::value_node(false));
+          node
+        } else {
+          let mut node = ExecutionPlanNode::action("match:equality");
+          node.add(ExecutionPlanNode::value_node(content_type.to_string()));
+          node.add(ExecutionPlanNode::resolve_value(DocPath::new("$.content-type")?));
+          node.add(ExecutionPlanNode::value_node(NodeValue::NULL));
+          node.add(ExecutionPlanNode::value_node(false));
+          node
+        };
+        let mut error_node = ExecutionPlanNode::action("error");
+        error_node.add(ExecutionPlanNode::value_node(NodeValue::STRING("Body type error - ".to_string())));
+        error_node.add(ExecutionPlanNode::action("apply"));
+        ct_condition_node.add(error_node);
         let mut content_type_check_node = ExecutionPlanNode::action("if");
-        content_type_check_node
-          .add(
-            ExecutionPlanNode::action("match:equality")
-              .add(ExecutionPlanNode::value_node(content_type.to_string()))
-              .add(ExecutionPlanNode::resolve_value(DocPath::new("$.content-type")?))
-              .add(ExecutionPlanNode::value_node(NodeValue::NULL))
-              .add(ExecutionPlanNode::value_node(false))
-              .add(
-                ExecutionPlanNode::action("error")
-                  .add(ExecutionPlanNode::value_node(NodeValue::STRING("Body type error - ".to_string())))
-                  .add(ExecutionPlanNode::action("apply"))
-              )
-          );
+        content_type_check_node.add(ct_condition_node);
         if let Some(plan_builder) = get_body_plan_builder(&content_type) {
           content_type_check_node.add(plan_builder.build_plan(content, context)?);
         } else {
@@ -2251,20 +2288,28 @@ fn setup_message_body_plan(
           context.config.show_types_in_errors
         ));
       } else {
+        let mut error_node = ExecutionPlanNode::action("error");
+        error_node.add(ExecutionPlanNode::value_node(NodeValue::STRING("Body type error - ".to_string())));
+        error_node.add(ExecutionPlanNode::action("apply"));
+        let mut ct_condition_node = if content_type.main_type == "multipart" {
+          let base_type = format!("{}/{}", content_type.main_type, content_type.sub_type);
+          let mut node = ExecutionPlanNode::action("match:include");
+          node.add(ExecutionPlanNode::value_node(NodeValue::STRING(base_type.clone())));
+          node.add(ExecutionPlanNode::resolve_value(DocPath::new("$.content-type")?));
+          node.add(ExecutionPlanNode::value_node(NodeValue::JSON(serde_json::json!({"value": base_type}))));
+          node.add(ExecutionPlanNode::value_node(false));
+          node
+        } else {
+          let mut node = ExecutionPlanNode::action("match:equality");
+          node.add(ExecutionPlanNode::value_node(content_type.to_string()));
+          node.add(ExecutionPlanNode::resolve_value(DocPath::new("$.content-type")?));
+          node.add(ExecutionPlanNode::value_node(NodeValue::NULL));
+          node.add(ExecutionPlanNode::value_node(false));
+          node
+        };
+        ct_condition_node.add(error_node);
         let mut content_type_check_node = ExecutionPlanNode::action("if");
-        content_type_check_node
-          .add(
-            ExecutionPlanNode::action("match:equality")
-              .add(ExecutionPlanNode::value_node(content_type.to_string()))
-              .add(ExecutionPlanNode::resolve_value(DocPath::new("$.content-type")?))
-              .add(ExecutionPlanNode::value_node(NodeValue::NULL))
-              .add(ExecutionPlanNode::value_node(false))
-              .add(
-                ExecutionPlanNode::action("error")
-                  .add(ExecutionPlanNode::value_node(NodeValue::STRING("Body type error - ".to_string())))
-                  .add(ExecutionPlanNode::action("apply"))
-              )
-          );
+        content_type_check_node.add(ct_condition_node);
         if let Some(plan_builder) = get_body_plan_builder(&content_type) {
           content_type_check_node.add(plan_builder.build_plan(content, context)?);
         } else {

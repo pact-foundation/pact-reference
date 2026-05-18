@@ -1,6 +1,6 @@
 //! This module provides the interpreter that can execute a matching plan AST
 
-use std::collections::{HashSet, VecDeque};
+use std::collections::{BTreeMap, HashSet, VecDeque};
 use std::iter::once;
 use std::time::Instant;
 
@@ -318,6 +318,8 @@ impl ExecutionPlanInterpreter {
         "header:parse" => self.execute_header_parse(action, value_resolver, node, &action_path),
         "header:normalize-commas" => self.execute_normalize_comma_whitespace(action, value_resolver, node, &action_path),
         "for-each" => self.execute_for_each(value_resolver, node, &action_path),
+        #[cfg(feature = "multipart")]
+        "multipart:parse" => self.execute_multipart_parse(action, value_resolver, node, &action_path),
         _ => {
           ExecutionPlanNode {
             node_type: node.node_type.clone(),
@@ -756,6 +758,61 @@ impl ExecutionPlanInterpreter {
     }
   }
 
+  #[cfg(feature = "multipart")]
+  fn execute_multipart_parse(
+    &mut self,
+    action: &str,
+    value_resolver: &dyn ValueResolver,
+    node: &ExecutionPlanNode,
+    action_path: &Vec<String>
+  ) -> ExecutionPlanNode {
+    match self.validate_two_args(node, action, value_resolver, action_path) {
+      Ok((body_node, ct_node)) => {
+        let body_value = body_node.value().unwrap_or_default().as_value().unwrap_or_default();
+        let ct_value = ct_node.value().unwrap_or_default().as_value().unwrap_or_default();
+        let result = match (body_value, ct_value) {
+          (NodeValue::BARRAY(body_bytes), NodeValue::STRING(ct_str)) => {
+            crate::binary_utils::parse_multipart_body(bytes::Bytes::from(body_bytes), &ct_str)
+              .map(|parts| {
+                let map: BTreeMap<String, NodeValue> = parts.into_iter()
+                  .map(|(name, (data, _mime_ct))| {
+                    // Try JSON first; fall back to raw bytes for binary parts
+                    let value = serde_json::from_slice::<Value>(data.as_ref())
+                      .map(NodeValue::JSON)
+                      .unwrap_or_else(|_| NodeValue::BARRAY(data.to_vec()));
+                    (name, value)
+                  })
+                  .collect();
+                NodeResult::VALUE(NodeValue::MAP(map))
+              })
+              .map_err(|err| anyhow!("multipart:parse error - {}", err))
+          }
+          (body_val, ct_val) => Err(anyhow!(
+            "multipart:parse requires BARRAY body and STRING content-type, got {} and {}",
+            body_val.value_type(), ct_val.value_type()
+          ))
+        };
+        match result {
+          Ok(result) => ExecutionPlanNode {
+            node_type: node.node_type.clone(),
+            result: Some(result),
+            children: vec![body_node, ct_node]
+          },
+          Err(err) => ExecutionPlanNode {
+            node_type: node.node_type.clone(),
+            result: Some(NodeResult::ERROR(err.to_string())),
+            children: vec![body_node, ct_node]
+          }
+        }
+      }
+      Err(err) => ExecutionPlanNode {
+        node_type: node.node_type.clone(),
+        result: Some(NodeResult::ERROR(err.to_string())),
+        children: node.children.clone()
+      }
+    }
+  }
+
   #[cfg(feature = "xml")]
   fn execute_xml_parse(
     &mut self,
@@ -1128,6 +1185,11 @@ impl ExecutionPlanInterpreter {
               }
               NodeValue::BOOL(b) => Ok(NodeResult::VALUE(NodeValue::BOOL(*b))),
               NodeValue::MMAP(m) => if m.is_empty() {
+                Ok(NodeResult::VALUE(NodeValue::BOOL(true)))
+              } else {
+                Err(anyhow!("Expected {} to be empty", value))
+              }
+              NodeValue::MAP(m) => if m.is_empty() {
                 Ok(NodeResult::VALUE(NodeValue::BOOL(true)))
               } else {
                 Err(anyhow!("Expected {} to be empty", value))
@@ -2011,6 +2073,12 @@ impl ExecutionPlanInterpreter {
               .collect::<HashSet<_>>();
             Self::check_diff(action, &expected_keys, &actual_keys)
           }
+          NodeValue::MAP(map) => {
+            let actual_keys = map.keys()
+              .cloned()
+              .collect::<HashSet<_>>();
+            Self::check_diff(action, &expected_keys, &actual_keys)
+          }
           NodeValue::SLIST(list) => {
             let actual_keys = list.iter()
               .cloned()
@@ -2520,6 +2588,50 @@ impl ExecutionPlanInterpreter {
               }
             } else {
               Err(anyhow!("Can not resolve '{}' from a map value", path))
+            }
+          }
+          NodeValue::MAP(map) => {
+            if path.is_root() {
+              Ok(NodeValue::MAP(map.clone()))
+            } else {
+              let path_tokens = path.tokens();
+              if let Some(PathToken::Field(part_name)) = path_tokens.get(1) {
+                if let Some(value) = map.get(part_name.as_str()) {
+                  if path_tokens.len() <= 2 {
+                    Ok(value.clone())
+                  } else {
+                    // Build remaining path (tokens after the part name) and navigate into part value
+                    let mut remaining = DocPath::root();
+                    for token in path_tokens.iter().skip(2) {
+                      remaining.push(token.clone());
+                    }
+                    match value {
+                      NodeValue::JSON(json) => {
+                        let json_paths = pact_models::json_utils::resolve_path(json, &remaining);
+                        if json_paths.is_empty() {
+                          Ok(NodeValue::NULL)
+                        } else if json_paths.len() == 1 {
+                          if let Some(v) = json.pointer(json_paths[0].as_str()) {
+                            Ok(NodeValue::JSON(v.clone()))
+                          } else {
+                            Ok(NodeValue::NULL)
+                          }
+                        } else {
+                          let values = json_paths.iter()
+                            .map(|p| json.pointer(p.as_str()).cloned().unwrap_or_default())
+                            .collect();
+                          Ok(NodeValue::JSON(Value::Array(values)))
+                        }
+                      }
+                      _ => Ok(NodeValue::NULL)
+                    }
+                  }
+                } else {
+                  Ok(NodeValue::NULL)
+                }
+              } else {
+                Err(anyhow!("Can not resolve '{}' from a MAP value", path))
+              }
             }
           }
           _ => {

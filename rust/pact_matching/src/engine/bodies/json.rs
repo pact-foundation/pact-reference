@@ -21,7 +21,7 @@ impl JsonPlanBuilder {
     JsonPlanBuilder{}
   }
 
-  fn process_body_node(
+  pub(crate) fn process_body_node(
     context: &PlanMatchingContext,
     json: &Value,
     path: &DocPath,
