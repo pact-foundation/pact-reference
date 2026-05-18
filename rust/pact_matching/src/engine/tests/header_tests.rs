@@ -67,6 +67,9 @@ fn match_headers_with_expected_headers() {
             $.headers['HEADER-X'],
             NULL,
             BOOL(false)
+          ),
+          %error (
+            'Expected header \'HEADER-X\' but was missing'
           )
         )
       ),
@@ -106,7 +109,10 @@ fn match_headers_with_expected_headers() {
             $.headers['HEADER-X'],
             NULL,
             BOOL(false)
-          )
+          ),
+          %error (
+            'Expected header \'HEADER-X\' but was missing' => 'Expected header \'HEADER-X\' but was missing'
+          ) => ERROR(Expected header 'HEADER-X' but was missing)
         ) => BOOL(false)
       ) => BOOL(false),
       %expect:entries (
@@ -150,7 +156,10 @@ fn match_headers_with_expected_headers() {
             $.headers['HEADER-X'] => 'b',
             NULL => NULL,
             BOOL(false) => BOOL(false)
-          ) => BOOL(true)
+          ) => BOOL(true),
+          %error (
+            'Expected header \'HEADER-X\' but was missing'
+          )
         ) => BOOL(true)
       ) => BOOL(true),
       %expect:entries (
@@ -194,7 +203,10 @@ fn match_headers_with_expected_headers() {
             $.headers['HEADER-X'] => 'C',
             NULL => NULL,
             BOOL(false) => BOOL(false)
-          ) => ERROR(Expected 'C' to be equal to 'b')
+          ) => ERROR(Expected 'C' to be equal to 'b'),
+          %error (
+            'Expected header \'HEADER-X\' but was missing'
+          )
         ) => BOOL(false)
       ) => BOOL(false),
       %expect:entries (
@@ -239,7 +251,10 @@ fn match_headers_with_expected_headers() {
             $.headers['HEADER-X'] => 'b',
             NULL => NULL,
             BOOL(false) => BOOL(false)
-          ) => BOOL(true)
+          ) => BOOL(true),
+          %error (
+            'Expected header \'HEADER-X\' but was missing'
+          )
         ) => BOOL(true)
       ) => BOOL(true),
       %expect:entries (
@@ -283,7 +298,10 @@ fn match_headers_with_expected_headers() {
             $.headers['HEADER-X'],
             NULL,
             BOOL(false)
-          )
+          ),
+          %error (
+            'Expected header \'HEADER-X\' but was missing' => 'Expected header \'HEADER-X\' but was missing'
+          ) => ERROR(Expected header 'HEADER-X' but was missing)
         ) => BOOL(false)
       ) => BOOL(false),
       %expect:entries (
@@ -346,6 +364,9 @@ fn match_headers_with_matching_rule() {
             $.headers['REF-CODE'],
             NULL,
             BOOL(false)
+          ),
+          %error (
+            'Expected header \'REF-CODE\' but was missing'
           )
         )
       ),
@@ -360,6 +381,9 @@ fn match_headers_with_matching_rule() {
             $.headers['REF-ID'],
             json:{"regex":"^[0-9]+$"},
             BOOL(false)
+          ),
+          %error (
+            'Expected header \'REF-ID\' but was missing'
           )
         )
       ),
@@ -405,7 +429,10 @@ fn match_headers_with_matching_rule() {
             $.headers['REF-CODE'] => 'test',
             NULL => NULL,
             BOOL(false) => BOOL(false)
-          ) => BOOL(true)
+          ) => BOOL(true),
+          %error (
+            'Expected header \'REF-CODE\' but was missing'
+          )
         ) => BOOL(true)
       ) => BOOL(true),
       :REF-ID (
@@ -419,7 +446,10 @@ fn match_headers_with_matching_rule() {
             $.headers['REF-ID'] => '9023470945622',
             json:{"regex":"^[0-9]+$"} => json:{"regex":"^[0-9]+$"},
             BOOL(false) => BOOL(false)
-          ) => BOOL(true)
+          ) => BOOL(true),
+          %error (
+            'Expected header \'REF-ID\' but was missing'
+          )
         ) => BOOL(true)
       ) => BOOL(true),
       %expect:entries (
@@ -464,7 +494,10 @@ fn match_headers_with_matching_rule() {
             $.headers['REF-CODE'] => 'test',
             NULL => NULL,
             BOOL(false) => BOOL(false)
-          ) => BOOL(true)
+          ) => BOOL(true),
+          %error (
+            'Expected header \'REF-CODE\' but was missing'
+          )
         ) => BOOL(true)
       ) => BOOL(true),
       :REF-ID (
@@ -478,7 +511,10 @@ fn match_headers_with_matching_rule() {
             $.headers['REF-ID'] => '9023470X945622',
             json:{"regex":"^[0-9]+$"} => json:{"regex":"^[0-9]+$"},
             BOOL(false) => BOOL(false)
-          ) => ERROR(Expected '9023470X945622' to match '^[0-9]+$')
+          ) => ERROR(Expected '9023470X945622' to match '^[0-9]+$'),
+          %error (
+            'Expected header \'REF-ID\' but was missing'
+          )
         ) => BOOL(false)
       ) => BOOL(false),
       %expect:entries (
@@ -537,6 +573,9 @@ fn match_headers_with_values_having_different_lengths() {
             $.headers['REF-CODE'],
             NULL,
             BOOL(false)
+          ),
+          %error (
+            'Expected header \'REF-CODE\' but was missing'
           )
         )
       ),
@@ -551,6 +590,9 @@ fn match_headers_with_values_having_different_lengths() {
             $.headers['REF-ID'],
             NULL,
             BOOL(false)
+          ),
+          %error (
+            'Expected header \'REF-ID\' but was missing'
           )
         )
       ),
@@ -596,7 +638,10 @@ fn match_headers_with_values_having_different_lengths() {
             $.headers['REF-CODE'] => ['test', 'test2'],
             NULL => NULL,
             BOOL(false) => BOOL(false)
-          ) => BOOL(true)
+          ) => BOOL(true),
+          %error (
+            'Expected header \'REF-CODE\' but was missing'
+          )
         ) => BOOL(true)
       ) => BOOL(true),
       :REF-ID (
@@ -610,7 +655,10 @@ fn match_headers_with_values_having_different_lengths() {
             $.headers['REF-ID'] => '1234',
             NULL => NULL,
             BOOL(false) => BOOL(false)
-          ) => BOOL(true)
+          ) => BOOL(true),
+          %error (
+            'Expected header \'REF-ID\' but was missing'
+          )
         ) => BOOL(true)
       ) => BOOL(true),
       %expect:entries (
@@ -655,7 +703,10 @@ fn match_headers_with_values_having_different_lengths() {
             $.headers['REF-CODE'] => 'test',
             NULL => NULL,
             BOOL(false) => BOOL(false)
-          ) => ERROR(Expected 'test' to be equal to ['test', 'test2'])
+          ) => ERROR(Expected 'test' to be equal to ['test', 'test2']),
+          %error (
+            'Expected header \'REF-CODE\' but was missing'
+          )
         ) => BOOL(false)
       ) => BOOL(false),
       :REF-ID (
@@ -669,7 +720,10 @@ fn match_headers_with_values_having_different_lengths() {
             $.headers['REF-ID'] => ['1234', '1234', '4567'],
             NULL => NULL,
             BOOL(false) => BOOL(false)
-          ) => ERROR(Expected ['1234', '1234', '4567'] to be equal to '1234')
+          ) => ERROR(Expected ['1234', '1234', '4567'] to be equal to '1234'),
+          %error (
+            'Expected header \'REF-ID\' but was missing'
+          )
         ) => BOOL(false)
       ) => BOOL(false),
       %expect:entries (
@@ -732,6 +786,9 @@ fn match_headers_with_number_type_matching_rule() {
             $.headers['REF-CODE'],
             NULL,
             BOOL(false)
+          ),
+          %error (
+            'Expected header \'REF-CODE\' but was missing'
           )
         )
       ),
@@ -746,6 +803,9 @@ fn match_headers_with_number_type_matching_rule() {
             $.headers['REF-ID'],
             json:{},
             BOOL(false)
+          ),
+          %error (
+            'Expected header \'REF-ID\' but was missing'
           )
         )
       ),
@@ -791,7 +851,10 @@ fn match_headers_with_number_type_matching_rule() {
             $.headers['REF-CODE'] => 'test',
             NULL => NULL,
             BOOL(false) => BOOL(false)
-          ) => BOOL(true)
+          ) => BOOL(true),
+          %error (
+            'Expected header \'REF-CODE\' but was missing'
+          )
         ) => BOOL(true)
       ) => BOOL(true),
       :REF-ID (
@@ -805,7 +868,10 @@ fn match_headers_with_number_type_matching_rule() {
             $.headers['REF-ID'] => '9023470945622',
             json:{} => json:{},
             BOOL(false) => BOOL(false)
-          ) => BOOL(true)
+          ) => BOOL(true),
+          %error (
+            'Expected header \'REF-ID\' but was missing'
+          )
         ) => BOOL(true)
       ) => BOOL(true),
       %expect:entries (
@@ -850,7 +916,10 @@ fn match_headers_with_number_type_matching_rule() {
             $.headers['REF-CODE'] => 'test',
             NULL => NULL,
             BOOL(false) => BOOL(false)
-          ) => BOOL(true)
+          ) => BOOL(true),
+          %error (
+            'Expected header \'REF-CODE\' but was missing'
+          )
         ) => BOOL(true)
       ) => BOOL(true),
       :REF-ID (
@@ -864,7 +933,10 @@ fn match_headers_with_number_type_matching_rule() {
             $.headers['REF-ID'] => '9023470X945622',
             json:{} => json:{},
             BOOL(false) => BOOL(false)
-          ) => ERROR(Expected '9023470X945622' to match an integer number)
+          ) => ERROR(Expected '9023470X945622' to match an integer number),
+          %error (
+            'Expected header \'REF-ID\' but was missing'
+          )
         ) => BOOL(false)
       ) => BOOL(false),
       %expect:entries (
@@ -909,7 +981,10 @@ fn match_headers_with_number_type_matching_rule() {
             $.headers['REF-CODE'] => 'test',
             NULL => NULL,
             BOOL(false) => BOOL(false)
-          ) => BOOL(true)
+          ) => BOOL(true),
+          %error (
+            'Expected header \'REF-CODE\' but was missing'
+          )
         ) => BOOL(true)
       ) => BOOL(true),
       :REF-ID (
@@ -923,7 +998,10 @@ fn match_headers_with_number_type_matching_rule() {
             $.headers['REF-ID'] => ['1111', '2222'],
             json:{} => json:{},
             BOOL(false) => BOOL(false)
-          ) => BOOL(true)
+          ) => BOOL(true),
+          %error (
+            'Expected header \'REF-ID\' but was missing'
+          )
         ) => BOOL(true)
       ) => BOOL(true),
       %expect:entries (
@@ -968,7 +1046,10 @@ fn match_headers_with_number_type_matching_rule() {
             $.headers['REF-CODE'] => 'test',
             NULL => NULL,
             BOOL(false) => BOOL(false)
-          ) => BOOL(true)
+          ) => BOOL(true),
+          %error (
+            'Expected header \'REF-CODE\' but was missing'
+          )
         ) => BOOL(true)
       ) => BOOL(true),
       :REF-ID (
@@ -982,7 +1063,10 @@ fn match_headers_with_number_type_matching_rule() {
             $.headers['REF-ID'] => ['1111', 'two'],
             json:{} => json:{},
             BOOL(false) => BOOL(false)
-          ) => ERROR(Expected 'two' to match an integer number)
+          ) => ERROR(Expected 'two' to match an integer number),
+          %error (
+            'Expected header \'REF-ID\' but was missing'
+          )
         ) => BOOL(false)
       ) => BOOL(false),
       %expect:entries (
@@ -1045,6 +1129,9 @@ fn match_headers_with_min_type_matching_rules() {
             $.headers['REF-CODE'],
             NULL,
             BOOL(false)
+          ),
+          %error (
+            'Expected header \'REF-CODE\' but was missing'
           )
         )
       ),
@@ -1059,6 +1146,9 @@ fn match_headers_with_min_type_matching_rules() {
             $.headers['REF-ID'],
             json:{"min":2},
             BOOL(false)
+          ),
+          %error (
+            'Expected header \'REF-ID\' but was missing'
           )
         )
       ),
@@ -1104,7 +1194,10 @@ fn match_headers_with_min_type_matching_rules() {
             $.headers['REF-CODE'] => 'test',
             NULL => NULL,
             BOOL(false) => BOOL(false)
-          ) => BOOL(true)
+          ) => BOOL(true),
+          %error (
+            'Expected header \'REF-CODE\' but was missing'
+          )
         ) => BOOL(true)
       ) => BOOL(true),
       :REF-ID (
@@ -1118,7 +1211,10 @@ fn match_headers_with_min_type_matching_rules() {
             $.headers['REF-ID'] => ['1', '1', '1'],
             json:{"min":2} => json:{"min":2},
             BOOL(false) => BOOL(false)
-          ) => BOOL(true)
+          ) => BOOL(true),
+          %error (
+            'Expected header \'REF-ID\' but was missing'
+          )
         ) => BOOL(true)
       ) => BOOL(true),
       %expect:entries (
@@ -1163,7 +1259,10 @@ fn match_headers_with_min_type_matching_rules() {
             $.headers['REF-CODE'] => 'test',
             NULL => NULL,
             BOOL(false) => BOOL(false)
-          ) => BOOL(true)
+          ) => BOOL(true),
+          %error (
+            'Expected header \'REF-CODE\' but was missing'
+          )
         ) => BOOL(true)
       ) => BOOL(true),
       :REF-ID (
@@ -1177,7 +1276,10 @@ fn match_headers_with_min_type_matching_rules() {
             $.headers['REF-ID'] => '1',
             json:{"min":2} => json:{"min":2},
             BOOL(false) => BOOL(false)
-          ) => ERROR(Expected [1] \(size 1\) to have minimum size of 2)
+          ) => ERROR(Expected [1] \(size 1\) to have minimum size of 2),
+          %error (
+            'Expected header \'REF-ID\' but was missing'
+          )
         ) => BOOL(false)
       ) => BOOL(false),
       %expect:entries (
@@ -1236,6 +1338,9 @@ fn match_content_type_header() {
               NULL,
               BOOL(false)
             )
+          ),
+          %error (
+            'Expected header \'Content-Type\' but was missing'
           )
         )
       ),
@@ -1287,7 +1392,10 @@ fn match_content_type_header() {
               NULL => NULL,
               BOOL(false) => BOOL(false)
             ) => BOOL(true)
-          ) => BOOL(true)
+          ) => BOOL(true),
+          %error (
+            'Expected header \'Content-Type\' but was missing'
+          )
         ) => BOOL(true)
       ) => BOOL(true),
       %expect:entries (
@@ -1359,6 +1467,9 @@ fn match_content_type_header() {
                 )
               )
             )
+          ),
+          %error (
+            'Expected header \'Content-Type\' but was missing'
           )
         )
       ),
@@ -1428,7 +1539,10 @@ fn match_content_type_header() {
                 )
               ) => BOOL(true)
             ) => BOOL(true)
-          ) => BOOL(true)
+          ) => BOOL(true),
+          %error (
+            'Expected header \'Content-Type\' but was missing'
+          )
         ) => BOOL(true)
       ) => BOOL(true),
       %expect:entries (
@@ -1495,9 +1609,12 @@ fn match_content_type_header() {
                 %error (
                   'Expected a charset value of \'UTF-8\' but it was missing' => 'Expected a charset value of \'UTF-8\' but it was missing'
                 ) => ERROR(Expected a charset value of 'UTF-8' but it was missing)
-              ) => ERROR(Expected a charset value of 'UTF-8' but it was missing)
+              ) => BOOL(false)
             ) => BOOL(false)
-          ) => BOOL(false)
+          ) => BOOL(false),
+          %error (
+            'Expected header \'Content-Type\' but was missing'
+          )
         ) => BOOL(false)
       ) => BOOL(false),
       %expect:entries (
@@ -1566,7 +1683,10 @@ fn match_content_type_header() {
                 )
               ) => BOOL(false)
             ) => BOOL(false)
-          ) => BOOL(false)
+          ) => BOOL(false),
+          %error (
+            'Expected header \'Content-Type\' but was missing'
+          )
         ) => BOOL(false)
       ) => BOOL(false),
       %expect:entries (

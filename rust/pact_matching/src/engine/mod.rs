@@ -1478,12 +1478,12 @@ impl Into<Vec<Mismatch>> for ExecutionPlan {
       if let Some(mismatch) = status_mismatch(&response) {
         result.push(mismatch);
       }
+      let body = body_mismatches(&response);
+      result.extend(body.mismatches());
       let headers = header_mismatches(&response);
       for mismatches in headers.values() {
         result.extend(mismatches.clone());
       }
-      let body = body_mismatches(&response);
-      result.extend(body.mismatches());
     }
 
     if let Some(message) = self.fetch_node(&[":message"]) {
@@ -1580,7 +1580,7 @@ pub(crate) fn query_mismatches(plan: &ExecutionPlanNode) -> HashMap<String, Vec<
 
 pub(crate) fn header_mismatches(plan: &ExecutionPlanNode) -> HashMap<String, Vec<Mismatch>> {
   let headers_node = plan.fetch_child_node(&[":headers"]).unwrap_or_default();
-  let mut headers = headers_node.children.iter()
+  let headers = headers_node.children.iter()
     .fold(hashmap! {}, |mut acc, child| {
       if let PlanNodeType::CONTAINER(label) = &child.node_type {
         let mismatches = child.errors().iter().map(|err| HeaderMismatch {
@@ -1605,18 +1605,6 @@ pub(crate) fn header_mismatches(plan: &ExecutionPlanNode) -> HashMap<String, Vec
       };
       acc
     });
-  let errors = headers_node.child_errors(Terminator::CONTAINERS);
-  if !errors.is_empty() {
-    let mismatches = errors.iter()
-      .map(|err| BodyMismatch {
-        path: "".to_string(),
-        expected: None,
-        actual: None,
-        mismatch: err.clone(),
-      })
-      .collect_vec();
-    headers.insert("".to_string(), mismatches);
-  }
   headers
 }
 
@@ -2016,6 +2004,13 @@ fn setup_header_plan<T: HttpPart>(
           }
           presence_check.add(item_check);
         }
+
+        presence_check.add(
+          ExecutionPlanNode::action("error")
+            .add(ExecutionPlanNode::value_node(
+              format!("Expected header '{}' but was missing", key)
+            ))
+        );
 
         item_node.add(presence_check);
         plan_node.add(item_node);

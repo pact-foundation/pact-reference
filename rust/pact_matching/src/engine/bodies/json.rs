@@ -129,7 +129,7 @@ impl JsonPlanBuilder {
         path.last_field().unwrap_or_default(),
         matchers.generate_description(true))));
       root_node.add(build_matching_rule_node(&ExecutionPlanNode::value_node(json.clone()),
-        &ExecutionPlanNode::resolve_current_value(path), &matchers, true,
+        &ExecutionPlanNode::resolve_current_value(path), &matchers, !matchers.cascaded,
         context.config.show_types_in_errors));
 
       if let Some(template) = items.first() {

@@ -325,7 +325,7 @@ fn json_with_array() {
           %error (
             'Expected a value for \\'/0\\' but it was missing' => 'Expected a value for \\'/0\\' but it was missing'
           ) => ERROR(Expected a value for '/0' but it was missing)
-        ) => ERROR(Expected a value for '/0' but it was missing)
+        ) => BOOL(false)
       ) => BOOL(false),
       :$[1] (
         %if (
@@ -341,7 +341,7 @@ fn json_with_array() {
           %error (
             'Expected a value for \\'/1\\' but it was missing' => 'Expected a value for \\'/1\\' but it was missing'
           ) => ERROR(Expected a value for '/1' but it was missing)
-        ) => ERROR(Expected a value for '/1' but it was missing)
+        ) => BOOL(false)
       ) => BOOL(false),
       :$[2] (
         %if (
@@ -357,7 +357,7 @@ fn json_with_array() {
           %error (
             'Expected a value for \\'/2\\' but it was missing' => 'Expected a value for \\'/2\\' but it was missing'
           ) => ERROR(Expected a value for '/2' but it was missing)
-        ) => ERROR(Expected a value for '/2' but it was missing)
+        ) => BOOL(false)
       ) => BOOL(false)
     ) => BOOL(false)
   ) => BOOL(false)", buffer);
@@ -410,7 +410,7 @@ fn json_with_array() {
           %error (
             'Expected a value for \\'/1\\' but it was missing' => 'Expected a value for \\'/1\\' but it was missing'
           ) => ERROR(Expected a value for '/1' but it was missing)
-        ) => ERROR(Expected a value for '/1' but it was missing)
+        ) => BOOL(false)
       ) => BOOL(false),
       :$[2] (
         %if (
@@ -426,7 +426,7 @@ fn json_with_array() {
           %error (
             'Expected a value for \\'/2\\' but it was missing' => 'Expected a value for \\'/2\\' but it was missing'
           ) => ERROR(Expected a value for '/2' but it was missing)
-        ) => ERROR(Expected a value for '/2' but it was missing)
+        ) => BOOL(false)
       ) => BOOL(false)
     ) => BOOL(false)
   ) => BOOL(false)", buffer);
@@ -582,7 +582,7 @@ fn very_simple_xml() {
         %error (
           'Was expecting an XML element /foo but it was missing' => 'Was expecting an XML element /foo but it was missing'
         ) => ERROR(Was expecting an XML element /foo but it was missing)
-      ) => ERROR(Was expecting an XML element /foo but it was missing)
+      ) => BOOL(false)
     ) => BOOL(false)
   ) => BOOL(false)", buffer);
 
@@ -1156,7 +1156,7 @@ fn simple_xml() {
                 %error (
                   'Was expecting an XML element /config/sound/0/property/1 but it was missing' => 'Was expecting an XML element /config/sound/0/property/1 but it was missing'
                 ) => ERROR(Was expecting an XML element /config/sound/0/property/1 but it was missing)
-              ) => ERROR(Was expecting an XML element /config/sound/0/property/1 but it was missing)
+              ) => BOOL(false)
             ) => BOOL(false),
             %error (
               'Was expecting an XML element /config/sound/0 but it was missing'
@@ -1360,7 +1360,7 @@ fn missing_xml_value() {
         %error (
           'Was expecting an XML element /values but it was missing' => 'Was expecting an XML element /values but it was missing'
         ) => ERROR(Was expecting an XML element /values but it was missing)
-      ) => ERROR(Was expecting an XML element /values but it was missing)
+      ) => BOOL(false)
     ) => BOOL(false)
   ) => BOOL(false)"#, buffer);
 
@@ -1448,7 +1448,7 @@ fn missing_xml_value() {
             %error (
               'Was expecting an XML element /values/value/1 but it was missing' => 'Was expecting an XML element /values/value/1 but it was missing'
             ) => ERROR(Was expecting an XML element /values/value/1 but it was missing)
-          ) => ERROR(Was expecting an XML element /values/value/1 but it was missing)
+          ) => BOOL(false)
         ) => BOOL(false),
         %error (
           'Was expecting an XML element /values but it was missing'

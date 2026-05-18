@@ -269,6 +269,8 @@ impl ExecutionPlanInterpreter {
       self.execute_match_each_key(value_resolver, node, &action_path)
     } else if action == "match:each-value" {
       self.execute_match_each_value(value_resolver, node, &action_path)
+    } else if action == "match:values" {
+      self.execute_match_values(value_resolver, node, &action_path)
     } else if action.starts_with("match:") {
       match action.strip_prefix("match:") {
         None => {
@@ -931,7 +933,7 @@ impl ExecutionPlanInterpreter {
                   children[2] = else_node.clone();
                   ExecutionPlanNode {
                     node_type: node.node_type.clone(),
-                    result: else_node.result.clone(),
+                    result: else_node.result.clone().map(|r| r.truthy()),
                     children
                   }
                 }
@@ -1331,10 +1333,13 @@ impl ExecutionPlanInterpreter {
               }
               Err(err) => {
                 if let Some(error_node) = optional.first() {
-                  self.push_result(Some(NodeResult::ERROR(err.to_string())));
+                  self.push_result(Some(NodeResult::VALUE(NodeValue::STRING(err.to_string()))));
                   match self.walk_tree(action_path.as_slice(), error_node, value_resolver) {
                     Ok(error_node) => {
-                      let message = error_node.value().unwrap_or_default().as_string().unwrap_or_default();
+                      let message = match error_node.value().unwrap_or_default() {
+                        NodeResult::ERROR(e) => e,
+                        other => other.as_string().unwrap_or_default()
+                      };
                       Err(ExecutionPlanNode {
                         node_type: node.node_type.clone(),
                         result: Some(NodeResult::ERROR(message)),
@@ -1372,6 +1377,37 @@ impl ExecutionPlanInterpreter {
         }
       }
       Err(err) => Err(node.clone_with_result(NodeResult::ERROR(err.to_string())))
+    }
+  }
+
+  fn execute_match_values(
+    &mut self,
+    value_resolver: &dyn ValueResolver,
+    node: &ExecutionPlanNode,
+    action_path: &Vec<String>
+  ) -> ExecutionPlanNode {
+    match self.validate_args(4, 0, node, "match:values", value_resolver, action_path) {
+      Ok((args, _)) => {
+        let expected = args[0].value().unwrap_or_default().as_value();
+        let actual = args[1].value().unwrap_or_default().as_value();
+        let ok = match (&expected, &actual) {
+          (Some(NodeValue::JSON(Value::Object(_))), Some(NodeValue::JSON(Value::Object(_)))) => true,
+          (Some(NodeValue::JSON(Value::Array(_))), Some(NodeValue::JSON(Value::Array(_)))) => true,
+          (Some(NodeValue::MMAP(_)), Some(NodeValue::MMAP(_))) => true,
+          (Some(NodeValue::NULL), _) | (_, Some(NodeValue::NULL)) => true,
+          _ => false
+        };
+        ExecutionPlanNode {
+          node_type: node.node_type.clone(),
+          result: Some(if ok {
+            NodeResult::VALUE(NodeValue::BOOL(true))
+          } else {
+            NodeResult::ERROR(format!("Expected type {:?} but was {:?}", expected, actual))
+          }),
+          children: args
+        }
+      }
+      Err(err) => node.clone_with_result(NodeResult::ERROR(err.to_string()))
     }
   }
 
