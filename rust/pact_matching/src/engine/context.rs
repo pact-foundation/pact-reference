@@ -8,6 +8,7 @@ use pact_models::matchingrules::{MatchingRuleCategory, RuleList};
 use pact_models::path_exp::DocPath;
 use pact_models::prelude::v4::{SynchronousHttp, V4Pact};
 use pact_models::v4::interaction::V4Interaction;
+use pact_models::v4::message_parts::MessageContents;
 
 /// Configuration for driving behaviour of the execution
 #[derive(Copy, Clone, Debug)]
@@ -266,6 +267,40 @@ impl PlanMatchingContext {
       interaction: self.interaction.boxed_v4(),
       matching_rules,
       config: self.config
+    }
+  }
+
+  /// Creates a clone of this context, but with the matching rules set for Message Contents (body)
+  pub fn for_message_contents(&self, contents: &MessageContents) -> Self {
+    let matching_rules = contents.matching_rules
+      .rules_for_category("content")
+      .unwrap_or_default();
+
+    PlanMatchingContext {
+      pact: self.pact.clone(),
+      interaction: self.interaction.boxed_v4(),
+      matching_rules,
+      config: MatchingConfiguration {
+        show_types_in_errors: true,
+        ..self.config
+      }
+    }
+  }
+
+  /// Creates a clone of this context, but with the matching rules set for Message Metadata
+  pub fn for_message_metadata(&self, contents: &MessageContents) -> Self {
+    let matching_rules = contents.matching_rules
+      .rules_for_category("metadata")
+      .unwrap_or_default();
+
+    PlanMatchingContext {
+      pact: self.pact.clone(),
+      interaction: self.interaction.boxed_v4(),
+      matching_rules,
+      config: MatchingConfiguration {
+        allow_unexpected_entries: true,
+        ..self.config
+      }
     }
   }
 }

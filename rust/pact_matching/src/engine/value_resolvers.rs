@@ -4,8 +4,10 @@ use anyhow::anyhow;
 use itertools::Itertools;
 
 use pact_models::bodies::OptionalBody;
+use pact_models::json_utils::json_to_string;
 use pact_models::path_exp::{DocPath, PathToken};
 use pact_models::v4::http_parts::{HttpRequest, HttpResponse};
+use pact_models::v4::message_parts::MessageContents;
 
 use crate::engine::{NodeValue, PlanMatchingContext};
 
@@ -170,6 +172,51 @@ impl ValueResolver for HttpResponseValueResolver {
       }
     } else {
       Err(anyhow!("{} is not valid for a HTTP response", path))
+    }
+  }
+}
+
+/// Value resolver for a message interaction
+#[derive(Clone, Debug, Default)]
+pub struct MessageValueResolver {
+  /// Message contents to resolve values against
+  pub contents: MessageContents
+}
+
+impl ValueResolver for MessageValueResolver {
+  fn resolve(&self, path: &DocPath, _context: &PlanMatchingContext) -> anyhow::Result<NodeValue> {
+    if let Some(field) = path.first_field() {
+      match field {
+        "body" if path.len() == 2 => match &self.contents.contents {
+          OptionalBody::Present(bytes, _, _) => Ok(NodeValue::BARRAY(bytes.to_vec())),
+          _ => Ok(NodeValue::NULL)
+        },
+        "content-type" => {
+          Ok(self.contents.message_content_type()
+            .map(|ct| NodeValue::STRING(ct.to_string()))
+            .unwrap_or(NodeValue::NULL))
+        },
+        "metadata" => {
+          let metadata: std::collections::HashMap<String, Vec<String>> = self.contents.metadata.iter()
+            .map(|(k, v)| (k.clone(), vec![json_to_string(v)]))
+            .collect();
+          if path.len() == 2 || (path.len() == 3 && path.is_wildcard()) {
+            Ok(NodeValue::MMAP(metadata))
+          } else if path.len() == 3 {
+            let key = path.last_field().unwrap_or_default();
+            if let Some(val) = self.contents.metadata.get(key) {
+              Ok(NodeValue::STRING(json_to_string(val)))
+            } else {
+              Ok(NodeValue::NULL)
+            }
+          } else {
+            Err(anyhow!("{} is not valid for message metadata", path))
+          }
+        },
+        _ => Err(anyhow!("{} is not valid for a message", path))
+      }
+    } else {
+      Err(anyhow!("{} is not valid for a message", path))
     }
   }
 }

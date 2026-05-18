@@ -388,12 +388,15 @@ use pact_models::v4::sync_message::SynchronousMessage;
 
 use crate::engine::{
   body_mismatches,
+  build_message_plan,
   build_request_plan,
   build_response_plan,
+  execute_message_plan,
   execute_request_plan,
   execute_response_plan,
   ExecutionPlan,
   header_mismatches,
+  metadata_mismatches,
   method_mismatch,
   path_mismatch,
   query_mismatches
@@ -2027,6 +2030,57 @@ pub async fn match_message_contents(
   actual: &MessageContents,
   context: &(dyn MatchingContext + Send + Sync)
 ) -> Result<(), Vec<Mismatch>> {
+  let use_v2_engine = std::env::var("PACT_MATCHING_ENGINE")
+    .map(|val| val.to_lowercase() == "v2")
+    .unwrap_or(false);
+  if use_v2_engine {
+    let config = MatchingConfiguration {
+      allow_unexpected_entries: true,
+      show_types_in_errors: true,
+      .. MatchingConfiguration::init_from_env()
+    };
+    let plan_context = PlanMatchingContext {
+      config,
+      .. PlanMatchingContext::default()
+    };
+    match build_message_plan(expected, &plan_context) {
+      Ok(plan) => match execute_message_plan(&plan, actual, &plan_context) {
+        Ok(executed_plan) => {
+          if config.log_executed_plan {
+            debug!("config = {:?}", config);
+            debug!("\n{}", executed_plan.pretty_form());
+          }
+          if config.log_plan_summary {
+            info!("\n{}", executed_plan.generate_summary(config.coloured_output));
+          }
+          if let Some(message_node) = executed_plan.fetch_node(&[":message"]) {
+            return match body_mismatches(&message_node) {
+              BodyMatchResult::Ok => Ok(()),
+              BodyMatchResult::BodyTypeMismatch { expected_type, actual_type, message, expected: e, actual: a } => {
+                Err(vec![Mismatch::BodyTypeMismatch {
+                  expected: expected_type,
+                  actual: actual_type,
+                  mismatch: message,
+                  expected_body: e,
+                  actual_body: a
+                }])
+              }
+              BodyMatchResult::BodyMismatches(results) => {
+                let mismatches: Vec<Mismatch> = results.values()
+                  .flat_map(|values| values.iter().cloned())
+                  .collect();
+                if mismatches.is_empty() { Ok(()) } else { Err(mismatches) }
+              }
+            };
+          }
+          return Ok(());
+        }
+        Err(err) => warn!("Failed to execute message plan: {}", err)
+      },
+      Err(err) => warn!("Failed to build message plan: {}", err)
+    }
+  }
+
   let expected_content_type = expected.message_content_type().unwrap_or_default();
   let actual_content_type = actual.message_content_type().unwrap_or_default();
   debug!("expected content type = '{}', actual content type = '{}'", expected_content_type,
@@ -2069,6 +2123,39 @@ pub fn match_message_metadata(
   actual: &MessageContents,
   context: &dyn MatchingContext
 ) -> HashMap<String, Vec<Mismatch>> {
+  let use_v2_engine = std::env::var("PACT_MATCHING_ENGINE")
+    .map(|val| val.to_lowercase() == "v2")
+    .unwrap_or(false);
+  if use_v2_engine {
+    let config = MatchingConfiguration {
+      allow_unexpected_entries: true,
+      .. MatchingConfiguration::init_from_env()
+    };
+    let plan_context = PlanMatchingContext {
+      config,
+      .. PlanMatchingContext::default()
+    };
+    match build_message_plan(expected, &plan_context) {
+      Ok(plan) => match execute_message_plan(&plan, actual, &plan_context) {
+        Ok(executed_plan) => {
+          if config.log_executed_plan {
+            debug!("config = {:?}", config);
+            debug!("\n{}", executed_plan.pretty_form());
+          }
+          if config.log_plan_summary {
+            info!("\n{}", executed_plan.generate_summary(config.coloured_output));
+          }
+          if let Some(message_node) = executed_plan.fetch_node(&[":message"]) {
+            return metadata_mismatches(&message_node);
+          }
+          return hashmap!{};
+        }
+        Err(err) => warn!("Failed to execute message plan: {}", err)
+      },
+      Err(err) => warn!("Failed to build message plan: {}", err)
+    }
+  }
+
   debug!("Matching message metadata");
   let mut result = hashmap!{};
   let expected_metadata = &expected.metadata;

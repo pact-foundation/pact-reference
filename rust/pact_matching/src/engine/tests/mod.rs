@@ -9,11 +9,14 @@ use pact_models::content_types::TEXT;
 use pact_models::{HttpStatus, matchingrules};
 use pact_models::v4::http_parts::{HttpRequest, HttpResponse};
 use pact_models::v4::interaction::V4Interaction;
+use pact_models::v4::message_parts::MessageContents;
 use pact_models::v4::synch_http::SynchronousHttp;
 
 use crate::{BodyMatchResult, MatchingRule, RequestMatchResult};
 use crate::engine::{
+  build_message_plan,
   build_request_plan,
+  execute_message_plan,
   execute_request_plan,
   build_response_plan,
   execute_response_plan,
@@ -836,4 +839,147 @@ fn body_with_root_matcher() {
   ) => BOOL(true)
 )
 "#, executed_plan.pretty_form());
+}
+
+#[test_log::test]
+fn simple_match_message_test() -> anyhow::Result<()> {
+  let actual = MessageContents {
+    contents: OptionalBody::Present("Some nice bit of text".into(), Some(TEXT.clone()), None),
+    .. Default::default()
+  };
+  let expected = MessageContents {
+    contents: OptionalBody::Present("Some nice bit of text".into(), Some(TEXT.clone()), None),
+    .. Default::default()
+  };
+  let context = PlanMatchingContext::default();
+  let plan = build_message_plan(&expected, &context)?;
+
+  assert_eq!(r#"(
+  :message (
+    :body (
+      %if (
+        %match:equality (
+          'text/plain',
+          $.content-type,
+          NULL,
+          BOOL(false),
+          %error (
+            'Body type error - ',
+            %apply ()
+          )
+        ),
+        %match:equality (
+          'Some nice bit of text',
+          %convert:UTF8 (
+            $.body
+          ),
+          NULL,
+          BOOL(false)
+        )
+      )
+    )
+  )
+)
+"#, plan.pretty_form());
+
+  let executed_plan = execute_message_plan(&plan, &actual, &context)?;
+
+  assert_eq!("message:\n  body: - OK\n",
+    executed_plan.generate_summary(false));
+
+  let mismatches: Vec<Mismatch> = executed_plan.into();
+  assert!(mismatches.is_empty());
+
+  Ok(())
+}
+
+#[test_log::test]
+fn match_message_with_metadata_mismatch() -> anyhow::Result<()> {
+  let actual = MessageContents {
+    contents: OptionalBody::Missing,
+    metadata: maplit::hashmap! { "key".to_string() => json!("actualValue") },
+    .. Default::default()
+  };
+  let expected = MessageContents {
+    contents: OptionalBody::Missing,
+    metadata: maplit::hashmap! { "key".to_string() => json!("expectedValue") },
+    .. Default::default()
+  };
+  let context = PlanMatchingContext::default();
+  let plan = build_message_plan(&expected, &context)?;
+
+  assert_eq!(r#"(
+  :message (
+    :metadata (
+      :key (
+        #{'key=\'expectedValue\''},
+        %if (
+          %check:exists (
+            $.metadata.key
+          ),
+          %match:equality (
+            'expectedValue',
+            $.metadata.key,
+            NULL,
+            BOOL(false)
+          )
+        )
+      ),
+      %expect:entries (
+        ['key'],
+        $.metadata,
+        %join (
+          'The following expected message metadata were missing: ',
+          %join-with (
+            ', ',
+            ** (
+              %apply ()
+            )
+          )
+        )
+      )
+    )
+  )
+)
+"#, plan.pretty_form());
+
+  let executed_plan = execute_message_plan(&plan, &actual, &context)?;
+
+  assert_eq!(r#"message:
+  metadata:
+    key: key='expectedValue' - ERROR Expected 'actualValue' to be equal to 'expectedValue'
+"#, executed_plan.generate_summary(false));
+
+  let mismatches: Vec<Mismatch> = executed_plan.into();
+  assert!(!mismatches.is_empty());
+  assert!(matches!(mismatches[0], Mismatch::MetadataMismatch { .. }));
+
+  Ok(())
+}
+
+#[test_log::test]
+fn match_message_with_missing_metadata() -> anyhow::Result<()> {
+  let actual = MessageContents {
+    contents: OptionalBody::Missing,
+    metadata: maplit::hashmap!{},
+    .. Default::default()
+  };
+  let expected = MessageContents {
+    contents: OptionalBody::Missing,
+    metadata: maplit::hashmap! { "key".to_string() => json!("value") },
+    .. Default::default()
+  };
+  let context = PlanMatchingContext::default();
+  let plan = build_message_plan(&expected, &context)?;
+  let executed_plan = execute_message_plan(&plan, &actual, &context)?;
+
+  assert_eq!(r#"message:
+  metadata: - ERROR The following expected message metadata were missing: key
+    key: key='value' - FAILED
+"#, executed_plan.generate_summary(false));
+
+  let mismatches: Vec<Mismatch> = executed_plan.into();
+  assert!(!mismatches.is_empty());
+
+  Ok(())
 }

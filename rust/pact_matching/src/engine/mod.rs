@@ -19,20 +19,22 @@ use tracing::debug;
 use pact_models::bodies::OptionalBody;
 use pact_models::content_types::TEXT;
 use pact_models::headers::{MULTI_VALUE_HEADERS, PARAMETERISED_HEADERS};
+use pact_models::json_utils::json_to_string;
 use pact_models::http_parts::HttpPart;
 use pact_models::matchingrules::{MatchingRule, RuleList, RuleLogic};
 use pact_models::path_exp::DocPath;
 use pact_models::v4::http_parts::{HttpRequest, HttpResponse};
+use pact_models::v4::message_parts::MessageContents;
 
 use crate::engine::bodies::{get_body_plan_builder, PlainTextBuilder, PlanBodyBuilder};
 use crate::engine::context::PlanMatchingContext;
 use crate::engine::interpreter::ExecutionPlanInterpreter;
-use crate::engine::value_resolvers::{HttpRequestValueResolver, HttpResponseValueResolver};
+use crate::engine::value_resolvers::{HttpRequestValueResolver, HttpResponseValueResolver, MessageValueResolver};
 #[cfg(feature = "xml")] use crate::engine::xml::XmlValue;
 use crate::headers::{parse_charset_parameters, strip_whitespace};
 use crate::{BodyMatchResult, Mismatch};
 use crate::matchingrules::{DoMatch, value_for_mismatch};
-use crate::Mismatch::{BodyMismatch, HeaderMismatch, QueryMismatch};
+use crate::Mismatch::{BodyMismatch, HeaderMismatch, MetadataMismatch, QueryMismatch};
 
 mod bodies;
 mod value_resolvers;
@@ -1469,6 +1471,15 @@ impl Into<Vec<Mismatch>> for ExecutionPlan {
       result.extend(body.mismatches());
     }
 
+    if let Some(message) = self.fetch_node(&[":message"]) {
+      let body = body_mismatches(&message);
+      result.extend(body.mismatches());
+      let metadata = metadata_mismatches(&message);
+      for mismatches in metadata.values() {
+        result.extend(mismatches.clone());
+      }
+    }
+
     result
   }
 }
@@ -1651,6 +1662,48 @@ pub(crate) fn body_mismatches(plan: &ExecutionPlanNode) -> BodyMatchResult {
     }
   };
   body
+}
+
+pub(crate) fn metadata_mismatches(plan: &ExecutionPlanNode) -> HashMap<String, Vec<Mismatch>> {
+  let metadata_node = plan.fetch_child_node(&[":metadata"]).unwrap_or_default();
+  let mut metadata = metadata_node.children.iter()
+    .fold(hashmap! {}, |mut acc, child| {
+      if let PlanNodeType::CONTAINER(label) = &child.node_type {
+        let mismatches = child.errors().iter().map(|err| MetadataMismatch {
+          key: label.clone(),
+          expected: "".to_string(),
+          actual: "".to_string(),
+          mismatch: err.clone(),
+        }).collect_vec();
+        acc.insert(label.clone(), mismatches);
+      } else {
+        let mismatches = child.errors().iter().map(|err| MetadataMismatch {
+          key: "".to_string(),
+          expected: "".to_string(),
+          actual: "".to_string(),
+          mismatch: err.clone(),
+        }).collect_vec();
+        if !mismatches.is_empty() {
+          acc.entry("".to_string())
+            .and_modify(|entry| entry.extend_from_slice(&mismatches))
+            .or_insert(vec![]);
+        }
+      };
+      acc
+    });
+  let errors = metadata_node.child_errors(Terminator::CONTAINERS);
+  if !errors.is_empty() {
+    let mismatches = errors.iter()
+      .map(|err| MetadataMismatch {
+        key: "".to_string(),
+        expected: "".to_string(),
+        actual: "".to_string(),
+        mismatch: err.clone(),
+      })
+      .collect_vec();
+    metadata.insert("".to_string(), mismatches);
+  }
+  metadata
 }
 
 /// Constructs an execution plan for the HTTP request part.
@@ -2145,6 +2198,156 @@ pub fn execute_response_plan(
   };
   let mut interpreter = ExecutionPlanInterpreter::new_with_context(context);
   let result = interpreter.execute_plan(&plan, &value_resolver)?;
+  debug!("Total execution time: {:?}", result.execution_time.unwrap_or_default());
+  Ok(result)
+}
+
+/// Constructs an execution plan for a message interaction.
+pub fn build_message_plan(
+  expected: &MessageContents,
+  context: &PlanMatchingContext
+) -> anyhow::Result<ExecutionPlan> {
+  let mut plan = ExecutionPlan::new("message");
+  plan.add(setup_message_body_plan(expected, &context.for_message_contents(expected))?);
+  plan.add(setup_message_metadata_plan(expected, &context.for_message_metadata(expected))?);
+  Ok(plan)
+}
+
+fn setup_message_body_plan(
+  expected: &MessageContents,
+  context: &PlanMatchingContext
+) -> anyhow::Result<ExecutionPlanNode> {
+  let mut plan_node = ExecutionPlanNode::container("body");
+  let body_path = DocPath::body();
+
+  match &expected.contents {
+    OptionalBody::Missing => {}
+    OptionalBody::Empty | OptionalBody::Null => {
+      plan_node.add(ExecutionPlanNode::action("expect:empty")
+        .add(ExecutionPlanNode::resolve_value(body_path)));
+    }
+    OptionalBody::Present(content, _, _) => {
+      let content_type = expected.message_content_type().unwrap_or_else(|| TEXT.clone());
+      let root_matcher = expected.matching_rules
+        .rules_for_category("content")
+        .map(|category| category.rules.get(&DocPath::root()).cloned())
+        .flatten();
+      if let Some(root_matcher) = root_matcher && root_matcher.can_match(&content_type) {
+        plan_node.add(build_matching_rule_node(
+          &ExecutionPlanNode::value_node(NodeValue::NULL),
+          &ExecutionPlanNode::resolve_value(body_path),
+          &root_matcher,
+          false,
+          context.config.show_types_in_errors
+        ));
+      } else {
+        let mut content_type_check_node = ExecutionPlanNode::action("if");
+        content_type_check_node
+          .add(
+            ExecutionPlanNode::action("match:equality")
+              .add(ExecutionPlanNode::value_node(content_type.to_string()))
+              .add(ExecutionPlanNode::resolve_value(DocPath::new("$.content-type")?))
+              .add(ExecutionPlanNode::value_node(NodeValue::NULL))
+              .add(ExecutionPlanNode::value_node(false))
+              .add(
+                ExecutionPlanNode::action("error")
+                  .add(ExecutionPlanNode::value_node(NodeValue::STRING("Body type error - ".to_string())))
+                  .add(ExecutionPlanNode::action("apply"))
+              )
+          );
+        if let Some(plan_builder) = get_body_plan_builder(&content_type) {
+          content_type_check_node.add(plan_builder.build_plan(content, context)?);
+        } else {
+          let plan_builder = PlainTextBuilder::new();
+          content_type_check_node.add(plan_builder.build_plan(content, context)?);
+        }
+        plan_node.add(content_type_check_node);
+      }
+    }
+  }
+
+  Ok(plan_node)
+}
+
+fn setup_message_metadata_plan(
+  expected: &MessageContents,
+  context: &PlanMatchingContext
+) -> anyhow::Result<ExecutionPlanNode> {
+  let mut plan_node = ExecutionPlanNode::container("metadata");
+  let doc_path = DocPath::new("$.metadata")?;
+
+  if !expected.metadata.is_empty() {
+    let keys = expected.metadata.keys().cloned().sorted().collect_vec();
+    for key in &keys {
+      let value = expected.metadata.get(key).unwrap();
+      let mut item_node = ExecutionPlanNode::container(key.as_str());
+      let item_value = NodeValue::STRING(json_to_string(value));
+      let path = doc_path.join(key.as_str());
+
+      let mut presence_check = ExecutionPlanNode::action("if");
+      presence_check.add(
+        ExecutionPlanNode::action("check:exists")
+          .add(ExecutionPlanNode::resolve_value(path.clone()))
+      );
+
+      let item_path = DocPath::root().join(key.as_str());
+      if context.matcher_is_defined(&item_path) {
+        let matchers = context.select_best_matcher(&item_path);
+        item_node.add(ExecutionPlanNode::annotation(format!("{} {}", key, matchers.generate_description(true))));
+        presence_check.add(build_matching_rule_node(
+          &ExecutionPlanNode::value_node(item_value),
+          &ExecutionPlanNode::resolve_value(&path),
+          &matchers,
+          true,
+          context.config.show_types_in_errors
+        ));
+      } else {
+        item_node.add(ExecutionPlanNode::annotation(format!("{}={}", key, item_value)));
+        let mut item_check = ExecutionPlanNode::action("match:equality");
+        item_check
+          .add(ExecutionPlanNode::value_node(item_value))
+          .add(ExecutionPlanNode::resolve_value(&path))
+          .add(ExecutionPlanNode::value_node(NodeValue::NULL))
+          .add(ExecutionPlanNode::value_node(context.config.show_types_in_errors));
+        presence_check.add(item_check);
+      }
+
+      item_node.add(presence_check);
+      plan_node.add(item_node);
+    }
+
+    plan_node.add(
+      ExecutionPlanNode::action("expect:entries")
+        .add(ExecutionPlanNode::value_node(NodeValue::SLIST(keys.clone())))
+        .add(ExecutionPlanNode::resolve_value(doc_path))
+        .add(
+          ExecutionPlanNode::action("join")
+            .add(ExecutionPlanNode::value_node("The following expected message metadata were missing: "))
+            .add(ExecutionPlanNode::action("join-with")
+              .add(ExecutionPlanNode::value_node(", "))
+              .add(
+                ExecutionPlanNode::splat()
+                  .add(ExecutionPlanNode::action("apply"))
+              )
+            )
+        )
+    );
+  }
+
+  Ok(plan_node)
+}
+
+/// Executes the message plan against the actual message contents.
+pub fn execute_message_plan(
+  plan: &ExecutionPlan,
+  actual: &MessageContents,
+  context: &PlanMatchingContext
+) -> anyhow::Result<ExecutionPlan> {
+  let value_resolver = MessageValueResolver {
+    contents: actual.clone()
+  };
+  let mut interpreter = ExecutionPlanInterpreter::new_with_context(context);
+  let result = interpreter.execute_plan(plan, &value_resolver)?;
   debug!("Total execution time: {:?}", result.execution_time.unwrap_or_default());
   Ok(result)
 }
