@@ -75,3 +75,8 @@ tracing-subscriber = { version = "0.3.22", features = ["env-filter", "tracing-lo
 ntest = "0.9.5"
 pretty_assertions = "1.4.1"
 rstest = "0.26.1"
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "v2_engine"
+harness = false

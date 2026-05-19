@@ -17,3 +17,9 @@ pact_matching = { version = "~2.0.3", path = "./pact_matching" }
 strip = true
 opt-level = "z"
 codegen-units = 1
+
+# Release-speed optimisations with debug symbols retained — for flamegraph/perf.
+[profile.profiling]
+inherits = "release"
+strip = false
+debug = true
