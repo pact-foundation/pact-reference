@@ -2692,6 +2692,7 @@ dependencies = [
  "regex-syntax",
  "reqwest 0.13.3",
  "rstest 0.26.1",
+ "rustls",
  "serde",
  "serde_json",
  "serde_urlencoded",
