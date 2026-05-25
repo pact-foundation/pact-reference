@@ -999,6 +999,12 @@ fn from_integration_json_v2(
   let matching_rules = rules.add_category(category);
   let path_or_status = [Category::PATH, Category::STATUS].contains(&matching_rules.name);
   let query_or_header = [Category::QUERY, Category::HEADER].contains(&matching_rules.name);
+  // Compute the effective generator/rule path once: for PATH/STATUS, use the parent path
+  let effective_path = if path_or_status {
+    path.parent().unwrap_or(DocPath::root())
+  } else {
+    path.clone()
+  };
 
   match serde_json::from_str(value) {
     Ok(json) => match &json {
@@ -1059,12 +1065,7 @@ fn from_integration_json_v2(
             debug!("detected pact:generator:type, will configure a generators");
             if let Some(generator) = Generator::from_map(&json_to_string(gen), map) {
               let category = generator_category(matching_rules);
-              let path = if path_or_status {
-                path.parent().unwrap_or(DocPath::root())
-              } else {
-                path.clone()
-              };
-              generators.add_generator_with_subcategory(category, path.clone(), generator);
+              generators.add_generator_with_subcategory(category, effective_path.clone(), generator);
             }
           }
 
@@ -1073,12 +1074,7 @@ fn from_integration_json_v2(
           debug!("detected 'expression' without 'pact:matcher:type', configuring ProviderStateGenerator");
           if let Some(generator) = Generator::from_map("ProviderState", map) {
             let category = generator_category(matching_rules);
-            let gen_path = if path_or_status {
-              path.parent().unwrap_or(DocPath::root())
-            } else {
-              path.clone()
-            };
-            generators.add_generator_with_subcategory(category, gen_path, generator);
+            generators.add_generator_with_subcategory(category, effective_path.clone(), generator);
           }
           map.get("value").cloned().unwrap_or_default()
         } else {

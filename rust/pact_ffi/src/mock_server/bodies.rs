@@ -67,7 +67,7 @@ pub fn process_object(
   let result = if let Some(matcher_type) = obj.get("pact:matcher:type") {
     debug!("detected pact:matcher:type, will configure a matcher");
     process_matcher(obj, matching_rules, generators, &path, type_matcher, &matcher_type.clone())
-  } else if obj.contains_key("expression") && !obj.contains_key("pact:matcher:type") {
+  } else if obj.contains_key("expression") {
     debug!("detected 'expression' without 'pact:matcher:type', configuring ProviderStateGenerator");
     if let Some(generator) = Generator::from_map("ProviderState", obj) {
       let category = generator_category(matching_rules);
