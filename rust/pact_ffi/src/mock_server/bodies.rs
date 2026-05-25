@@ -9,7 +9,7 @@ use lazy_static::lazy_static;
 use multipart_2021 as multipart;
 use regex::Regex;
 use serde_json::{Map, Value};
-use tracing::{debug, error, trace};
+use tracing::{debug, error, trace, warn};
 
 use pact_models::bodies::OptionalBody;
 use pact_models::content_types::ContentTypeHint;
@@ -73,7 +73,10 @@ pub fn process_object(
       let category = generator_category(matching_rules);
       generators.add_generator_with_subcategory(category, path.clone(), generator);
     }
-    obj.get("value").cloned().unwrap_or(Value::Null)
+    if !obj.contains_key("value") {
+      warn!("ProviderStateGenerator shorthand at path '{}' has no 'value' key; example value will be null", path);
+    }
+    obj.get("value").cloned().unwrap_or_default()
   } else {
     debug!("Configuring a normal object");
     Value::Object(obj.iter()

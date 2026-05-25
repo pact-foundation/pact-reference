@@ -35,7 +35,7 @@ pactffi_with_request(handle, "PUT", "{\"value\": \"/path/to/100\", \"pact:matche
 The `ProviderState` generator allows values to be sourced from provider state parameters during provider verification.
 There are two formats for specifying a `ProviderState` generator:
 
-### Shorthand format (expression only)
+### Shorthand format (expression only, no matching rule)
 
 When you only need a `ProviderState` generator (without any matching rule), you can use the shorthand format with just
 the `expression` and `value` keys:
@@ -47,8 +47,10 @@ the `expression` and `value` keys:
 }
 ```
 
-This sets up a `ProviderStateGenerator` with the given expression and uses the `value` as the example value. This
-shorthand is supported for query parameters, headers, path, and request/response bodies.
+This sets up a `ProviderStateGenerator` with the given expression and uses the `value` as the example value. **No
+matching rule is configured** — the example value is used as-is during consumer test execution, and the generator
+replaces it with the resolved provider state value during provider verification. This shorthand is supported for query
+parameters, headers, path, and request/response bodies.
 
 ### Full format (with matcher)
 

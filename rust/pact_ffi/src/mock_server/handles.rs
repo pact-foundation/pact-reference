@@ -1076,6 +1076,9 @@ fn from_integration_json_v2(
             let category = generator_category(matching_rules);
             generators.add_generator_with_subcategory(category, effective_path.clone(), generator);
           }
+          if !map.contains_key("value") {
+            warn!("ProviderStateGenerator shorthand at path '{}' has no 'value' key; example value will be null", path);
+          }
           map.get("value").cloned().unwrap_or_default()
         } else {
           debug!("Configuring a normal value using the 'value' attribute");
