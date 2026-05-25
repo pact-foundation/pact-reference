@@ -1069,6 +1069,18 @@ fn from_integration_json_v2(
           }
 
           result_value
+        } else if map.contains_key("expression") {
+          debug!("detected 'expression' without 'pact:matcher:type', configuring ProviderStateGenerator");
+          if let Some(generator) = Generator::from_map("ProviderState", map) {
+            let category = generator_category(matching_rules);
+            let gen_path = if path_or_status {
+              path.parent().unwrap_or(DocPath::root())
+            } else {
+              path.clone()
+            };
+            generators.add_generator_with_subcategory(category, gen_path, generator);
+          }
+          map.get("value").cloned().unwrap_or_default()
         } else {
           debug!("Configuring a normal value using the 'value' attribute");
           map.get("value").cloned().unwrap_or_default()
@@ -3488,6 +3500,82 @@ mod tests {
       .to(be_equal_to(Either::Right(vec!["100".to_string(), "200".to_string()])));
   }
 
+  // Issue #460 - ProviderStateGenerator shorthand with expression key (no pact:matcher:type)
+  #[test_log::test]
+  fn from_integration_json_expression_provider_state_generator() {
+    let mut rules = MatchingRules::default();
+    let mut generators = Generators::default();
+    let mut path = DocPath::root();
+    path.push_field("accountNumber");
+
+    let result = from_integration_json_v2(
+      &mut rules, &mut generators,
+      r#"{"expression":"${accountNumber}","value":"100"}"#,
+      path.clone(), "query", 0
+    );
+
+    expect!(result).to(be_equal_to(Either::Left("100".to_string())));
+    let gen_cat = generators.categories.get(&pact_models::generators::GeneratorCategory::QUERY);
+    assert!(gen_cat.is_some(), "Expected QUERY generator category to be present");
+    let gen_path = DocPath::root().join("accountNumber");
+    let gen = gen_cat.unwrap().get(&gen_path);
+    assert_eq!(gen, Some(&pact_models::generators::Generator::ProviderStateGenerator("${accountNumber}".to_string(), None)));
+  }
+
+  // Issue #460 - query parameter with ProviderStateGenerator shorthand (no pact:matcher:type)
+  #[test_log::test]
+  fn query_with_provider_state_generator_shorthand() {
+    let pact_handle = PactHandle::new("TestQPSG1", "TestQPSGP1");
+    let description = CString::new("query_with_provider_state_generator_shorthand").unwrap();
+    let handle = pactffi_new_interaction(pact_handle, description.as_ptr());
+
+    let name = CString::new("accountNumber").unwrap();
+    let value = CString::new(r#"{"expression":"${accountNumber}","value":"100"}"#).unwrap();
+    pactffi_with_query_parameter_v2(handle, name.as_ptr(), 0, value.as_ptr());
+
+    let interaction = handle.with_interaction(&|_, _, inner| {
+      inner.as_v4_http().unwrap()
+    }).unwrap();
+
+    pactffi_free_pact_handle(pact_handle);
+
+    expect!(interaction.request.query.clone()).to(be_some().value(hashmap!{
+      "accountNumber".to_string() => vec![Some("100".to_string())]
+    }));
+    expect!(&interaction.request.generators).to(be_equal_to(&generators! {
+      "query" => {
+        "$.accountNumber" => pact_models::generators::Generator::ProviderStateGenerator("${accountNumber}".to_string(), None)
+      }
+    }));
+  }
+
+  // Issue #460 - header with ProviderStateGenerator shorthand (no pact:matcher:type)
+  #[test_log::test]
+  fn header_with_provider_state_generator_shorthand() {
+    let pact_handle = PactHandle::new("TestHPSG1", "TestHPSGP1");
+    let description = CString::new("header_with_provider_state_generator_shorthand").unwrap();
+    let handle = pactffi_new_interaction(pact_handle, description.as_ptr());
+
+    let name = CString::new("x-account-id").unwrap();
+    let value = CString::new(r#"{"expression":"${accountId}","value":"ABC123"}"#).unwrap();
+    pactffi_with_header_v2(handle, InteractionPart::Request, name.as_ptr(), 0, value.as_ptr());
+
+    let interaction = handle.with_interaction(&|_, _, inner| {
+      inner.as_v4_http().unwrap()
+    }).unwrap();
+
+    pactffi_free_pact_handle(pact_handle);
+
+    expect!(interaction.request.headers.clone()).to(be_some().value(hashmap!{
+      "x-account-id".to_string() => vec!["ABC123".to_string()]
+    }));
+    expect!(&interaction.request.generators).to(be_equal_to(&generators! {
+      "header" => {
+        "$['x-account-id']" => pact_models::generators::Generator::ProviderStateGenerator("${accountId}".to_string(), None)
+      }
+    }));
+  }
+
   #[test]
   fn pactffi_with_metadata_async() {
     let pact_handle = PactHandle::new("metadata-consumer", "metadata-provider");
@@ -4603,5 +4691,38 @@ mod tests {
     let headers = interaction.request.headers.unwrap();
     expect!(headers.get("Content-Type").unwrap().first().unwrap())
       .to(be_equal_to(&JSON.to_string()));
+  }
+
+  // Issue #460 - body with ProviderStateGenerator shorthand (expression key, no pact:matcher:type)
+  #[test_log::test]
+  fn body_with_provider_state_generator_shorthand() {
+    let pact_handle = PactHandle::new("TestBPSG1", "TestBPSGP1");
+    let description = CString::new("body_with_provider_state_generator_shorthand").unwrap();
+    let i_handle = pactffi_new_interaction(pact_handle, description.as_ptr());
+
+    let json_ct = CString::new(JSON.to_string()).unwrap();
+    // Body where accountNumber field uses the expression shorthand for ProviderStateGenerator
+    let body = CString::new(r#"{"accountNumber":{"expression":"${accountNumber}","value":100}}"#).unwrap();
+    let result = pactffi_with_body(i_handle, InteractionPart::Request, json_ct.as_ptr(), body.as_ptr());
+
+    let interaction = i_handle
+      .with_interaction(&|_, _, inner| inner.as_v4_http().unwrap())
+      .unwrap();
+
+    pactffi_free_pact_handle(pact_handle);
+
+    expect!(result).to(be_true());
+
+    // The body should have the value extracted (100), not the full expression object
+    let body_bytes = interaction.request.body.value().unwrap();
+    let body_json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+    assert_eq!(body_json, json!({"accountNumber": 100}));
+
+    // A ProviderStateGenerator should be configured for the accountNumber field
+    expect!(&interaction.request.generators).to(be_equal_to(&generators! {
+      "body" => {
+        "$.accountNumber" => pact_models::generators::Generator::ProviderStateGenerator("${accountNumber}".to_string(), None)
+      }
+    }));
   }
 }

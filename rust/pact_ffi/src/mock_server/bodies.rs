@@ -67,6 +67,13 @@ pub fn process_object(
   let result = if let Some(matcher_type) = obj.get("pact:matcher:type") {
     debug!("detected pact:matcher:type, will configure a matcher");
     process_matcher(obj, matching_rules, generators, &path, type_matcher, &matcher_type.clone())
+  } else if obj.contains_key("expression") && !obj.contains_key("pact:matcher:type") {
+    debug!("detected 'expression' without 'pact:matcher:type', configuring ProviderStateGenerator");
+    if let Some(generator) = Generator::from_map("ProviderState", obj) {
+      let category = generator_category(matching_rules);
+      generators.add_generator_with_subcategory(category, path.clone(), generator);
+    }
+    obj.get("value").cloned().unwrap_or(Value::Null)
   } else {
     debug!("Configuring a normal object");
     Value::Object(obj.iter()
@@ -459,6 +466,57 @@ use pretty_assertions::assert_eq;
                                 &mut generators, DocPath::root(), false);
 
     expect!(result).to(be_equal_to(json));
+  }
+
+  // Issue #460 - ProviderStateGenerator shorthand with expression key (no pact:matcher:type)
+  #[test_log::test]
+  fn process_object_with_expression_provider_state_generator() {
+    // A body where accountNumber uses the expression shorthand
+    let json = json!({
+      "accountNumber": {
+        "expression": "${accountNumber}",
+        "value": 100
+      }
+    });
+    let mut matching_rules = MatchingRuleCategory::empty("body");
+    let mut generators = Generators::default();
+    let result = process_object(json.as_object().unwrap(), &mut matching_rules,
+                                &mut generators, DocPath::root(), false);
+
+    // The value should be extracted, not the full object
+    expect!(result).to(be_equal_to(json!({"accountNumber": 100})));
+    // No matching rules should be added (no pact:matcher:type)
+    expect!(matching_rules.is_empty()).to(be_true());
+    // A ProviderStateGenerator should be configured
+    expect!(generators).to(be_equal_to(generators! {
+      "BODY" => {
+        "$.accountNumber" => Generator::ProviderStateGenerator("${accountNumber}".to_string(), None)
+      }
+    }));
+  }
+
+  // Issue #460 - ProviderStateGenerator shorthand with string value
+  #[test_log::test]
+  fn process_object_with_expression_provider_state_generator_string_value() {
+    let json = json!({
+      "expression": "${accountNumber}",
+      "value": "100"
+    });
+    let mut matching_rules = MatchingRuleCategory::empty("body");
+    let mut generators = Generators::default();
+    let result = process_object(json.as_object().unwrap(), &mut matching_rules,
+                                &mut generators, DocPath::root(), false);
+
+    // The value should be extracted
+    expect!(result).to(be_equal_to(json!("100")));
+    // No matching rules
+    expect!(matching_rules.is_empty()).to(be_true());
+    // A ProviderStateGenerator should be configured at root
+    expect!(generators).to(be_equal_to(generators! {
+      "BODY" => {
+        "$" => Generator::ProviderStateGenerator("${accountNumber}".to_string(), None)
+      }
+    }));
   }
 
   #[test]
