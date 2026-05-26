@@ -215,7 +215,7 @@ impl HALClientBuilder {
     self
   }
 
-  /// Sets the number of retries on certain HTTP errors. Default is 3.
+  /// Sets the number of retries on certain HTTP errors (5xx, 408, 429). Default is 3.
   pub fn with_retries(&mut self, retries: u8) -> &mut Self {
     self.retries = retries;
     self
