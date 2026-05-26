@@ -35,7 +35,7 @@ fn json_with_null() {
     bytes: content.to_vec()
   };
   let mut interpreter = ExecutionPlanInterpreter::new_with_context(&context);
-  let result = interpreter.walk_tree(&path, &node, &resolver).unwrap();
+  let result = interpreter.walk_tree(&path, node.clone(), &resolver).unwrap();
   let mut buffer = String::new();
   result.pretty_form(&mut buffer, 2);
   assert_eq!("  %tee (
@@ -57,7 +57,7 @@ fn json_with_null() {
     bytes: content.to_vec()
   };
   let mut interpreter = ExecutionPlanInterpreter::new_with_context(&context);
-  let result = interpreter.walk_tree(&path, &node, &resolver).unwrap();
+  let result = interpreter.walk_tree(&path, node.clone(), &resolver).unwrap();
   let mut buffer = String::new();
   result.pretty_form(&mut buffer, 2);
   assert_eq!("  %tee (
@@ -79,7 +79,7 @@ fn json_with_null() {
     bytes: content.to_vec()
   };
   let mut interpreter = ExecutionPlanInterpreter::new_with_context(&context);
-  let result = interpreter.walk_tree(&path, &node, &resolver).unwrap();
+  let result = interpreter.walk_tree(&path, node.clone(), &resolver).unwrap();
   let mut buffer = String::new();
   result.pretty_form(&mut buffer, 2);
   assert_eq!("  %tee (
@@ -109,7 +109,7 @@ fn json_with_boolean() {
     bytes: content.to_vec()
   };
   let mut interpreter = ExecutionPlanInterpreter::new_with_context(&context);
-  let result = interpreter.walk_tree(&path, &node, &resolver).unwrap();
+  let result = interpreter.walk_tree(&path, node.clone(), &resolver).unwrap();
   let mut buffer = String::new();
   result.pretty_form(&mut buffer, 2);
   assert_eq!("  %tee (
@@ -131,7 +131,7 @@ fn json_with_boolean() {
     bytes: content.to_vec()
   };
   let mut interpreter = ExecutionPlanInterpreter::new_with_context(&context);
-  let result = interpreter.walk_tree(&path, &node, &resolver).unwrap();
+  let result = interpreter.walk_tree(&path, node.clone(), &resolver).unwrap();
   let mut buffer = String::new();
   result.pretty_form(&mut buffer, 2);
   assert_eq!("  %tee (
@@ -161,7 +161,7 @@ fn json_with_empty_array() {
     bytes: content.to_vec()
   };
   let mut interpreter = ExecutionPlanInterpreter::new_with_context(&context);
-  let result = interpreter.walk_tree(&path, &node, &resolver).unwrap();
+  let result = interpreter.walk_tree(&path, node.clone(), &resolver).unwrap();
   let mut buffer = String::new();
   result.pretty_form(&mut buffer, 2);
   assert_eq!("  %tee (
@@ -181,7 +181,7 @@ fn json_with_empty_array() {
     bytes: content.to_vec()
   };
   let mut interpreter = ExecutionPlanInterpreter::new_with_context(&context);
-  let result = interpreter.walk_tree(&path, &node, &resolver).unwrap();
+  let result = interpreter.walk_tree(&path, node.clone(), &resolver).unwrap();
   let mut buffer = String::new();
   result.pretty_form(&mut buffer, 2);
   assert_eq!("  %tee (
@@ -201,7 +201,7 @@ fn json_with_empty_array() {
     bytes: content.to_vec()
   };
   let mut interpreter = ExecutionPlanInterpreter::new_with_context(&context);
-  let result = interpreter.walk_tree(&path, &node, &resolver).unwrap();
+  let result = interpreter.walk_tree(&path, node.clone(), &resolver).unwrap();
   let mut buffer = String::new();
   result.pretty_form(&mut buffer, 2);
   assert_eq!("  %tee (
@@ -229,7 +229,7 @@ fn json_with_array() {
     bytes: content.to_vec()
   };
   let mut interpreter = ExecutionPlanInterpreter::new_with_context(&context);
-  let result = interpreter.walk_tree(&path, &node, &resolver).unwrap();
+  let result = interpreter.walk_tree(&path, node.clone(), &resolver).unwrap();
   let mut buffer = String::new();
   result.pretty_form(&mut buffer, 2);
   assert_eq!("  %tee (
@@ -298,7 +298,7 @@ fn json_with_array() {
     bytes: content.to_vec()
   };
   let mut interpreter = ExecutionPlanInterpreter::new_with_context(&context);
-  let result = interpreter.walk_tree(&path, &node, &resolver).unwrap();
+  let result = interpreter.walk_tree(&path, node.clone(), &resolver).unwrap();
   let mut buffer = String::new();
   result.pretty_form(&mut buffer, 2);
   assert_eq!("  %tee (
@@ -367,7 +367,7 @@ fn json_with_array() {
     bytes: content.to_vec()
   };
   let mut interpreter = ExecutionPlanInterpreter::new_with_context(&context);
-  let result = interpreter.walk_tree(&path, &node, &resolver).unwrap();
+  let result = interpreter.walk_tree(&path, node.clone(), &resolver).unwrap();
   let mut buffer = String::new();
   result.pretty_form(&mut buffer, 2);
   assert_eq!("  %tee (
@@ -436,7 +436,7 @@ fn json_with_array() {
     bytes: content.to_vec()
   };
   let mut interpreter = ExecutionPlanInterpreter::new_with_context(&context);
-  let result = interpreter.walk_tree(&path, &node, &resolver).unwrap();
+  let result = interpreter.walk_tree(&path, node.clone(), &resolver).unwrap();
   let mut buffer = String::new();
   result.pretty_form(&mut buffer, 2);
   assert_eq!("  %tee (
@@ -513,7 +513,7 @@ fn very_simple_xml() {
     bytes: content.to_vec()
   };
   let mut interpreter = ExecutionPlanInterpreter::new_with_context(&context);
-  let result = interpreter.walk_tree(&path, &node, &resolver).unwrap();
+  let result = interpreter.walk_tree(&path, node.clone(), &resolver).unwrap();
   let mut buffer = String::new();
   result.pretty_form(&mut buffer, 2);
   assert_eq!("  %tee (
@@ -552,7 +552,7 @@ fn very_simple_xml() {
     bytes: content.to_vec()
   };
   let mut interpreter = ExecutionPlanInterpreter::new_with_context(&context);
-  let result = interpreter.walk_tree(&path, &node, &resolver).unwrap();
+  let result = interpreter.walk_tree(&path, node.clone(), &resolver).unwrap();
   let mut buffer = String::new();
   result.pretty_form(&mut buffer, 2);
   assert_eq!("  %tee (
@@ -591,7 +591,7 @@ fn very_simple_xml() {
     bytes: content.to_vec()
   };
   let mut interpreter = ExecutionPlanInterpreter::new_with_context(&context);
-  let result = interpreter.walk_tree(&path, &node, &resolver).unwrap();
+  let result = interpreter.walk_tree(&path, node.clone(), &resolver).unwrap();
   let mut buffer = String::new();
   result.pretty_form(&mut buffer, 2);
   assert_eq!("  %tee (
@@ -646,7 +646,7 @@ fn simple_xml() {
     bytes: content.to_vec()
   };
   let mut interpreter = ExecutionPlanInterpreter::new_with_context(&context);
-  let result = interpreter.walk_tree(&path, &node, &resolver).unwrap();
+  let result = interpreter.walk_tree(&path, node.clone(), &resolver).unwrap();
   let mut buffer = String::new();
   result.pretty_form(&mut buffer, 2);
   assert_eq!(r#"  %tee (
@@ -914,7 +914,7 @@ fn simple_xml() {
     bytes: content.to_vec()
   };
   let mut interpreter = ExecutionPlanInterpreter::new_with_context(&context);
-  let result = interpreter.walk_tree(&path, &node, &resolver).unwrap();
+  let result = interpreter.walk_tree(&path, node.clone(), &resolver).unwrap();
   let mut buffer = String::new();
   result.pretty_form(&mut buffer, 2);
   assert_eq!(r#"  %tee (
@@ -1183,7 +1183,7 @@ fn missing_xml_value() {
     bytes: content.to_vec()
   };
   let mut interpreter = ExecutionPlanInterpreter::new_with_context(&context);
-  let result = interpreter.walk_tree(&path, &node, &resolver).unwrap();
+  let result = interpreter.walk_tree(&path, node.clone(), &resolver).unwrap();
   let mut buffer = String::new();
   result.pretty_form(&mut buffer, 2);
   assert_eq!(r#"  %tee (
@@ -1276,7 +1276,7 @@ fn missing_xml_value() {
     bytes: content.to_vec()
   };
   let mut interpreter = ExecutionPlanInterpreter::new_with_context(&context);
-  let result = interpreter.walk_tree(&path, &node, &resolver).unwrap();
+  let result = interpreter.walk_tree(&path, node.clone(), &resolver).unwrap();
   let mut buffer = String::new();
   result.pretty_form(&mut buffer, 2);
   assert_eq!(r#"  %tee (
@@ -1369,7 +1369,7 @@ fn missing_xml_value() {
     bytes: content.to_vec()
   };
   let mut interpreter = ExecutionPlanInterpreter::new_with_context(&context);
-  let result = interpreter.walk_tree(&path, &node, &resolver).unwrap();
+  let result = interpreter.walk_tree(&path, node.clone(), &resolver).unwrap();
   let mut buffer = String::new();
   result.pretty_form(&mut buffer, 2);
   assert_eq!(r#"  %tee (
@@ -1471,7 +1471,7 @@ fn invalid_xml() {
     bytes: content.to_vec()
   };
   let mut interpreter = ExecutionPlanInterpreter::new_with_context(&context);
-  let result = interpreter.walk_tree(&path, &node, &resolver).unwrap();
+  let result = interpreter.walk_tree(&path, node.clone(), &resolver).unwrap();
   let mut buffer = String::new();
   result.pretty_form(&mut buffer, 2);
   assert_eq!(r#"  %tee (
@@ -1573,7 +1573,7 @@ fn unexpected_xml_value() {
     bytes: content.to_vec()
   };
   let mut interpreter = ExecutionPlanInterpreter::new_with_context(&context);
-  let result = interpreter.walk_tree(&path, &node, &resolver).unwrap();
+  let result = interpreter.walk_tree(&path, node.clone(), &resolver).unwrap();
   let mut buffer = String::new();
   result.pretty_form(&mut buffer, 2);
   assert_eq!(r#"  %tee (

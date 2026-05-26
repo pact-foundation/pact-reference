@@ -59,7 +59,7 @@ impl ExecutionPlanInterpreter {
   ) -> anyhow::Result<ExecutionPlan> {
     let path = vec![];
     let start = Instant::now();
-    let executed_tree = self.walk_tree(&path, &plan.plan_root, value_resolver)?;
+    let executed_tree = self.walk_tree(&path, plan.plan_root.clone(), value_resolver)?;
     Ok(ExecutionPlan {
       plan_root: executed_tree,
       execution_time: Some(start.elapsed())
@@ -70,51 +70,55 @@ impl ExecutionPlanInterpreter {
   pub fn walk_tree(
     &mut self,
     path: &[String],
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     value_resolver: &dyn ValueResolver
   ) -> anyhow::Result<ExecutionPlanNode> {
-    match &node.node_type {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    match node_type {
       PlanNodeType::EMPTY => {
         trace!(?path, "walk_tree ==> Empty node");
-        Ok(node.clone())
+        Ok(ExecutionPlanNode { node_type: PlanNodeType::EMPTY, result: None, children })
       },
-      PlanNodeType::CONTAINER(label) => {
-        trace!(?path, %label, "walk_tree ==> Container node");
+      PlanNodeType::CONTAINER(ref label) => {
+        trace!(?path, label, "walk_tree ==> Container node");
 
-        let mut result = vec![];
+        let mut result_children = vec![];
         let mut child_path = path.to_vec();
         child_path.push(label.clone());
         let mut status = NodeResult::OK;
-        let mut loop_items = VecDeque::from(node.children.clone());
+        let mut loop_items: VecDeque<ExecutionPlanNode> = children.into_iter().collect();
 
-        while !loop_items.is_empty() {
-          let child = loop_items.pop_front().unwrap();
-          let child_result = self.walk_tree(&child_path, &child, value_resolver)?;
-          status = status.and(&child_result.result.clone().unwrap_or_default());
-          result.push(child_result.clone());
-          if child_result.is_splat() {
-            for item in child_result.children.iter().rev() {
+        while let Some(child) = loop_items.pop_front() {
+          let child_result = self.walk_tree(&child_path, child, value_resolver)?;
+          status = status.and(child_result.result.as_ref().unwrap_or(&NodeResult::OK));
+          let is_splat = child_result.is_splat();
+          result_children.push(child_result);
+          if is_splat {
+            let last = result_children.last().unwrap();
+            for item in last.children.iter().rev() {
               loop_items.push_front(item.clone());
             }
           }
         }
 
         Ok(ExecutionPlanNode {
-          node_type: node.node_type.clone(),
+          node_type,
           result: Some(status.truthy()),
-          children: result
+          children: result_children
         })
       }
-      PlanNodeType::ACTION(action) => {
-        trace!(?path, %action, "walk_tree ==> Action node");
-        Ok(self.execute_action(action.as_str(), value_resolver, node, path))
+      PlanNodeType::ACTION(ref action) => {
+        trace!(?path, action, "walk_tree ==> Action node");
+        let action_str = action.clone();
+        let node = ExecutionPlanNode { node_type, children, result: None };
+        Ok(self.execute_action(&action_str, value_resolver, node, path))
       }
-      PlanNodeType::VALUE(val) => {
+      PlanNodeType::VALUE(ref val) => {
         trace!(?path, ?val, "walk_tree ==> Value node");
         let value = match val {
           NodeValue::NAMESPACED(namespace, value) => match namespace.as_str() {
             "json" => serde_json::from_str(value.as_str())
-              .map(|v| NodeValue::JSON(v))
+              .map(NodeValue::JSON)
               .map_err(|err| anyhow!(err)),
             #[cfg(feature = "xml")]
             "xml" => kiss_xml::parse_str(value)
@@ -125,25 +129,25 @@ impl ExecutionPlanInterpreter {
           _ => Ok(val.clone())
         }?;
         Ok(ExecutionPlanNode {
-          node_type: node.node_type.clone(),
+          node_type,
           result: Some(NodeResult::VALUE(value)),
           children: vec![]
         })
       }
-      PlanNodeType::RESOLVE(resolve_path) => {
+      PlanNodeType::RESOLVE(ref resolve_path) => {
         trace!(?path, %resolve_path, "walk_tree ==> Resolve node");
         match value_resolver.resolve(resolve_path, &self.context) {
           Ok(val) => {
             Ok(ExecutionPlanNode {
-              node_type: node.node_type.clone(),
-              result: Some(NodeResult::VALUE(val.clone())),
+              node_type,
+              result: Some(NodeResult::VALUE(val)),
               children: vec![]
             })
           }
           Err(err) => {
             trace!(?path, %resolve_path, %err, "Resolve node failed");
             Ok(ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(NodeResult::ERROR(err.to_string())),
               children: vec![]
             })
@@ -156,54 +160,50 @@ impl ExecutionPlanInterpreter {
         let child_path = path.to_vec();
         self.push_result(None);
         let mut child_results = vec![];
-        let mut loop_items = VecDeque::from(node.children.clone());
+        let mut loop_items: VecDeque<ExecutionPlanNode> = children.into_iter().collect();
 
         // TODO: Need a short circuit here if any child results in an error
-        while !loop_items.is_empty() {
-          let child = loop_items.pop_front().unwrap();
-          let child_result = self.walk_tree(&child_path, &child, value_resolver)?;
+        while let Some(child) = loop_items.pop_front() {
+          let child_result = self.walk_tree(&child_path, child, value_resolver)?;
           self.update_result(child_result.result.clone());
-          child_results.push(child_result.clone());
-          if child_result.is_splat() {
-            for item in child_result.children.iter().rev() {
+          let is_splat = child_result.is_splat();
+          child_results.push(child_result);
+          if is_splat {
+            let last = child_results.last().unwrap();
+            for item in last.children.iter().rev() {
               loop_items.push_front(item.clone());
             }
           }
         }
 
         let result = self.pop_result();
-        match result {
-          Some(value) => {
-            Ok(ExecutionPlanNode {
-              node_type: node.node_type.clone(),
-              result: Some(value),
-              children: child_results
-            })
-          }
+        let result = match result {
+          Some(value) => value,
           None => {
             trace!(?path, "Value from stack is empty");
-            Ok(ExecutionPlanNode {
-              node_type: node.node_type.clone(),
-              result: Some(NodeResult::ERROR("Value from stack is empty".to_string())),
-              children: child_results
-            })
+            NodeResult::ERROR("Value from stack is empty".to_string())
           }
-        }
+        };
+        Ok(ExecutionPlanNode {
+          node_type,
+          result: Some(result),
+          children: child_results
+        })
       }
-      PlanNodeType::RESOLVE_CURRENT(expression) => {
+      PlanNodeType::RESOLVE_CURRENT(ref expression) => {
         trace!(?path, %expression, "walk_tree ==> Resolve current node");
         match self.resolve_stack_value(expression) {
           Ok(val) => {
             Ok(ExecutionPlanNode {
-              node_type: node.node_type.clone(),
-              result: Some(NodeResult::VALUE(val.clone())),
+              node_type,
+              result: Some(NodeResult::VALUE(val)),
               children: vec![]
             })
           }
           Err(err) => {
             debug!(?path, %expression, %err, "Resolve node failed");
             Ok(ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(NodeResult::ERROR(err.to_string())),
               children: vec![]
             })
@@ -217,37 +217,39 @@ impl ExecutionPlanInterpreter {
         let mut child_results = vec![];
 
         // TODO: Need a short circuit here if any child results in an error
-        for child in &node.children {
+        for child in children {
           let child_result = self.walk_tree(&child_path, child, value_resolver)?;
           match &child_result.result {
-            None => child_results.push(child_result.clone()),
+            None => child_results.push(child_result),
             Some(result) => match result {
-              NodeResult::OK => child_results.push(child_result.clone()),
+              NodeResult::OK => child_results.push(child_result),
               NodeResult::VALUE(value) => match value {
                 NodeValue::MMAP(map) => {
-                  for (key, value) in map {
+                  for (key, value) in map.iter() {
                     child_results.push(child_result.clone_with_value(NodeValue::ENTRY(key.clone(), Box::new(NodeValue::SLIST(value.clone())))));
                   }
                 }
                 NodeValue::SLIST(list) => {
-                  for item in list {
+                  for item in list.iter() {
                     child_results.push(child_result.clone_with_value(NodeValue::STRING(item.clone())));
                   }
                 }
-                _ => child_results.push(child_result.clone())
+                _ => child_results.push(child_result)
               }
-              NodeResult::ERROR(_) => child_results.push(child_result.clone())
+              NodeResult::ERROR(_) => child_results.push(child_result)
             }
           }
         }
 
         Ok(ExecutionPlanNode {
-          node_type: node.node_type.clone(),
+          node_type,
           result: Some(NodeResult::OK),
           children: child_results
         })
       }
-      PlanNodeType::ANNOTATION(_) => Ok(node.clone())
+      PlanNodeType::ANNOTATION(_) => {
+        Ok(ExecutionPlanNode { node_type, result: None, children })
+      }
     }
   }
 
@@ -257,7 +259,7 @@ impl ExecutionPlanInterpreter {
     &mut self,
     action: &str,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     path: &[String]
   ) -> ExecutionPlanNode {
     trace!(%action, "Executing action");
@@ -274,10 +276,11 @@ impl ExecutionPlanInterpreter {
     } else if action.starts_with("match:") {
       match action.strip_prefix("match:") {
         None => {
+          let ExecutionPlanNode { node_type, children, .. } = node;
           ExecutionPlanNode {
-            node_type: node.node_type.clone(),
+            node_type,
             result: Some(NodeResult::ERROR(format!("'{}' is not a valid action", action))),
-            children: node.children.clone()
+            children
           }
         }
         Some(matcher) => self.execute_match(action, matcher, value_resolver, node, &action_path)
@@ -321,10 +324,11 @@ impl ExecutionPlanInterpreter {
         #[cfg(feature = "multipart")]
         "multipart:parse" => self.execute_multipart_parse(action, value_resolver, node, &action_path),
         _ => {
+          let ExecutionPlanNode { node_type, children, .. } = node;
           ExecutionPlanNode {
-            node_type: node.node_type.clone(),
+            node_type,
             result: Some(NodeResult::ERROR(format!("'{}' is not a valid action", action))),
-            children: node.children.clone()
+            children
           }
         }
       }
@@ -335,16 +339,17 @@ impl ExecutionPlanInterpreter {
     &mut self,
     action: &str,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     action_path: &Vec<String>
   ) -> ExecutionPlanNode {
-    match self.validate_three_args(node, action, value_resolver, &action_path) {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    match self.validate_three_args(children, action, value_resolver, &action_path) {
       Ok((first_node, second_node, third_node)) => {
         let result1 = first_node.value().unwrap_or_default();
         let expected_json_type = match result1.as_string() {
           None => {
             return ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(NodeResult::ERROR(format!("'{}' is not a valid JSON type", result1))),
               children: vec![first_node, second_node, third_node]
             }
@@ -355,7 +360,7 @@ impl ExecutionPlanInterpreter {
         let expected_keys = match result2.as_slist() {
           None => {
             return ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(NodeResult::ERROR(format!("'{}' is not a list of Strings", result2))),
               children: vec![first_node, second_node, third_node]
             }
@@ -368,7 +373,7 @@ impl ExecutionPlanInterpreter {
         let value = match result3.as_value() {
           None => {
             return ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(NodeResult::ERROR(format!("Was expecting a JSON value, but got {}", result3))),
               children: vec![first_node, second_node, third_node]
             }
@@ -379,7 +384,7 @@ impl ExecutionPlanInterpreter {
           NodeValue::JSON(json) => json,
           _ => {
             return ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(NodeResult::ERROR(format!("Was expecting a JSON value, but got {:?}", value))),
               children: vec![first_node, second_node, third_node]
             }
@@ -387,7 +392,7 @@ impl ExecutionPlanInterpreter {
         };
         if let Err(err) = json_check_type(expected_json_type, json_value) {
           return ExecutionPlanNode {
-            node_type: node.node_type.clone(),
+            node_type,
             result: Some(NodeResult::ERROR(err.to_string())),
             children: vec![first_node, second_node, third_node]
           }
@@ -401,13 +406,13 @@ impl ExecutionPlanInterpreter {
             let diff = &expected_keys - &actual_keys;
             if diff.is_empty() {
               ExecutionPlanNode {
-                node_type: node.node_type.clone(),
+                node_type,
                 result: Some(NodeResult::VALUE(NodeValue::BOOL(true))),
                 children: vec![first_node, second_node, third_node]
               }
             } else {
               ExecutionPlanNode {
-                node_type: node.node_type.clone(),
+                node_type,
                 result: Some(
                   NodeResult::ERROR(
                     format!("The following expected entries were missing from the actual Object: {}",
@@ -420,7 +425,7 @@ impl ExecutionPlanInterpreter {
           }
           _ => {
             ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(NodeResult::ERROR(format!("Was expecting a JSON Object, but got {:?}", json_value))),
               children: vec![first_node, second_node, third_node]
             }
@@ -429,9 +434,9 @@ impl ExecutionPlanInterpreter {
       }
       Err(err) => {
         ExecutionPlanNode {
-          node_type: node.node_type.clone(),
+          node_type,
           result: Some(NodeResult::ERROR(err.to_string())),
-          children: node.children.clone()
+          children: vec![]
         }
       }
     }
@@ -441,16 +446,17 @@ impl ExecutionPlanInterpreter {
     &mut self,
     action: &str,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     action_path: &Vec<String>
   ) -> ExecutionPlanNode {
-    match self.validate_three_args(node, action, value_resolver, &action_path) {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    match self.validate_three_args(children, action, value_resolver, &action_path) {
       Ok((first_node, second_node, third_node)) => {
         let result1 = first_node.value().unwrap_or_default();
         let expected_json_type = match result1.as_string() {
           None => {
             return ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(NodeResult::ERROR(format!("'{}' is not a valid JSON type", result1))),
               children: vec![first_node, second_node, third_node]
             }
@@ -461,7 +467,7 @@ impl ExecutionPlanInterpreter {
         let expected_length = match result2.as_number() {
           None => {
             return ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(NodeResult::ERROR(format!("'{}' is not a valid number", result2))),
               children: vec![first_node, second_node, third_node]
             }
@@ -472,7 +478,7 @@ impl ExecutionPlanInterpreter {
         let value = match result3.as_value() {
           None => {
             return ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(NodeResult::ERROR(format!("Was expecting a JSON value, but got {}", result3))),
               children: vec![first_node, second_node, third_node]
             }
@@ -483,7 +489,7 @@ impl ExecutionPlanInterpreter {
           NodeValue::JSON(json) => json,
           _ => {
             return ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(NodeResult::ERROR(format!("Was expecting a JSON value, but got {:?}", value))),
               children: vec![first_node, second_node, third_node]
             }
@@ -491,29 +497,29 @@ impl ExecutionPlanInterpreter {
         };
         if let Err(err) = json_check_type(expected_json_type, &json_value) {
           return ExecutionPlanNode {
-            node_type: node.node_type.clone(),
+            node_type,
             result: Some(NodeResult::ERROR(err.to_string())),
             children: vec![first_node, second_node, third_node]
           }
         }
         if let Err(err) = json_check_length(expected_length as usize, &json_value) {
           return ExecutionPlanNode {
-            node_type: node.node_type.clone(),
+            node_type,
             result: Some(NodeResult::ERROR(err.to_string())),
             children: vec![first_node, second_node, third_node]
           }
         }
         ExecutionPlanNode {
-          node_type: node.node_type.clone(),
+          node_type,
           result: Some(NodeResult::VALUE(NodeValue::BOOL(true))),
           children: vec![first_node, second_node, third_node]
         }
       }
       Err(err) => {
         ExecutionPlanNode {
-          node_type: node.node_type.clone(),
+          node_type,
           result: Some(NodeResult::ERROR(err.to_string())),
-          children: node.children.clone()
+          children: vec![]
         }
       }
     }
@@ -523,17 +529,18 @@ impl ExecutionPlanInterpreter {
     &mut self,
     action: &str,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     action_path: &Vec<String>,
     is_empty: bool
   ) -> ExecutionPlanNode {
-    match self.validate_two_args(node, action, value_resolver, &action_path) {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    match self.validate_two_args(children, action, value_resolver, &action_path) {
       Ok((first_node, second_node)) => {
         let result1 = first_node.value().unwrap_or_default();
         let expected_json_type = match result1.as_string() {
           None => {
             return ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(NodeResult::ERROR(format!("'{}' is not a valid JSON type", result1))),
               children: vec![first_node, second_node]
             }
@@ -544,7 +551,7 @@ impl ExecutionPlanInterpreter {
         let value = match result2.as_value() {
           None => {
             return ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(NodeResult::ERROR(format!("Was expecting a JSON value, but got {}", result2))),
               children: vec![first_node, second_node]
             }
@@ -556,7 +563,7 @@ impl ExecutionPlanInterpreter {
           NodeValue::JSON(json) => json,
           _ => {
             return ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(NodeResult::ERROR(format!("Was expecting a JSON value, but got {:?}", value))),
               children: vec![first_node, second_node]
             }
@@ -565,7 +572,7 @@ impl ExecutionPlanInterpreter {
 
         if let Err(err) = json_check_type(expected_json_type, &json_value) {
           return ExecutionPlanNode {
-            node_type: node.node_type.clone(),
+            node_type,
             result: Some(NodeResult::ERROR(err.to_string())),
             children: vec![first_node, second_node]
           }
@@ -616,14 +623,14 @@ impl ExecutionPlanInterpreter {
         match result {
           Ok(result) => {
             ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(result),
               children: vec![first_node, second_node]
             }
           }
           Err(err) => {
             ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(NodeResult::ERROR(err.to_string())),
               children: vec![first_node, second_node]
             }
@@ -632,9 +639,9 @@ impl ExecutionPlanInterpreter {
       }
       Err(err) => {
         ExecutionPlanNode {
-          node_type: node.node_type.clone(),
+          node_type,
           result: Some(NodeResult::ERROR(err.to_string())),
-          children: node.children.clone()
+          children: vec![]
         }
       }
     }
@@ -644,10 +651,11 @@ impl ExecutionPlanInterpreter {
     &mut self,
     action: &str,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     action_path: &Vec<String>
   ) -> ExecutionPlanNode {
-    match self.validate_one_arg(node, action, value_resolver, &action_path) {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    match self.validate_one_arg(children, action, value_resolver, &action_path) {
       Ok(value) => {
         let arg_value = value.value().unwrap_or_default().as_value();
         let result = if let Some(value) = &arg_value {
@@ -667,14 +675,14 @@ impl ExecutionPlanInterpreter {
         match result {
           Ok(result) => {
             ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(result),
               children: vec![value]
             }
           }
           Err(err) => {
             ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(NodeResult::ERROR(err.to_string())),
               children: vec![value]
             }
@@ -683,9 +691,9 @@ impl ExecutionPlanInterpreter {
       }
       Err(err) => {
         ExecutionPlanNode {
-          node_type: node.node_type.clone(),
+          node_type,
           result: Some(NodeResult::ERROR(err.to_string())),
-          children: node.children.clone()
+          children: vec![]
         }
       }
     }
@@ -695,10 +703,11 @@ impl ExecutionPlanInterpreter {
     &mut self,
     action: &str,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     action_path: &Vec<String>
   ) -> ExecutionPlanNode {
-    match self.validate_one_arg(node, action, value_resolver, &action_path) {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    match self.validate_one_arg(children, action, value_resolver, &action_path) {
       Ok(value) => {
         let arg_value = value.value().unwrap_or_default().as_value();
         let result = if let Some(value) = &arg_value {
@@ -734,14 +743,14 @@ impl ExecutionPlanInterpreter {
         match result {
           Ok(result) => {
             ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(result),
               children: vec![value]
             }
           }
           Err(err) => {
             ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(NodeResult::ERROR(err.to_string())),
               children: vec![value]
             }
@@ -750,9 +759,9 @@ impl ExecutionPlanInterpreter {
       }
       Err(err) => {
         ExecutionPlanNode {
-          node_type: node.node_type.clone(),
+          node_type,
           result: Some(NodeResult::ERROR(err.to_string())),
-          children: node.children.clone()
+          children: vec![]
         }
       }
     }
@@ -763,10 +772,11 @@ impl ExecutionPlanInterpreter {
     &mut self,
     action: &str,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     action_path: &Vec<String>
   ) -> ExecutionPlanNode {
-    match self.validate_two_args(node, action, value_resolver, action_path) {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    match self.validate_two_args(children, action, value_resolver, action_path) {
       Ok((body_node, ct_node)) => {
         let body_value = body_node.value().unwrap_or_default().as_value().unwrap_or_default();
         let ct_value = ct_node.value().unwrap_or_default().as_value().unwrap_or_default();
@@ -794,21 +804,21 @@ impl ExecutionPlanInterpreter {
         };
         match result {
           Ok(result) => ExecutionPlanNode {
-            node_type: node.node_type.clone(),
+            node_type,
             result: Some(result),
             children: vec![body_node, ct_node]
           },
           Err(err) => ExecutionPlanNode {
-            node_type: node.node_type.clone(),
+            node_type,
             result: Some(NodeResult::ERROR(err.to_string())),
             children: vec![body_node, ct_node]
           }
         }
       }
       Err(err) => ExecutionPlanNode {
-        node_type: node.node_type.clone(),
+        node_type,
         result: Some(NodeResult::ERROR(err.to_string())),
-        children: node.children.clone()
+        children: vec![]
       }
     }
   }
@@ -818,10 +828,11 @@ impl ExecutionPlanInterpreter {
     &mut self,
     action: &str,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     action_path: &Vec<String>
   ) -> ExecutionPlanNode {
-    match self.validate_one_arg(node, action, value_resolver, &action_path) {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    match self.validate_one_arg(children, action, value_resolver, &action_path) {
       Ok(value) => {
         let arg_value = value.value().unwrap_or_default().as_value();
         let result = if let Some(value) = &arg_value {
@@ -845,21 +856,25 @@ impl ExecutionPlanInterpreter {
         match result {
           Ok(result) => {
             ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(result),
               children: vec![value]
             }
           }
           Err(err) => {
             ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(NodeResult::ERROR(err.to_string())),
               children: vec![value]
             }
           }
         }
       }
-      Err(err) => node.clone_with_result(NodeResult::ERROR(err.to_string()))
+      Err(err) => ExecutionPlanNode {
+        node_type,
+        result: Some(NodeResult::ERROR(err.to_string())),
+        children: vec![]
+      }
     }
   }
 
@@ -868,10 +883,11 @@ impl ExecutionPlanInterpreter {
     &mut self,
     action: &str,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     action_path: &Vec<String>
   ) -> ExecutionPlanNode {
-    match self.validate_one_arg(node, action, value_resolver, &action_path) {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    match self.validate_one_arg(children, action, value_resolver, &action_path) {
       Ok(value) => {
         let arg_value = value.value().unwrap_or_default().as_value();
         let result = if let Some(value) = &arg_value {
@@ -888,21 +904,25 @@ impl ExecutionPlanInterpreter {
         match result {
           Ok(result) => {
             ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(result),
               children: vec![value]
             }
           }
           Err(err) => {
             ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(NodeResult::ERROR(err.to_string())),
               children: vec![value]
             }
           }
         }
       }
-      Err(err) => node.clone_with_result(NodeResult::ERROR(err.to_string()))
+      Err(err) => ExecutionPlanNode {
+        node_type,
+        result: Some(NodeResult::ERROR(err.to_string())),
+        children: vec![]
+      }
     }
   }
 
@@ -911,10 +931,11 @@ impl ExecutionPlanInterpreter {
     &mut self,
     action: &str,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     action_path: &Vec<String>
   ) -> ExecutionPlanNode {
-    match self.validate_one_arg(node, action, value_resolver, &action_path) {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    match self.validate_one_arg(children, action, value_resolver, &action_path) {
       Ok(value) => {
         let arg_value = value.value().unwrap_or_default().as_value();
         let result = if let Some(value) = &arg_value {
@@ -937,36 +958,41 @@ impl ExecutionPlanInterpreter {
         match result {
           Ok(result) => {
             ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(result),
               children: vec![value]
             }
           }
           Err(err) => {
             ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(NodeResult::ERROR(err.to_string())),
               children: vec![value]
             }
           }
         }
       }
-      Err(err) => node.clone_with_result(NodeResult::ERROR(err.to_string()))
+      Err(err) => ExecutionPlanNode {
+        node_type,
+        result: Some(NodeResult::ERROR(err.to_string())),
+        children: vec![]
+      }
     }
   }
 
-  fn execute_apply(&mut self, node: &ExecutionPlanNode) -> ExecutionPlanNode {
+  fn execute_apply(&mut self, node: ExecutionPlanNode) -> ExecutionPlanNode {
+    let ExecutionPlanNode { node_type, children, .. } = node;
     if let Some(value) = self.value_stack.last() {
       ExecutionPlanNode {
-        node_type: node.node_type.clone(),
+        node_type,
         result: value.clone(),
-        children: node.children.clone()
+        children
       }
     } else {
       ExecutionPlanNode {
-        node_type: node.node_type.clone(),
+        node_type,
         result: Some(NodeResult::ERROR("No value to apply (stack is empty)".to_string())),
-        children: node.children.clone()
+        children
       }
     }
   }
@@ -974,89 +1000,87 @@ impl ExecutionPlanInterpreter {
   fn execute_if(
     &mut self,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     action_path: &Vec<String>
   ) -> ExecutionPlanNode {
-    if let Some(first_node) = node.children.first() {
-      match self.walk_tree(action_path.as_slice(), first_node, value_resolver) {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    if let Some(first_node) = children.first() {
+      match self.walk_tree(action_path.as_slice(), first_node.clone(), value_resolver) {
         Ok(first) => {
           let node_result = first.value().unwrap_or_default();
-          let mut children = node.children.clone();
-          children[0] = first.clone();
+          let mut result_children = children.clone();
+          result_children[0] = first.clone();
           if !node_result.is_truthy() {
-            if node.children.len() > 2 {
-              match self.walk_tree(action_path.as_slice(), &node.children[2], value_resolver) {
+            if children.len() > 2 {
+              match self.walk_tree(action_path.as_slice(), children[2].clone(), value_resolver) {
                 Ok(else_node) => {
-                  children[2] = else_node.clone();
+                  result_children[2] = else_node.clone();
                   ExecutionPlanNode {
-                    node_type: node.node_type.clone(),
+                    node_type,
                     result: else_node.result.clone().map(|r| r.truthy()),
-                    children
+                    children: result_children
                   }
                 }
                 Err(err) => {
                   ExecutionPlanNode {
-                    node_type: node.node_type.clone(),
+                    node_type,
                     result: Some(NodeResult::ERROR(err.to_string())),
-                    children
+                    children: result_children
                   }
                 }
               }
             } else {
               ExecutionPlanNode {
-                node_type: node.node_type.clone(),
+                node_type,
                 result: Some(NodeResult::VALUE(NodeValue::BOOL(false))),
-                children
+                children: result_children
               }
             }
-          } else if let Some(second_node) = node.children.get(1) {
-            match self.walk_tree(action_path.as_slice(), second_node, value_resolver) {
+          } else if let Some(second_node) = children.get(1) {
+            match self.walk_tree(action_path.as_slice(), second_node.clone(), value_resolver) {
               Ok(second) => {
                 let second_result = second.value().unwrap_or_default();
                 ExecutionPlanNode {
-                  node_type: node.node_type.clone(),
+                  node_type,
                   result: Some(second_result.truthy()),
-                  children: vec![first, second].iter()
-                    .chain(node.children.iter().dropping(2))
-                    .cloned()
+                  children: vec![first, second].into_iter()
+                    .chain(children.into_iter().skip(2))
                     .collect()
                 }
               }
               Err(err) => {
                 error!("Failed to evaluate the second child - {}", err);
                 ExecutionPlanNode {
-                  node_type: node.node_type.clone(),
+                  node_type,
                   result: Some(NodeResult::VALUE(NodeValue::BOOL(false))),
-                  children: vec![first, second_node.clone()].iter()
-                    .chain(node.children.iter().dropping(2))
-                    .cloned()
+                  children: vec![first, second_node.clone()].into_iter()
+                    .chain(children.into_iter().skip(2))
                     .collect()
                 }
               }
             }
           } else {
             ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(node_result),
-              children: vec![first].iter().chain(node.children.iter().dropping(1))
-                .cloned()
+              children: vec![first].into_iter().chain(children.into_iter().skip(1))
                 .collect()
             }
           }
         }
         Err(err) => {
           ExecutionPlanNode {
-            node_type: node.node_type.clone(),
+            node_type,
             result: Some(NodeResult::ERROR(err.to_string())),
-            children: node.children.clone()
+            children
           }
         }
       }
     } else {
       ExecutionPlanNode {
-        node_type: node.node_type.clone(),
+        node_type,
         result: Some(NodeResult::ERROR("'if' action requires at least one argument".to_string())),
-        children: node.children.clone()
+        children
       }
     }
   }
@@ -1064,25 +1088,26 @@ impl ExecutionPlanInterpreter {
   fn execute_tee(
     &mut self,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     action_path: &Vec<String>
   ) -> ExecutionPlanNode {
-    if let Some(first_node) = node.children.first() {
-      match self.walk_tree(action_path.as_slice(), first_node, value_resolver) {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    if let Some(first_node) = children.first() {
+      match self.walk_tree(action_path.as_slice(), first_node.clone(), value_resolver) {
         Ok(first) => {
           let first_result = first.value().unwrap_or_default();
           if first_result.is_err() {
             ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(first_result.clone()),
-              children: once(first).chain(node.children.iter().dropping(1).cloned()).collect()
+              children: once(first).chain(children.into_iter().skip(1)).collect()
             }
           } else {
             let mut result = NodeResult::OK;
             self.push_result(first.result.clone());
             let mut child_results = vec![first.clone()];
-            for child in node.children.iter().dropping(1) {
-              match self.walk_tree(&action_path, &child, value_resolver) {
+            for child in children.iter().skip(1) {
+              match self.walk_tree(&action_path, child.clone(), value_resolver) {
                 Ok(value) => {
                   result = result.and(&value.result.clone().unwrap_or_default());
                   child_results.push(value.clone());
@@ -1097,16 +1122,24 @@ impl ExecutionPlanInterpreter {
 
             self.pop_result();
             ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(result.truthy()),
               children: child_results
             }
           }
         }
-        Err(err) => node.clone_with_result(NodeResult::ERROR(err.to_string()))
+        Err(err) => ExecutionPlanNode {
+          node_type,
+          result: Some(NodeResult::ERROR(err.to_string())),
+          children
+        }
       }
     } else {
-      node.clone_with_result(NodeResult::OK)
+      ExecutionPlanNode {
+        node_type,
+        result: Some(NodeResult::OK),
+        children
+      }
     }
   }
 
@@ -1114,10 +1147,11 @@ impl ExecutionPlanInterpreter {
     &mut self,
     action: &str,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     action_path: &Vec<String>
   ) -> ExecutionPlanNode {
-    match self.validate_one_arg(node, action, value_resolver, &action_path) {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    match self.validate_one_arg(children, action, value_resolver, &action_path) {
       Ok(value) => {
         let arg_value = value.value().unwrap_or_default().as_value();
         let result = if let Some(value) = &arg_value {
@@ -1133,14 +1167,14 @@ impl ExecutionPlanInterpreter {
         match result {
           Ok(result) => {
             ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(result),
               children: vec![value]
             }
           }
           Err(err) => {
             ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(NodeResult::ERROR(err.to_string())),
               children: vec![value]
             }
@@ -1149,9 +1183,9 @@ impl ExecutionPlanInterpreter {
       }
       Err(err) => {
         ExecutionPlanNode {
-          node_type: node.node_type.clone(),
+          node_type,
           result: Some(NodeResult::ERROR(err.to_string())),
-          children: node.children.clone()
+          children: vec![]
         }
       }
     }
@@ -1161,15 +1195,16 @@ impl ExecutionPlanInterpreter {
     &mut self,
     action: &str,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     action_path: &Vec<String>
   ) -> ExecutionPlanNode {
-    match self.validate_args(1, 1, node, action, value_resolver, &action_path) {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    match self.validate_args(1, 1, children, action, value_resolver, &action_path) {
       Ok((values, optional)) => {
         let first = values.first().unwrap().value().unwrap_or_default();
         if let NodeResult::ERROR(err) = first  {
           ExecutionPlanNode {
-            node_type: node.node_type.clone(),
+            node_type,
             result: Some(NodeResult::ERROR(err.to_string())),
             children: values.iter().chain(optional.iter()).cloned().collect()
           }
@@ -1260,7 +1295,7 @@ impl ExecutionPlanInterpreter {
           match result {
             Ok(result) => {
               ExecutionPlanNode {
-                node_type: node.node_type.clone(),
+                node_type,
                 result: Some(result),
                 children: values.iter().chain(optional.iter()).cloned().collect()
               }
@@ -1268,10 +1303,10 @@ impl ExecutionPlanInterpreter {
             Err(err) => {
               debug!("expect:empty failed with an error: {}", err);
               if optional.len() > 0 {
-                if let Ok(value) = self.walk_tree(action_path.as_slice(), &optional[0], value_resolver) {
+                if let Ok(value) = self.walk_tree(action_path.as_slice(), optional[0].clone(), value_resolver) {
                   let message = value.value().unwrap_or_default().as_string().unwrap_or_default();
                   ExecutionPlanNode {
-                    node_type: node.node_type.clone(),
+                    node_type,
                     result: Some(NodeResult::ERROR(message)),
                     children: values.iter().chain(once(&value)).cloned().collect()
                   }
@@ -1279,14 +1314,14 @@ impl ExecutionPlanInterpreter {
                   // There was an error generating the optional message, so just return the
                   // original error
                   ExecutionPlanNode {
-                    node_type: node.node_type.clone(),
+                    node_type,
                     result: Some(NodeResult::ERROR(err.to_string())),
                     children: values.iter().chain(optional.iter()).cloned().collect()
                   }
                 }
               } else {
                 ExecutionPlanNode {
-                  node_type: node.node_type.clone(),
+                  node_type,
                   result: Some(NodeResult::ERROR(err.to_string())),
                   children: values.iter().chain(optional.iter()).cloned().collect()
                 }
@@ -1297,9 +1332,9 @@ impl ExecutionPlanInterpreter {
       }
       Err(err) => {
         ExecutionPlanNode {
-          node_type: node.node_type.clone(),
+          node_type,
           result: Some(NodeResult::ERROR(err.to_string())),
-          children: node.children.clone()
+          children: vec![]
         }
       }
     }
@@ -1310,10 +1345,11 @@ impl ExecutionPlanInterpreter {
     action: &str,
     matcher: &str,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     action_path: &Vec<String>
   ) -> Result<ExecutionPlanNode, ExecutionPlanNode> {
-    match self.validate_args(4, 1, node, action, value_resolver, &action_path) {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    match self.validate_args(4, 1, children, action, value_resolver, &action_path) {
       Ok((args, optional)) => {
         let first_node = &args[0];
         let second_node = &args[1];
@@ -1325,7 +1361,7 @@ impl ExecutionPlanInterpreter {
           .value_or_error()
           .map_err(|err| {
             ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type: node_type.clone(),
               result: Some(NodeResult::ERROR(err.to_string())),
               children: args.iter()
                 .chain(optional.iter())
@@ -1339,7 +1375,7 @@ impl ExecutionPlanInterpreter {
           .value_or_error()
           .map_err(|err| {
             ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type: node_type.clone(),
               result: Some(NodeResult::ERROR(err.to_string())),
               children: args.iter()
                 .chain(optional.iter())
@@ -1353,7 +1389,7 @@ impl ExecutionPlanInterpreter {
           .value_or_error()
           .map_err(|err| {
             ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type: node_type.clone(),
               result: Some(NodeResult::ERROR(err.to_string())),
               children: args.iter()
                 .chain(optional.iter())
@@ -1369,7 +1405,7 @@ impl ExecutionPlanInterpreter {
           .value_or_error()
             .map_err(|err| {
               ExecutionPlanNode {
-                node_type: node.node_type.clone(),
+                node_type: node_type.clone(),
                 result: Some(NodeResult::ERROR(err.to_string())),
                 children: args.iter()
                   .chain(optional.iter())
@@ -1385,7 +1421,7 @@ impl ExecutionPlanInterpreter {
             match rule.match_value(&exepected_value, &actual_value, false, show_types) {
               Ok(_) => {
                 Ok(ExecutionPlanNode {
-                  node_type: node.node_type.clone(),
+                  node_type,
                   result: Some(NodeResult::VALUE(NodeValue::BOOL(true))),
                   children: args.iter()
                     .chain(optional.iter())
@@ -1396,14 +1432,14 @@ impl ExecutionPlanInterpreter {
               Err(err) => {
                 if let Some(error_node) = optional.first() {
                   self.push_result(Some(NodeResult::VALUE(NodeValue::STRING(err.to_string()))));
-                  match self.walk_tree(action_path.as_slice(), error_node, value_resolver) {
+                  match self.walk_tree(action_path.as_slice(), error_node.clone(), value_resolver) {
                     Ok(error_node) => {
                       let message = match error_node.value().unwrap_or_default() {
                         NodeResult::ERROR(e) => e,
                         other => other.as_string().unwrap_or_default()
                       };
                       Err(ExecutionPlanNode {
-                        node_type: node.node_type.clone(),
+                        node_type,
                         result: Some(NodeResult::ERROR(message)),
                         children: args.iter().chain(vec![error_node].iter()).cloned().collect()
                       })
@@ -1413,7 +1449,7 @@ impl ExecutionPlanInterpreter {
                       // There was an error generating the optional error node, so just return the
                       // original error
                       Err(ExecutionPlanNode {
-                        node_type: node.node_type.clone(),
+                        node_type,
                         result: Some(NodeResult::ERROR(err.to_string())),
                         children: args.iter()
                           .chain(optional.iter())
@@ -1424,7 +1460,7 @@ impl ExecutionPlanInterpreter {
                   }
                 } else {
                   Err(ExecutionPlanNode {
-                    node_type: node.node_type.clone(),
+                    node_type,
                     result: Some(NodeResult::ERROR(err.to_string())),
                     children: args.iter()
                       .chain(optional.iter())
@@ -1435,20 +1471,29 @@ impl ExecutionPlanInterpreter {
               }
             }
           }
-          Err(err) => Err(node.clone_with_result(NodeResult::ERROR(err.to_string())))
+          Err(err) => Err(ExecutionPlanNode {
+            node_type,
+            result: Some(NodeResult::ERROR(err.to_string())),
+            children: vec![]
+          })
         }
       }
-      Err(err) => Err(node.clone_with_result(NodeResult::ERROR(err.to_string())))
+      Err(err) => Err(ExecutionPlanNode {
+        node_type,
+        result: Some(NodeResult::ERROR(err.to_string())),
+        children: vec![]
+      })
     }
   }
 
   fn execute_match_values(
     &mut self,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     action_path: &Vec<String>
   ) -> ExecutionPlanNode {
-    match self.validate_args(4, 0, node, "match:values", value_resolver, action_path) {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    match self.validate_args(4, 0, children, "match:values", value_resolver, action_path) {
       Ok((args, _)) => {
         let expected = args[0].value().unwrap_or_default().as_value();
         let actual = args[1].value().unwrap_or_default().as_value();
@@ -1460,7 +1505,7 @@ impl ExecutionPlanInterpreter {
           _ => false
         };
         ExecutionPlanNode {
-          node_type: node.node_type.clone(),
+          node_type,
           result: Some(if ok {
             NodeResult::VALUE(NodeValue::BOOL(true))
           } else {
@@ -1469,17 +1514,22 @@ impl ExecutionPlanInterpreter {
           children: args
         }
       }
-      Err(err) => node.clone_with_result(NodeResult::ERROR(err.to_string()))
+      Err(err) => ExecutionPlanNode {
+        node_type,
+        result: Some(NodeResult::ERROR(err.to_string())),
+        children: vec![]
+      }
     }
   }
 
   fn execute_match_each_key(
     &mut self,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     action_path: &Vec<String>
   ) -> ExecutionPlanNode {
-    match self.validate_args(4, 0, node, "match:each-key", value_resolver, action_path) {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    match self.validate_args(4, 0, children, "match:each-key", value_resolver, action_path) {
       Ok((args, _)) => {
         let actual_result = args[1].value().unwrap_or_default();
         let matcher_params = args[2].value().unwrap_or_default()
@@ -1513,29 +1563,41 @@ impl ExecutionPlanInterpreter {
                   }
                 }
                 ExecutionPlanNode {
-                  node_type: node.node_type.clone(),
+                  node_type,
                   result: Some(NodeResult::VALUE(NodeValue::BOOL(!has_error))),
                   children: child_results
                 }
               }
-              _ => node.clone_with_result(NodeResult::VALUE(NodeValue::BOOL(true)))
+              _ => ExecutionPlanNode {
+                node_type,
+                result: Some(NodeResult::VALUE(NodeValue::BOOL(true))),
+                children: args
+              }
             }
           }
-          Ok(_) | Err(_) => node.clone_with_result(NodeResult::ERROR(
-            "match:each-key requires an each-key matching rule".to_string()))
+          Ok(_) | Err(_) => ExecutionPlanNode {
+            node_type,
+            result: Some(NodeResult::ERROR("match:each-key requires an each-key matching rule".to_string())),
+            children: args
+          }
         }
       }
-      Err(err) => node.clone_with_result(NodeResult::ERROR(err.to_string()))
+      Err(err) => ExecutionPlanNode {
+        node_type,
+        result: Some(NodeResult::ERROR(err.to_string())),
+        children: vec![]
+      }
     }
   }
 
   fn execute_match_each_value(
     &mut self,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     action_path: &Vec<String>
   ) -> ExecutionPlanNode {
-    match self.validate_args(4, 0, node, "match:each-value", value_resolver, action_path) {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    match self.validate_args(4, 0, children, "match:each-value", value_resolver, action_path) {
       Ok((args, _)) => {
         let actual_result = args[1].value().unwrap_or_default();
         let matcher_params = args[2].value().unwrap_or_default()
@@ -1569,7 +1631,7 @@ impl ExecutionPlanInterpreter {
                   }
                 }
                 ExecutionPlanNode {
-                  node_type: node.node_type.clone(),
+                  node_type,
                   result: Some(NodeResult::VALUE(NodeValue::BOOL(!has_error))),
                   children: child_results
                 }
@@ -1597,7 +1659,7 @@ impl ExecutionPlanInterpreter {
                   }
                 }
                 ExecutionPlanNode {
-                  node_type: node.node_type.clone(),
+                  node_type,
                   result: Some(NodeResult::VALUE(NodeValue::BOOL(!has_error))),
                   children: child_results
                 }
@@ -1625,19 +1687,30 @@ impl ExecutionPlanInterpreter {
                   }
                 }
                 ExecutionPlanNode {
-                  node_type: node.node_type.clone(),
+                  node_type,
                   result: Some(NodeResult::VALUE(NodeValue::BOOL(!has_error))),
                   children: child_results
                 }
               }
-              _ => node.clone_with_result(NodeResult::VALUE(NodeValue::BOOL(true)))
+              _ => ExecutionPlanNode {
+                node_type,
+                result: Some(NodeResult::VALUE(NodeValue::BOOL(true))),
+                children: args
+              }
             }
           }
-          Ok(_) | Err(_) => node.clone_with_result(NodeResult::ERROR(
-            "match:each-value requires an each-value matching rule".to_string()))
+          Ok(_) | Err(_) => ExecutionPlanNode {
+            node_type,
+            result: Some(NodeResult::ERROR("match:each-value requires an each-value matching rule".to_string())),
+            children: args
+          }
         }
       }
-      Err(err) => node.clone_with_result(NodeResult::ERROR(err.to_string()))
+      Err(err) => ExecutionPlanNode {
+        node_type,
+        result: Some(NodeResult::ERROR(err.to_string())),
+        children: vec![]
+      }
     }
   }
 
@@ -1645,11 +1718,12 @@ impl ExecutionPlanInterpreter {
     &mut self,
     _action: &str,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     action_path: &Vec<String>,
     upper_case: bool
   ) -> ExecutionPlanNode {
-    let (children, values) = match self.evaluate_children(value_resolver, node, action_path, true) {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    let (result_children, values) = match self.evaluate_children(value_resolver, &node_type, children, action_path, true) {
       Ok(value) => value,
       Err(value) => return value
     };
@@ -1686,9 +1760,9 @@ impl ExecutionPlanInterpreter {
       NodeValue::LIST(results)
     };
     ExecutionPlanNode {
-      node_type: node.node_type.clone(),
+      node_type,
       result: Some(NodeResult::VALUE(result)),
-      children
+      children: result_children
     }
   }
 
@@ -1696,10 +1770,11 @@ impl ExecutionPlanInterpreter {
     &mut self,
     _action: &str,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     action_path: &Vec<String>
   ) -> ExecutionPlanNode {
-    let (children, values) = match self.evaluate_children(value_resolver, node, action_path, true) {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    let (result_children, values) = match self.evaluate_children(value_resolver, &node_type, children, action_path, true) {
       Ok(value) => value,
       Err(value) => return value
     };
@@ -1731,9 +1806,9 @@ impl ExecutionPlanInterpreter {
       NodeValue::LIST(results)
     };
     ExecutionPlanNode {
-      node_type: node.node_type.clone(),
+      node_type,
       result: Some(NodeResult::VALUE(result)),
-      children
+      children: result_children
     }
   }
 
@@ -1741,10 +1816,11 @@ impl ExecutionPlanInterpreter {
     &mut self,
     action: &str,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     action_path: &Vec<String>
   ) -> ExecutionPlanNode {
-    match self.validate_one_arg(node, action, value_resolver, &action_path) {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    match self.validate_one_arg(children, action, value_resolver, &action_path) {
       Ok(value) => {
         let result = value.value()
           .unwrap_or_default()
@@ -1772,16 +1848,16 @@ impl ExecutionPlanInterpreter {
           _ => NodeResult::ERROR(format!("'length' can't be used with a {:?} node", value))
         };
         ExecutionPlanNode {
-          node_type: node.node_type.clone(),
+          node_type,
           result: Some(result),
           children: vec![ value.clone() ]
         }
       }
       Err(err) => {
         ExecutionPlanNode {
-          node_type: node.node_type.clone(),
+          node_type,
           result: Some(NodeResult::ERROR(err.to_string())),
-          children: node.children.clone()
+          children: vec![]
         }
       }
     }
@@ -1791,10 +1867,11 @@ impl ExecutionPlanInterpreter {
     &mut self,
     action: &str,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     action_path: &Vec<String>
   ) -> ExecutionPlanNode {
-    match self.validate_one_arg(node, action, value_resolver, &action_path) {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    match self.validate_one_arg(children, action, value_resolver, &action_path) {
       Ok(value) => {
         let result = if let NodeResult::VALUE(value) = value.value().unwrap_or_default() {
           match value {
@@ -1805,16 +1882,16 @@ impl ExecutionPlanInterpreter {
           NodeResult::VALUE(NodeValue::BOOL(false))
         };
         ExecutionPlanNode {
-          node_type: node.node_type.clone(),
+          node_type,
           result: Some(result),
           children: vec![value]
         }
       }
       Err(err) => {
         ExecutionPlanNode {
-          node_type: node.node_type.clone(),
+          node_type,
           result: Some(NodeResult::ERROR(err.to_string())),
-          children: node.children.clone()
+          children: vec![]
         }
       }
     }
@@ -1846,50 +1923,55 @@ impl ExecutionPlanInterpreter {
 
   fn validate_one_arg(
     &mut self,
-    node: &ExecutionPlanNode,
+    children: Vec<ExecutionPlanNode>,
     action: &str,
     value_resolver: &dyn ValueResolver,
     path: &Vec<String>
   ) -> anyhow::Result<ExecutionPlanNode> {
-    if node.children.len() > 1 {
-      Err(anyhow!("{} takes only one argument, got {}", action, node.children.len()))
-    } else if let Some(argument) = node.children.first() {
-      self.walk_tree(path.as_slice(), argument, value_resolver)
+    if children.len() > 1 {
+      Err(anyhow!("{} takes only one argument, got {}", action, children.len()))
     } else {
-      Err(anyhow!("{} requires one argument, got none", action))
+      let mut iter = children.into_iter();
+      if let Some(argument) = iter.next() {
+        self.walk_tree(path.as_slice(), argument, value_resolver)
+      } else {
+        Err(anyhow!("{} requires one argument, got none", action))
+      }
     }
   }
 
   fn validate_two_args(
     &mut self,
-    node: &ExecutionPlanNode,
+    children: Vec<ExecutionPlanNode>,
     action: &str,
     value_resolver: &dyn ValueResolver,
     path: &Vec<String>
   ) -> anyhow::Result<(ExecutionPlanNode, ExecutionPlanNode)> {
-    if node.children.len() == 2 {
-      let first = self.walk_tree(path.as_slice(), &node.children[0], value_resolver)?;
-      let second = self.walk_tree(path.as_slice(), &node.children[1], value_resolver)?;
+    if children.len() == 2 {
+      let mut iter = children.into_iter();
+      let first = self.walk_tree(path.as_slice(), iter.next().unwrap(), value_resolver)?;
+      let second = self.walk_tree(path.as_slice(), iter.next().unwrap(), value_resolver)?;
       Ok((first, second))
     } else {
-      Err(anyhow!("Action '{}' requires two arguments, got {}", action, node.children.len()))
+      Err(anyhow!("Action '{}' requires two arguments, got {}", action, children.len()))
     }
   }
 
   fn validate_three_args(
     &mut self,
-    node: &ExecutionPlanNode,
+    children: Vec<ExecutionPlanNode>,
     action: &str,
     value_resolver: &dyn ValueResolver,
     path: &Vec<String>
   ) -> anyhow::Result<(ExecutionPlanNode, ExecutionPlanNode, ExecutionPlanNode)> {
-    if node.children.len() == 3 {
-      let first = self.walk_tree(path.as_slice(), &node.children[0], value_resolver)?;
-      let second = self.walk_tree(path.as_slice(), &node.children[1], value_resolver)?;
-      let third = self.walk_tree(path.as_slice(), &node.children[2], value_resolver)?;
+    if children.len() == 3 {
+      let mut iter = children.into_iter();
+      let first = self.walk_tree(path.as_slice(), iter.next().unwrap(), value_resolver)?;
+      let second = self.walk_tree(path.as_slice(), iter.next().unwrap(), value_resolver)?;
+      let third = self.walk_tree(path.as_slice(), iter.next().unwrap(), value_resolver)?;
       Ok((first, second, third))
     } else {
-      Err(anyhow!("Action '{}' requires three arguments, got {}", action, node.children.len()))
+      Err(anyhow!("Action '{}' requires three arguments, got {}", action, children.len()))
     }
   }
 
@@ -1897,22 +1979,24 @@ impl ExecutionPlanInterpreter {
     &mut self,
     required: usize,
     optional: usize,
-    node: &ExecutionPlanNode,
+    children: Vec<ExecutionPlanNode>,
     action: &str,
     value_resolver: &dyn ValueResolver,
     path: &Vec<String>
   ) -> anyhow::Result<(Vec<ExecutionPlanNode>, Vec<ExecutionPlanNode>)> {
-    if node.children.len() < required {
-      Err(anyhow!("{} requires {} arguments, got {}", action, required, node.children.len()))
-    } else if node.children.len() > required + optional {
-      Err(anyhow!("{} supports at most {} arguments, got {}", action, required + optional, node.children.len()))
+    let count = children.len();
+    if count < required {
+      Err(anyhow!("{} requires {} arguments, got {}", action, required, count))
+    } else if count > required + optional {
+      Err(anyhow!("{} supports at most {} arguments, got {}", action, required + optional, count))
     } else {
+      let mut iter = children.into_iter();
       let mut required_args = vec![];
-      for child in node.children.iter().take(required) {
+      for child in iter.by_ref().take(required) {
         let value = self.walk_tree(path.as_slice(), child, value_resolver)?;
         required_args.push(value);
       }
-      Ok((required_args, node.children.iter().dropping(required).cloned().collect()))
+      Ok((required_args, iter.collect()))
     }
   }
 
@@ -1920,10 +2004,11 @@ impl ExecutionPlanInterpreter {
     &mut self,
     action: &str,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     path: &Vec<String>
   ) -> ExecutionPlanNode {
-    let (children, str_values) = match self.evaluate_children(value_resolver, node, path, true) {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    let (result_children, str_values) = match self.evaluate_children(value_resolver, &node_type, children, path, true) {
       Ok((children, values)) => {
         (children, values.iter().flat_map(|v| {
           let v = v.as_value().unwrap_or_default();
@@ -1951,9 +2036,9 @@ impl ExecutionPlanInterpreter {
     };
 
     ExecutionPlanNode {
-      node_type: node.node_type.clone(),
+      node_type,
       result: Some(NodeResult::VALUE(NodeValue::STRING(result))),
-      children
+      children: result_children
     }
   }
 
@@ -1961,10 +2046,11 @@ impl ExecutionPlanInterpreter {
     &mut self,
     _action: &str,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     path: &Vec<String>
   ) -> ExecutionPlanNode {
-    let (children, str_values) = match self.evaluate_children(value_resolver, node, path, true) {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    let (result_children, str_values) = match self.evaluate_children(value_resolver, &node_type, children, path, true) {
       Ok((children, values)) => {
         (children, values.iter().flat_map(|v| {
           let v = v.as_value().unwrap_or_default();
@@ -1986,54 +2072,59 @@ impl ExecutionPlanInterpreter {
 
     let result = str_values.iter().join("");
     ExecutionPlanNode {
-      node_type: node.node_type.clone(),
+      node_type,
       result: Some(NodeResult::ERROR(result)),
-      children
+      children: result_children
     }
   }
 
   fn evaluate_children(
     &mut self,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node_type: &PlanNodeType,
+    children: Vec<ExecutionPlanNode>,
     path: &Vec<String>,
     short_circuit: bool
   ) -> Result<(Vec<ExecutionPlanNode>, Vec<NodeResult>), ExecutionPlanNode> {
-    let mut children = vec![];
+    let mut result_children = vec![];
     let mut values = vec![];
-    let mut loop_items = VecDeque::from(node.children.clone());
+    let mut loop_items: VecDeque<ExecutionPlanNode> = children.into_iter().collect();
 
-    while !loop_items.is_empty() {
-      let child = loop_items.pop_front().unwrap();
+    while let Some(child) = loop_items.pop_front() {
       let value = if let Some(child_value) = child.value() {
         child_value
       } else {
-        match &self.walk_tree(path.as_slice(), &child, value_resolver) {
+        match self.walk_tree(path.as_slice(), child, value_resolver) {
           Ok(value) => {
-            if let Some(NodeResult::ERROR(_)) = &value.result && short_circuit {
-              children.push(value.clone());
-              children.extend(loop_items);
-              return Err(ExecutionPlanNode {
-                node_type: node.node_type.clone(),
-                result: value.result.clone(),
-                children: children.clone()
-              })
-            } else if value.is_splat() {
-              children.push(value.clone());
+            if let Some(NodeResult::ERROR(_)) = &value.result {
+              if short_circuit {
+                result_children.push(value.clone());
+                result_children.extend(loop_items);
+                return Err(ExecutionPlanNode {
+                  node_type: node_type.clone(),
+                  result: value.result.clone(),
+                  children: result_children.clone()
+                });
+              }
+            }
+            if value.is_splat() {
               for splat_child in value.children.iter().rev() {
                 loop_items.push_front(splat_child.clone());
               }
-              NodeResult::OK
+              let v = value.value().unwrap_or_default();
+              result_children.push(value);
+              v
             } else {
-              children.push(value.clone());
-              value.value().unwrap_or_default()
+              let v = value.value().unwrap_or_default();
+              result_children.push(value);
+              v
             }
           },
           Err(err) => {
             return Err(ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type: node_type.clone(),
               result: Some(NodeResult::ERROR(err.to_string())),
-              children: children.clone()
+              children: result_children.clone()
             })
           }
         }
@@ -2041,17 +2132,18 @@ impl ExecutionPlanInterpreter {
 
       values.push(value);
     }
-    Ok((children, values))
+    Ok((result_children, values))
   }
 
   fn execute_check_entries(
     &mut self,
     action: &str,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     action_path: &Vec<String>
   ) -> ExecutionPlanNode {
-    match self.validate_args(2, 1, node, action, value_resolver, &action_path) {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    match self.validate_args(2, 1, children, action, value_resolver, &action_path) {
       Ok((values, optional)) => {
         let first = values[0].value()
           .unwrap_or_default()
@@ -2120,7 +2212,7 @@ impl ExecutionPlanInterpreter {
         match result {
           Ok(_) => {
             ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(NodeResult::OK),
               children: values.iter().chain(optional.iter()).cloned().collect()
             }
@@ -2130,10 +2222,10 @@ impl ExecutionPlanInterpreter {
             if optional.len() > 0 {
               if let Some(diff) = diff {
                 self.push_result(Some(NodeResult::VALUE(NodeValue::SLIST(diff.iter().cloned().collect()))));
-                let result = if let Ok(value) = self.walk_tree(action_path.as_slice(), &optional[0], value_resolver) {
+                let result = if let Ok(value) = self.walk_tree(action_path.as_slice(), optional[0].clone(), value_resolver) {
                   let message = value.value().unwrap_or_default().as_string().unwrap_or_default();
                   ExecutionPlanNode {
-                    node_type: node.node_type.clone(),
+                    node_type,
                     result: Some(NodeResult::ERROR(message)),
                     children: values.iter().chain(once(&value)).cloned().collect()
                   }
@@ -2141,7 +2233,7 @@ impl ExecutionPlanInterpreter {
                   // There was an error generating the optional message, so just return the
                   // original error
                   ExecutionPlanNode {
-                    node_type: node.node_type.clone(),
+                    node_type,
                     result: Some(NodeResult::ERROR(err.to_string())),
                     children: values.iter().chain(optional.iter()).cloned().collect()
                   }
@@ -2150,14 +2242,14 @@ impl ExecutionPlanInterpreter {
                 result
               } else {
                 ExecutionPlanNode {
-                  node_type: node.node_type.clone(),
+                  node_type,
                   result: Some(NodeResult::ERROR(err.to_string())),
                   children: values.iter().chain(optional.iter()).cloned().collect()
                 }
               }
             } else {
               ExecutionPlanNode {
-                node_type: node.node_type.clone(),
+                node_type,
                 result: Some(NodeResult::ERROR(err.to_string())),
                 children: values.iter().chain(optional.iter()).cloned().collect()
               }
@@ -2167,9 +2259,9 @@ impl ExecutionPlanInterpreter {
       }
       Err(err) => {
         ExecutionPlanNode {
-          node_type: node.node_type.clone(),
+          node_type,
           result: Some(NodeResult::ERROR(err.to_string())),
-          children: node.children.clone()
+          children: vec![]
         }
       }
     }
@@ -2179,10 +2271,11 @@ impl ExecutionPlanInterpreter {
     &mut self,
     action: &str,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     action_path: &Vec<String>
   ) -> ExecutionPlanNode {
-    match self.validate_args(2, 1, node, action, value_resolver, &action_path) {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    match self.validate_args(2, 1, children, action, value_resolver, &action_path) {
       Ok((values, optional)) => {
         let expected_length = values[0].value()
           .unwrap_or_default()
@@ -2257,7 +2350,7 @@ impl ExecutionPlanInterpreter {
         match result {
           Ok(_) => {
             ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(NodeResult::OK),
               children: values.iter().chain(optional.iter()).cloned().collect()
             }
@@ -2265,10 +2358,10 @@ impl ExecutionPlanInterpreter {
           Err(err) => {
             debug!("expect:count failed with an error: {}", err);
             if optional.len() > 0 {
-              if let Ok(value) = self.walk_tree(action_path.as_slice(), &optional[0], value_resolver) {
+              if let Ok(value) = self.walk_tree(action_path.as_slice(), optional[0].clone(), value_resolver) {
                 let message = value.value().unwrap_or_default().as_string().unwrap_or_default();
                 ExecutionPlanNode {
-                  node_type: node.node_type.clone(),
+                  node_type,
                   result: Some(NodeResult::ERROR(message)),
                   children: values.iter().chain(once(&value)).cloned().collect()
                 }
@@ -2276,14 +2369,14 @@ impl ExecutionPlanInterpreter {
                 // There was an error generating the optional message, so just return the
                 // original error
                 ExecutionPlanNode {
-                  node_type: node.node_type.clone(),
+                  node_type,
                   result: Some(NodeResult::ERROR(err.to_string())),
                   children: values.iter().chain(optional.iter()).cloned().collect()
                 }
               }
             } else {
               ExecutionPlanNode {
-                node_type: node.node_type.clone(),
+                node_type,
                 result: Some(NodeResult::ERROR(err.to_string())),
                 children: values.iter().chain(optional.iter()).cloned().collect()
               }
@@ -2293,9 +2386,9 @@ impl ExecutionPlanInterpreter {
       }
       Err(err) => {
         ExecutionPlanNode {
-          node_type: node.node_type.clone(),
+          node_type,
           result: Some(NodeResult::ERROR(err.to_string())),
-          children: node.children.clone()
+          children: vec![]
         }
       }
     }
@@ -2304,17 +2397,18 @@ impl ExecutionPlanInterpreter {
   fn execute_and(
     &mut self,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     path: &Vec<String>
   ) -> ExecutionPlanNode {
-    match self.evaluate_children(value_resolver, node, path, true) {
-      Ok((children, values)) => {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    match self.evaluate_children(value_resolver, &node_type, children, path, true) {
+      Ok((result_children, values)) => {
         ExecutionPlanNode {
-          node_type: node.node_type.clone(),
+          node_type,
           result: Some(values.iter().fold(NodeResult::OK, |result, value| {
             result.and(value)
           })),
-          children
+          children: result_children
         }
       }
       Err(err) => err
@@ -2324,17 +2418,18 @@ impl ExecutionPlanInterpreter {
   fn execute_or(
     &mut self,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     path: &Vec<String>
   ) -> ExecutionPlanNode {
-    match self.evaluate_children(value_resolver, node, path, false) {
-      Ok((children, values)) => {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    match self.evaluate_children(value_resolver, &node_type, children, path, false) {
+      Ok((result_children, values)) => {
         ExecutionPlanNode {
-          node_type: node.node_type.clone(),
+          node_type,
           result: Some(values.iter().fold(NodeResult::OK, |result, value| {
             result.or(value)
           })),
-          children
+          children: result_children
         }
       }
       Err(err) => err
@@ -2373,10 +2468,11 @@ impl ExecutionPlanInterpreter {
     &mut self,
     action: &str,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     action_path: &Vec<String>
   ) -> ExecutionPlanNode {
-    match self.validate_one_arg(node, action, value_resolver, &action_path) {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    match self.validate_one_arg(children, action, value_resolver, &action_path) {
       Ok(value) => {
         let arg_value = value.value()
           .unwrap_or_default()
@@ -2389,7 +2485,7 @@ impl ExecutionPlanInterpreter {
         let parameter_map = parse_charset_parameters(header_params);
 
         ExecutionPlanNode {
-          node_type: node.node_type.clone(),
+          node_type,
           result: Some(NodeResult::VALUE(NodeValue::JSON(json!({
             "value": header_value,
             "parameters": parameter_map
@@ -2399,9 +2495,9 @@ impl ExecutionPlanInterpreter {
       }
       Err(err) => {
         ExecutionPlanNode {
-          node_type: node.node_type.clone(),
+          node_type,
           result: Some(NodeResult::ERROR(err.to_string())),
-          children: node.children.clone()
+          children: vec![]
         }
       }
     }
@@ -2411,10 +2507,11 @@ impl ExecutionPlanInterpreter {
     &mut self,
     _action: &str,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     action_path: &Vec<String>
   ) -> ExecutionPlanNode {
-    let (children, values) = match self.evaluate_children(value_resolver, node, action_path, true) {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    let (result_children, values) = match self.evaluate_children(value_resolver, &node_type, children, action_path, true) {
       Ok(value) => value,
       Err(value) => return value
     };
@@ -2441,19 +2538,20 @@ impl ExecutionPlanInterpreter {
     };
 
     ExecutionPlanNode {
-      node_type: node.node_type.clone(),
+      node_type,
       result: Some(NodeResult::VALUE(result)),
-      children
+      children: result_children
     }
   }
 
   fn execute_for_each(
     &mut self,
     value_resolver: &dyn ValueResolver,
-    node: &ExecutionPlanNode,
+    node: ExecutionPlanNode,
     action_path: &Vec<String>
   ) -> ExecutionPlanNode {
-    match self.validate_args(2, 1, node, "for-each", value_resolver, &action_path) {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    match self.validate_args(2, 1, children, "for-each", value_resolver, &action_path) {
       Ok((values, optional)) => {
         let marker_result = &values[0];
         let loop_items = &values[1];
@@ -2464,11 +2562,11 @@ impl ExecutionPlanInterpreter {
         match loop_items.value().unwrap_or_default() {
           NodeResult::ERROR(err) => {
             ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(NodeResult::ERROR(err)),
               children: [marker_result.clone(), loop_items.clone()]
                 .iter()
-                .chain(node.children.iter().dropping(2))
+                .chain(optional.iter())
                 .cloned()
                 .collect()
             }
@@ -2478,15 +2576,15 @@ impl ExecutionPlanInterpreter {
             let mut child_results = vec![marker_result.clone(), loop_items.clone()];
 
             if let Some(template) = optional.first() {
-              let loop_items = loop_items
+              let loop_items_list = loop_items
                 .value()
                 .unwrap_or_default()
                 .as_value()
                 .unwrap_or_default()
                 .to_list();
-              for (index, _) in loop_items.iter().enumerate() {
+              for (index, _) in loop_items_list.iter().enumerate() {
                 let updated_child = inject_index(template, marker.as_str(), index);
-                match self.walk_tree(&action_path, &updated_child, value_resolver) {
+                match self.walk_tree(&action_path, updated_child.clone(), value_resolver) {
                   Ok(value) => {
                     result = result.and(&value.result.clone().unwrap_or_default());
                     child_results.push(value.clone());
@@ -2501,7 +2599,7 @@ impl ExecutionPlanInterpreter {
             }
 
             ExecutionPlanNode {
-              node_type: node.node_type.clone(),
+              node_type,
               result: Some(result.truthy()),
               children: child_results
             }
@@ -2509,7 +2607,11 @@ impl ExecutionPlanInterpreter {
         }
       }
       Err(err) => {
-        node.clone_with_result(NodeResult::ERROR(err.to_string()))
+        ExecutionPlanNode {
+          node_type,
+          result: Some(NodeResult::ERROR(err.to_string())),
+          children: vec![]
+        }
       }
     }
   }
