@@ -203,7 +203,7 @@ impl HALClientBuilder {
     HALClientBuilder {
       url: "".to_string(),
       auth: None,
-      retries: 3,
+      retries: 8,
       client: None
     }
   }
@@ -215,7 +215,7 @@ impl HALClientBuilder {
     self
   }
 
-  /// Sets the number of retries on certain HTTP errors (5xx, 408, 429). Default is 3.
+  /// Sets the number of retries on certain HTTP errors (5xx, 408, 429). Default is 8.
   pub fn with_retries(&mut self, retries: u8) -> &mut Self {
     self.retries = retries;
     self
@@ -634,12 +634,13 @@ fn links_from_json(json: &Value) -> Vec<Link> {
 pub async fn fetch_pacts_from_broker(
   broker_url: &str,
   provider_name: &str,
-  auth: Option<HttpAuth>
+  auth: Option<HttpAuth>,
+  retries: u8,
 ) -> anyhow::Result<Vec<anyhow::Result<(Box<dyn Pact + Send + Sync + RefUnwindSafe>, Option<PactVerificationContext>, Vec<Link>)>>> {
   trace!("fetch_pacts_from_broker(broker_url='{}', provider_name='{}', auth={})", broker_url,
     provider_name, auth.clone().unwrap_or_default());
 
-    let mut hal_client = HALClientBuilder::builder().with_url(broker_url, auth).build();
+    let mut hal_client = HALClientBuilder::builder().with_url(broker_url, auth).with_retries(retries).build();
     let template_values = hashmap!{ "provider".to_string() => provider_name.to_string() };
 
     hal_client = hal_client.navigate("pb:latest-provider-pacts", &template_values)
@@ -705,14 +706,15 @@ pub async fn fetch_pacts_dynamically_from_broker(
   provider_tags: Vec<String>,
   provider_branch: Option<String>,
   consumer_version_selectors: Vec<ConsumerVersionSelector>,
-  auth: Option<HttpAuth>
+  auth: Option<HttpAuth>,
+  retries: u8,
 ) -> anyhow::Result<Vec<Result<(Box<dyn Pact + Send + Sync + RefUnwindSafe>, Option<PactVerificationContext>, Vec<Link>), PactBrokerError>>> {
   trace!("fetch_pacts_dynamically_from_broker(broker_url='{}', provider_name='{}', pending={}, \
     include_wip_pacts_since={:?}, provider_tags: {:?}, consumer_version_selectors: {:?}, auth={})",
     broker_url, provider_name, pending, include_wip_pacts_since, provider_tags,
     consumer_version_selectors, auth.clone().unwrap_or_default());
 
-    let mut hal_client = HALClientBuilder::builder().with_url(broker_url, auth).build();
+    let mut hal_client = HALClientBuilder::builder().with_url(broker_url, auth).with_retries(retries).build();
     let template_values = hashmap!{ "provider".to_string() => provider_name.clone() };
 
     hal_client = hal_client.navigate("pb:provider-pacts-for-verification", &template_values)
@@ -874,9 +876,10 @@ pub async fn publish_verification_results(
   build_url: Option<String>,
   provider_tags: Vec<String>,
   branch: Option<String>,
-  metrics_data: Option<&VerificationMetrics>
+  metrics_data: Option<&VerificationMetrics>,
+  retries: u8,
 ) -> Result<serde_json::Value, PactBrokerError> {
-  let hal_client = HALClientBuilder::builder().with_url(broker_url, auth.clone()).build();
+  let hal_client = HALClientBuilder::builder().with_url(broker_url, auth.clone()).with_retries(retries).build();
 
   if branch.is_some() {
     publish_provider_branch(&hal_client, &links, &branch.unwrap(), &version).await?;
@@ -1380,7 +1383,7 @@ mod tests {
       })
       .start_mock_server(None, None);
 
-    let client = HALClientBuilder::builder().with_url(pact_broker.url(), None).build();
+    let client = HALClientBuilder::builder().with_url(pact_broker.url(), None).with_retries(3).build();
     let expected_requests = client.retries as usize;
     let result = client.fetch("/").await;
     expect!(result).to(be_err());
@@ -1431,7 +1434,7 @@ mod tests {
       })
       .start_mock_server(None, None);
 
-    let client = HALClientBuilder::builder().with_url(pact_broker.url(), None).build();
+    let client = HALClientBuilder::builder().with_url(pact_broker.url(), None).with_retries(3).build();
     let expected_requests = client.retries as usize;
     let result = client.post_json(pact_broker.url().as_str(), "{}").await;
 
@@ -1452,7 +1455,7 @@ mod tests {
       })
       .start_mock_server(None, None);
 
-    let client = HALClientBuilder::builder().with_url(pact_broker.url(), None).build();
+    let client = HALClientBuilder::builder().with_url(pact_broker.url(), None).with_retries(3).build();
     let expected_requests = client.retries as usize;
     let result = client.put_json(pact_broker.url().as_str(), "{}").await;
 
@@ -1741,7 +1744,7 @@ mod tests {
             .start_mock_server(None, Some(MockServerConfig::with_keep_alive(true)));
 
         let result = fetch_pacts_from_broker(pact_broker.url().as_str(),
-                                             "sad_provider", None).await;
+                                             "sad_provider", None, 3).await;
         match result {
           Ok(_) => {
             panic!("Expected an error result, but got OK");
@@ -1829,7 +1832,7 @@ mod tests {
             .start_mock_server(None, Some(MockServerConfig::with_keep_alive(true)));
 
         let result = fetch_pacts_from_broker(pact_broker.url().as_str(),
-          "happy_provider", None).await;
+          "happy_provider", None, 3).await;
         match &result {
           Ok(_) => (),
           Err(err) => panic!("Expected an Ok result, got a error {}", err)
@@ -1971,7 +1974,7 @@ mod tests {
         matching_branch: None,
         environment: None,
         fallback_branch: None,
-      }), None).await;
+      }), None, 3).await;
 
       match &result {
         Ok(_) => (),
@@ -2071,7 +2074,7 @@ mod tests {
       matching_branch: None,
       environment: None,
       fallback_branch: None,
-    }), None).await;
+    }), None, 3).await;
 
     match result {
       Ok(_) => {
@@ -2174,7 +2177,8 @@ mod tests {
         environment: None,
         fallback_branch: None,
       }),
-      None
+      None,
+      3,
     ).await;
 
     match result {

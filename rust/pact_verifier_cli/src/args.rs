@@ -358,6 +358,14 @@ pub fn setup_app() -> Command {
       .value_parser(NonEmptyStringValueParser::new())
       .requires("broker-url")
       .help("Allow pacts that don't match given consumer selectors (or tags) to  be verified, without causing the overall task to fail. For more information, see https://pact.io/wip"))
+    .arg(Arg::new("retries")
+      .long("retries")
+      .env("PACT_BROKER_HTTP_RETRIES")
+      .action(ArgAction::Set)
+      .default_value("8")
+      .value_parser(clap::value_parser!(u8))
+      .help("The number of times to retry failed HTTP requests to the Pact Broker (retries on 5xx, 408, and 429). Delays use exponential back-off starting at 500 ms and doubling each attempt (0.5 s, 1 s, 2 s, 4 s, 8 s, …). 429 responses honour the Retry-After header when present.")
+      .value_name("N"))
 
     .group(ArgGroup::new("development").multiple(true))
     .next_help_heading("Development options")
@@ -433,4 +441,19 @@ mod test {
   fn verify_cli() {
     setup_app().debug_assert();
   }
+
+  #[test]
+  fn retries_defaults_to_8() {
+    let app = setup_app();
+    let m = app.try_get_matches_from(["pact-verifier", "--file", "f.json"]).unwrap();
+    assert_eq!(m.get_one::<u8>("retries").copied(), Some(8));
+  }
+
+  #[test]
+  fn retries_can_be_set_via_flag() {
+    let app = setup_app();
+    let m = app.try_get_matches_from(["pact-verifier", "--file", "f.json", "--retries", "3"]).unwrap();
+    assert_eq!(m.get_one::<u8>("retries").copied(), Some(3));
+  }
+
 }

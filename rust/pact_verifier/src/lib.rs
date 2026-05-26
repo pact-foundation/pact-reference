@@ -994,7 +994,10 @@ pub struct VerificationOptions<F> where F: RequestFilterExecutor {
   /// Only execute the interactions that failed on the previous verifier run
   pub run_last_failed_only: bool,
   /// If redirects should be automatically followed
-  pub follow_redirects: bool
+  pub follow_redirects: bool,
+  /// Number of times to retry failed HTTP requests to the Pact Broker
+  /// (retries on 5xx, 408, and 429). Default is 8.
+  pub broker_request_retries: u8,
 }
 
 impl <F: RequestFilterExecutor> Default for VerificationOptions<F> {
@@ -1008,7 +1011,8 @@ impl <F: RequestFilterExecutor> Default for VerificationOptions<F> {
       no_pacts_is_error: true,
       exit_on_first_failure: false,
       run_last_failed_only: false,
-      follow_redirects: true
+      follow_redirects: true,
+      broker_request_retries: 8,
     }
   }
 }
@@ -1067,7 +1071,7 @@ pub async fn verify_provider_async<F: RequestFilterExecutor, S: ProviderStateExe
 ) -> anyhow::Result<VerificationExecutionResult> {
   pact_matching::matchingrules::configure_core_catalogue();
   async {
-    let pact_results = fetch_pacts(source, consumers, &provider_info).await;
+    let pact_results = fetch_pacts(source, consumers, &provider_info, verification_options.broker_request_retries).await;
 
     let mut total_results = 0;
     let mut pending_errors: Vec<(String, MismatchResult)> = vec![];
@@ -1167,7 +1171,7 @@ pub async fn verify_provider_async<F: RequestFilterExecutor, S: ProviderStateExe
             }
 
             if let Some(publish) = publish_options {
-              publish_result(results.as_slice(), &pact_source, &publish, metrics_data.as_ref()).await;
+              publish_result(results.as_slice(), &pact_source, &publish, metrics_data.as_ref(), verification_options.broker_request_retries).await;
 
               if !errors.is_empty() || !pending_errors.is_empty() {
                 process_notices(&context, VERIFICATION_NOTICE_AFTER_ERROR_RESULT_AND_PUBLISH, &mut verification_result);
@@ -1296,7 +1300,8 @@ pub fn interaction_mismatch_output(
 #[tracing::instrument(level = "trace")]
 async fn fetch_pact(
   source: PactSource,
-  provider: &ProviderInfo
+  provider: &ProviderInfo,
+  retries: u8,
 ) -> Vec<anyhow::Result<(Box<dyn Pact + Send + Sync + RefUnwindSafe>, Option<PactVerificationContext>, PactSource, Duration)>> {
   trace!("fetch_pact(source={})", source);
 
@@ -1344,7 +1349,8 @@ async fn fetch_pact(
       let result = timeit_async(pact_broker::fetch_pacts_from_broker(
         broker_url.as_str(),
         provider_name.as_str(),
-        auth.clone()
+        auth.clone(),
+        retries,
       )).await;
 
       match result {
@@ -1387,7 +1393,8 @@ async fn fetch_pact(
         provider_tags.clone(),
         provider_branch.clone(),
         selectors.clone(),
-        auth.clone()
+        auth.clone(),
+        retries,
       )).await;
 
       match result {
@@ -1464,13 +1471,14 @@ fn is_pact_broker_source(links: &Vec<Link>) -> bool {
 async fn fetch_pacts(
   source: Vec<PactSource>,
   consumers: Vec<String>,
-  provider: &ProviderInfo
+  provider: &ProviderInfo,
+  retries: u8,
 ) -> Vec<anyhow::Result<(Box<dyn Pact + Send + Sync + RefUnwindSafe>, Option<PactVerificationContext>, PactSource, Duration)>> {
   trace!("fetch_pacts(source={}, consumers={:?})", source.iter().map(|s| s.to_string()).join(", "), consumers);
 
   futures::stream::iter(source)
     .then(|pact_source| async {
-      futures::stream::iter(fetch_pact(pact_source, provider).await)
+      futures::stream::iter(fetch_pact(pact_source, provider, retries).await)
     })
     .flatten()
     .filter(|res| futures::future::ready(filter_consumers(&consumers, res)))
@@ -1675,18 +1683,19 @@ async fn publish_result(
   results: &[VerificationInteractionResult],
   source: &PactSource,
   options: &PublishOptions,
-  metrics_data: Option<&VerificationMetrics>
+  metrics_data: Option<&VerificationMetrics>,
+  retries: u8,
 ) {
   let publish_result = match source {
     PactSource::BrokerUrl(_, broker_url, auth, links) => {
       publish_to_broker(results, source, &options.build_url, &options.provider_tags,
         &options.provider_branch, &options.provider_version, links.clone(), broker_url.clone(),
-        auth.clone(), metrics_data
+        auth.clone(), metrics_data, retries
       ).await
     }
     PactSource::BrokerWithDynamicConfiguration { broker_url, auth, links, provider_branch, provider_tags, .. } => {
       publish_to_broker(results, source, &options.build_url, &provider_tags, &provider_branch,
-        &options.provider_version, links.clone(), broker_url.clone(), auth.clone(), metrics_data
+        &options.provider_version, links.clone(), broker_url.clone(), auth.clone(), metrics_data, retries
       ).await
     }
     _ => {
@@ -1710,7 +1719,8 @@ async fn publish_to_broker(
   links: Vec<Link>,
   broker_url: String,
   auth: Option<HttpAuth>,
-  metrics_data: Option<&VerificationMetrics>
+  metrics_data: Option<&VerificationMetrics>,
+  retries: u8,
 ) -> Result<Value, pact_broker::PactBrokerError> {
   info!("Publishing verification results back to the Pact Broker");
   let result = if results.iter().all(|r| r.result.is_ok()) {
@@ -1733,7 +1743,8 @@ async fn publish_to_broker(
     build_url.clone(),
     provider_tags.clone(),
     provider_branch.clone(),
-    metrics_data
+    metrics_data,
+    retries,
   ).await
 }
 
