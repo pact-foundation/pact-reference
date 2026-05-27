@@ -2844,7 +2844,7 @@ dependencies = [
 
 [[package]]
 name = "pact_matching"
-version = "2.0.4"
+version = "2.0.5"
 dependencies = [
  "ansi_term",
  "anyhow",
