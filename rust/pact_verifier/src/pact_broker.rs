@@ -1363,13 +1363,13 @@ mod tests {
         let client = HALClientBuilder::builder().with_url(pact_broker.url(), None).build();
         let result = client.fetch("/nonhal").await;
         pretty_assertions::assert_eq!(
-          format!("Error with the content of a HAL resource - Did not get a valid HAL response body from pact broker path \'/nonhal\' - error decoding response body. URL: '{}'",
-            pact_broker.url()), result.unwrap_err().to_string());
+          format!("Error with the content of a HAL resource - Did not get a valid HAL response body from pact broker path \'/nonhal\' - error decoding response body for url ({host}nonhal). URL: '{host}'",
+            host = pact_broker.url()), result.unwrap_err().to_string());
 
         let result = client.fetch("/nonhal2").await;
         pretty_assertions::assert_eq!(
-          format!("Error with the content of a HAL resource - Did not get a valid HAL response body from pact broker path \'/nonhal2\' - error decoding response body. URL: '{}'",
-            pact_broker.url()), result.unwrap_err().to_string());
+          format!("Error with the content of a HAL resource - Did not get a valid HAL response body from pact broker path \'/nonhal2\' - error decoding response body for url ({host}nonhal2). URL: '{host}'",
+            host = pact_broker.url()), result.unwrap_err().to_string());
     }
 
   #[test_log::test(tokio::test)]
