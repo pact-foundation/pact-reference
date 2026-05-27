@@ -1,5 +1,14 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.4.0 - Add retry logic when interacting with a Pact broker
+
+* 3a6e45ef - chore: Update pact_matching to 2.0.4 (Ronald Holshausen, Wed May 27 16:26:53 2026 +1000)
+* 27a68723 - test: fix error from upstream error format change (JP-Ellis, Wed May 27 15:19:55 2026 +1000)
+* c4f31956 - style: remove trailing whitespaces (JP-Ellis, Wed May 27 15:19:43 2026 +1000)
+* c98502f6 - feat: add --retries / PACT_BROKER_HTTP_RETRIES to pact_verifier_cli (JP-Ellis, Tue May 26 15:39:28 2026 +1000)
+* 8f86cd92 - fix: verifier retry logic (JP-Ellis, Tue May 26 10:43:08 2026 +1000)
+* 2e9a89f8 - bump version to 1.3.6 (Ronald Holshausen, Thu Apr 30 09:22:26 2026 +1000)
+
 # 1.3.5 - Maintenance Release
 
 * 620632a2 - feat(pact_verifier): Display any references in the verifier output (#528) (Ronald Holshausen, Thu Apr 30 09:12:59 2026 +1000)
