@@ -1,5 +1,11 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.3.2 - Maintenance release
+
+* 3a6e45ef - chore: Update pact_matching to 2.0.4 (Ronald Holshausen, Wed May 27 16:26:53 2026 +1000)
+* c98502f6 - feat: add --retries / PACT_BROKER_HTTP_RETRIES to pact_verifier_cli (JP-Ellis, Tue May 26 15:39:28 2026 +1000)
+* 8af79332 - bump version to 1.3.2 (Ronald Holshausen, Fri May 1 10:22:32 2026 +1000)
+
 # 1.3.1 - Feature Release
 
 * 75243a7e - chore(pact_verifier_cli): Correct the version of pact_matching in Cargo.toml (Ronald Holshausen, Fri May 1 10:12:07 2026 +1000)
