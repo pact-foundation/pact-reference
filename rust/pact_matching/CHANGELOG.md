@@ -1,5 +1,23 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 2.0.4 - Maintenance Release
+
+* fb640a1e - docs(pact_matching): Add performance optimisation guide (Ronald Holshausen, Tue May 19 11:58:19 2026 +1000)
+* 5d721171 - perf(pact_matching): Eliminate redundant tree-cloning in V2 engine interpreter (Ronald Holshausen, Tue May 19 11:13:09 2026 +1000)
+* 70dea3d9 - chore(pact_matching): Add criterion benchmarks and flamegraph profiling target for V2 engine (Ronald Holshausen, Tue May 19 10:31:28 2026 +1000)
+* 5363f22e - feat(pact_matching): Add V2 engine support for multipart/form-data body matching (Ronald Holshausen, Mon May 18 17:30:25 2026 +1000)
+* bc4b5410 - fix(pact_matching): Fix 3 failing pact_verifier tests under V2 engine (Ronald Holshausen, Mon May 18 15:41:14 2026 +1000)
+* 29302a82 - feat(pact_matching): Add V2 engine support for form-urlencoded body matching (Ronald Holshausen, Mon May 18 13:39:21 2026 +1000)
+* b771b182 - feat(pact_matching): Add V2 engine support for message interaction matching (Ronald Holshausen, Mon May 18 10:34:41 2026 +1000)
+* 6274ea7b - chore(v2-engine): Only split headers where it is known that it is safe to do (Ronald Holshausen, Mon May 4 09:33:22 2026 +1000)
+* ef16af41 - chore: Correct the header tests when using the V2 matching engine (Ronald Holshausen, Fri May 1 17:26:06 2026 +1000)
+* dc19a21e - chore(pact_matching): Cleanup compiler warnings in test code (Ronald Holshausen, Fri May 1 17:01:15 2026 +1000)
+* fa2ba4b0 - chore(pact_matching): Cleanup compiler warnings (Ronald Holshausen, Fri May 1 16:55:14 2026 +1000)
+* 27c4aa20 - chore: Update pact_models to 1.3.10 (Ronald Holshausen, Wed Apr 29 17:20:36 2026 +1000)
+* ac7df19d - chore(v2-engine): Make matching rule error more helpful (Ronald Holshausen, Thu Feb 19 14:06:02 2026 +1100)
+* 92490fee - chore(pact_matching): Update dependencies (Ronald Holshausen, Thu Feb 19 10:10:55 2026 +1100)
+* 71dab8b2 - bump version to 2.0.4 (Ronald Holshausen, Thu Feb 19 10:04:11 2026 +1100)
+
 # 2.0.3 - Bugfix Release
 
 * 650a2582 - chore: Update pact_models to 1.3.8 (Ronald Holshausen, Wed Feb 18 12:19:37 2026 +1100)
