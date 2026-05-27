@@ -203,7 +203,7 @@ impl HALClientBuilder {
     HALClientBuilder {
       url: "".to_string(),
       auth: None,
-      retries: 3,
+      retries: 8,
       client: None
     }
   }
@@ -215,7 +215,7 @@ impl HALClientBuilder {
     self
   }
 
-  /// Sets the number of retries on certain HTTP errors (5xx, 408, 429). Default is 3.
+  /// Sets the number of retries on certain HTTP errors (5xx, 408, 429). Default is 8.
   pub fn with_retries(&mut self, retries: u8) -> &mut Self {
     self.retries = retries;
     self
@@ -634,12 +634,13 @@ fn links_from_json(json: &Value) -> Vec<Link> {
 pub async fn fetch_pacts_from_broker(
   broker_url: &str,
   provider_name: &str,
-  auth: Option<HttpAuth>
+  auth: Option<HttpAuth>,
+  retries: u8,
 ) -> anyhow::Result<Vec<anyhow::Result<(Box<dyn Pact + Send + Sync + RefUnwindSafe>, Option<PactVerificationContext>, Vec<Link>)>>> {
   trace!("fetch_pacts_from_broker(broker_url='{}', provider_name='{}', auth={})", broker_url,
     provider_name, auth.clone().unwrap_or_default());
 
-    let mut hal_client = HALClientBuilder::builder().with_url(broker_url, auth).build();
+    let mut hal_client = HALClientBuilder::builder().with_url(broker_url, auth).with_retries(retries).build();
     let template_values = hashmap!{ "provider".to_string() => provider_name.to_string() };
 
     hal_client = hal_client.navigate("pb:latest-provider-pacts", &template_values)
@@ -705,14 +706,15 @@ pub async fn fetch_pacts_dynamically_from_broker(
   provider_tags: Vec<String>,
   provider_branch: Option<String>,
   consumer_version_selectors: Vec<ConsumerVersionSelector>,
-  auth: Option<HttpAuth>
+  auth: Option<HttpAuth>,
+  retries: u8,
 ) -> anyhow::Result<Vec<Result<(Box<dyn Pact + Send + Sync + RefUnwindSafe>, Option<PactVerificationContext>, Vec<Link>), PactBrokerError>>> {
   trace!("fetch_pacts_dynamically_from_broker(broker_url='{}', provider_name='{}', pending={}, \
     include_wip_pacts_since={:?}, provider_tags: {:?}, consumer_version_selectors: {:?}, auth={})",
     broker_url, provider_name, pending, include_wip_pacts_since, provider_tags,
     consumer_version_selectors, auth.clone().unwrap_or_default());
 
-    let mut hal_client = HALClientBuilder::builder().with_url(broker_url, auth).build();
+    let mut hal_client = HALClientBuilder::builder().with_url(broker_url, auth).with_retries(retries).build();
     let template_values = hashmap!{ "provider".to_string() => provider_name.clone() };
 
     hal_client = hal_client.navigate("pb:provider-pacts-for-verification", &template_values)
@@ -874,9 +876,10 @@ pub async fn publish_verification_results(
   build_url: Option<String>,
   provider_tags: Vec<String>,
   branch: Option<String>,
-  metrics_data: Option<&VerificationMetrics>
+  metrics_data: Option<&VerificationMetrics>,
+  retries: u8,
 ) -> Result<serde_json::Value, PactBrokerError> {
-  let hal_client = HALClientBuilder::builder().with_url(broker_url, auth.clone()).build();
+  let hal_client = HALClientBuilder::builder().with_url(broker_url, auth.clone()).with_retries(retries).build();
 
   if branch.is_some() {
     publish_provider_branch(&hal_client, &links, &branch.unwrap(), &version).await?;
@@ -1089,43 +1092,43 @@ pub struct ConsumerVersionSelector {
   /// allows a selector to only be applied to a certain consumer.
   pub consumer: Option<String>,
   /// Tag
-  /// the tag name(s) of the consumer versions to get the pacts for. 
+  /// the tag name(s) of the consumer versions to get the pacts for.
   /// *This field is still supported but it is recommended to use the `branch` in preference now.*
   pub tag: Option<String>,
   /// Fallback tag if Tag doesn't exist
-  /// the name of the tag to fallback to if the specified `tag` does not exist. 
+  /// the name of the tag to fallback to if the specified `tag` does not exist.
   /// This is useful when the consumer and provider use matching branch names to coordinate the development of new features.
   /// *This field is still supported but it is recommended to use two separate selectors - one with the main branch name and one with the feature branch name.*
   pub fallback_tag: Option<String>,
   /// Only select the latest (if false, this selects all pacts for a tag)
-  /// Used in conjuction with the tag property. 
-  /// If a tag is specified, and latest is true, then the latest pact for each of the consumers with that tag will be returned. 
-  /// If a tag is specified and the latest flag is not set to true, all the pacts with the specified tag will be returned. 
+  /// Used in conjuction with the tag property.
+  /// If a tag is specified, and latest is true, then the latest pact for each of the consumers with that tag will be returned.
+  /// If a tag is specified and the latest flag is not set to true, all the pacts with the specified tag will be returned.
   /// (This might seem a bit weird, but it's done this way to match the syntax used for the matrix query params. See https://docs.pact.io/selectors).
   pub latest: Option<bool>,
   /// Applications that have been deployed or released
-  /// if the key is specified, can only be set to `true`. 
-  /// Returns the pacts for all versions of the consumer that are currently deployed or released and currently supported in any environment. 
+  /// if the key is specified, can only be set to `true`.
+  /// Returns the pacts for all versions of the consumer that are currently deployed or released and currently supported in any environment.
   /// Use of this selector requires that the deployment of the consumer application is recorded in the Pact Broker using the `pact-broker record-deployment` or `record-release` CLI.
   pub deployed_or_released: Option<bool>,
   /// Applications that have been deployed
-  /// if the key is specified, can only be set to `true`. 
+  /// if the key is specified, can only be set to `true`.
   /// Returns the pacts for all versions of the consumer that are currently deployed to any environment.
   /// Use of this selector requires that the deployment of the consumer application is recorded in the Pact Broker using the `pact-broker record-deployment` CLI.
   pub deployed: Option<bool>,
   /// Applications that have been released
-  /// if the key is specified, can only be set to `true`. 
-  /// Returns the pacts for all versions of the consumer that are released and currently supported in any environment. 
+  /// if the key is specified, can only be set to `true`.
+  /// Returns the pacts for all versions of the consumer that are released and currently supported in any environment.
   /// Use of this selector requires that the deployment of the consumer application is recorded in the Pact Broker using the `pact-broker record-release` CLI.
   pub released: Option<bool>,
   /// Applications in a given environment
-  /// the name of the environment containing the consumer versions for which to return the pacts. 
+  /// the name of the environment containing the consumer versions for which to return the pacts.
   /// Used to further qualify `{ "deployed": true }` or `{ "released": true }`.
   /// Normally, this would not be needed, as it is recommended to verify the pacts for all currently deployed/currently supported released versions.
   pub environment: Option<String>,
   /// Applications with the default branch set in the broker
-  /// if the key is specified, can only be set to `true`. 
-  /// Return the pacts for the configured `mainBranch` of each consumer. 
+  /// if the key is specified, can only be set to `true`.
+  /// Return the pacts for the configured `mainBranch` of each consumer.
   /// Use of this selector requires that the consumer has configured the `mainBranch` property, and has set a branch name when publishing the pacts.
   pub main_branch: Option<bool>,
   /// Applications with the given branch
@@ -1133,12 +1136,12 @@ pub struct ConsumerVersionSelector {
   /// Use of this selector requires that the consumer has configured a branch name when publishing the pacts.
   pub branch: Option<String>,
   /// Applications that match the the provider version branch sent during verification
-  /// if the key is specified, can only be set to `true`. 
+  /// if the key is specified, can only be set to `true`.
   /// When true, returns the latest pact for any branch with the same name as the specified `provider_version_branch`.
   pub matching_branch: Option<bool>,
   /// Fallback branch if branch doesn't exist
-  /// the name of the branch to fallback to if the specified branch does not exist. 
-  /// Use of this property is discouraged as it may allow a pact to pass on a feature branch while breaking backwards compatibility with the main branch, which is generally not desired. 
+  /// the name of the branch to fallback to if the specified branch does not exist.
+  /// Use of this property is discouraged as it may allow a pact to pass on a feature branch while breaking backwards compatibility with the main branch, which is generally not desired.
   /// It is better to use two separate consumer version selectors, one with the main branch name, and one with the feature branch name, rather than use this property
   pub fallback_branch: Option<String>,
 }
@@ -1171,23 +1174,23 @@ struct PactForVerification {
 /// Request to send to determine the pacts to verify
 pub struct PactsForVerificationRequest {
   /// Provider tags to use for determining pending pacts (if enabled)
-  /// the tag name(s) for the provider application version that will be published with the verification results. 
-  /// This is used by the Broker to determine whether or not a particular pact is in pending state or not. 
+  /// the tag name(s) for the provider application version that will be published with the verification results.
+  /// This is used by the Broker to determine whether or not a particular pact is in pending state or not.
   /// This parameter can be specified multiple times. *This field is still supported but it is recommended to use the `provider_version_branch` in preference now.*
   #[serde(skip_serializing_if = "Vec::is_empty")]
   pub provider_version_tags: Vec<String>,
   /// Enable pending pacts feature
-  /// When true, a pending boolean will be added to the verificationProperties in the response, 
+  /// When true, a pending boolean will be added to the verificationProperties in the response,
   /// and an extra message will appear in the notices array to indicate why this pact is/is not in pending state.
   pub include_pending_status: bool,
   /// Find WIP pacts after given date
-  /// The date from which to include the "work in progress" pacts. 
+  /// The date from which to include the "work in progress" pacts.
   /// See https://docs.pact.io/wip for more information on work in progress pacts.
   pub include_wip_pacts_since: Option<String>,
   /// Detailed pact selection criteria , see https://docs.pact.io/pact_broker/advanced_topics/consumer_version_selectors/
   pub consumer_version_selectors: Vec<ConsumerVersionSelector>,
   /// Current provider version branch if used
-  /// the repository branch name for the provider application version that will be published with the verification results. 
+  /// the repository branch name for the provider application version that will be published with the verification results.
   /// This is used by the Broker to determine whether or not a particular pact is in pending state or not.
   pub provider_version_branch: Option<String>
 }
@@ -1360,13 +1363,13 @@ mod tests {
         let client = HALClientBuilder::builder().with_url(pact_broker.url(), None).build();
         let result = client.fetch("/nonhal").await;
         pretty_assertions::assert_eq!(
-          format!("Error with the content of a HAL resource - Did not get a valid HAL response body from pact broker path \'/nonhal\' - error decoding response body. URL: '{}'",
-            pact_broker.url()), result.unwrap_err().to_string());
+          format!("Error with the content of a HAL resource - Did not get a valid HAL response body from pact broker path \'/nonhal\' - error decoding response body for url ({host}nonhal). URL: '{host}'",
+            host = pact_broker.url()), result.unwrap_err().to_string());
 
         let result = client.fetch("/nonhal2").await;
         pretty_assertions::assert_eq!(
-          format!("Error with the content of a HAL resource - Did not get a valid HAL response body from pact broker path \'/nonhal2\' - error decoding response body. URL: '{}'",
-            pact_broker.url()), result.unwrap_err().to_string());
+          format!("Error with the content of a HAL resource - Did not get a valid HAL response body from pact broker path \'/nonhal2\' - error decoding response body for url ({host}nonhal2). URL: '{host}'",
+            host = pact_broker.url()), result.unwrap_err().to_string());
     }
 
   #[test_log::test(tokio::test)]
@@ -1380,7 +1383,7 @@ mod tests {
       })
       .start_mock_server(None, None);
 
-    let client = HALClientBuilder::builder().with_url(pact_broker.url(), None).build();
+    let client = HALClientBuilder::builder().with_url(pact_broker.url(), None).with_retries(3).build();
     let expected_requests = client.retries as usize;
     let result = client.fetch("/").await;
     expect!(result).to(be_err());
@@ -1431,7 +1434,7 @@ mod tests {
       })
       .start_mock_server(None, None);
 
-    let client = HALClientBuilder::builder().with_url(pact_broker.url(), None).build();
+    let client = HALClientBuilder::builder().with_url(pact_broker.url(), None).with_retries(3).build();
     let expected_requests = client.retries as usize;
     let result = client.post_json(pact_broker.url().as_str(), "{}").await;
 
@@ -1452,7 +1455,7 @@ mod tests {
       })
       .start_mock_server(None, None);
 
-    let client = HALClientBuilder::builder().with_url(pact_broker.url(), None).build();
+    let client = HALClientBuilder::builder().with_url(pact_broker.url(), None).with_retries(3).build();
     let expected_requests = client.retries as usize;
     let result = client.put_json(pact_broker.url().as_str(), "{}").await;
 
@@ -1741,7 +1744,7 @@ mod tests {
             .start_mock_server(None, Some(MockServerConfig::with_keep_alive(true)));
 
         let result = fetch_pacts_from_broker(pact_broker.url().as_str(),
-                                             "sad_provider", None).await;
+                                             "sad_provider", None, 3).await;
         match result {
           Ok(_) => {
             panic!("Expected an error result, but got OK");
@@ -1829,7 +1832,7 @@ mod tests {
             .start_mock_server(None, Some(MockServerConfig::with_keep_alive(true)));
 
         let result = fetch_pacts_from_broker(pact_broker.url().as_str(),
-          "happy_provider", None).await;
+          "happy_provider", None, 3).await;
         match &result {
           Ok(_) => (),
           Err(err) => panic!("Expected an Ok result, got a error {}", err)
@@ -1971,7 +1974,7 @@ mod tests {
         matching_branch: None,
         environment: None,
         fallback_branch: None,
-      }), None).await;
+      }), None, 3).await;
 
       match &result {
         Ok(_) => (),
@@ -2071,7 +2074,7 @@ mod tests {
       matching_branch: None,
       environment: None,
       fallback_branch: None,
-    }), None).await;
+    }), None, 3).await;
 
     match result {
       Ok(_) => {
@@ -2174,7 +2177,8 @@ mod tests {
         environment: None,
         fallback_branch: None,
       }),
-      None
+      None,
+      3,
     ).await;
 
     match result {

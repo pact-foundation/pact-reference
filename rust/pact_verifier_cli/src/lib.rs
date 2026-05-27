@@ -507,6 +507,7 @@ pub async fn handle_matches(matches: &ArgMatches) -> Result<(), i32> {
     no_pacts_is_error: !matches.get_flag("ignore-no-pacts-error"),
     exit_on_first_failure: matches.get_flag("exit-first"),
     run_last_failed_only: matches.get_flag("last-failed"),
+    broker_request_retries: *matches.get_one::<u8>("retries").expect("retries has a default value"),
     .. VerificationOptions::default()
   };
 

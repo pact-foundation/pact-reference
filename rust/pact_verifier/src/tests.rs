@@ -310,7 +310,7 @@ fn publish_result_does_nothing_if_not_from_broker() {
         provider_tags: vec![],
         .. super::PublishOptions::default()
       };
-      super::publish_result(&vec![], &PactSource::File("/tmp/test".into()), &options, None).await;
+      super::publish_result(&vec![], &PactSource::File("/tmp/test".into()), &options, None, 3).await;
     })
   });
   expect!(server_response).to(be_err());
@@ -352,7 +352,7 @@ async fn publish_successful_result_to_broker() {
       title: None
     }
   ];
-  
+
   let source = PactSource::BrokerUrl("Test".to_string(), server.url().to_string(), None, links.clone());
   publish_result(&[VerificationInteractionResult {
       interaction_id: Some("1".to_string()),
@@ -362,7 +362,7 @@ async fn publish_successful_result_to_broker() {
       result: Ok(()),
       pending: false,
       duration: Default::default(),
-    }], &source, &options, None
+    }], &source, &options, None, 3
   ).await;
 
   // Same publish but with dynamic configuration as pact source:
@@ -385,7 +385,7 @@ async fn publish_successful_result_to_broker() {
       result: Ok(()),
       pending: false,
       duration: Default::default(),
-    }], &source, &options, None
+    }], &source, &options, None, 3
   ).await;
 }
 
@@ -566,7 +566,7 @@ async fn test_fetch_pact_from_url_with_links() {
 
   let url = server.url().join(path).unwrap();
   let provider = ProviderInfo::default();
-  let result = super::fetch_pact(PactSource::URL(url.to_string(), None), &provider).await;
+  let result = super::fetch_pact(PactSource::URL(url.to_string(), None), &provider, 3).await;
 
   let first_result = result.get(0).unwrap().as_ref();
   let (_, _, source, _) = &first_result.clone().unwrap();
@@ -1050,7 +1050,7 @@ async fn test_publish_results_from_url_source_with_provider_branch() {
 
   let url = server.url().join(path).unwrap();
   let provider = ProviderInfo::default();
-  let pact_result = super::fetch_pact(PactSource::URL(url.to_string(), None), &provider).await;
+  let pact_result = super::fetch_pact(PactSource::URL(url.to_string(), None), &provider, 3).await;
 
   let first_result = pact_result.get(0).unwrap().as_ref();
   let (_, _, source, _) = &first_result.clone().unwrap();
@@ -1062,7 +1062,7 @@ async fn test_publish_results_from_url_source_with_provider_branch() {
   };
   let verification_result = vec![];
 
-  publish_result(&verification_result, &source, &options, None).await;
+  publish_result(&verification_result, &source, &options, None, 3).await;
 }
 
 #[test_log::test(tokio::test)]
@@ -1073,7 +1073,7 @@ async fn fetch_pact_from_dir_filters_by_provider_name() {
   };
   let pacts_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
     .join("tests/pacts");
-  let result = super::fetch_pact(PactSource::Dir(pacts_path.to_string_lossy().to_string()), &provider).await;
+  let result = super::fetch_pact(PactSource::Dir(pacts_path.to_string_lossy().to_string()), &provider, 3).await;
   expect!(result.len()).to(be_equal_to(1));
   let first_result = result.first().unwrap().as_ref();
   let (pact, _, _, _) = first_result.unwrap();
