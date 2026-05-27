@@ -1092,43 +1092,43 @@ pub struct ConsumerVersionSelector {
   /// allows a selector to only be applied to a certain consumer.
   pub consumer: Option<String>,
   /// Tag
-  /// the tag name(s) of the consumer versions to get the pacts for. 
+  /// the tag name(s) of the consumer versions to get the pacts for.
   /// *This field is still supported but it is recommended to use the `branch` in preference now.*
   pub tag: Option<String>,
   /// Fallback tag if Tag doesn't exist
-  /// the name of the tag to fallback to if the specified `tag` does not exist. 
+  /// the name of the tag to fallback to if the specified `tag` does not exist.
   /// This is useful when the consumer and provider use matching branch names to coordinate the development of new features.
   /// *This field is still supported but it is recommended to use two separate selectors - one with the main branch name and one with the feature branch name.*
   pub fallback_tag: Option<String>,
   /// Only select the latest (if false, this selects all pacts for a tag)
-  /// Used in conjuction with the tag property. 
-  /// If a tag is specified, and latest is true, then the latest pact for each of the consumers with that tag will be returned. 
-  /// If a tag is specified and the latest flag is not set to true, all the pacts with the specified tag will be returned. 
+  /// Used in conjuction with the tag property.
+  /// If a tag is specified, and latest is true, then the latest pact for each of the consumers with that tag will be returned.
+  /// If a tag is specified and the latest flag is not set to true, all the pacts with the specified tag will be returned.
   /// (This might seem a bit weird, but it's done this way to match the syntax used for the matrix query params. See https://docs.pact.io/selectors).
   pub latest: Option<bool>,
   /// Applications that have been deployed or released
-  /// if the key is specified, can only be set to `true`. 
-  /// Returns the pacts for all versions of the consumer that are currently deployed or released and currently supported in any environment. 
+  /// if the key is specified, can only be set to `true`.
+  /// Returns the pacts for all versions of the consumer that are currently deployed or released and currently supported in any environment.
   /// Use of this selector requires that the deployment of the consumer application is recorded in the Pact Broker using the `pact-broker record-deployment` or `record-release` CLI.
   pub deployed_or_released: Option<bool>,
   /// Applications that have been deployed
-  /// if the key is specified, can only be set to `true`. 
+  /// if the key is specified, can only be set to `true`.
   /// Returns the pacts for all versions of the consumer that are currently deployed to any environment.
   /// Use of this selector requires that the deployment of the consumer application is recorded in the Pact Broker using the `pact-broker record-deployment` CLI.
   pub deployed: Option<bool>,
   /// Applications that have been released
-  /// if the key is specified, can only be set to `true`. 
-  /// Returns the pacts for all versions of the consumer that are released and currently supported in any environment. 
+  /// if the key is specified, can only be set to `true`.
+  /// Returns the pacts for all versions of the consumer that are released and currently supported in any environment.
   /// Use of this selector requires that the deployment of the consumer application is recorded in the Pact Broker using the `pact-broker record-release` CLI.
   pub released: Option<bool>,
   /// Applications in a given environment
-  /// the name of the environment containing the consumer versions for which to return the pacts. 
+  /// the name of the environment containing the consumer versions for which to return the pacts.
   /// Used to further qualify `{ "deployed": true }` or `{ "released": true }`.
   /// Normally, this would not be needed, as it is recommended to verify the pacts for all currently deployed/currently supported released versions.
   pub environment: Option<String>,
   /// Applications with the default branch set in the broker
-  /// if the key is specified, can only be set to `true`. 
-  /// Return the pacts for the configured `mainBranch` of each consumer. 
+  /// if the key is specified, can only be set to `true`.
+  /// Return the pacts for the configured `mainBranch` of each consumer.
   /// Use of this selector requires that the consumer has configured the `mainBranch` property, and has set a branch name when publishing the pacts.
   pub main_branch: Option<bool>,
   /// Applications with the given branch
@@ -1136,12 +1136,12 @@ pub struct ConsumerVersionSelector {
   /// Use of this selector requires that the consumer has configured a branch name when publishing the pacts.
   pub branch: Option<String>,
   /// Applications that match the the provider version branch sent during verification
-  /// if the key is specified, can only be set to `true`. 
+  /// if the key is specified, can only be set to `true`.
   /// When true, returns the latest pact for any branch with the same name as the specified `provider_version_branch`.
   pub matching_branch: Option<bool>,
   /// Fallback branch if branch doesn't exist
-  /// the name of the branch to fallback to if the specified branch does not exist. 
-  /// Use of this property is discouraged as it may allow a pact to pass on a feature branch while breaking backwards compatibility with the main branch, which is generally not desired. 
+  /// the name of the branch to fallback to if the specified branch does not exist.
+  /// Use of this property is discouraged as it may allow a pact to pass on a feature branch while breaking backwards compatibility with the main branch, which is generally not desired.
   /// It is better to use two separate consumer version selectors, one with the main branch name, and one with the feature branch name, rather than use this property
   pub fallback_branch: Option<String>,
 }
@@ -1174,23 +1174,23 @@ struct PactForVerification {
 /// Request to send to determine the pacts to verify
 pub struct PactsForVerificationRequest {
   /// Provider tags to use for determining pending pacts (if enabled)
-  /// the tag name(s) for the provider application version that will be published with the verification results. 
-  /// This is used by the Broker to determine whether or not a particular pact is in pending state or not. 
+  /// the tag name(s) for the provider application version that will be published with the verification results.
+  /// This is used by the Broker to determine whether or not a particular pact is in pending state or not.
   /// This parameter can be specified multiple times. *This field is still supported but it is recommended to use the `provider_version_branch` in preference now.*
   #[serde(skip_serializing_if = "Vec::is_empty")]
   pub provider_version_tags: Vec<String>,
   /// Enable pending pacts feature
-  /// When true, a pending boolean will be added to the verificationProperties in the response, 
+  /// When true, a pending boolean will be added to the verificationProperties in the response,
   /// and an extra message will appear in the notices array to indicate why this pact is/is not in pending state.
   pub include_pending_status: bool,
   /// Find WIP pacts after given date
-  /// The date from which to include the "work in progress" pacts. 
+  /// The date from which to include the "work in progress" pacts.
   /// See https://docs.pact.io/wip for more information on work in progress pacts.
   pub include_wip_pacts_since: Option<String>,
   /// Detailed pact selection criteria , see https://docs.pact.io/pact_broker/advanced_topics/consumer_version_selectors/
   pub consumer_version_selectors: Vec<ConsumerVersionSelector>,
   /// Current provider version branch if used
-  /// the repository branch name for the provider application version that will be published with the verification results. 
+  /// the repository branch name for the provider application version that will be published with the verification results.
   /// This is used by the Broker to determine whether or not a particular pact is in pending state or not.
   pub provider_version_branch: Option<String>
 }
