@@ -57,7 +57,7 @@ uuid = { version = "1.21.0", features = ["v4"] }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 onig = { version = "6.5.1", default-features = false }
-pact-plugin-driver = { version = "~0.7.5", optional = true, default-features = false }
+pact-plugin-driver = { version = "~1.0.0-beta.1", optional = true, default-features = false }
 reqwest = { version = "0.12.28", default-features = false, features = ["rustls-tls-native-roots", "json"] }
 tokio = { version = "1.49.0", features = ["full"] }
 
