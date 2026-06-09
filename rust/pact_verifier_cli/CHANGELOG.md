@@ -1,5 +1,11 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.3.3 - Support V2 plugins
+
+* e26db512 - chore: Update pact_verifier to 1.4.1 (Ronald Holshausen, Tue Jun 9 16:56:25 2026 +1000)
+* 50fb5a6f - chore: Update pact_matching to 2.0.5 and pact_mock_server to 2.2.2 (Ronald Holshausen, Tue Jun 9 15:20:14 2026 +1000)
+* 123cf49b - bump version to 1.3.3 (Ronald Holshausen, Wed May 27 16:59:20 2026 +1000)
+
 # 1.3.2 - Maintenance release
 
 * 3a6e45ef - chore: Update pact_matching to 2.0.4 (Ronald Holshausen, Wed May 27 16:26:53 2026 +1000)
