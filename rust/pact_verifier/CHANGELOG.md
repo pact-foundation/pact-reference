@@ -1,5 +1,12 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.4.1 - Support V2 plugins
+
+* 50fb5a6f - chore: Update pact_matching to 2.0.5 and pact_mock_server to 2.2.2 (Ronald Holshausen, Tue Jun 9 15:20:14 2026 +1000)
+* 8ec724bb - chore: Update pact-plugin-driver to 1.0.0-beta.2 to support V2 plugins (Ronald Holshausen, Tue Jun 9 14:49:40 2026 +1000)
+* a579270d - chore: update Pact plugin driver to version supporting initial V2 plugins (Ronald Holshausen, Fri May 29 13:41:41 2026 +1000)
+* 9df6c7f5 - bump version to 1.4.1 (Ronald Holshausen, Wed May 27 16:30:08 2026 +1000)
+
 # 1.4.0 - Add retry logic when interacting with a Pact broker
 
 * 3a6e45ef - chore: Update pact_matching to 2.0.4 (Ronald Holshausen, Wed May 27 16:26:53 2026 +1000)
