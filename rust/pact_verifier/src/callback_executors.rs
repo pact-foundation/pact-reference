@@ -2,13 +2,20 @@
 
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 
 use async_trait::async_trait;
 use bytes::Bytes;
 use itertools::Either;
 use maplit::*;
 use serde_json::{json, Value};
+
+static DEFAULT_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
+  reqwest::Client::builder()
+    .user_agent(concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")))
+    .build()
+    .expect("Failed to build default HTTP client")
+});
 
 use pact_models::bodies::OptionalBody;
 use pact_models::content_types::JSON;
@@ -153,7 +160,7 @@ impl ProviderStateExecutor for HttpRequestProviderStateExecutor {
           }
           state_change_request.query = Some(query);
         }
-        make_state_change_request(client.unwrap_or(&reqwest::Client::default()), &state_change_url, &state_change_request, self.retries).await
+        make_state_change_request(client.unwrap_or(&DEFAULT_CLIENT), &state_change_url, &state_change_request, self.retries).await
           .map_err(|err| ProviderStateError { description: err.to_string(), interaction_id }.into())
       },
       None => {

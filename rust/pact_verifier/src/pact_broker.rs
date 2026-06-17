@@ -231,7 +231,7 @@ impl HALClientBuilder {
   pub fn build(&self) -> HALClient {
     HALClient {
       client: self.client.clone().unwrap_or_else(|| reqwest::ClientBuilder::new()
-        .user_agent(format!("{}/{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION")))
+        .user_agent(concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")))
         .tcp_keepalive(None)
         .build()
         .unwrap()),
@@ -603,7 +603,7 @@ impl Default for HALClient {
   fn default() -> Self {
     HALClient {
       client: reqwest::ClientBuilder::new()
-        .user_agent(format!("{}/{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION")))
+        .user_agent(concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")))
         .tcp_keepalive(None)
         .build()
         .unwrap(),
@@ -1316,7 +1316,7 @@ mod tests {
             .interaction("a request to the broker includes a user-agent", "", |mut i| {
                 i.request
                   .path("/user-agent")
-                  .header("user-agent", format!("{}/{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION")));
+                  .header("user-agent", concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")));
 
                 i.response
                   .status(200)
