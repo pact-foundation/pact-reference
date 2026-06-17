@@ -190,7 +190,16 @@ pub async fn send_metrics_async(event: MetricEvent) {
           "ev" => value.as_str()                            // Value
           };
     debug!("Sending event to GA - {:?}", event_payload);
-    let result = Client::new().post(GA_URL)
+    let client = match Client::builder()
+      .user_agent(concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")))
+      .build() {
+      Ok(c) => c,
+      Err(err) => {
+        debug!("Failed to build HTTP client: {}", err);
+        return;
+      }
+    };
+    let result = client.post(GA_URL)
       .form(&event_payload)
       .send()
       .await;

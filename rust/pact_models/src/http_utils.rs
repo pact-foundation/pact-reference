@@ -30,7 +30,10 @@ impl HttpAuth {
 
 /// Fetches the JSON from a URL
 pub fn fetch_json_from_url(url: &String, auth: &Option<HttpAuth>) -> anyhow::Result<(String, Value)> {
-  let client = Client::new();
+  let client = Client::builder()
+    .user_agent(concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")))
+    .build()
+    .map_err(|e| anyhow::anyhow!("Failed to build HTTP client: {}", e))?;
   let request = match auth {
     &Some(ref auth) => {
       match auth {

@@ -701,6 +701,7 @@ pub(crate) fn configure_http_client<F: RequestFilterExecutor>(
   options: &VerificationOptions<F>
 ) -> anyhow::Result<Client> {
   let mut client_builder = reqwest::Client::builder()
+    .user_agent(concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")))
     .danger_accept_invalid_certs(options.disable_ssl_verification)
     .timeout(Duration::from_millis(options.request_timeout));
 
