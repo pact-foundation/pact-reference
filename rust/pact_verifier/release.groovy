@@ -83,7 +83,7 @@ ask('Update Changelog?: [Y]') {
   }
 
   executeOnShell("git add CHANGELOG.md")
-  executeOnShell("git commit -m 'update changelog for release $releaseVer'")
+  executeOnShell("git commit -m 'chore(pact_verifier): update changelog for release $releaseVer [skip ci]'")
   executeOnShell("git status")
   executeOnShell("git diff HEAD^..HEAD")
 }
@@ -106,7 +106,7 @@ ask("Bump version to $nextVer?: [Y]") {
   executeOnShell("git add ../Cargo.lock")
   executeOnShell("git diff --cached")
   ask("Commit and push this change?: [Y]") {
-    executeOnShell("git commit -m 'bump version to $nextVer'")
+    executeOnShell("git commit -m 'chore(pact_verifier): bump version to $nextVer [skip ci]'")
     executeOnShell("git push")
   }
 }

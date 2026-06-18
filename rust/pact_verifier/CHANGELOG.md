@@ -1,5 +1,12 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.4.2 - Maintenance Release
+
+* 4fa2a6f5 - chore: Update pact_matching to 2.0.6 (Ronald Holshausen, Fri Jun 19 09:31:54 2026 +1000)
+* 46a285ae - chore: Update pact_models to 1.3.11 (Ronald Holshausen, Thu Jun 18 16:00:45 2026 +1000)
+* b0554f31 - chore: add crate name and version to all http clients (JP-Ellis, Thu Jun 18 09:26:08 2026 +1000)
+* ca18d2db - bump version to 1.4.2 (Ronald Holshausen, Tue Jun 9 16:52:05 2026 +1000)
+
 # 1.4.1 - Support V2 plugins
 
 * 50fb5a6f - chore: Update pact_matching to 2.0.5 and pact_mock_server to 2.2.2 (Ronald Holshausen, Tue Jun 9 15:20:14 2026 +1000)
