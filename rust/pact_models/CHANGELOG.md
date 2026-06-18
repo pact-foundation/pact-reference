@@ -1,5 +1,10 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.3.11 - Maintenance Release
+
+* b0554f31 - chore: add crate name and version to all http clients (JP-Ellis, Thu Jun 18 09:26:08 2026 +1000)
+* 2aa42a36 - bump version to 1.3.11 (Ronald Holshausen, Wed Apr 29 16:57:05 2026 +1000)
+
 # 1.3.10 - Bugfix Release
 
 * bf2fc778 - fix: ArrayContains variants must serialise as objects in values() (Stan Vodetskyi, Tue Apr 28 14:25:11 2026 -0700)
