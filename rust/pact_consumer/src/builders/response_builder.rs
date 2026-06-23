@@ -112,6 +112,9 @@ impl ResponseBuilder {
           } else {
             let response = &mut self.response;
             debug!("Plugin matcher, will get the plugin to provide the response contents");
+            pact_plugin_driver::test_context::set_test_run_id(
+              Some(uuid::Uuid::new_v4().to_string())
+            );
             match definition {
               Value::Object(attributes) => {
                 let map = attributes.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
