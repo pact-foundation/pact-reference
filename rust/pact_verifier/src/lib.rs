@@ -427,6 +427,8 @@ async fn verify_interaction<'a, F: RequestFilterExecutor, S: ProviderStateExecut
 ) -> Result<(Option<String>, Vec<String>, Duration), (MismatchResult, Vec<String>, Duration)> {
   let start = Instant::now();
   debug!("Verifying interaction {} {} ({:?})", interaction.type_of(), interaction.description(), interaction.id());
+  #[cfg(feature = "plugins")]
+  pact_plugin_driver::test_context::set_test_run_id(Some(uuid::Uuid::new_v4().to_string()));
   let client = Arc::new(configure_http_client(options)
     .map_err(|err| (
       MismatchResult::Error(err.to_string(), interaction.id()),

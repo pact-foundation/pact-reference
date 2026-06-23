@@ -18,7 +18,7 @@ exclude = [
 default = ["datetime", "xml", "plugins", "multipart"]
 datetime = ["pact_models/datetime", "pact-plugin-driver?/datetime", "pact_matching/datetime"] # Support for date/time matchers and expressions
 xml = ["pact_models/xml", "pact-plugin-driver?/xml", "pact_matching/xml"] # support for matching XML documents
-plugins = ["dep:pact-plugin-driver", "pact_matching/plugins"]
+plugins = ["dep:pact-plugin-driver", "dep:uuid", "pact_matching/plugins"]
 multipart = ["pact_matching/multipart"] # suport for MIME multipart bodies
 
 [dependencies]
@@ -37,7 +37,8 @@ maplit = "1.0.2"
 mime = "0.3.17"
 pact_matching = { version = "~2.0.6", path = "../pact_matching", default-features = false }
 pact_models = { version = "~1.3.11", default-features = false }
-pact-plugin-driver = { version = "~1.0.0-beta.2", optional = true, default-features = false }
+pact-plugin-driver = { version = "~1.0.0-beta.5", optional = true, default-features = false }
+uuid = { version = "1.0", features = ["v4"], optional = true }
 regex = "1.12.3"
 httpdate = "1.0"
 reqwest = { version = "0.13", default-features = false, features = ["rustls", "blocking", "json", "query"] }
