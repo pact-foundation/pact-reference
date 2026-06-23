@@ -1645,6 +1645,9 @@ pub(crate) async fn compare_bodies(
           trace!(plugin_name = matcher.plugin_name(),"Content matcher is provided via a plugin");
           let plugin_config = context.plugin_configuration().get(&matcher.plugin_name()).cloned();
           trace!("Plugin config = {:?}", plugin_config);
+          pact_plugin_driver::test_context::set_test_run_id(
+            Some(uuid::Uuid::new_v4().to_string())
+          );
           if let Err(map) = matcher.match_contents(expected.body(), actual.body(), &context.matchers(),
                                                    context.config() == DiffConfig::AllowUnexpectedKeys, plugin_config).await {
             // TODO: group the mismatches by key
