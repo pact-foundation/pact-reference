@@ -2872,7 +2872,7 @@ dependencies = [
 
 [[package]]
 name = "pact_matching"
-version = "2.0.7"
+version = "2.0.8"
 dependencies = [
  "ansi_term",
  "anyhow",
