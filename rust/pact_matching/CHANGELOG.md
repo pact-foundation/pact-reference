@@ -1,5 +1,10 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 2.0.7 - V2 plugin logging improvements
+
+* 40318b16 - feat(008): Plugin observability — test run ID correlation and FFI log sink (#537) (Ronald Holshausen, Wed Jun 24 10:08:42 2026 +1000)
+* d76db156 - bump version to 2.0.7 [skip ci] (Ronald Holshausen, Fri Jun 19 09:26:58 2026 +1000)
+
 # 2.0.6 - Maintenance Release
 
 * 46a285ae - chore: Update pact_models to 1.3.11 (Ronald Holshausen, Thu Jun 18 16:00:45 2026 +1000)
