@@ -6,6 +6,7 @@ mod logger;
 mod sink;
 mod status;
 mod inmem_buffer;
+pub(crate) mod plugin_sink;
 
 pub use crate::log::ffi::{
     pactffi_logger_apply,

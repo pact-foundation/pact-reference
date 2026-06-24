@@ -1,6 +1,9 @@
 //! The `plugins` module provides exported functions using C bindings for using plugins with
 //! Pact tests.
 
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::ffi::CString;
 use std::time::Duration;
 
 use anyhow::anyhow;
@@ -27,8 +30,18 @@ use tracing::{debug, error};
 
 use crate::{ffi_fn, safe_str, RUNTIME};
 use crate::error::{catch_panic, set_error_msg};
+use crate::log::plugin_sink::{PluginLogCallback, get_logs, register_callback};
 use crate::mock_server::handles::{InteractionHandle, InteractionPart, PactHandle};
 use crate::string::if_null;
+
+thread_local! {
+  static CURRENT_TEST_RUN_ID: RefCell<Option<String>> = const { RefCell::new(None) };
+}
+
+fn set_driver_test_run_id(id: Option<String>) {
+  pact_plugin_driver::test_context::set_test_run_id(id.clone());
+  CURRENT_TEST_RUN_ID.with(|cell| *cell.borrow_mut() = id);
+}
 
 ffi_fn! {
   /// Add a plugin to be used by the test. The plugin needs to be installed correctly for this
@@ -151,6 +164,74 @@ ffi_fn! {
         drop_plugin_access(&plugin);
       }
     });
+  }
+}
+
+/// Set the test run ID for the current thread. The ID is included in the `testContext` of
+/// outgoing plugin requests so that plugin log entries can be correlated with a specific test.
+///
+/// Pass a NULL pointer to clear a previously set ID.
+///
+/// # Safety
+///
+/// `test_run_id` must be a valid pointer to a NULL terminated string, or NULL.
+#[no_mangle]
+pub unsafe extern "C" fn pactffi_set_test_run_id(test_run_id: *const c_char) {
+  let id = if test_run_id.is_null() {
+    None
+  } else {
+    match std::ffi::CStr::from_ptr(test_run_id).to_str() {
+      Ok(s) if !s.is_empty() => Some(s.to_string()),
+      _ => None,
+    }
+  };
+  set_driver_test_run_id(id);
+}
+
+/// Register a callback to be invoked for each plugin log entry received from any running plugin.
+/// The callback is invoked on the tokio runtime thread that handles the gRPC `Log` RPC, so it
+/// must be thread-safe. It must also not call back into pact_ffi from within the callback.
+///
+/// Registering a new callback replaces any previously registered one. Pass NULL to deregister.
+///
+/// # Safety
+///
+/// `callback` must be a valid function pointer or NULL.
+#[no_mangle]
+pub extern "C" fn pactffi_register_plugin_log_callback(callback: Option<PluginLogCallback>) {
+  if let Some(cb) = callback {
+    register_callback(cb);
+  }
+}
+
+/// Return all buffered plugin log entries for the given plugin instance ID as a
+/// newline-delimited sequence of JSON objects (one per line). Returns NULL if the instance ID
+/// is unknown or the string cannot be constructed.
+///
+/// The caller is responsible for freeing the returned string with `pactffi_string_delete`.
+///
+/// # Safety
+///
+/// `plugin_instance_id` must be a valid pointer to a NULL terminated string.
+#[no_mangle]
+pub unsafe extern "C" fn pactffi_get_plugin_logs(
+  plugin_instance_id: *const c_char,
+) -> *const c_char {
+  if plugin_instance_id.is_null() {
+    return std::ptr::null();
+  }
+  let instance_id = match std::ffi::CStr::from_ptr(plugin_instance_id).to_str() {
+    Ok(s) => s,
+    Err(_) => return std::ptr::null(),
+  };
+  let entries = get_logs(instance_id);
+  let lines: Vec<String> = entries
+    .iter()
+    .filter_map(|e| serde_json::to_string(e).ok())
+    .collect();
+  match CString::new(lines.join("\n")) {
+    Ok(s) => s.into_raw() as *const c_char,
+    Err(_) => std::ptr::null(),
   }
 }
 

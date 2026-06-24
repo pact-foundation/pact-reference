@@ -263,6 +263,9 @@ impl SyncMessageInteractionBuilder {
             debug!("Content matcher is a core matcher, will use the internal implementation");
             self.setup_core_matcher(Some(ct.clone()), &contents_hashmap, Some(content_matcher));
           } else {
+            pact_plugin_driver::test_context::set_test_run_id(
+              Some(uuid::Uuid::new_v4().to_string())
+            );
             match content_matcher.configure_interaction(&ct, contents_hashmap).await {
               Ok((contents, plugin_config)) => {
                 if let Some(interaction) = contents.iter().find(|i| i.part_name == "request") {

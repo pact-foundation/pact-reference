@@ -8,6 +8,7 @@
 use std::ffi::CStr;
 use std::panic::RefUnwindSafe;
 use std::str::FromStr;
+use std::sync::OnceLock;
 
 use lazy_static::lazy_static;
 use libc::c_char;
@@ -35,6 +36,19 @@ pub mod plugins;
 pub mod matching;
 
 const VERSION: &str = concat!(env!("CARGO_PKG_VERSION"), "\0");
+
+static PLUGIN_SINK_REGISTERED: OnceLock<()> = OnceLock::new();
+
+/// Register the FFI plugin log sink with the plugin driver exactly once.
+/// Called from all `pactffi_init*` functions so plugin log entries are always
+/// buffered and forwarded to any registered C callback.
+fn init_plugin_log_sink() {
+  PLUGIN_SINK_REGISTERED.get_or_init(|| {
+    pact_plugin_driver::plugin_log_sink::set_plugin_log_sink(
+      Box::new(crate::log::plugin_sink::FfiPluginLogSink)
+    );
+  });
+}
 
 // Create a global runtime of all async tasks
 lazy_static! {
@@ -80,6 +94,7 @@ pub unsafe extern "C" fn pactffi_init(log_env_var: *const c_char) {
     if let Err(err) = tracing::subscriber::set_global_default(subscriber) {
       eprintln!("Failed to initialise global tracing subscriber - {err}");
     };
+    init_plugin_log_sink();
 }
 
 /// Initialises logging, and sets the log level explicitly. This function should only be called
@@ -101,6 +116,7 @@ pub unsafe extern "C" fn pactffi_init_with_log_level(level: *const c_char) {
   if let Err(err) = tracing::subscriber::set_global_default(subscriber) {
     eprintln!("Failed to initialise global tracing subscriber - {err}");
   };
+  init_plugin_log_sink();
 }
 
 /// Enable ANSI coloured output on Windows. On non-Windows platforms, this function is a no-op.

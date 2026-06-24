@@ -341,6 +341,9 @@ impl MessageInteractionBuilder {
             self.setup_core_matcher(&ct, &contents_hashmap, Some(content_matcher));
           } else {
             debug!("Plugin matcher, will get the plugin to provide the interaction contents");
+            pact_plugin_driver::test_context::set_test_run_id(
+              Some(uuid::Uuid::new_v4().to_string())
+            );
             match content_matcher.configure_interaction(&ct, contents_hashmap).await {
               Ok((contents, plugin_config)) => {
                 if let Some(contents) = contents.first() {
