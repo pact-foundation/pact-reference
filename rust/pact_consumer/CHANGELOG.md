@@ -1,5 +1,14 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.4.5 - V2 plugin logging improvements
+
+* 0e529d39 - chore(pact-consumer): Update release script [skip ci] (Ronald Holshausen, Wed Jun 24 15:04:10 2026 +1000)
+* fb8a0a95 - chore: Update pact_matching to 2.0.7 (Ronald Holshausen, Wed Jun 24 15:01:51 2026 +1000)
+* 40318b16 - feat(008): Plugin observability — test run ID correlation and FFI log sink (#537) (Ronald Holshausen, Wed Jun 24 10:08:42 2026 +1000)
+* 4fa2a6f5 - chore: Update pact_matching to 2.0.6 (Ronald Holshausen, Fri Jun 19 09:31:54 2026 +1000)
+* 46a285ae - chore: Update pact_models to 1.3.11 (Ronald Holshausen, Thu Jun 18 16:00:45 2026 +1000)
+* fda61fb6 - bump version to 1.4.5 (Ronald Holshausen, Tue Jun 9 15:30:20 2026 +1000)
+
 # 1.4.4 - Support V2 plugins
 
 * 50fb5a6f - chore: Update pact_matching to 2.0.5 and pact_mock_server to 2.2.2 (Ronald Holshausen, Tue Jun 9 15:20:14 2026 +1000)
