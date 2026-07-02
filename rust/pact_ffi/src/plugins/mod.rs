@@ -2,7 +2,6 @@
 //! Pact tests.
 
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::ffi::CString;
 use std::time::Duration;
 
@@ -21,18 +20,18 @@ use pact_models::v4::message_parts::MessageContents;
 use pact_models::v4::V4InteractionType;
 use pact_plugin_driver::catalogue_manager::find_content_matcher;
 use pact_plugin_driver::content::{InteractionContents, PluginConfiguration};
-use pact_plugin_driver::plugin_manager::{drop_plugin_access, load_plugin, lookup_plugin};
+use pact_plugin_driver::plugin_manager::{drop_plugin_access, load_plugin};
 use pact_plugin_driver::plugin_models::{PluginDependency, PluginDependencyType};
 use serde_json::Value;
 use tokio::runtime::Builder;
 use tokio::time::sleep;
 use tracing::{debug, error};
 
-use crate::{ffi_fn, safe_str, RUNTIME};
 use crate::error::{catch_panic, set_error_msg};
-use crate::log::plugin_sink::{PluginLogCallback, get_logs, register_callback};
+use crate::log::plugin_sink::{get_logs, register_callback, PluginLogCallback};
 use crate::mock_server::handles::{InteractionHandle, InteractionPart, PactHandle};
 use crate::string::if_null;
+use crate::{ffi_fn, safe_str, RUNTIME};
 
 thread_local! {
   static CURRENT_TEST_RUN_ID: RefCell<Option<String>> = const { RefCell::new(None) };
@@ -74,32 +73,22 @@ ffi_fn! {
     let plugin_name = safe_str!(plugin_name);
     let plugin_version = if_null(plugin_version, "");
 
+    pact_mock_server::configure_core_catalogue();
+    pact_matching::matchingrules::configure_core_catalogue();
+
     let dependency = PluginDependency {
       name: plugin_name.to_string(),
       version: if plugin_version.is_empty() { None } else { Some(plugin_version) },
       dependency_type: Default::default()
     };
-    let result = lookup_plugin(&dependency)
-      .and_then(|mut plugin| {
-        plugin.update_access();
-        Some(plugin)
-      })
-      .ok_or(())
-      .or_else(|_| {
-        pact_mock_server::configure_core_catalogue();
-        pact_matching::matchingrules::configure_core_catalogue();
+    let result = RUNTIME.block_on(async {
+      let result = load_plugin(&dependency).await;
 
-        let result = RUNTIME.block_on(async {
-          let result = load_plugin(&dependency).await;
+      // Add a small delay to let asynchronous tasks to complete
+      sleep(Duration::from_millis(completion_delay)).await;
 
-          // Add a small delay to let asynchronous tasks to complete
-          sleep(Duration::from_millis(completion_delay)).await;
-
-          result
-        });
-
-        result
-      });
+      result
+    });
 
     match result {
       Ok(plugin) => pact.with_pact(&|_, inner| {
@@ -517,10 +506,10 @@ mod tests {
   use std::ptr::null;
 
   use expectest::prelude::*;
-  use pact_plugin_driver::content::InteractionContents;
-  use pact_models::{matchingrules, matchingrules_list};
   use pact_models::matchingrules::MatchingRule;
   use pact_models::v4::sync_message::SynchronousMessage;
+  use pact_models::{matchingrules, matchingrules_list};
+  use pact_plugin_driver::content::InteractionContents;
 
   use crate::mock_server::handles::{InteractionHandle, InteractionPart, PactHandle};
 
