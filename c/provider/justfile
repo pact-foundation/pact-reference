@@ -16,8 +16,8 @@ clean:
 
 [unix]
 run: build
-    ./build/pact-provider
+    LD_LIBRARY_PATH="./build:${LD_LIBRARY_PATH:-}" DYLD_LIBRARY_PATH="./build:${DYLD_LIBRARY_PATH:-}" ./build/pact-provider
 
 [windows]
 run: build
-    ./build/Release/pact-provider.exe
+    PATH="./build:${PATH:-}" ./build/Release/pact-provider.exe
