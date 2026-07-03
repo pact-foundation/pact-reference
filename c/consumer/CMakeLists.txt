@@ -50,8 +50,15 @@ find_package(BZip2 REQUIRED)
 find_package(ZLIB REQUIRED)
 
 # The Pact FFI is a Rust project
+#
+# We only import the cdylib crate type here (rather than the default, which
+# would prefer the staticlib). pact_ffi pulls in native static libraries via
+# dependencies' build scripts (e.g. mlua's vendored Lua), which cargo bakes
+# into the cdylib at link time but does not surface to corrosion for the
+# staticlib, causing missing symbol errors when linking against libpact_ffi.a.
 corrosion_import_crate(
     MANIFEST_PATH "${PACT_FFI_ROOT}/Cargo.toml"
+    CRATE_TYPES cdylib
 )
 corrosion_experimental_cbindgen(
     TARGET pact_ffi
