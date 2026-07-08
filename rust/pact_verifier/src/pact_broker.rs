@@ -528,13 +528,29 @@ impl HALClient {
   async fn send_document(&self, url: &str, body: &str, method: Method) -> Result<Value, PactBrokerError> {
     debug!("Sending JSON to {} using {}: {}", url, method, body);
 
-    let base_url = &self.url.parse::<Url>()?;
-    let url = if url.starts_with("/") {
-      base_url.join(url)?
+    // Extract path from URL if it's absolute (like fetch_url does), then resolve with context path
+    let mut path = if let Ok(link_as_url) = url.parse::<Url>() {
+      // URL is absolute, extract path to use broker's original host and context path
+      link_as_url.path().to_string()
     } else {
-      let url = url.parse::<Url>()?;
-      base_url.join(&url.path())?
+      // URL is already a path (relative)
+      url.to_string()
     };
+
+    // If we have a context path and the path doesn't already include it, prepend it
+    let broker_url = self.url.parse::<Url>()?;
+    let context_path = broker_url.path();
+    if !context_path.is_empty() && context_path != "/" && path.starts_with("/") {
+      let context_with_slash = format!("{}/", context_path);
+      let path_matches_context = path == context_path || path.starts_with(&context_with_slash);
+      if !path_matches_context {
+        // Path doesn't include context path, prepend it
+        let full_path = format!("{}{}", context_path, path);
+        path = full_path;
+      }
+    }
+
+    let url = self.resolve_path(path.as_str())?;
 
     let request_builder = match self.auth {
       Some(ref auth) => match auth {
@@ -2675,6 +2691,66 @@ mod tests {
     }));
     let result = client.navigate("next", &hashmap!{}).await.unwrap();
     expect!(result.path_info).to(be_some().value(serde_json::Value::String("Yay! You found your way here".to_string())));
+  }
+
+
+  #[test]
+  fn resolve_path_handles_absolute_links_correctly() {
+    let client = HALClientBuilder::builder()
+      .with_url("http://127.0.0.1:8080/pact", None)
+      .build();
+    
+    let path = "/pact/pacts/provider/Example%20API/for-verification";
+    let resolved = client.resolve_path(path).expect("Should resolve path");
+    
+    expect!(resolved.path()).to(be_equal_to("/pact/pacts/provider/Example%20API/for-verification"));
+  }
+
+  #[test_log::test(tokio::test)]
+  async fn subpath_broker_templates_are_substituted() {
+    let pact_broker = PactBuilderAsync::new("RustPactVerifier", "TemplateTest")
+      .interaction("fetch root", "", |mut i| async move {
+        i.request.path("/pact");
+        i.response
+          .header("Content-Type", "application/hal+json")
+          .json_body(json_pattern!({
+            "_links": {
+              "pb:test": {
+                "href": "http://localhost/pact/test/{id}",
+                "templated": true
+              }
+            }
+          }));
+        i
+      })
+      .await
+      .interaction("fetch templated", "", |mut i| async move {
+        i.request.path("/pact/test/123");
+        i.response
+          .header("Content-Type", "application/json")
+          .json_body(json_pattern!("success"));
+        i
+      })
+      .await
+      .start_mock_server(None, None);
+
+    let base_url = pact_broker.url().to_string();
+    let broker_url = if base_url.ends_with('/') {
+      format!("{}pact", base_url)
+    } else {
+      format!("{}/pact", base_url)
+    };
+
+    let client = HALClientBuilder::builder()
+      .with_url(broker_url, None)
+      .build();
+
+    // Navigate to templated link
+    let mut template_vals = HashMap::new();
+    template_vals.insert("id".to_string(), "123".to_string());
+    
+    let client_after = client.navigate("pb:test", &template_vals).await.unwrap();
+    expect!(client_after.path_info).to(be_some());
   }
 
   #[test_log::test(tokio::test)]
