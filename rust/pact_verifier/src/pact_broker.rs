@@ -69,6 +69,68 @@ fn find_entry(map: &serde_json::Map<String, Value>, key: &str) -> Option<(String
     }
 }
 
+/// Returns `true` when `path` equals `context_path` or starts with `context_path/`.
+///
+/// This prevents a broker context path such as `/pact` from falsely matching an
+/// unrelated path like `/pactfoo/bar` via a naive `starts_with` check.
+fn has_context_prefix(path: &str, context_path: &str) -> bool {
+    path == context_path || path.starts_with(&format!("{}/", context_path))
+}
+
+/// Extracts the path component from `url_string` (stripping scheme/host if it is an
+/// absolute URL) and prepends `broker_url`'s context path when it is missing.
+///
+/// Accepts an already-parsed `broker_url` so callers that have parsed it for
+/// another purpose need not parse it a second time.
+fn normalize_path_inner(url_string: &str, broker_url: &Url) -> String {
+    let mut path = if let Ok(parsed_url) = url_string.parse::<Url>() {
+        // Absolute URL: extract only the path, so we keep the broker's host.
+        parsed_url.path().to_string()
+    } else {
+        // Already a path (relative or absolute).
+        url_string.to_string()
+    };
+
+    let context_path = broker_url.path();
+    if !context_path.is_empty() && context_path != "/" && path.starts_with('/') {
+        if !has_context_prefix(&path, context_path) {
+            debug!("Prepending context path '{}' to path '{}'", context_path, path);
+            path = format!("{}{}", context_path, path);
+        }
+    }
+    path
+}
+
+/// Resolves a normalised `path` against an already-parsed `broker_url`,
+/// respecting any context path embedded in the broker URL.
+///
+/// Accepts ownership of `broker_url` so callers that have already parsed it
+/// can pass it through without a second `parse::<Url>()` call.
+fn resolve_path_inner(path: &str, broker_url: Url) -> Result<Url, PactBrokerError> {
+    let context_path = broker_url.path().to_string();
+    let url = if path.is_empty() {
+        broker_url
+    } else if !context_path.is_empty() && context_path != "/" {
+        if has_context_prefix(path, &context_path) {
+            let mut base_url = broker_url;
+            base_url.set_path("/");
+            base_url.join(path)?
+        } else if path.starts_with('/') {
+            let mut base_url = broker_url;
+            base_url.set_path(path);
+            base_url
+        } else {
+            let mut base_url = broker_url;
+            let cp = format!("{}/", context_path);
+            base_url.set_path(&cp);
+            base_url.join(path)?
+        }
+    } else {
+        broker_url.join(path)?
+    };
+    Ok(url)
+}
+
 /// Errors that can occur with a Pact Broker
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum PactBrokerError {
@@ -340,16 +402,24 @@ impl HALClient {
         ))
     }?;
 
-    let base_url = self.url.parse::<Url>()?;
-    let joined_url = base_url.join(&link_url)?;
-    self.fetch(joined_url.path().into()).await
+    // Parse broker URL once and use both inner functions to avoid double-parsing.
+    let broker_url = self.url.parse::<Url>()?;
+    let path = normalize_path_inner(&link_url, &broker_url);
+    let url = resolve_path_inner(&path, broker_url)?;
+    self.fetch_with_url(&path, url).await
   }
 
   async fn fetch(&self, path: &str) -> Result<Value, PactBrokerError> {
     info!("Fetching path '{}' from pact broker", path);
     trace!(%path, broker_url = %self.url, ">> fetch");
-
     let url = self.resolve_path(path)?;
+    self.fetch_with_url(path, url).await
+  }
+
+  /// Performs the actual GET request using an already-resolved `url`.
+  async fn fetch_with_url(&self, path: &str, url: Url) -> Result<Value, PactBrokerError> {
+    info!("Fetching path '{}' from pact broker", path);
+    trace!(%path, broker_url = %self.url, ">> fetch_with_url");
     debug!("Final broker URL: {}", url);
 
     let request_builder = match self.auth {
@@ -364,41 +434,18 @@ impl HALClient {
     let response = with_retries(self.retries, request_builder).await
       .map_err(|err| {
           PactBrokerError::IoError(format!("Failed to access pact broker path '{}' - {}. URL: '{}'",
-              &path,
+              path,
               err,
               &self.url,
           ))
       })?;
 
-    self.parse_broker_response(path.to_string(), response)
-        .await
+    self.parse_broker_response(path.to_string(), response).await
   }
 
   fn resolve_path(&self, path: &str) -> Result<Url, PactBrokerError> {
     let broker_url = self.url.parse::<Url>()?;
-    let context_path = broker_url.path();
-    let url = if path.is_empty() {
-      broker_url
-    } else if !context_path.is_empty() && context_path != "/" {
-      if path.starts_with(context_path) {
-        let mut base_url = broker_url.clone();
-        base_url.set_path("/");
-        base_url.join(path)?
-      } else if path.starts_with("/") {
-        let mut base_url = broker_url.clone();
-        base_url.set_path(path);
-        base_url
-      } else {
-        let mut base_url = broker_url.clone();
-        let mut cp = context_path.to_string();
-        cp.push('/');
-        base_url.set_path(cp.as_str());
-        base_url.join(path)?
-      }
-    } else {
-      broker_url.join(path)?
-    };
-    Ok(url)
+    resolve_path_inner(path, broker_url)
   }
 
   async fn parse_broker_response(
@@ -528,29 +575,10 @@ impl HALClient {
   async fn send_document(&self, url: &str, body: &str, method: Method) -> Result<Value, PactBrokerError> {
     debug!("Sending JSON to {} using {}: {}", url, method, body);
 
-    // Extract path from URL if it's absolute (like fetch_url does), then resolve with context path
-    let mut path = if let Ok(link_as_url) = url.parse::<Url>() {
-      // URL is absolute, extract path to use broker's original host and context path
-      link_as_url.path().to_string()
-    } else {
-      // URL is already a path (relative)
-      url.to_string()
-    };
-
-    // If we have a context path and the path doesn't already include it, prepend it
+    // Parse broker URL once and use inner functions for both steps.
     let broker_url = self.url.parse::<Url>()?;
-    let context_path = broker_url.path();
-    if !context_path.is_empty() && context_path != "/" && path.starts_with("/") {
-      let context_with_slash = format!("{}/", context_path);
-      let path_matches_context = path == context_path || path.starts_with(&context_with_slash);
-      if !path_matches_context {
-        // Path doesn't include context path, prepend it
-        let full_path = format!("{}{}", context_path, path);
-        path = full_path;
-      }
-    }
-
-    let url = self.resolve_path(path.as_str())?;
+    let path = normalize_path_inner(url, &broker_url);
+    let url = resolve_path_inner(&path, broker_url)?;
 
     let request_builder = match self.auth {
       Some(ref auth) => match auth {
@@ -2695,15 +2723,57 @@ mod tests {
 
 
   #[test]
-  fn resolve_path_handles_absolute_links_correctly() {
+  fn resolve_path_with_context_prefixed_path() {
+    // Path already contains the context prefix — resolve_path must not double-prepend it.
     let client = HALClientBuilder::builder()
       .with_url("http://127.0.0.1:8080/pact", None)
       .build();
-    
+
     let path = "/pact/pacts/provider/Example%20API/for-verification";
     let resolved = client.resolve_path(path).expect("Should resolve path");
-    
+
     expect!(resolved.path()).to(be_equal_to("/pact/pacts/provider/Example%20API/for-verification"));
+  }
+
+  #[test]
+  fn resolve_path_does_not_match_context_prefix_without_boundary() {
+    // "/pactfoo/bar" starts with "/pact" lexically but must NOT be treated as
+    // already having context path "/pact".
+    let client = HALClientBuilder::builder()
+      .with_url("http://127.0.0.1:8080/pact", None)
+      .build();
+
+    let path = "/pactfoo/bar";
+    let resolved = client.resolve_path(path).expect("Should resolve path");
+
+    // The path does not start with /pact/, so it is treated as an absolute path
+    // without a context prefix and set directly.
+    expect!(resolved.path()).to(be_equal_to("/pactfoo/bar"));
+  }
+
+  #[test]
+  fn normalize_path_from_url_prepends_context_for_absolute_url_missing_context() {
+    // Broker lives at http://host/pact but the link contains an absolute URL
+    // from a different host that omits the context path.  normalize_path_inner
+    // must strip the foreign host and prepend the broker's context path.
+    let broker_url = "http://127.0.0.1:8080/pact".parse::<Url>().unwrap();
+    let absolute_link = "http://other-broker.example.com/pacts/provider/Example%20API/for-verification";
+
+    let normalized = normalize_path_inner(absolute_link, &broker_url);
+
+    expect!(normalized).to(be_equal_to("/pact/pacts/provider/Example%20API/for-verification"));
+  }
+
+  #[test]
+  fn normalize_path_from_url_does_not_double_prepend_context_path() {
+    // When the absolute URL already carries the correct context path the
+    // function must leave it unchanged.
+    let broker_url = "http://127.0.0.1:8080/pact".parse::<Url>().unwrap();
+    let absolute_link = "http://other-broker.example.com/pact/pacts/provider/Example%20API/latest";
+
+    let normalized = normalize_path_inner(absolute_link, &broker_url);
+
+    expect!(normalized).to(be_equal_to("/pact/pacts/provider/Example%20API/latest"));
   }
 
   #[test_log::test(tokio::test)]
