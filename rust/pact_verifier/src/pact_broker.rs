@@ -473,7 +473,11 @@ impl HALClient {
             let lookup = caps.get(1).unwrap().as_str();
             trace!("Looking up value for key '{}'", lookup);
             match values.get(lookup) {
-              Some(val) => urlencoding::encode(val.as_str()).to_string(),
+              Some(val) => val.as_str()
+                .split('/')
+                .map(|segment| urlencoding::encode(segment).into_owned())
+                .collect::<Vec<_>>()
+                .join("/"),
               None => {
                 warn!("No value was found for key '{}', mapped values are {:?}", lookup, values);
                 format!("{{{}}}", lookup)
@@ -1494,7 +1498,7 @@ mod tests {
     let values = hashmap!{ "valA".to_string() => "A".to_string(), "valB".to_string() => "B/C".to_string() };
 
     let link = Link { name: "link".to_string(), href: Some("http://{valA}/{valB}".to_string()), templated: false, title: None };
-    expect!(client.clone().parse_link_url(&link, &values)).to(be_ok().value("http://A/B%2FC"));
+    expect!(client.clone().parse_link_url(&link, &values)).to(be_ok().value("http://A/B/C"));
   }
 
     #[test_log::test(tokio::test)]
@@ -2555,7 +2559,7 @@ mod tests {
       .interaction("a request to publish the provider branch", "", |mut i| async move {
         i.request
           .method("PUT")
-          .path("/pacticipants/Pact%20Broker/branches/feat%2F1234/versions/1234")
+          .path("/pacticipants/Pact%20Broker/branches/feat/1234/versions/1234")
           .json_body(json!({}));
         i.response
           .status(200)

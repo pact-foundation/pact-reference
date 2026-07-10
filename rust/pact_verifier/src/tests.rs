@@ -1019,7 +1019,7 @@ async fn test_publish_results_from_url_source_with_provider_branch() {
       .await
       .interaction("a request to publish provider branch", "", |mut i| async move {
         i.request.method("PUT");
-        i.request.path("/pacticipants/Pact%20Broker/branches/feat%2F1234/versions/1.2.3");
+        i.request.path("/pacticipants/Pact%20Broker/branches/feat/1234/versions/1.2.3");
         i.request.json_body(json!({}));
 
         i.response
