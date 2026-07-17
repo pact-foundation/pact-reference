@@ -92,7 +92,9 @@ pub enum PactSpecification {
   /// Version three of the pact specification (`https://github.com/pact-foundation/pact-specification/tree/version-3`)
   V3,
   /// Version four of the pact specification (`https://github.com/pact-foundation/pact-specification/tree/version-4`)
-  V4
+  V4,
+  /// Version 4.1 of the pact specification (`https://github.com/pact-foundation/pact-specification/tree/version-4.1`)
+  V4_1
 }
 
 impl Default for PactSpecification {
@@ -110,6 +112,7 @@ impl PactSpecification {
         PactSpecification::V2 => "2.0.0",
         PactSpecification::V3 => "3.0.0",
         PactSpecification::V4 => "4.0",
+        PactSpecification::V4_1 => "4.1",
         _ => "unknown"
     }.into()
   }
@@ -135,6 +138,7 @@ impl PactSpecification {
       },
       4 => match version.minor {
         0 => Ok(PactSpecification::V4),
+        1 => Ok(PactSpecification::V4_1),
         _ => Err(anyhow!("Unsupported specification version '{}'", str_version))
       },
       _ => Err(anyhow!("Invalid specification version '{}'", str_version))
@@ -150,6 +154,7 @@ impl From<&str> for PactSpecification {
       "V2" => PactSpecification::V2,
       "V3" => PactSpecification::V3,
       "V4" => PactSpecification::V4,
+      "V4.1" => PactSpecification::V4_1,
       _ => PactSpecification::Unknown
     }
   }
@@ -175,6 +180,7 @@ impl Display for PactSpecification {
       PactSpecification::V2 => write!(f, "V2"),
       PactSpecification::V3 => write!(f, "V3"),
       PactSpecification::V4 => write!(f, "V4"),
+      PactSpecification::V4_1 => write!(f, "V4.1"),
       _ => write!(f, "unknown")
     }
   }
