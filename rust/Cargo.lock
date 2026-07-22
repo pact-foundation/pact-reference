@@ -2365,6 +2365,7 @@ dependencies = [
  "bstr",
  "either",
  "erased-serde",
+ "futures-util",
  "libc",
  "mlua-sys",
  "num-traits",
@@ -2883,9 +2884,8 @@ dependencies = [
 
 [[package]]
 name = "pact-plugin-driver"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e6057f90dca5cfd3d86430fa5c6b483c8722a70651712af423e33b334a5c6eb"
+version = "1.1.1"
+source = "git+https://github.com/pact-foundation/pact-plugins.git#5d7bc897595473cfc5319f2982ca3286cf7774e4"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3019,6 +3019,7 @@ version = "2.0.8"
 dependencies = [
  "ansi_term",
  "anyhow",
+ "async-trait",
  "base64",
  "bytes",
  "chrono",
@@ -3067,9 +3068,8 @@ dependencies = [
 
 [[package]]
 name = "pact_mock_server"
-version = "2.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d1a0fa12842fdc02365f081fba73c672c3a1c2b218e591c9c0829fec3f32ee71"
+version = "2.2.3"
+source = "git+https://github.com/pact-foundation/pact-core-mock-server.git#0025f1bde416e53d7266e9ece04baec62c80cec2"
 dependencies = [
  "anyhow",
  "bytes",
