@@ -130,6 +130,7 @@ lazy_static! {
 pub fn configure_core_catalogue() {
   #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))] register_core_entries(CONTENT_MATCHER_CATALOGUE_ENTRIES.as_ref());
   #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))] register_core_entries(MATCHER_CATALOGUE_ENTRIES.as_ref());
+  #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))] crate::core_capabilities::register_core_capabilities();
 }
 
 pub(crate) fn display<T: Display>(value: &[T]) -> String {

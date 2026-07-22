@@ -431,6 +431,7 @@ pub mod headers;
 pub mod query;
 pub mod form_urlencoded;
 #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))] mod plugin_support;
+#[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))] mod core_capabilities;
 
 #[cfg(not(feature = "plugins"))]
 #[derive(Clone, Debug, PartialEq)]
