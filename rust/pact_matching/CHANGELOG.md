@@ -1,5 +1,13 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 2.0.8 - Plugin Host-provided matching and generation interface
+
+* 050ec62d - fix: parenthesize the text-matcher closure to survive async_trait's re-tokenization (Ronald Holshausen, Wed Jul 22 12:00:25 2026 +1000)
+* 06087bdc - feat: register host-provided core content matcher/generator capabilities (Ronald Holshausen, Wed Jul 22 11:40:50 2026 +1000)
+* b51c2bac - chore: remove beta flag from driver version (Ronald Holshausen, Fri Jul 17 11:08:04 2026 +1000)
+* 51d9f5fb - chore: Update pact-plugin-driver to 1.0.0-beta.6 (Ronald Holshausen, Thu Jul 2 17:08:12 2026 +1000)
+* 06ae6424 - bump version to 2.0.8 [skip ci] (Ronald Holshausen, Wed Jun 24 14:56:32 2026 +1000)
+
 # 2.0.7 - V2 plugin logging improvements
 
 * 40318b16 - feat(008): Plugin observability — test run ID correlation and FFI log sink (#537) (Ronald Holshausen, Wed Jun 24 10:08:42 2026 +1000)
