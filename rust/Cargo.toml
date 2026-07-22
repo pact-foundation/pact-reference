@@ -12,6 +12,10 @@ resolver = "2"
 # Issue 389 - Pull change into other crates
 pact_models = { version = "~1.3.11", path = "./pact_models" }
 pact_matching = { version = "~2.0.7", path = "./pact_matching" }
+# Track unreleased changes in the crates this workspace depends on but doesn't own, so the whole
+# chain can be built and tested together before any of them are published to crates.io.
+pact-plugin-driver = { git = "https://github.com/pact-foundation/pact-plugins.git" }
+pact_mock_server = { git = "https://github.com/pact-foundation/pact-core-mock-server.git" }
 
 [profile.release]
 strip = true

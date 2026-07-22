@@ -138,8 +138,8 @@ macro_rules! core_content_matcher {
 }
 
 core_content_matcher!(JsonCoreContentMatcher, crate::json::match_json);
-core_content_matcher!(TextCoreContentMatcher, |expected: &HttpResponse, actual: &HttpResponse, context: &CoreMatchingContext|
-  crate::match_text(&expected.body.value(), &actual.body.value(), context));
+core_content_matcher!(TextCoreContentMatcher, (|expected: &HttpResponse, actual: &HttpResponse, context: &CoreMatchingContext|
+  crate::match_text(&expected.body.value(), &actual.body.value(), context)));
 core_content_matcher!(MultipartCoreContentMatcher, crate::binary_utils::match_mime_multipart);
 
 #[derive(Debug)]
