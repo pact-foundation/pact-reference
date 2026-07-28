@@ -2212,14 +2212,14 @@ mod test {
 
   #[test]
   fn is_matcher_def_array_contains() {
-    assert!(is_matcher_def("arrayContains(matching(equalTo, 'PUBLIC'))"));
+    assert!(is_matcher_def("arrayContains(matching(equalTo, 'HARDCOVER'))"));
     assert!(is_matcher_def("arrayContains(matching(equalTo, 'A'), matching(equalTo, 'B'))"));
     assert!(!is_matcher_def("notArrayContains"));
   }
 
   #[test]
   fn parse_array_contains_single_variant() {
-    let result = parse_matcher_def("arrayContains(matching(equalTo, 'PUBLIC'))").unwrap();
+    let result = parse_matcher_def("arrayContains(matching(equalTo, 'HARDCOVER'))").unwrap();
     assert_eq!(result.rules.len(), 1);
     match &result.rules[0] {
       Either::Left(MatchingRule::ArrayContains(variants)) => {
@@ -2232,12 +2232,12 @@ mod test {
       }
       _ => panic!("Expected ArrayContains rule, got {:?}", result.rules[0]),
     }
-    assert_eq!(result.value, "PUBLIC");
+    assert_eq!(result.value, "HARDCOVER");
   }
 
   #[test]
   fn parse_array_contains_multi_variant() {
-    let result = parse_matcher_def("arrayContains(matching(equalTo, 'PUBLIC'), matching(equalTo, 'PRIVATE_LINK'))").unwrap();
+    let result = parse_matcher_def("arrayContains(matching(equalTo, 'HARDCOVER'), matching(equalTo, 'PAPERBACK'))").unwrap();
     assert_eq!(result.rules.len(), 1);
     match &result.rules[0] {
       Either::Left(MatchingRule::ArrayContains(variants)) => {
@@ -2247,7 +2247,7 @@ mod test {
       }
       _ => panic!("Expected ArrayContains rule"),
     }
-    assert_eq!(result.value, "PUBLIC");
+    assert_eq!(result.value, "HARDCOVER");
   }
 
   #[test]
@@ -2277,20 +2277,20 @@ mod test {
 
   #[test]
   fn parse_array_contains_with_regex() {
-    let result = parse_matcher_def("arrayContains(matching(regex, 'PUBLIC|PRIVATE.*', 'PUBLIC'))").unwrap();
+    let result = parse_matcher_def("arrayContains(matching(regex, 'HARDCOVER|PAPER.*', 'HARDCOVER'))").unwrap();
     assert_eq!(result.rules.len(), 1);
     match &result.rules[0] {
       Either::Left(MatchingRule::ArrayContains(variants)) => {
         assert_eq!(variants.len(), 1);
         let rule_list = variants[0].1.rules.get(&DocPath::root()).unwrap();
         match &rule_list.rules[0] {
-          MatchingRule::Regex(re) => assert_eq!(re, "PUBLIC|PRIVATE.*"),
+          MatchingRule::Regex(re) => assert_eq!(re, "HARDCOVER|PAPER.*"),
           other => panic!("Expected Regex, got {:?}", other),
         }
       }
       _ => panic!("Expected ArrayContains"),
     }
-    assert_eq!(result.value, "PUBLIC");
+    assert_eq!(result.value, "HARDCOVER");
   }
 
   #[test]
@@ -2301,14 +2301,14 @@ mod test {
 
   #[test]
   fn parse_array_contains_combined_with_at_least() {
-    let result = parse_matcher_def("atLeast(2), arrayContains(matching(equalTo, 'PUBLIC'))").unwrap();
+    let result = parse_matcher_def("atLeast(2), arrayContains(matching(equalTo, 'HARDCOVER'))").unwrap();
     assert!(result.rules.iter().any(|r| matches!(r, Either::Left(MatchingRule::MinType(2)))));
     assert!(result.rules.iter().any(|r| matches!(r, Either::Left(MatchingRule::ArrayContains(_)))));
   }
 
   #[test]
   fn parse_array_contains_combined_with_each_value() {
-    let result = parse_matcher_def("eachValue(matching(type, 'X')), arrayContains(matching(equalTo, 'PUBLIC'))").unwrap();
+    let result = parse_matcher_def("eachValue(matching(type, 'X')), arrayContains(matching(equalTo, 'HARDCOVER'))").unwrap();
     assert!(result.rules.iter().any(|r| matches!(r, Either::Left(MatchingRule::EachValue(_)))));
     assert!(result.rules.iter().any(|r| matches!(r, Either::Left(MatchingRule::ArrayContains(_)))));
   }
