@@ -77,6 +77,19 @@ fn has_context_prefix(path: &str, context_path: &str) -> bool {
     path == context_path || path.starts_with(&format!("{}/", context_path))
 }
 
+/// Strips a single trailing `/` from `context_path`, leaving the root path `/` as is.
+///
+/// A broker URL configured with a trailing slash (e.g. `http://host/pact/`) would
+/// otherwise yield a context path of `/pact/`, producing double slashes (`/pact//...`)
+/// wherever the context path is prepended or joined with another path.
+fn trim_context_path(context_path: &str) -> &str {
+    if context_path == "/" {
+        context_path
+    } else {
+        context_path.trim_end_matches('/')
+    }
+}
+
 /// Extracts the path component from `url_string` (stripping scheme/host if it is an
 /// absolute URL) and prepends `broker_url`'s context path when it is missing.
 ///
@@ -84,14 +97,17 @@ fn has_context_prefix(path: &str, context_path: &str) -> bool {
 /// another purpose need not parse it a second time.
 fn normalize_path_inner(url_string: &str, broker_url: &Url) -> String {
     let mut path = if let Ok(parsed_url) = url_string.parse::<Url>() {
-        // Absolute URL: extract only the path, so we keep the broker's host.
-        parsed_url.path().to_string()
+        // Absolute URL: extract the path (plus query, if any), so we keep the broker's host.
+        match parsed_url.query() {
+            Some(query) => format!("{}?{}", parsed_url.path(), query),
+            None => parsed_url.path().to_string()
+        }
     } else {
         // Already a path (relative or absolute).
         url_string.to_string()
     };
 
-    let context_path = broker_url.path();
+    let context_path = trim_context_path(broker_url.path());
     if !context_path.is_empty() && context_path != "/" && path.starts_with('/') {
         if !has_context_prefix(&path, context_path) {
             debug!("Prepending context path '{}' to path '{}'", context_path, path);
@@ -107,7 +123,7 @@ fn normalize_path_inner(url_string: &str, broker_url: &Url) -> String {
 /// Accepts ownership of `broker_url` so callers that have already parsed it
 /// can pass it through without a second `parse::<Url>()` call.
 fn resolve_path_inner(path: &str, broker_url: Url) -> Result<Url, PactBrokerError> {
-    let context_path = broker_url.path().to_string();
+    let context_path = trim_context_path(broker_url.path()).to_string();
     let url = if path.is_empty() {
         broker_url
     } else if !context_path.is_empty() && context_path != "/" {
@@ -410,8 +426,6 @@ impl HALClient {
   }
 
   async fn fetch(&self, path: &str) -> Result<Value, PactBrokerError> {
-    info!("Fetching path '{}' from pact broker", path);
-    trace!(%path, broker_url = %self.url, ">> fetch");
     let url = self.resolve_path(path)?;
     self.fetch_with_url(path, url).await
   }
@@ -2774,6 +2788,48 @@ mod tests {
     let normalized = normalize_path_inner(absolute_link, &broker_url);
 
     expect!(normalized).to(be_equal_to("/pact/pacts/provider/Example%20API/latest"));
+  }
+
+  #[test]
+  fn normalize_path_from_url_drops_query_string() {
+    // Copilot review comment: normalize_path_inner extracts only `parsed_url.path()`
+    // from an absolute URL, so any query string on a broker-provided href (e.g.
+    // pagination or filter params) is silently discarded.
+    let broker_url = "http://127.0.0.1:8080/pact".parse::<Url>().unwrap();
+    let absolute_link = "http://other-broker.example.com/pact/pacts/provider/Example%20API?page=2&size=10";
+
+    let normalized = normalize_path_inner(absolute_link, &broker_url);
+
+    expect!(normalized).to(be_equal_to("/pact/pacts/provider/Example%20API?page=2&size=10"));
+  }
+
+  #[test]
+  fn normalize_path_from_url_context_with_trailing_slash_does_not_double_slash() {
+    // Copilot review comment: if the broker URL has a trailing slash (e.g.
+    // "http://host/pact/"), context_path is "/pact/" and the naive
+    // `format!("{}{}", context_path, path)` prepend produces "/pact//...".
+    let broker_url = "http://127.0.0.1:8080/pact/".parse::<Url>().unwrap();
+    let absolute_link = "http://other-broker.example.com/pacts/provider/Example%20API/for-verification";
+
+    let normalized = normalize_path_inner(absolute_link, &broker_url);
+
+    expect!(normalized).to(be_equal_to("/pact/pacts/provider/Example%20API/for-verification"));
+  }
+
+  #[test]
+  fn resolve_path_context_with_trailing_slash_does_not_double_slash() {
+    // Copilot review comment: resolve_path_inner also takes broker_url.path()
+    // verbatim, so a trailing-slash context path ("/pact/") makes
+    // `format!("{}/", context_path)` produce "/pact//", which can 404 on
+    // brokers/proxies that don't normalize repeated slashes.
+    let client = HALClientBuilder::builder()
+      .with_url("http://127.0.0.1:8080/pact/", None)
+      .build();
+
+    let path = "pacts/provider/Example%20API/for-verification";
+    let resolved = client.resolve_path(path).expect("Should resolve path");
+
+    expect!(resolved.path()).to(be_equal_to("/pact/pacts/provider/Example%20API/for-verification"));
   }
 
   #[test_log::test(tokio::test)]
