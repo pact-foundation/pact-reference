@@ -1,5 +1,14 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.4.6 - Maintenance Release
+
+* 59535d64 - chore: Update pact_models to 1.3.12 (Ronald Holshausen, Thu Jul 30 16:41:12 2026 +1000)
+* 4538b017 - chore: Update pact_matching to 2.0.8 (Ronald Holshausen, Wed Jul 22 14:54:18 2026 +1000)
+* 76270454 - chore: bump pact_consumer/pact_ffi to pact-plugin-driver ~1.1.0 (Ronald Holshausen, Wed Jul 22 12:15:01 2026 +1000)
+* b51c2bac - chore: remove beta flag from driver version (Ronald Holshausen, Fri Jul 17 11:08:04 2026 +1000)
+* 51d9f5fb - chore: Update pact-plugin-driver to 1.0.0-beta.6 (Ronald Holshausen, Thu Jul 2 17:08:12 2026 +1000)
+* 1049fd81 - bump version to 1.4.6 [skip ci] (Ronald Holshausen, Wed Jun 24 15:06:25 2026 +1000)
+
 # 1.4.5 - V2 plugin logging improvements
 
 * 0e529d39 - chore(pact-consumer): Update release script [skip ci] (Ronald Holshausen, Wed Jun 24 15:04:10 2026 +1000)
