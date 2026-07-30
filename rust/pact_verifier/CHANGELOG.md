@@ -1,5 +1,20 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.4.4 - Bugfix Release
+
+* bada2558 - chore: Update pact_consumer to 1.4.6 (Ronald Holshausen, Fri Jul 31 09:29:47 2026 +1000)
+* b194fd45 - Revert "chore(pact_verifier): update changelog for release 1.4.4 [skip ci]" (Ronald Holshausen, Thu Jul 30 16:54:21 2026 +1000)
+* c45734a8 - chore(pact_verifier): update changelog for release 1.4.4 [skip ci] (Ronald Holshausen, Thu Jul 30 16:53:17 2026 +1000)
+* 59535d64 - chore: Update pact_models to 1.3.12 (Ronald Holshausen, Thu Jul 30 16:41:12 2026 +1000)
+* d0c1fd46 - fix(verifier): trim trailing slash from broker context path and preserve query strings (Ronald Holshausen, Tue Jul 28 15:12:29 2026 +1000)
+* 2f4ff0b6 - fix(verifier): support pact-broker on subpath (Yousaf Nabi, Thu Jul 9 12:12:40 2026 +0100)
+* 7ca9b6c4 - fix: ensure root path is passed when posting to broker (Yousaf Nabi, Wed Jul 8 16:51:24 2026 +0100)
+* 4538b017 - chore: Update pact_matching to 2.0.8 (Ronald Holshausen, Wed Jul 22 14:54:18 2026 +1000)
+* 06087bdc - feat: register host-provided core content matcher/generator capabilities (Ronald Holshausen, Wed Jul 22 11:40:50 2026 +1000)
+* b51c2bac - chore: remove beta flag from driver version (Ronald Holshausen, Fri Jul 17 11:08:04 2026 +1000)
+* 51d9f5fb - chore: Update pact-plugin-driver to 1.0.0-beta.6 (Ronald Holshausen, Thu Jul 2 17:08:12 2026 +1000)
+* 89822e2c - chore(pact_verifier): bump version to 1.4.4 [skip ci] (Ronald Holshausen, Wed Jun 24 15:14:39 2026 +1000)
+
 # 1.4.3 - V2 plugin logging improvements
 
 * 8a70209b - chore: Update pact_consumer to 1.4.5 (Ronald Holshausen, Wed Jun 24 15:10:51 2026 +1000)
