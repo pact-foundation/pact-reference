@@ -1,5 +1,11 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.3.12 - Maintenance Release
+
+* adabf328 - chore(pact_models): use neutral values in arrayContains expression tests (Stan Vodetskyi, Mon Jul 27 17:16:52 2026 -0700)
+* 46a285ae - chore: Update pact_models to 1.3.11 (Ronald Holshausen, Thu Jun 18 16:00:45 2026 +1000)
+* 2ac36a10 - chore(pact_models): bump version to 1.3.12 [skip-ci] (Ronald Holshausen, Thu Jun 18 15:55:42 2026 +1000)
+
 # 1.3.11 - Maintenance Release
 
 * b0554f31 - chore: add crate name and version to all http clients (JP-Ellis, Thu Jun 18 09:26:08 2026 +1000)
