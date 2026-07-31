@@ -1,5 +1,18 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.3.4 - Bugfix Release
+
+* 7551fe54 - chore: Update pact_verifier to 1.4.4 (Ronald Holshausen, Fri Jul 31 09:45:27 2026 +1000)
+* 59535d64 - chore: Update pact_models to 1.3.12 (Ronald Holshausen, Thu Jul 30 16:41:12 2026 +1000)
+* 4538b017 - chore: Update pact_matching to 2.0.8 (Ronald Holshausen, Wed Jul 22 14:54:18 2026 +1000)
+* b51c2bac - chore: remove beta flag from driver version (Ronald Holshausen, Fri Jul 17 11:08:04 2026 +1000)
+* 385d546d - chore: Update pact_verifier to 1.4.3 (Ronald Holshausen, Wed Jun 24 15:27:24 2026 +1000)
+* fb8a0a95 - chore: Update pact_matching to 2.0.7 (Ronald Holshausen, Wed Jun 24 15:01:51 2026 +1000)
+* 165e88a0 - chore: Update pact_verifier to 1.4.2 (Ronald Holshausen, Fri Jun 19 09:55:04 2026 +1000)
+* 4fa2a6f5 - chore: Update pact_matching to 2.0.6 (Ronald Holshausen, Fri Jun 19 09:31:54 2026 +1000)
+* 46a285ae - chore: Update pact_models to 1.3.11 (Ronald Holshausen, Thu Jun 18 16:00:45 2026 +1000)
+* d77096ad - bump version to 1.3.4 (Ronald Holshausen, Tue Jun 9 17:10:36 2026 +1000)
+
 # 1.3.3 - Support V2 plugins
 
 * e26db512 - chore: Update pact_verifier to 1.4.1 (Ronald Holshausen, Tue Jun 9 16:56:25 2026 +1000)
