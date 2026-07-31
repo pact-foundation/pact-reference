@@ -1,5 +1,31 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 0.5.5 - Bugfix Release
+
+* 7551fe54 - chore: Update pact_verifier to 1.4.4 (Ronald Holshausen, Fri Jul 31 09:45:27 2026 +1000)
+* dae8ec0e - chore: Update pact_mock_server to 2.0.8 (Ronald Holshausen, Thu Jul 30 17:26:10 2026 +1000)
+* 59535d64 - chore: Update pact_models to 1.3.12 (Ronald Holshausen, Thu Jul 30 16:41:12 2026 +1000)
+* 4538b017 - chore: Update pact_matching to 2.0.8 (Ronald Holshausen, Wed Jul 22 14:54:18 2026 +1000)
+* 76270454 - chore: bump pact_consumer/pact_ffi to pact-plugin-driver ~1.1.0 (Ronald Holshausen, Wed Jul 22 12:15:01 2026 +1000)
+* b51c2bac - chore: remove beta flag from driver version (Ronald Holshausen, Fri Jul 17 11:08:04 2026 +1000)
+* 51d9f5fb - chore: Update pact-plugin-driver to 1.0.0-beta.6 (Ronald Holshausen, Thu Jul 2 17:08:12 2026 +1000)
+* 385d546d - chore: Update pact_verifier to 1.4.3 (Ronald Holshausen, Wed Jun 24 15:27:24 2026 +1000)
+* fb8a0a95 - chore: Update pact_matching to 2.0.7 (Ronald Holshausen, Wed Jun 24 15:01:51 2026 +1000)
+* 40318b16 - feat(008): Plugin observability — test run ID correlation and FFI log sink (#537) (Ronald Holshausen, Wed Jun 24 10:08:42 2026 +1000)
+* 165e88a0 - chore: Update pact_verifier to 1.4.2 (Ronald Holshausen, Fri Jun 19 09:55:04 2026 +1000)
+* 4fa2a6f5 - chore: Update pact_matching to 2.0.6 (Ronald Holshausen, Fri Jun 19 09:31:54 2026 +1000)
+* 46a285ae - chore: Update pact_models to 1.3.11 (Ronald Holshausen, Thu Jun 18 16:00:45 2026 +1000)
+* e26db512 - chore: Update pact_verifier to 1.4.1 (Ronald Holshausen, Tue Jun 9 16:56:25 2026 +1000)
+* 50fb5a6f - chore: Update pact_matching to 2.0.5 and pact_mock_server to 2.2.2 (Ronald Holshausen, Tue Jun 9 15:20:14 2026 +1000)
+* 8ec724bb - chore: Update pact-plugin-driver to 1.0.0-beta.2 to support V2 plugins (Ronald Holshausen, Tue Jun 9 14:49:40 2026 +1000)
+* a579270d - chore: update Pact plugin driver to version supporting initial V2 plugins (Ronald Holshausen, Fri May 29 13:41:41 2026 +1000)
+* 3a6e45ef - chore: Update pact_matching to 2.0.4 (Ronald Holshausen, Wed May 27 16:26:53 2026 +1000)
+* c98502f6 - feat: add --retries / PACT_BROKER_HTTP_RETRIES to pact_verifier_cli (JP-Ellis, Tue May 26 15:39:28 2026 +1000)
+* 9f100787 - Merge pull request #530 from pact-foundation/fix-ffi-tls-mockserver (Ronald Holshausen, Wed May 20 14:51:04 2026 +1000)
+* 29302a82 - feat(pact_matching): Add V2 engine support for form-urlencoded body matching (Ronald Holshausen, Mon May 18 13:39:21 2026 +1000)
+* bdfe6f68 - fix(pact-ffi): pactffi_create_mock_server_for_transport is unable to start a TLS mock server (Ronald Holshausen, Tue May 5 16:01:31 2026 +1000)
+* 4420a878 - bump version to 0.5.5 (Ronald Holshausen, Thu Apr 30 10:33:24 2026 +1000)
+
 # 0.5.4 - Maintenance Release
 
 * 28c540cd - chore: Update pact_verifier to 1.3.5 (Ronald Holshausen, Thu Apr 30 10:04:40 2026 +1000)
