@@ -1691,7 +1691,6 @@ dependencies = [
  "hyper-util",
  "log",
  "rustls",
- "rustls-native-certs",
  "tokio",
  "tokio-rustls",
  "tower-service",
@@ -2934,7 +2933,7 @@ dependencies = [
  "prost",
  "prost-types",
  "regex",
- "reqwest 0.13.4",
+ "reqwest",
  "rsa",
  "semver",
  "serde",
@@ -2972,7 +2971,7 @@ dependencies = [
  "proclaim-it",
  "rand 0.8.7",
  "regex",
- "reqwest 0.13.4",
+ "reqwest",
  "serde",
  "serde_json",
  "tempfile",
@@ -3019,7 +3018,7 @@ dependencies = [
  "rand_regex",
  "regex",
  "regex-syntax",
- "reqwest 0.13.4",
+ "reqwest",
  "rstest 0.26.1",
  "rustls",
  "serde",
@@ -3075,7 +3074,7 @@ dependencies = [
  "quickcheck",
  "rand 0.9.5",
  "regex",
- "reqwest 0.12.28",
+ "reqwest",
  "rstest 0.26.1",
  "semver",
  "serde",
@@ -3155,7 +3154,7 @@ dependencies = [
  "rand_regex",
  "regex",
  "regex-syntax",
- "reqwest 0.13.4",
+ "reqwest",
  "rstest 0.26.1",
  "semver",
  "serde",
@@ -3201,7 +3200,7 @@ dependencies = [
  "pretty_assertions",
  "quickcheck",
  "regex",
- "reqwest 0.13.4",
+ "reqwest",
  "rstest 0.26.1",
  "serde",
  "serde_json",
@@ -4020,44 +4019,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "71fe3824f5629716b1589be05dacd749f6aa084c87e00e016714a8cdfccc997c"
 dependencies = [
  "bytecheck",
-]
-
-[[package]]
-name = "reqwest"
-version = "0.12.28"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eddd3ca559203180a307f12d114c268abf583f59b03cb906fd0b3ff8646c1147"
-dependencies = [
- "base64 0.22.1",
- "bytes",
- "futures-core",
- "http",
- "http-body",
- "http-body-util",
- "hyper",
- "hyper-rustls",
- "hyper-util",
- "js-sys",
- "log",
- "percent-encoding",
- "pin-project-lite",
- "quinn",
- "rustls",
- "rustls-native-certs",
- "rustls-pki-types",
- "serde",
- "serde_json",
- "serde_urlencoded",
- "sync_wrapper",
- "tokio",
- "tokio-rustls",
- "tower",
- "tower-http",
- "tower-service",
- "url",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
 ]
 
 [[package]]
