@@ -1,5 +1,14 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 2.0.9 - Maintenance Release
+
+* c99c46c9 - chore(pact-matching): Update reqwest to 0.13.4 and set rustls-no-provider (Ronald Holshausen, Tue Aug 4 09:16:28 2026 +1000)
+* 3043dc06 - chore(pact-matching): Update dependencies (Ronald Holshausen, Tue Aug 4 09:14:51 2026 +1000)
+* c1c39f35 - chore: Update pact-plugin-driver to 1.1.1 (Ronald Holshausen, Mon Aug 3 18:02:36 2026 +1000)
+* 0904b3d3 - chore: Update pact_models to 1.3.13 (Ronald Holshausen, Mon Aug 3 17:16:00 2026 +1000)
+* 59535d64 - chore: Update pact_models to 1.3.12 (Ronald Holshausen, Thu Jul 30 16:41:12 2026 +1000)
+* 7188e2ce - bump version to 2.0.9 [skip ci] (Ronald Holshausen, Wed Jul 22 13:59:59 2026 +1000)
+
 # 2.0.8 - Plugin Host-provided matching and generation interface
 
 * 050ec62d - fix: parenthesize the text-matcher closure to survive async_trait's re-tokenization (Ronald Holshausen, Wed Jul 22 12:00:25 2026 +1000)
