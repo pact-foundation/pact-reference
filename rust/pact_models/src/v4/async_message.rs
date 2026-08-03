@@ -523,6 +523,23 @@ mod tests {
   use crate::v4::message_parts::MessageContents;
 
   #[test]
+  fn message_contents_without_a_content_attribute_are_not_dropped() {
+    // A hand-written pact may put the payload where the body attributes belong. Reading it as a
+    // missing body made an interaction verify successfully whatever the provider produced.
+    // See https://github.com/pact-foundation/pact-python/issues/1103
+    let json = json!({
+      "type": "Asynchronous/Messages",
+      "description": "a message",
+      "contents": {
+        "Payload": "exists"
+      }
+    });
+    let message = AsynchronousMessage::from_json(&json, 0).unwrap();
+    expect!(message.contents.contents).to(be_equal_to(
+      OptionalBody::Present("{\"Payload\":\"exists\"}".into(), None, None)));
+  }
+
+  #[test]
   fn when_downgrading_message_to_v3_rename_the_matching_rules_from_content_to_body() {
     let message = AsynchronousMessage {
       contents: MessageContents {

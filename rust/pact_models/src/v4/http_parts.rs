@@ -269,6 +269,9 @@ impl HttpPart for HttpRequest {
   }
 }
 
+/// Attributes a V4 body fragment may hold alongside its content.
+const BODY_ATTRIBUTES: [&str; 4] = ["content", "contentType", "contentTypeHint", "encoded"];
+
 /// Set up an OptionalBody from a JSON fragment. The contents for the body will be looked up from
 /// the attribute given by `attr_name`. The headers will be used to work out the content type,
 /// if required.
@@ -361,8 +364,16 @@ pub fn body_from_json(json: &Value, attr_name: &str, headers: &Option<HashMap<St
             }
           },
 
-          // No content attribute, assume a missing body
-          None => OptionalBody::Missing
+          None => if body_attrs.keys().all(|k| BODY_ATTRIBUTES.contains(&k.as_str())) {
+            // Only body attributes, so the body really is missing
+            OptionalBody::Missing
+          } else {
+            // The payload has been set where the body attributes belong. Treat it the same as a
+            // body that is not a JSON object, rather than silently dropping it.
+            warn!("Body in attribute '{}' from JSON file has no 'content' attribute, will load the \
+              whole value as the body", attr_name);
+            OptionalBody::Present(body.to_string().into(), None, None)
+          }
         }
       },
 
@@ -991,6 +1002,35 @@ mod tests {
       "content-type".to_string() => vec!["application/json".to_string()]
     }));
     expect!(body).to(be_equal_to(OptionalBody::Null));
+  }
+
+  #[test]
+  fn body_from_json_returns_missing_if_the_body_only_has_body_attributes() {
+    let json = json!({
+      "body": {
+        "contentType": "application/json",
+        "encoded": false
+      }
+    });
+    expect!(body_from_json(&json, "body", &None)).to(be_equal_to(OptionalBody::Missing));
+
+    let json = json!({
+      "body": {}
+    });
+    expect!(body_from_json(&json, "body", &None)).to(be_equal_to(OptionalBody::Missing));
+  }
+
+  #[test]
+  fn body_from_json_loads_the_whole_value_if_the_body_has_no_content_attribute() {
+    // The payload has been set where the body attributes belong. Previously this was read as a
+    // missing body, so an interaction with a mismatched payload verified successfully.
+    let json = json!({
+      "body": {
+        "Payload": "exists"
+      }
+    });
+    expect!(body_from_json(&json, "body", &None)).to(be_equal_to(
+      OptionalBody::Present("{\"Payload\":\"exists\"}".into(), None, None)));
   }
 
   #[test]
