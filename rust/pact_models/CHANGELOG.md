@@ -1,5 +1,11 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.3.13 - Maintenance Release
+
+* 4f35334b - chore(pact_models): Update reqwest to 0.13.4 and set rustls-no-provider (Ronald Holshausen, Mon Aug 3 16:41:50 2026 +1000)
+* ee4abc34 - chore(pact_models): Update dependencies (Ronald Holshausen, Mon Aug 3 16:33:49 2026 +1000)
+* b74a0e4b - chore(pact_models): bump version to 1.3.13 [skip ci] (Ronald Holshausen, Thu Jul 30 16:27:44 2026 +1000)
+
 # 1.3.12 - Maintenance Release
 
 * adabf328 - chore(pact_models): use neutral values in arrayContains expression tests (Stan Vodetskyi, Mon Jul 27 17:16:52 2026 -0700)
