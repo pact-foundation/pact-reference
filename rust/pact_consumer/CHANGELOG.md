@@ -1,5 +1,10 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.4.9 - Bugfix Release
+
+* f4e1fab7 - fix(pact-consumer): do not panic if the DSL builder can not set the default crypto provider (Ronald Holshausen, Tue Aug 4 15:18:39 2026 +1000)
+* 1bb2ec54 - bump version to 1.4.9 [skip ci] (Ronald Holshausen, Tue Aug 4 15:11:06 2026 +1000)
+
 # 1.4.8 - Maintenance Release
 
 * 43b53503 - chore(pact-consumer): Set the crypto provider in the DSL Builder if it has not already been set (Ronald Holshausen, Tue Aug 4 15:08:15 2026 +1000)
