@@ -42,6 +42,7 @@ uuid = { version = "1.24.0", features = ["v4"], optional = true }
 regex = "1.13.1"
 httpdate = "1.0.3"
 reqwest = { version = "0.13.4", default-features = false, features = ["rustls-no-provider", "blocking", "json", "query"] }
+rustls = { version = "0.23.43", features = ["ring"] }
 serde = "1.0.229"
 serde_json = "1.0.151"
 serde_with = { version = "3.21.0", features = ["json"] }
@@ -66,6 +67,5 @@ pretty_assertions = "1.4.1"
 quickcheck = "1.1.0"
 insta = "1.48.0"
 rstest = "0.26.1"
-rustls = { version = "0.23.43", features = ["ring"] }
 test-log = { version = "0.2.21", features = ["trace"] }
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "tracing-log", "fmt"] }

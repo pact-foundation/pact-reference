@@ -702,6 +702,11 @@ async fn execute_provider_states<S: ProviderStateExecutor>(
 pub(crate) fn configure_http_client<F: RequestFilterExecutor>(
   options: &VerificationOptions<F>
 ) -> anyhow::Result<Client> {
+  if rustls::crypto::CryptoProvider::get_default().is_none() {
+    if let Err(_) = rustls::crypto::ring::default_provider().install_default() {
+      warn!("failed to installed the default crypto provider");
+    }
+  }
   let mut client_builder = reqwest::Client::builder()
     .user_agent(concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")))
     .danger_accept_invalid_certs(options.disable_ssl_verification)

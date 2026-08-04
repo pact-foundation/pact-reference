@@ -260,7 +260,7 @@ async fn the_verification_is_run(world: &mut V4World) -> anyhow::Result<()> {
   if rustls::crypto::CryptoProvider::get_default().is_none() {
     let _ = rustls::crypto::ring::default_provider().install_default();
   }
-  
+
   let options = VerificationOptions::<ProviderWorldRequestFilter>::default();
   world.verification_results = verify_provider_async(
     world.provider_info.clone(),

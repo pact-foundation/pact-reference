@@ -14,7 +14,7 @@ use chrono::Local;
 use expectest::prelude::*;
 use itertools::Itertools;
 use libc::c_char;
-use log::LevelFilter;
+use log::{warn, LevelFilter};
 use maplit::*;
 use multipart_2021 as multipart;
 use pretty_assertions::assert_eq;
@@ -483,6 +483,8 @@ fn add_interaction_reference() {
 
 #[test_log::test]
 fn http_consumer_feature_test() {
+  init_crypto();
+
   let consumer_name = CString::new("http-consumer").unwrap();
   let provider_name = CString::new("http-provider").unwrap();
   let pact_handle = pactffi_new_pact(consumer_name.as_ptr(), provider_name.as_ptr());
@@ -560,6 +562,8 @@ fn http_consumer_feature_test() {
 #[test]
 #[allow(deprecated)]
 fn http_xml_consumer_feature_test() {
+  init_crypto();
+
   let consumer_name = CString::new("http-consumer").unwrap();
   let provider_name = CString::new("http-provider").unwrap();
   let pact_handle = pactffi_new_pact(consumer_name.as_ptr(), provider_name.as_ptr());
@@ -682,6 +686,8 @@ fn message_xml_consumer_feature_test() {
 
 #[test]
 fn http_xml_consumer_with_examples_and_content_test() {
+  init_crypto();
+
   let consumer_name = CString::new("http-consumer").unwrap();
   let provider_name = CString::new("http-provider").unwrap();
   let pact_handle = pactffi_new_pact(consumer_name.as_ptr(), provider_name.as_ptr());
@@ -857,6 +863,8 @@ fn pactffi_with_binary_file_feature_test(specification: PactSpecification, expec
 #[test_log::test]
 #[allow(deprecated)]
 fn http_verification_from_directory_feature_test() {
+  init_crypto();
+
   let name = CString::new("tests").unwrap();
   let version = CString::new("1.0.0").unwrap();
   let handle = pactffi_verifier_new_for_application(name.as_ptr(), version.as_ptr());
@@ -908,6 +916,8 @@ fn test_missing_plugin() {
 // Issue #299
 #[test_log::test]
 fn each_value_matcher() {
+  init_crypto();
+
   let consumer_name = CString::new("each_value_matcher-consumer").unwrap();
   let provider_name = CString::new("each_value_matcher-provider").unwrap();
   let pact_handle = pactffi_new_pact(consumer_name.as_ptr(), provider_name.as_ptr());
@@ -973,6 +983,8 @@ fn each_value_matcher() {
 // Issue #301
 #[test_log::test]
 fn each_key_matcher() {
+  init_crypto();
+
   let consumer_name = CString::new("each_key_matcher-consumer").unwrap();
   let provider_name = CString::new("each_key_matcher-provider").unwrap();
   let pact_handle = pactffi_new_pact(consumer_name.as_ptr(), provider_name.as_ptr());
@@ -1046,6 +1058,8 @@ fn each_key_matcher() {
 // Issue #324
 #[test_log::test]
 fn array_contains_matcher() {
+  init_crypto();
+
   let consumer_name = CString::new("array_contains_matcher-consumer").unwrap();
   let provider_name = CString::new("array_contains_matcher-provider").unwrap();
   let pact_handle = pactffi_new_pact(consumer_name.as_ptr(), provider_name.as_ptr());
@@ -1120,6 +1134,14 @@ fn array_contains_matcher() {
       "id": { "value": 2 }
     },
   ])));
+}
+
+fn init_crypto() {
+  if rustls::crypto::CryptoProvider::get_default().is_none() {
+    if let Err(_) = rustls::crypto::ring::default_provider().install_default() {
+      warn!("failed to installed the default crypto provider");
+    }
+  }
 }
 
 // Issue #332
@@ -1795,6 +1817,8 @@ fn provider_states_ignoring_parameter_types() {
 // Issue #399
 #[test_log::test]
 fn combined_each_key_and_each_value_matcher() {
+  init_crypto();
+
   let consumer_name = CString::new("combined_matcher-consumer").unwrap();
   let provider_name = CString::new("combined_matcher-provider").unwrap();
   let pact_handle = pactffi_new_pact(consumer_name.as_ptr(), provider_name.as_ptr());
@@ -1991,6 +2015,8 @@ fn returns_mock_server_logs() {
 #[test]
 #[allow(deprecated)]
 fn http_form_urlencoded_consumer_feature_test() {
+  init_crypto();
+
   let consumer_name = CString::new("http-consumer").unwrap();
   let provider_name = CString::new("http-provider").unwrap();
   let pact_handle = pactffi_new_pact(consumer_name.as_ptr(), provider_name.as_ptr());
@@ -2303,6 +2329,8 @@ fn mime_multipart() {
 // Response returns current date in the provided format when pact:generator:type is present in date matcher
 #[test_log::test]
 fn date_matcher_in_response_body_with_generator_type() {
+    init_crypto();
+
     let consumer_name = CString::new("date-consumer").unwrap();
     let provider_name = CString::new("date-provider").unwrap();
     let pact_handle = pactffi_new_pact(consumer_name.as_ptr(), provider_name.as_ptr());
@@ -2378,6 +2406,8 @@ fn date_matcher_in_response_body_with_generator_type() {
 // Response returns provided date value itself when pact:generator:type is not provided in date matcher
 #[test_log::test]
 fn date_matcher_in_response_body_without_generator_type() {
+    init_crypto();
+
     let consumer_name = CString::new("date-consumer").unwrap();
     let provider_name = CString::new("date-provider").unwrap();
     let pact_handle = pactffi_new_pact(consumer_name.as_ptr(), provider_name.as_ptr());
