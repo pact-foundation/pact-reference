@@ -1689,12 +1689,10 @@ dependencies = [
  "http",
  "hyper",
  "hyper-util",
- "log",
  "rustls",
  "tokio",
  "tokio-rustls",
  "tower-service",
- "webpki-roots",
 ]
 
 [[package]]
@@ -3092,17 +3090,16 @@ dependencies = [
 
 [[package]]
 name = "pact_mock_server"
-version = "2.2.4"
-source = "git+https://github.com/pact-foundation/pact-core-mock-server.git#5b2b3df1b9f45ea36f6b8e7b7ca75d13dbcfe3ac"
+version = "2.2.5"
+source = "git+https://github.com/pact-foundation/pact-core-mock-server.git#f1cc75980e0f453a6d76035db1ab62ac561a8c9f"
 dependencies = [
  "anyhow",
  "bytes",
  "futures",
  "http-body-util",
  "hyper",
- "hyper-rustls",
  "hyper-util",
- "itertools 0.14.0",
+ "itertools 0.15.0",
  "lazy_static",
  "maplit",
  "pact-plugin-driver",
@@ -3111,7 +3108,6 @@ dependencies = [
  "rcgen",
  "rustls",
  "rustls-pemfile",
- "rustls-webpki",
  "serde",
  "serde_json",
  "thiserror",
@@ -5742,15 +5738,6 @@ name = "webpki-root-certs"
 version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b96554aa2acc8ccdb7e1c9a58a7a68dd5d13bccc69cd124cb09406db612a1c9b"
-dependencies = [
- "rustls-pki-types",
-]
-
-[[package]]
-name = "webpki-roots"
-version = "1.0.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7dcd9d09a39985f5344844e66b0c530a33843579125f23e21e9f0f220850f22a"
 dependencies = [
  "rustls-pki-types",
 ]
