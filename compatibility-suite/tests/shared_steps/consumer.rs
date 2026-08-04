@@ -64,6 +64,12 @@ fn the_following_http_interactions_have_been_setup(world: &mut ConsumerWorld, st
 
 #[when(expr = "the mock server is started with interaction {int}")]
 async fn the_mock_server_is_started_with_interaction(world: &mut ConsumerWorld, interaction: usize) -> anyhow::Result<()> {
+  if rustls::crypto::CryptoProvider::get_default().is_none() {
+    if let Err(_) = rustls::crypto::ring::default_provider().install_default() {
+      warn!("failed to installed the default crypto provider");
+    }
+  }
+
   let pact = RequestResponsePact {
     consumer: Consumer { name: "v1-compatibility-suite-c".to_string() },
     provider: Provider { name: "p".to_string() },
@@ -100,6 +106,12 @@ async fn the_mock_server_is_started_with_interaction_but_with_the_following_chan
   step: &Step,
   interaction: usize
 ) -> anyhow::Result<()> {
+  if rustls::crypto::CryptoProvider::get_default().is_none() {
+    if let Err(_) = rustls::crypto::ring::default_provider().install_default() {
+      warn!("failed to installed the default crypto provider");
+    }
+  }
+
   let mut request_response_interaction = world.interactions
     .get(interaction - 1).unwrap().clone();
 
@@ -162,6 +174,12 @@ async fn the_mock_server_is_started_with_interaction_but_with_the_following_chan
 
 #[when(expr = "the mock server is started with interactions {string}")]
 async fn the_mock_server_is_started_with_interactions(world: &mut ConsumerWorld, ids: String) -> anyhow::Result<()> {
+  if rustls::crypto::CryptoProvider::get_default().is_none() {
+    if let Err(_) = rustls::crypto::ring::default_provider().install_default() {
+      warn!("failed to installed the default crypto provider");
+    }
+  }
+
   let interactions = ids.split(",")
     .map(|id| id.trim().parse::<usize>().unwrap())
     .map(|index| world.interactions.get(index - 1).unwrap().clone())
