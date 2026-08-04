@@ -809,6 +809,10 @@ fn a_provider_state_callback_is_configured(world: &mut V3MessageWorld) -> anyhow
 
 #[when("the verification is run")]
 async fn the_verification_is_run(world: &mut V3MessageWorld) -> anyhow::Result<()> {
+  if rustls::crypto::CryptoProvider::get_default().is_none() {
+    let _ = rustls::crypto::ring::default_provider().install_default();
+  }
+  
   world.verification_results = verify_provider_async(
     world.provider_info.clone(),
     world.sources.clone(),
