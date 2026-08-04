@@ -64,6 +64,7 @@
 //! server.
 //!
 //! ```rust
+//! # rustls::crypto::ring::default_provider().install_default().expect("Failed to install rustls crypto provider");
 //! # tokio_test::block_on(async {
 //! # use pact_models::pact::Pact;
 //! # use std::io::Read;
