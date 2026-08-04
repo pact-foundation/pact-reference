@@ -1995,6 +1995,10 @@ fn returns_mock_server_logs() {
   let port = pactffi_create_mock_server_for_transport(pact_handle, address.as_ptr(), 0, null(), null());
   expect!(port).to(be_greater_than(0));
 
+  if rustls::crypto::CryptoProvider::get_default().is_none() {
+    let _ = rustls::crypto::ring::default_provider().install_default();
+  }
+
   let client = Client::default();
   client.post(format!("http://127.0.0.1:{}/path", port).as_str())
     .header(CONTENT_TYPE, "application/json")
