@@ -462,6 +462,10 @@ fn a_pact_file_for_interaction_is_to_be_verified_with_the_following_provider_sta
 
 #[when("the verification is run")]
 async fn the_verification_is_run(world: &mut ProviderWorld) -> anyhow::Result<()> {
+  if rustls::crypto::CryptoProvider::get_default().is_none() {
+    let _ = rustls::crypto::ring::default_provider().install_default();
+  }
+
   let options = world.verification_options();
   world.verification_results = verify_provider_async(
     world.provider_info.clone(),
