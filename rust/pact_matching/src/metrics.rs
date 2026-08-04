@@ -11,6 +11,7 @@ use std::str;
 use std::sync::Mutex;
 
 use anyhow::anyhow;
+use itertools::Itertools;
 use lazy_static::lazy_static;
 use maplit::hashmap;
 use reqwest::Client;
@@ -200,7 +201,10 @@ pub async fn send_metrics_async(event: MetricEvent) {
       }
     };
     let result = client.post(GA_URL)
-      .form(&event_payload)
+      .header("content-type", "application/x-www-form-urlencoded")
+      .body(event_payload.iter()
+        .map(|(k, v)| format!("{}={}", k, v))
+        .join("&"))
       .send()
       .await;
     if let Err(err) = result {
