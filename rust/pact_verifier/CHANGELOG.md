@@ -1,5 +1,14 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.4.5 - Maintenance Release
+
+* f9889a8b - chore(pact-verifier): Update all dependencies and set rustls-no-provider (Ronald Holshausen, Tue Aug 4 15:30:33 2026 +1000)
+* 956679ca - chore: Update pact_consumer to 1.4.7 (Ronald Holshausen, Tue Aug 4 11:33:20 2026 +1000)
+* 32436afa - chore: Update pact-matching to 2.0.9 (Ronald Holshausen, Tue Aug 4 09:48:44 2026 +1000)
+* c1c39f35 - chore: Update pact-plugin-driver to 1.1.1 (Ronald Holshausen, Mon Aug 3 18:02:36 2026 +1000)
+* 0904b3d3 - chore: Update pact_models to 1.3.13 (Ronald Holshausen, Mon Aug 3 17:16:00 2026 +1000)
+* 00fa02aa - chore(pact_verifier): bump version to 1.4.5 [skip ci] (Ronald Holshausen, Fri Jul 31 09:34:10 2026 +1000)
+
 # 1.4.4 - Bugfix Release
 
 * bada2558 - chore: Update pact_consumer to 1.4.6 (Ronald Holshausen, Fri Jul 31 09:29:47 2026 +1000)
