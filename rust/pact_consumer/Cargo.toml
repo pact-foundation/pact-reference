@@ -34,7 +34,7 @@ pact_models = { version = "~1.3.13", default-features = false }
 pact-plugin-driver = { version = "~1.1.1", optional = true, default-features = false }
 uuid = { version = "1.24.0", features = ["v4"], optional = true }
 regex = "1.13.1"
-rustls = { version = "0.23.43", features = ["ring"] }
+rustls = { version = "0.23.43", default-features = false, features = ["ring", "logging", "tls12", "std"] }
 serde_json = "1.0.151"
 termsize = "0.1.9"
 tokio = { version = "1.53.1", features = ["full"] }
