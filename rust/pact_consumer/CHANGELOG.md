@@ -1,5 +1,10 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.4.8 - Maintenance Release
+
+* 43b53503 - chore(pact-consumer): Set the crypto provider in the DSL Builder if it has not already been set (Ronald Holshausen, Tue Aug 4 15:08:15 2026 +1000)
+* 6ab82882 - bump version to 1.4.8 [skip ci] (Ronald Holshausen, Tue Aug 4 11:29:45 2026 +1000)
+
 # 1.4.7 - Maintenance Release
 
 * 1ea32b09 - chore(pact-consumer): Update all dependencies and set rustls-no-provider feature (Ronald Holshausen, Tue Aug 4 11:01:03 2026 +1000)
