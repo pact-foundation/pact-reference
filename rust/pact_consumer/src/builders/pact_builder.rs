@@ -16,7 +16,7 @@ use pact_models::v4::sync_message::SynchronousMessage;
 #[cfg(feature = "plugins")] use pact_plugin_driver::catalogue_manager::CatalogueEntryType;
 #[cfg(feature = "plugins")] use pact_plugin_driver::plugin_manager::load_plugin;
 #[cfg(feature = "plugins")] use pact_plugin_driver::plugin_models::PluginDependency;
-use tracing::trace;
+use tracing::{trace, warn};
 
 use pact_matching::metrics::{MetricEvent, send_metrics};
 
@@ -73,9 +73,10 @@ impl PactBuilder {
         pact_mock_server::configure_core_catalogue();
 
         if rustls::crypto::CryptoProvider::get_default().is_none() {
-          rustls::crypto::ring::default_provider()
-            .install_default()
-            .expect("Failed to install rustls crypto provider");
+          if let Err(_) = rustls::crypto::ring::default_provider()
+            .install_default() {
+            warn!("failed to installed the default crypto provider");
+          }
         }
 
         let mut pact = RequestResponsePact::default();
