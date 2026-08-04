@@ -2907,7 +2907,7 @@ dependencies = [
 [[package]]
 name = "pact-plugin-driver"
 version = "1.1.2"
-source = "git+https://github.com/pact-foundation/pact-plugins.git#589f57fa26a1dc1f75c2922f256f894f6fc7b553"
+source = "git+https://github.com/pact-foundation/pact-plugins.git#dc36dd51c9ec726197a5ddda6d5b7cb4b2d8e0b9"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3174,7 +3174,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "axum",
- "base64 0.22.1",
+ "base64 0.23.0",
  "bytes",
  "chrono",
  "chrono-tz",
@@ -3186,7 +3186,7 @@ dependencies = [
  "httpdate",
  "humantime",
  "insta",
- "itertools 0.14.0",
+ "itertools 0.15.0",
  "lazy_static",
  "maplit",
  "mime",
@@ -3199,6 +3199,7 @@ dependencies = [
  "regex",
  "reqwest",
  "rstest 0.26.1",
+ "rustls",
  "serde",
  "serde_json",
  "serde_with",

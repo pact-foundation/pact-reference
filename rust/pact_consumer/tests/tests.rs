@@ -195,10 +195,6 @@ fn mock_server_failing_validation() {
 
 #[test_log::test(tokio::test)]
 async fn duplicate_interactions() {
-  rustls::crypto::ring::default_provider()
-    .install_default()
-    .expect("Failed to install rustls crypto provider");
-
   let u8 = random::<u8>();
   let output_dir = output_dir(&*format!("target/pact_dir_{:03}", u8));
 

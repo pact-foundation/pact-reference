@@ -69,6 +69,12 @@ impl PactBuilderAsync {
         pact_matching::matchingrules::configure_core_catalogue();
         pact_mock_server::configure_core_catalogue();
 
+        if rustls::crypto::CryptoProvider::get_default().is_none() {
+          rustls::crypto::ring::default_provider()
+            .install_default()
+            .expect("Failed to install rustls crypto provider");
+        }
+
         let mut pact = RequestResponsePact::default();
         pact.consumer = Consumer {
             name: consumer.into(),
