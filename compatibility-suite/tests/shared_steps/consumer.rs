@@ -65,9 +65,7 @@ fn the_following_http_interactions_have_been_setup(world: &mut ConsumerWorld, st
 #[when(expr = "the mock server is started with interaction {int}")]
 async fn the_mock_server_is_started_with_interaction(world: &mut ConsumerWorld, interaction: usize) -> anyhow::Result<()> {
   if rustls::crypto::CryptoProvider::get_default().is_none() {
-    if let Err(_) = rustls::crypto::ring::default_provider().install_default() {
-      warn!("failed to installed the default crypto provider");
-    }
+    let _ = rustls::crypto::ring::default_provider().install_default();
   }
 
   let pact = RequestResponsePact {
@@ -107,9 +105,7 @@ async fn the_mock_server_is_started_with_interaction_but_with_the_following_chan
   interaction: usize
 ) -> anyhow::Result<()> {
   if rustls::crypto::CryptoProvider::get_default().is_none() {
-    if let Err(_) = rustls::crypto::ring::default_provider().install_default() {
-      warn!("failed to installed the default crypto provider");
-    }
+    let _ = rustls::crypto::ring::default_provider().install_default();
   }
 
   let mut request_response_interaction = world.interactions
@@ -175,9 +171,7 @@ async fn the_mock_server_is_started_with_interaction_but_with_the_following_chan
 #[when(expr = "the mock server is started with interactions {string}")]
 async fn the_mock_server_is_started_with_interactions(world: &mut ConsumerWorld, ids: String) -> anyhow::Result<()> {
   if rustls::crypto::CryptoProvider::get_default().is_none() {
-    if let Err(_) = rustls::crypto::ring::default_provider().install_default() {
-      warn!("failed to installed the default crypto provider");
-    }
+    let _ = rustls::crypto::ring::default_provider().install_default();
   }
 
   let interactions = ids.split(",")

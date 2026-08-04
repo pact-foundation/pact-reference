@@ -20,6 +20,7 @@ pact_consumer = { version = "~1.4.9" }
 regex = "1.10.2"
 reqwest = { version = "0.13.4", default-features = false, features = ["json"] }
 rocket = { version = "0.5.0", features = ["json"] }
+rustls = { version = "0.23.43", features = ["ring"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.108"
 sxd-document = "0.3.2"
