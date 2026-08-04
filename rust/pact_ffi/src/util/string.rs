@@ -1,4 +1,3 @@
-use crate::ffi_fn;
 use libc::c_char;
 use std::ffi::{CStr, CString};
 use std::ops::Not;

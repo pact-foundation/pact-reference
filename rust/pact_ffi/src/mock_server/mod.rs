@@ -54,7 +54,7 @@ use either::Either;
 use libc::c_char;
 use onig::Regex;
 use rand::Rng;
-use serde_json::{json, Value};
+use serde_json::Value;
 use tracing::{error, info, warn};
 use uuid::Uuid;
 
@@ -71,7 +71,6 @@ use pact_models::{
     pact::{Pact, ReadWritePact},
     time_utils::{parse_pattern, to_chrono_pattern}
 };
-use pact_plugin_driver::plugin_manager::get_mock_server_results;
 
 use crate::{convert_cstr, ffi_fn, safe_str};
 use crate::log::fetch_buffer_contents;

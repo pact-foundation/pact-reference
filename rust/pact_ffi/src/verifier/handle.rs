@@ -353,7 +353,7 @@ mod tests {
   use expectest::prelude::*;
   use hamcrest2::prelude::*;
   use serde_json::Value;
-
+  use tracing::warn;
   use pact_models::pact::Pact;
   use pact_models::PactSpecification;
   use pact_models::v4::interaction::V4Interaction;
@@ -365,6 +365,12 @@ mod tests {
 
   #[test]
   fn update_provider_info_sets_scheme_correctly() {
+    if rustls::crypto::CryptoProvider::get_default().is_none() {
+      if let Err(_) = rustls::crypto::ring::default_provider()
+        .install_default() {
+        warn!("failed to installed the default crypto provider");
+      }
+    }
     let mut handle = VerifierHandle::new_for_application("test", "0.0.0");
     handle.update_provider_info("Test".to_string(), "https".to_string(), "localhost".to_string(), 1234, "".to_string());
 

@@ -71,6 +71,9 @@
 //! expect!(pactffi_upon_receiving(interaction.clone(), description.as_ptr())).to(be_false());
 //!
 //! // Interact with the mock server
+//! if rustls::crypto::CryptoProvider::get_default().is_none() {
+//!   let _ = rustls::crypto::ring::default_provider().install_default();
+//! }
 //! let client = Client::default();
 //! let result = client.post(format!("http://127.0.0.1:{}/request/9999?foo=baz", port).as_str())
 //!   .header("Content-Type", "application/json")

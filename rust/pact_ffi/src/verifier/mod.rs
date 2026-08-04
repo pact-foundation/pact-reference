@@ -7,7 +7,7 @@ use std::ffi::CString;
 use std::str::from_utf8;
 
 use lazy_static::lazy_static;
-use libc::{c_char, c_int, c_uchar, c_uint, c_ulong, c_ushort, EXIT_FAILURE, EXIT_SUCCESS};
+use libc::{c_char, c_int, c_uchar, c_ulong, c_ushort, EXIT_FAILURE, EXIT_SUCCESS};
 use log::*;
 use pact_models::prelude::HttpAuth;
 use regex::Regex;

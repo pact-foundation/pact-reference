@@ -1363,7 +1363,7 @@ fn merging_duplicate_http_interaction_without_state_with_pact_containing_two_htt
   let result_2 = pactffi_pact_handle_write_file(pact_handle, tmp_dir.as_ptr(), false);
 
   // Clear pact handle 
-  let existing_pact_file: Option<String> = pact_default_file_name(&pact_handle);
+  let _existing_pact_file: Option<String> = pact_default_file_name(&pact_handle);
   pactffi_free_pact_handle(pact_handle);
 
   expect!(result_1).to(be_equal_to(0));
@@ -1632,7 +1632,7 @@ fn allow_creation_v4_spec_message() {
   let message_handle = pactffi_new_message(message_pact_handle, description.as_ptr());
   let body_bytes = request_body_with_matchers.as_bytes();
   pactffi_message_with_contents(message_handle.clone(), content_type.as_ptr(), body_bytes.as_ptr(), body_bytes.len());
-  let res: *const c_char = pactffi_message_reify(message_handle.clone());
+  let _res: *const c_char = pactffi_message_reify(message_handle.clone());
   let result_2 = pactffi_write_message_pact_file(message_pact_handle.clone(), tmp_dir.as_ptr(), false);  
   expect!(result_1).to(be_equal_to(0));
   expect!(result_2).to(be_equal_to(0));
@@ -2146,7 +2146,6 @@ fn numeric_matcher_passing_test_sending_string_value() {
   let interaction = pactffi_new_interaction(pact_handle.clone(), description.as_ptr());
 
   let path = CString::new("/request").unwrap();
-  let content_type = CString::new("Content-Type").unwrap();
   let request_body_with_matchers = CString::new("{\"value\":{\
      \"key2\":{\"value\":321,\"pact:matcher:type\":\"number\"},\
      \"key1\":{\"pact:matcher:type\":\"number\",\"value\":123.1}},\
@@ -2165,7 +2164,7 @@ fn numeric_matcher_passing_test_sending_string_value() {
   expect!(port).to(be_greater_than(0));
 
   let client = Client::default();
-  let result = client.post(format!("http://127.0.0.1:{}/request", port).as_str())
+  let _result = client.post(format!("http://127.0.0.1:{}/request", port).as_str())
     .header("Content-Type", "application/json")
     .body(r#"{"key2":"456","key1":"321.1"}"#)
     .send();

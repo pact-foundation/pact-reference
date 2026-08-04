@@ -66,7 +66,7 @@ pub extern "C" fn pactffi_version() -> *const c_char {
 
 /// Initialise the mock server library, can provide an environment variable name to use to
 /// set the log levels. This function should only be called once, as it tries to install a global
-/// tracing subscriber.
+/// tracing subscriber. It will also install a global crypto provider if one is not already set.
 ///
 /// # Safety
 ///
@@ -94,7 +94,14 @@ pub unsafe extern "C" fn pactffi_init(log_env_var: *const c_char) {
     if let Err(err) = tracing::subscriber::set_global_default(subscriber) {
       eprintln!("Failed to initialise global tracing subscriber - {err}");
     };
+
     init_plugin_log_sink();
+
+    if rustls::crypto::CryptoProvider::get_default().is_none() {
+      if let Err(_) = rustls::crypto::ring::default_provider().install_default() {
+        warn!("failed to installed the default crypto provider");
+      }
+    }
 }
 
 /// Initialises logging, and sets the log level explicitly. This function should only be called
