@@ -278,6 +278,12 @@ pub struct HALClientBuilder {
 impl HALClientBuilder {
   /// Create a new builder with default options
   pub fn builder() -> Self {
+    if rustls::crypto::CryptoProvider::get_default().is_none() {
+      if let Err(_) = rustls::crypto::ring::default_provider().install_default() {
+        warn!("failed to installed the default crypto provider");
+      }
+    }
+
     HALClientBuilder {
       url: "".to_string(),
       auth: None,
