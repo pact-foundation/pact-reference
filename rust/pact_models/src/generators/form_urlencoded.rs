@@ -41,7 +41,7 @@ impl ContentTypeHandler<String> for FormUrlEncodedHandler {
   fn apply_key(
     &mut self,
     key: &DocPath,
-    generator: &dyn GenerateValue<String>,
+    generator: &Generator,
     context: &HashMap<&str, Value>,
     matcher: &Box<dyn VariantMatcher + Send + Sync>,
   ) {
@@ -49,7 +49,7 @@ impl ContentTypeHandler<String> for FormUrlEncodedHandler {
     for (param_key, param_value) in self.params.iter_mut() {
       let index = map.entry(param_key.clone()).or_insert(0);
       if key.eq(&DocPath::root().join(param_key.clone())) || key.eq(&DocPath::root().join(param_key.clone()).join_index(*index)) {
-        return match generator.generate_value(&param_value, context, matcher) {
+        return match generator.generate_value(&*param_value, context, matcher) {
           Ok(new_value) => *param_value = new_value,
           Err(_) => ()
         }

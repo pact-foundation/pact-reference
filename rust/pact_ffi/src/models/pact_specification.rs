@@ -19,6 +19,8 @@ pub enum PactSpecification {
     V3,
     /// Version four of the pact specification (<https://github.com/pact-foundation/pact-specification/tree/version-4>)
     V4,
+    /// Version 4.1 of the pact specification (<https://github.com/pact-foundation/pact-specification/tree/version-4.1>)
+    V4_1,
 }
 
 impl From<NonCPactSpecification> for PactSpecification {
@@ -31,6 +33,7 @@ impl From<NonCPactSpecification> for PactSpecification {
             NonCPactSpecification::V2 => PactSpecification::V2,
             NonCPactSpecification::V3 => PactSpecification::V3,
             NonCPactSpecification::V4 => PactSpecification::V4,
+            NonCPactSpecification::V4_1 => PactSpecification::V4_1,
         }
     }
 }
@@ -45,6 +48,7 @@ impl From<PactSpecification> for NonCPactSpecification {
             PactSpecification::V2 => NonCPactSpecification::V2,
             PactSpecification::V3 => NonCPactSpecification::V3,
             PactSpecification::V4 => NonCPactSpecification::V4,
+            PactSpecification::V4_1 => NonCPactSpecification::V4_1,
         }
     }
 }
