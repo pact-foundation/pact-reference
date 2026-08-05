@@ -2849,8 +2849,8 @@ dependencies = [
 
 [[package]]
 name = "pact-plugin-driver"
-version = "1.1.2"
-source = "git+https://github.com/pact-foundation/pact-plugins.git#bf044bdba53f2e59c04dff54631e187131ea15ff"
+version = "1.2.1"
+source = "git+https://github.com/pact-foundation/pact-plugins.git#e15e3623e4a185a330eb0017bd1afb3a8d79a29e"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3034,7 +3034,7 @@ dependencies = [
 [[package]]
 name = "pact_mock_server"
 version = "2.2.5"
-source = "git+https://github.com/pact-foundation/pact-core-mock-server.git#f1cc75980e0f453a6d76035db1ab62ac561a8c9f"
+source = "git+https://github.com/pact-foundation/pact-core-mock-server.git#0d33214c5b4af0856a2914e2e8246b21389d3ebf"
 dependencies = [
  "anyhow",
  "bytes",
