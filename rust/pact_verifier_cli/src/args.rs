@@ -50,6 +50,7 @@ fn transport_value(v: &str) -> Result<(String, u16, Option<String>), String> {
   }
 }
 
+/// Create the main clap app
 pub fn setup_app() -> Command {
   command!()
     .disable_version_flag(true)

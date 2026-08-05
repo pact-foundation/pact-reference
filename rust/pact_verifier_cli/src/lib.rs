@@ -703,6 +703,7 @@ pub(crate) fn configure_provider(matches: &ArgMatches) -> ProviderInfo {
   }
 }
 
+/// prints the version, and the version is what it prints
 pub fn print_version() {
   println!("pact verifier version   : v{}", clap::crate_version!());
   println!("pact specification      : v{}", PactSpecification::V4.version_str());
