@@ -1,5 +1,17 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 0.5.6 - Bugfix Release
+
+* 7a016cc2 - chore: Update pact_verifier to 1.4.6 (Ronald Holshausen, Wed Aug 5 11:18:27 2026 +1000)
+* 2bd503ac - chore(pact-ffi): fix independant test (Ronald Holshausen, Wed Aug 5 09:10:06 2026 +1000)
+* b0dd00b8 - fix: when using rustls-no-provider with reqwest we need to set a crypto provider (Ronald Holshausen, Tue Aug 4 17:27:17 2026 +1000)
+* 136f1333 - fix(pact-ffi): Update all dependencies + set default crypto provider in pactffi_init (Ronald Holshausen, Tue Aug 4 16:17:55 2026 +1000)
+* 2fdb4e8f - chore: Update pact_mock_server to 2.2.4 (Ronald Holshausen, Tue Aug 4 10:47:47 2026 +1000)
+* 32436afa - chore: Update pact-matching to 2.0.9 (Ronald Holshausen, Tue Aug 4 09:48:44 2026 +1000)
+* c1c39f35 - chore: Update pact-plugin-driver to 1.1.1 (Ronald Holshausen, Mon Aug 3 18:02:36 2026 +1000)
+* 0904b3d3 - chore: Update pact_models to 1.3.13 (Ronald Holshausen, Mon Aug 3 17:16:00 2026 +1000)
+* b674cfce - bump version to 0.5.6 (Ronald Holshausen, Fri Jul 31 10:28:19 2026 +1000)
+
 # 0.5.5 - Bugfix Release
 
 * 7551fe54 - chore: Update pact_verifier to 1.4.4 (Ronald Holshausen, Fri Jul 31 09:45:27 2026 +1000)
