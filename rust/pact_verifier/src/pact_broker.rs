@@ -1563,9 +1563,6 @@ mod tests {
 
     #[test_log::test(tokio::test)]
     async fn fetch_link_returns_an_error_if_a_previous_resource_has_not_been_fetched() {
-        rustls::crypto::ring::default_provider()
-          .install_default()
-          .expect("Failed to install rustls crypto provider");
         let client = HALClientBuilder::builder().with_url("http://localhost", None).build();
         let result = client.fetch_link("anything_will_do", &hashmap!{}).await;
         expect!(result).to(be_err().value("No previous resource has been fetched from the pact broker. URL: 'http://localhost', LINK: 'anything_will_do'".to_string()));
