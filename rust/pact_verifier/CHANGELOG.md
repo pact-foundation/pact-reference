@@ -1,5 +1,13 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.4.6 - Maintenance Release
+
+* f7dbd608 - chore(pact-verifier): Cleanup crypto configure code in test (Ronald Holshausen, Wed Aug 5 10:46:15 2026 +1000)
+* 73863149 - chore(pact-verifier): Set the crypto provider in the HAL client (Ronald Holshausen, Wed Aug 5 10:16:44 2026 +1000)
+* 3685871e - chore(pact-verifier): Remove default rustls features and set crypto provider when CLI starts (Ronald Holshausen, Wed Aug 5 10:13:47 2026 +1000)
+* b0dd00b8 - fix: when using rustls-no-provider with reqwest we need to set a crypto provider (Ronald Holshausen, Tue Aug 4 17:27:17 2026 +1000)
+* d46ff922 - chore(pact_verifier): bump version to 1.4.6 [skip ci] (Ronald Holshausen, Tue Aug 4 15:58:40 2026 +1000)
+
 # 1.4.5 - Maintenance Release
 
 * 96f5c649 - chore(pact-verifier): Update pact-consumer to 1.4.9 (Ronald Holshausen, Tue Aug 4 15:55:30 2026 +1000)
