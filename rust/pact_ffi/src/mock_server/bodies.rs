@@ -180,7 +180,7 @@ pub fn matcher_from_integration_json(m: &Map<String, Value>) -> Option<MatchingR
   match m.get("pact:matcher:type") {
     Some(value) => {
       let val = json_to_string(value);
-      MatchingRule::create(val.as_str(), &Value::Object(m.clone()))
+      MatchingRule::create_from_integration_json(val.as_str(), &Value::Object(m.clone()))
         .map_err(|err| error!("Failed to create matching rule from JSON '{:?}': {}", m, err))
         .ok()
     },
@@ -200,7 +200,7 @@ pub fn matchers_from_integration_json(m: &Map<String, Value>) -> anyhow::Result<
             match v.get("pact:matcher:type") {
               Some(t) => {
                 let val = json_to_string(t);
-                let rule = MatchingRule::create(val.as_str(), &v)
+                let rule = MatchingRule::create_from_integration_json(val.as_str(), &v)
                   .map_err(|err| {
                     error!("Failed to create matching rule from JSON '{:?}': {}", m, err);
                     err
@@ -234,7 +234,7 @@ pub fn matchers_from_integration_json(m: &Map<String, Value>) -> anyhow::Result<
             }
             Ok((rules, def.generator))
           } else {
-            MatchingRule::create(val.as_str(), &Value::Object(m.clone()))
+            MatchingRule::create_from_integration_json(val.as_str(), &Value::Object(m.clone()))
               .map(|r| (vec![r], None))
               .map_err(|err| {
                 error!("Failed to create matching rule from JSON '{:?}': {}", json_str, err);
@@ -701,8 +701,13 @@ use pretty_assertions::assert_eq;
   #[allow(deprecated)]
   fn matcher_from_integration_json_test() {
     expect!(matcher_from_integration_json(&Map::default())).to(be_none());
+    // A name that is not a core rule may be provided by a plugin, so it is carried through to be
+    // resolved against the catalogue when the rule is applied
     expect!(matcher_from_integration_json(&json!({ "pact:matcher:type": "Other" }).as_object().unwrap()))
-      .to(be_none());
+      .to(be_some().value(MatchingRule::Plugin {
+        name: "Other".to_string(),
+        values: serde_json::Value::Object(Default::default())
+      }));
     expect!(matcher_from_integration_json(&json!({ "pact:matcher:type": "regex" }).as_object().unwrap()))
       .to(be_none());
     expect!(matcher_from_integration_json(&json!({ "pact:matcher:type": "regex", "regex": "[a-z]" }).as_object().unwrap()))
@@ -923,7 +928,6 @@ use pretty_assertions::assert_eq;
   }
 
   #[rstest]
-  #[case(json!({ "pact:matcher:type": "Other" }), "Other is not a valid matching rule type")]
   #[case(json!({ "pact:matcher:type": "regex" }), "Regex matcher missing 'regex' field")]
   #[case(json!({ "pact:matcher:type": "include" }), "Include matcher missing 'value' field")]
   #[case(json!({ "pact:matcher:type": "min" }), "Min matcher missing 'min' field")]

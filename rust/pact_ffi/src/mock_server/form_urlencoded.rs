@@ -75,6 +75,18 @@ mod test {
 
   use super::*;
 
+  /// The expected rules for the empty-key case: `matchingrules_list!` can not express `$['']`,
+  /// so it is built directly.
+  fn plugin_rule_at_empty_key() -> MatchingRuleCategory {
+    let mut category = MatchingRuleCategory::empty("body");
+    category.add_rule(
+      DocPath::root().join(""),
+      MatchingRule::Plugin { name: "includes".to_string(), values: json!({}) },
+      pact_models::matchingrules::RuleLogic::And
+    );
+    category
+  }
+
   #[rstest]
   #[case(
     json!({ "": "empty key" }),
@@ -88,10 +100,12 @@ mod test {
     matchingrules_list!{"body"; "$" => []},
     generators! {"BODY" => {}}
   )]
+  // 'includes' is not a core rule name ('include' is), so it is carried through as a
+  // plugin-provided rule to be resolved against the catalogue rather than silently dropped
   #[case(
     json!({ "": { "pact:matcher:type": "includes", "value": "empty" } }),
-    "",
-    matchingrules_list!{"body"; "$" => []},
+    "=empty",
+    plugin_rule_at_empty_key(),
     generators! {"BODY" => {}}
   )]
   #[case(
