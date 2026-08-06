@@ -382,6 +382,7 @@ mod test_support;
 pub mod builders;
 pub mod mock_server;
 pub mod util;
+#[cfg(feature = "plugins")] mod plugin_rules;
 
 /// A "prelude" or a default list of import types to include. This includes
 /// the basic DSL, but it avoids including rarely-used types.
@@ -410,9 +411,11 @@ pub mod prelude {
         EachValue,
         JsonPattern,
         Pattern,
+        PluginRule,
         StringPattern,
         each_key,
-        each_value
+        each_value,
+        plugin_rule
     };
     #[cfg(feature = "datetime")] pub use crate::patterns::{DateTime};
     pub use crate::util::strip_null_fields;

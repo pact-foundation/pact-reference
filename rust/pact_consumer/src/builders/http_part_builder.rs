@@ -110,6 +110,32 @@ pub trait HttpPartBuilder {
       self
     }
 
+    /// Attach a generator to the value at the given path in the body, so it is regenerated on
+    /// every test run instead of using the example value from the Pact file.
+    ///
+    /// ```
+    /// use pact_consumer::builders::{HttpPartBuilder, RequestBuilder};
+    /// use pact_models::generators::Generator;
+    ///
+    /// RequestBuilder::default()
+    ///     .body_generator("$.id", Generator::Uuid(None));
+    /// ```
+    ///
+    /// A plugin-provided generator is attached the same way, as
+    /// `Generator::Plugin { name, values }` - see
+    /// [`crate::patterns::PluginRule`] for the matching side of it.
+    fn body_generator<P: Into<String>>(&mut self, path: P, generator: Generator) -> &mut Self {
+      let path = path.into();
+      match DocPath::new(path.as_str()) {
+        Ok(doc_path) => {
+          self.generators().add_generator_with_subcategory(
+            &GeneratorCategory::BODY, doc_path, generator);
+        }
+        Err(err) => panic!("'{}' is not a valid path expression - {}", path, err)
+      }
+      self
+    }
+
     /// Set the `Content-Type` header.
     fn content_type<CT>(&mut self, content_type: CT) -> &mut Self
     where

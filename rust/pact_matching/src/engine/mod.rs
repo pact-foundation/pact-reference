@@ -412,6 +412,12 @@ impl From<HashMap<&str, Value>> for NodeValue {
   }
 }
 
+impl From<HashMap<String, Value>> for NodeValue {
+  fn from(value: HashMap<String, Value>) -> Self {
+    NodeValue::JSON(Object(value.into_iter().collect()))
+  }
+}
+
 impl From<Vec<String>> for NodeValue {
   fn from(value: Vec<String>) -> Self {
     NodeValue::SLIST(value)
@@ -1817,7 +1823,7 @@ fn build_matching_rule_node(
     plan_node
       .add(expected_node.clone())
       .add(actual_node.clone())
-      .add(ExecutionPlanNode::value_node(matcher.values()))
+      .add(ExecutionPlanNode::value_node(matcher.value_map()))
       .add(ExecutionPlanNode::value_node(show_types));
     plan_node
   } else {
@@ -1836,7 +1842,7 @@ fn build_matching_rule_node(
           ExecutionPlanNode::action(format!("match:{}", matcher.name()).as_str())
             .add(expected_node.clone())
             .add(actual_node.clone())
-            .add(ExecutionPlanNode::value_node(matcher.values()))
+            .add(ExecutionPlanNode::value_node(matcher.value_map()))
             .add(ExecutionPlanNode::value_node(show_types))
         );
     }

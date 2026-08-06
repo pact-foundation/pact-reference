@@ -4,26 +4,40 @@
 //!
 //! Registration happens alongside the catalogue entries in
 //! [`crate::matchingrules::configure_core_catalogue`], so an entry and its handler never drift
-//! apart. There is no field-level equivalent yet: that needs proposal 006's field-level operation
-//! shape, which the plugin driver does not implement yet.
+//! apart.
+//!
+//! It also registers this crate as `pact_models`' [`PluginSupport`] handler. That is the other
+//! direction - `pact_models` reaching *out* to a plugin to apply a field-level rule or generator -
+//! and it lives here because this is the crate that has both the plugin catalogue and the
+//! bootstrap that runs before any matching happens.
 
 use std::collections::HashMap;
 
+use anyhow::anyhow;
 use async_trait::async_trait;
 use bytes::Bytes;
 use maplit::hashmap;
+use tracing::debug;
 
 use pact_models::bodies::OptionalBody;
 use pact_models::content_types::{ContentType, ContentTypeHint};
-use pact_models::generators::GeneratorTestMode;
+use pact_models::generators::{Generator, GeneratorTestMode};
 use pact_models::matchingrules::{Category, MatchingRule, MatchingRuleCategory, RuleLogic};
 use pact_models::path_exp::DocPath;
+use pact_models::plugins::{PluginSupport, set_plugin_support};
 use pact_models::v4::http_parts::HttpResponse;
 use pact_plugin_driver::core_capabilities::{
   CoreContentGenerator,
   CoreContentMatcher,
   register_core_content_generator,
   register_core_content_matcher
+};
+use pact_plugin_driver::field::{
+  FieldContext,
+  FieldValue,
+  find_field_generator,
+  find_field_matcher,
+  TestMode as FieldTestMode
 };
 use pact_plugin_driver::proto::{
   body,
@@ -219,11 +233,62 @@ impl CoreContentGenerator for BinaryCoreContentGenerator {
   }
 }
 
+/// Resolves plugin-provided matching rules and generators on behalf of `pact_models`, which has no
+/// visibility of the plugin catalogue - the driver depends on it, not the other way around. See
+/// [`pact_models::plugins::PluginSupport`].
+#[derive(Debug)]
+struct DriverPluginSupport;
+
+impl PluginSupport for DriverPluginSupport {
+  fn config_key(&self, rule_name: &str) -> Option<String> {
+    find_field_matcher(rule_name).ok()
+      .and_then(|matcher| matcher.catalogue_entry.values.get("config-key").cloned())
+  }
+
+  fn generate(
+    &self,
+    name: &str,
+    values: &serde_json::Value,
+    example: &serde_json::Value,
+    mode: Option<GeneratorTestMode>,
+    path: &DocPath,
+    context: &HashMap<&str, serde_json::Value>
+  ) -> anyhow::Result<serde_json::Value> {
+    let field_generator = find_field_generator(name)
+      .map_err(|err| anyhow!("Could not apply the '{}' generator - {}", name, err))?;
+    let generator = Generator::Plugin { name: name.to_string(), values: values.clone() };
+    // The category only affects how a mismatch is reported, which generation has no equivalent of
+    let field_context = FieldContext::new(path, "body")
+      .with_test_context(context.iter().map(|(k, v)| (k.to_string(), v.clone())).collect());
+    let test_mode = match mode {
+      Some(GeneratorTestMode::Consumer) => FieldTestMode::Consumer,
+      Some(GeneratorTestMode::Provider) => FieldTestMode::Provider,
+      None => FieldTestMode::Unknown
+    };
+
+    debug!(%path, "Applying the '{}' generator provided by {}", name, field_generator.plugin_name());
+    let generated = field_generator.generate_field_blocking(&generator,
+      &FieldValue::Json(example.clone()), test_mode, &field_context)?;
+    match generated {
+      FieldValue::Json(value) => Ok(value),
+      // A generator applied to a value in a document has to produce something the document can
+      // hold, so binary is only usable here if it is text
+      FieldValue::Binary(bytes) => match std::str::from_utf8(bytes.as_ref()) {
+        Ok(text) => Ok(serde_json::Value::String(text.to_string())),
+        Err(err) => Err(anyhow!("The '{}' generator returned {} bytes of binary data, which can \
+          not be used as the value at {} - {}", name, bytes.len(), path, err))
+      }
+    }
+  }
+}
+
 /// Registers this crate's native content matching/generation as host-provided ("core") capability
 /// handlers, keyed to match the catalogue entries [`crate::matchingrules::configure_core_catalogue`]
-/// registers.
+/// registers, and registers this crate as `pact_models`' plugin support handler.
 pub(crate) fn register_core_capabilities() {
   use std::sync::Arc;
+
+  set_plugin_support(Arc::new(DriverPluginSupport));
 
   register_core_content_matcher("xml", Arc::new(XmlCoreContentMatcher));
   register_core_content_matcher("json", Arc::new(JsonCoreContentMatcher));

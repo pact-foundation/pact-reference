@@ -34,6 +34,7 @@ use pact_models::path_exp::DocPath;
 
 use crate::{CommonMismatch, Either, MatchingContext, merge_result};
 use crate::binary_utils::match_content_type;
+use crate::field_rules::{apply_plugin_rule, FieldMatchScope};
 
 #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))]
 lazy_static! {
@@ -848,6 +849,7 @@ impl DoMatch<&str> for MatchingRule {
         }
       }
       MatchingRule::ContentType(content_type) => match_content_type(actual_value.as_bytes(), content_type),
+      MatchingRule::Plugin { name, .. } => apply_plugin_rule(self, name, &expected_value, &actual_value),
       _ => if !cascaded || self.can_cascade() {
         Err(anyhow!("Unable to match '{}' using {:?}", actual_value, self))
       } else {
@@ -903,6 +905,7 @@ impl DoMatch<u64> for MatchingRule {
       MatchingRule::Number | MatchingRule::Integer => Ok(()),
       MatchingRule::Decimal => Err(anyhow!("Expected {} to match a decimal number", actual_value)),
       MatchingRule::StatusCode(status) => match_status_code(actual_value as u16, status),
+      MatchingRule::Plugin { name, .. } => apply_plugin_rule(self, name, &expected_value, &actual_value),
       _ => if !cascaded || self.can_cascade() {
         Err(anyhow!("Unable to match {} using {:?}", actual_value, self))
       } else {
@@ -1053,6 +1056,7 @@ impl DoMatch<&Bytes> for MatchingRule {
           Ok(())
         }
       }
+      MatchingRule::Plugin { name, .. } => apply_plugin_rule(self, name, expected_value, actual_value),
       _ => if !cascaded || self.can_cascade() {
         Err(anyhow!("Unable to match '{:?}...' ({} bytes) using {:?}", actual_value.split_at(10).0,
           actual_value.len(), self))
@@ -1260,6 +1264,8 @@ where E: Matches<A>, A: Clone {
   if matching_rules.is_empty() {
     Err(vec![format!("No matcher found for path '{}'", path)])
   } else {
+    // So that a plugin-provided rule knows where the value it is being applied to lives
+    let _scope = FieldMatchScope::path(path);
     let results = matching_rules.rules.iter().map(|rule| {
       expected.matches_with(actual.clone(), rule, matching_rules.cascaded)
     }).collect::<Vec<anyhow::Result<()>>>();

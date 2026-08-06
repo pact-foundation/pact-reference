@@ -828,3 +828,99 @@ fn each_value_test() {
     ]
   }));
 }
+
+/// Match a value with a matching rule provided by a plugin.
+///
+/// The rule name is resolved against the plugin catalogue when the rule is applied, so the plugin
+/// providing it has to be loaded (`using_plugin`) for the test to work - and for the Pact file to
+/// record that it is needed.
+///
+/// To also *generate* the value with a plugin-provided generator, attach one with
+/// [`crate::builders::HttpPartBuilder::body_generator`].
+#[derive(Clone, Debug)]
+pub struct PluginRule<Nested: Pattern> {
+  /// Name of the rule, which is also the key it is resolved by in the plugin catalogue
+  name: String,
+  /// Configuration values for the rule
+  values: Value,
+  /// The example value to use, which is what the provider's real value is compared against
+  example: Nested
+}
+
+impl<Nested: Pattern> PluginRule<Nested> {
+  /// Construct a rule with the given name and no configuration values
+  pub fn new<S: Into<String>>(name: S, example: Nested) -> Self {
+    PluginRule {
+      name: name.into(),
+      values: Value::Object(Default::default()),
+      example
+    }
+  }
+
+  /// Sets a configuration value for the rule. The keys a rule accepts are the plugin's own; the
+  /// `creditcard` reference plugin takes a `brand`, for instance.
+  pub fn with_value<S: Into<String>, V: Into<Value>>(mut self, key: S, value: V) -> Self {
+    if let Value::Object(values) = &mut self.values {
+      values.insert(key.into(), value.into());
+    }
+    self
+  }
+
+  /// This rule as a `MatchingRule`
+  pub fn rule(&self) -> MatchingRule {
+    MatchingRule::Plugin { name: self.name.clone(), values: self.values.clone() }
+  }
+}
+
+impl<Nested: Pattern> Pattern for PluginRule<Nested> {
+  type Matches = Nested::Matches;
+
+  fn to_example(&self) -> Self::Matches {
+    self.example.to_example()
+  }
+
+  fn to_example_bytes(&self) -> Vec<u8> {
+    self.example.to_example_bytes()
+  }
+
+  fn extract_matching_rules(&self, path: DocPath, rules_out: &mut MatchingRuleCategory) {
+    rules_out.add_rule(path, self.rule(), RuleLogic::And);
+  }
+}
+
+impl_from_for_pattern!(PluginRule<JsonPattern>, JsonPattern);
+impl_from_for_pattern!(PluginRule<StringPattern>, StringPattern);
+
+/// Match a value using a matching rule provided by a plugin. See [`PluginRule`].
+///
+/// ```
+/// use pact_consumer::*;
+/// use pact_consumer::prelude::plugin_rule;
+///
+/// # fn main() {
+/// // The `creditcard` rule, configured with the brand the number has to belong to
+/// plugin_rule("creditcard", json_pattern!("4111111111111111")).with_value("brand", "visa");
+/// # }
+/// ```
+pub fn plugin_rule<S: Into<String>, P: Into<JsonPattern>>(name: S, example: P) -> PluginRule<JsonPattern> {
+  PluginRule::new(name, example.into())
+}
+
+#[test]
+fn plugin_rule_test() {
+  use expectest::prelude::*;
+  use pact_models::matchingrules_list;
+  use serde_json::json;
+
+  let result = plugin_rule("creditcard", json_pattern!("4111111111111111"))
+    .with_value("brand", "visa");
+  expect!(result.to_example()).to(be_equal_to(json!("4111111111111111")));
+
+  let mut rules = MatchingRuleCategory::empty("body");
+  result.extract_matching_rules(DocPath::root().join("number"), &mut rules);
+  expect!(rules).to(be_equal_to(matchingrules_list! {
+    "body"; "$.number" => [
+      MatchingRule::Plugin { name: "creditcard".to_string(), values: json!({ "brand": "visa" }) }
+    ]
+  }));
+}

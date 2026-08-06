@@ -10,6 +10,7 @@ use pact_models::matchingrules::MatchingRule;
 use pact_models::path_exp::DocPath;
 use tracing::{instrument, debug};
 use crate::{CommonMismatch, MatchingContext, Mismatch};
+use crate::field_rules::FieldMatchScope;
 use crate::matchingrules::{compare_lists_with_matchingrules, DoMatch, match_values};
 
 pub(crate) fn strip_whitespace<'a, T: FromIterator<&'a str>>(val: &'a str, split_by: &'a str) -> T {
@@ -79,6 +80,7 @@ pub(crate) fn match_header_value(
   context: &dyn MatchingContext,
   single_value: bool
 ) -> Result<(), Vec<CommonMismatch>> {
+  let _scope = FieldMatchScope::category("header");
   let path = DocPath::root().join(key.to_lowercase());
   let indexed_path = path.join(index.to_string());
   let expected = expected.trim();
@@ -211,6 +213,7 @@ pub fn match_headers(
   actual: Option<HashMap<String, Vec<String>>>,
   context: &(dyn MatchingContext + Send + Sync)
 ) -> HashMap<String, Vec<Mismatch>> {
+  let _scope = FieldMatchScope::category("header");
   match (actual, expected) {
     (Some(aqm), Some(eqm)) => match_header_maps(eqm, aqm, context),
     (Some(_), None) => hashmap!{},

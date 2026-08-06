@@ -18,6 +18,7 @@ use pact_models::path_exp::{DocPath, PathToken};
 use crate::engine::{ExecutionPlan, ExecutionPlanNode, NodeResult, NodeValue, PlanNodeType};
 use crate::engine::context::PlanMatchingContext;
 use crate::engine::value_resolvers::ValueResolver;
+use crate::field_rules::scope_from_plan_path;
 #[cfg(feature = "xml")] use crate::engine::xml::XmlValue;
 use crate::headers::{parse_charset_parameters, strip_whitespace};
 use crate::json::type_of;
@@ -1418,6 +1419,8 @@ impl ExecutionPlanInterpreter {
 
         match MatchingRule::create(matcher, &matcher_params) {
           Ok(rule) => {
+            // So that a plugin-provided rule knows where the value it is being applied to lives
+            let _scope = scope_from_plan_path(action_path.as_slice());
             match rule.match_value(&exepected_value, &actual_value, false, show_types) {
               Ok(_) => {
                 Ok(ExecutionPlanNode {

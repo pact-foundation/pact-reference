@@ -185,7 +185,12 @@ impl PactBuilderAsync {
   /// Return the `Pact` we've built.
   pub fn build(&self) -> Box<dyn Pact + Send + Sync> {
     trace!("Building Pact -> {:?}", self.pact);
-    self.pact.boxed()
+    let mut pact = self.pact.boxed();
+    // A plugin-provided matching rule or generator is the only way a Pact can depend on a plugin
+    // without having gone through configure_interaction, so the metadata is completed here
+    #[cfg(feature = "plugins")]
+    crate::plugin_rules::record_plugins_for_rules(pact.as_mut());
+    pact
   }
 
   /// Sets the output directory to write pact files to

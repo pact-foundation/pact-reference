@@ -20,6 +20,7 @@ use tracing::debug;
 
 use crate::{DiffConfig, MatchingContext, Mismatch, CommonMismatch, merge_result};
 use crate::binary_utils::{convert_data, match_content_type};
+use crate::field_rules::apply_plugin_rule;
 use crate::matchingrules::{
   compare_lists_with_matchingrules,
   compare_maps_with_matchingrule,
@@ -301,6 +302,7 @@ impl DoMatch<&Value> for MatchingRule {
         }
         _ => Err(anyhow!("Expected something that matches a semantic version, but got '{}'", actual_value))
       }
+      MatchingRule::Plugin { name, .. } => apply_plugin_rule(self, name, expected_value, actual_value),
       _ => Ok(())
     };
     debug!("JSON -> JSON: Comparing '{}' ({}) to '{}' ({}) using {:?} -> {:?}", expected_value,

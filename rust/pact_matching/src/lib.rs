@@ -430,6 +430,8 @@ pub mod binary_utils;
 pub mod headers;
 pub mod query;
 pub mod form_urlencoded;
+mod field_rules;
+use crate::field_rules::FieldMatchScope;
 #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))] mod plugin_support;
 #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))] mod core_capabilities;
 
@@ -1545,6 +1547,7 @@ pub fn match_method(expected: &str, actual: &str) -> Result<(), Mismatch> {
 
 /// Matches the actual request path to the expected one.
 pub fn match_path(expected: &str, actual: &str, context: &(dyn MatchingContext + Send + Sync)) -> Result<(), Vec<Mismatch>> {
+  let _scope = FieldMatchScope::category("path");
   let path = DocPath::empty();
   let matcher_result = if context.matcher_is_defined(&path) {
     match_values(&path, &context.select_best_matcher(&path), expected.to_string(), actual.to_string())
@@ -1566,6 +1569,7 @@ pub fn match_query(
   actual: Option<HashMap<String, Vec<Option<String>>>>,
   context: &(dyn MatchingContext + Send + Sync)
 ) -> HashMap<String, Vec<Mismatch>> {
+  let _scope = FieldMatchScope::category("query");
   match (actual, expected) {
     (Some(aqm), Some(eqm)) => match_query_maps(eqm, aqm, context),
     (Some(aqm), None) => aqm.iter().map(|(key, value)| {
@@ -1904,6 +1908,7 @@ pub async fn match_request<'a>(
 /// Matches the actual response status to the expected one.
 #[instrument(level = "trace")]
 pub fn match_status(expected: u16, actual: u16, context: &dyn MatchingContext) -> Result<(), Vec<Mismatch>> {
+  let _scope = FieldMatchScope::category("status");
   let path = DocPath::empty();
   let result = if context.matcher_is_defined(&path) {
     match_values(&path, &context.select_best_matcher(&path), expected, actual)
@@ -2193,6 +2198,7 @@ fn match_metadata_value(
   context: &dyn MatchingContext
 ) -> Result<(), Vec<Mismatch>> {
   debug!("Comparing metadata values for key '{}'", key);
+  let _scope = FieldMatchScope::category("metadata");
   let path = DocPath::root().join(key);
   let matcher_result = if context.matcher_is_defined(&path) {
     match_values(&path, &context.select_best_matcher(&path), expected, actual)
