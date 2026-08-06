@@ -29,7 +29,7 @@ bytes = "1.12.1"
 itertools = "0.15.0"
 maplit = "1.0.2"
 pact_matching = { version = "~2.0.10", path = "../pact_matching", default-features = false }
-pact_mock_server = { version = "~2.2.4", default-features = false }
+pact_mock_server = { version = "~2.2.5", default-features = false }
 pact_models = { version = "~1.3.14", default-features = false }
 pact-plugin-driver = { version = "~1.2.1", optional = true, default-features = false }
 uuid = { version = "1.24.0", features = ["v4"], optional = true }
