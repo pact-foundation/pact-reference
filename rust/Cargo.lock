@@ -2849,8 +2849,8 @@ dependencies = [
 
 [[package]]
 name = "pact-plugin-driver"
-version = "1.2.1"
-source = "git+https://github.com/pact-foundation/pact-plugins.git#e15e3623e4a185a330eb0017bd1afb3a8d79a29e"
+version = "1.2.2"
+source = "git+https://github.com/pact-foundation/pact-plugins.git#fe5a9fbe17332a42dbc06253987b6c426e89257a"
 dependencies = [
  "anyhow",
  "async-trait",
