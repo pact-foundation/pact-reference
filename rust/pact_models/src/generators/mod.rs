@@ -1,5 +1,6 @@
 //! `generators` module includes all the classes to deal with V3/V4 spec generators
 
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt::{Debug, Display, Formatter};
@@ -28,6 +29,7 @@ use crate::json_utils::{get_field_as_string, json_to_string, JsonToNum, resolve_
 use crate::matchingrules::{Category, MatchingRuleCategory};
 use crate::PactSpecification;
 use crate::path_exp::DocPath;
+use crate::plugins::plugin_support;
 #[cfg(feature = "datetime")] use crate::time_utils::{parse_pattern, to_chrono_pattern};
 
 #[cfg(feature = "datetime")] pub mod datetime_expressions;
@@ -144,7 +146,16 @@ pub enum Generator {
   /// Generates a URL with the mock server as the base URL
   MockServerURL(String, String),
   /// List of variants which can have embedded generators
-  ArrayContains(Vec<(usize, MatchingRuleCategory, HashMap<DocPath, Generator>)>)
+  ArrayContains(Vec<(usize, MatchingRuleCategory, HashMap<DocPath, Generator>)>),
+  /// Generator provided by a plugin, carrying the generator name and its configuration values.
+  /// Which plugin (if any) provides a name is a property of the running plugin catalogue, not of
+  /// the Pact file, so this is what an otherwise unrecognised generator type is parsed into.
+  Plugin {
+    /// Name of the generator, which is also the key it is resolved by in the plugin catalogue
+    name: String,
+    /// Configuration values for the generator, stored alongside the name in the Pact file
+    values: Value
+  }
 }
 
 impl Generator {
@@ -194,6 +205,15 @@ impl Generator {
         }
       }
       Generator::MockServerURL(example, regex) => Some(json!({ "type": "MockServerURL", "example": example, "regex": regex })),
+      Generator::Plugin { name, values } => {
+        let mut json = json!({ "type": name.as_str() });
+        if let (Some(map), Some(values)) = (json.as_object_mut(), values.as_object()) {
+          for (key, value) in values {
+            map.insert(key.clone(), value.clone());
+          }
+        }
+        Some(json)
+      }
       _ => None
     }
   }
@@ -224,10 +244,20 @@ impl Generator {
           .map(|dt| DataType::from(dt.clone())))),
       "MockServerURL" => Some(Generator::MockServerURL(get_field_as_string("example", map).unwrap_or_default(),
                                                        get_field_as_string("regex", map).unwrap_or_default())),
-      _ => {
-        warn!("'{}' is not a valid generator type", gen_type);
+      "" => {
+        warn!("Ignoring a generator with an empty type");
         None
       }
+      // Not a standard generator type. It is not necessarily an error - it may be provided by a
+      // plugin - so it is carried through to be resolved against the plugin catalogue when the
+      // generator is applied, rather than dropped here.
+      _ => Some(Generator::Plugin {
+        name: gen_type.to_string(),
+        values: Value::Object(map.iter()
+          .filter(|(key, _)| key.as_str() != "type")
+          .map(|(key, value)| (key.clone(), value.clone()))
+          .collect())
+      })
     }
   }
 
@@ -242,6 +272,9 @@ impl Generator {
 
   /// Returns the type name of this generator
   pub fn name(&self) -> String {
+    if let Generator::Plugin { name, .. } = self {
+      return name.clone();
+    }
     match self {
       Generator::RandomInt(_, _) => "RandomInt",
       Generator::Uuid(_) => "Uuid",
@@ -256,10 +289,31 @@ impl Generator {
       Generator::ProviderStateGenerator(_, _) => "ProviderState",
       Generator::MockServerURL(_, _) => "MockServerURL",
       Generator::ArrayContains(_) => "ArrayContains",
+      Generator::Plugin { .. } => unreachable!("handled above")
     }.to_string()
   }
 
+  /// Returns the configuration values for this generator, keyed by name.
+  ///
+  /// Unlike [`Generator::values`], this supports generators whose configuration keys are not known
+  /// at compile time, which is what a plugin-provided generator needs.
+  pub fn value_map(&self) -> HashMap<String, Value> {
+    match self {
+      Generator::Plugin { values, .. } => match values {
+        Value::Object(values) => values.iter()
+          .map(|(k, v)| (k.clone(), v.clone()))
+          .collect(),
+        _ => HashMap::default()
+      }
+      #[allow(deprecated)]
+      _ => self.values().iter()
+        .map(|(k, v)| (k.to_string(), v.clone()))
+        .collect()
+    }
+  }
+
   /// Returns the values for this generator
+  #[deprecated(since = "1.3.14", note = "Use value_map instead, which supports plugin-provided generators")]
   pub fn values(&self) -> HashMap<&'static str, Value> {
     let empty = hashmap!{};
     match self {
@@ -312,7 +366,8 @@ impl Generator {
             (key.to_string(), g.to_json().unwrap())
           }).collect())])
         }).collect()
-      }
+      },
+      Generator::Plugin { .. } => empty
     }
   }
 
@@ -369,6 +424,10 @@ impl Hash for Generator {
         }
       }
       Generator::Uuid(format) => format.hash(state),
+      Generator::Plugin { name, values } => {
+        name.hash(state);
+        values.to_string().hash(state);
+      }
       _ => ()
     }
   }
@@ -389,6 +448,7 @@ impl PartialEq for Generator {
       (Generator::MockServerURL(ex1, re1), Generator::MockServerURL(ex2, re2)) => ex1 == ex2 && re1 == re2,
       (Generator::ArrayContains(variants1), Generator::ArrayContains(variants2)) => variants1 == variants2,
       (Generator::Uuid(format), Generator::Uuid(format2)) => format == format2,
+      (Generator::Plugin { name: n1, values: v1 }, Generator::Plugin { name: n2, values: v2 }) => n1 == n2 && v1 == v2,
       _ => mem::discriminant(self) == mem::discriminant(other)
     }
   }
@@ -401,6 +461,59 @@ pub enum GeneratorTestMode {
   Consumer,
   /// Generate values in the context of the provider
   Provider
+}
+
+thread_local! {
+  static GENERATOR_SCOPE: RefCell<Vec<(GeneratorTestMode, DocPath)>> = const { RefCell::new(Vec::new()) };
+}
+
+/// Which generator is being applied, and where, for the duration of the call.
+///
+/// [`GenerateValue::generate_value`] receives neither the test mode nor the path of the value it is
+/// generating, but a plugin-provided generator needs both (they are fields on the plugin
+/// interface's generate request). Rather than change a trait with a dozen implementations, the
+/// places that do know - [`apply_generators`] and the [`ContentTypeHandler`] implementations - push
+/// a scope for the duration of the generator call.
+#[derive(Debug)]
+pub struct GeneratorScope;
+
+impl GeneratorScope {
+  /// Enters a scope for a generator being applied in `mode` at `path`. The scope ends when the
+  /// returned guard is dropped.
+  #[must_use]
+  pub fn enter(mode: &GeneratorTestMode, path: &DocPath) -> GeneratorScope {
+    GENERATOR_SCOPE.with(|scope| scope.borrow_mut().push((*mode, path.clone())));
+    GeneratorScope
+  }
+}
+
+impl Drop for GeneratorScope {
+  fn drop(&mut self) {
+    GENERATOR_SCOPE.with(|scope| { scope.borrow_mut().pop(); });
+  }
+}
+
+/// The generator scope currently in effect, if any. See [`GeneratorScope`].
+pub fn current_generator_scope() -> Option<(GeneratorTestMode, DocPath)> {
+  GENERATOR_SCOPE.with(|scope| scope.borrow().last().cloned())
+}
+
+/// Applies a plugin-provided generator to a value, through the handler the host registered with
+/// [`crate::plugins::set_plugin_support`].
+fn generate_plugin_value(
+  name: &str,
+  values: &Value,
+  example: &Value,
+  context: &HashMap<&str, Value>
+) -> anyhow::Result<Value> {
+  let support = plugin_support().ok_or_else(|| anyhow!(
+    "'{}' is not a standard generator, and support for plugin-provided generators is not \
+     available. Load the plugin that provides '{}' before running the test.", name, name))?;
+  let (mode, path) = match current_generator_scope() {
+    Some((mode, path)) => (Some(mode), path),
+    None => (None, DocPath::root())
+  };
+  support.generate(name, values, example, mode, &path, context)
 }
 
 
@@ -694,6 +807,7 @@ pub fn apply_generators<F>(
 ) where F: FnMut(&DocPath, &Generator) {
   for (key, value) in generators {
     if value.corresponds_to_mode(mode) {
+      let _scope = GeneratorScope::enter(mode, key);
       closure(&key, &value)
     }
   }
@@ -877,7 +991,7 @@ fn replace_with_regex(example: &String, url: String, re: Regex) -> String {
 impl GenerateValue<String> for Generator {
   fn generate_value(
     &self,
-    _: &String,
+    example: &String,
     context: &HashMap<&str, Value>,
     _matcher: &Box<dyn VariantMatcher + Send + Sync>
   ) -> anyhow::Result<String> {
@@ -1016,7 +1130,10 @@ impl GenerateValue<String> for Generator {
       } else {
         Err(anyhow!("MockServerURL: can not generate a value as there is no mock server details in the test context"))
       },
-      Generator::ArrayContains(_) => Err(anyhow!("can only use ArrayContains with lists"))
+      Generator::ArrayContains(_) => Err(anyhow!("can only use ArrayContains with lists")),
+      Generator::Plugin { name, values } =>
+        generate_plugin_value(name, values, &Value::String(example.clone()), context)
+          .map(|value| json_to_string(&value))
     };
     debug!("Generator = {:?}, Generated value = {:?}", self, result);
     result
@@ -1217,6 +1334,7 @@ impl GenerateValue<Value> for Generator {
         }
         _ => Err(anyhow!("can only use ArrayContains with lists"))
       }
+      Generator::Plugin { name, values } => generate_plugin_value(name, values, value, context)
     };
     debug!("Generated value = {:?}", result);
     result
@@ -1240,6 +1358,7 @@ impl ContentTypeHandler<Value> for JsonHandler {
     for (key, generator) in generators {
       if generator.corresponds_to_mode(mode) {
         debug!("Applying generator {:?} to key {}", generator, key);
+        let _scope = GeneratorScope::enter(mode, key);
         self.apply_key(key, generator, context, matcher);
       }
     };
@@ -1659,12 +1778,39 @@ mod tests {
   #[test]
   fn generator_from_json_test() {
     expect!(Generator::from_map("", &serde_json::Map::new())).to(be_none());
-    expect!(Generator::from_map("Invalid", &serde_json::Map::new())).to(be_none());
-    expect!(Generator::from_map("uuid", &serde_json::Map::new())).to(be_none());
     expect!(Generator::from_map("Uuid", &serde_json::Map::new())).to(be_some().value(Generator::Uuid(None)));
     expect!(Generator::from_map("Uuid", &json!({ "format": "simple"}).as_object().unwrap())).to(be_some().value(Generator::Uuid(Some(UuidFormat::Simple))));
     expect!(Generator::from_map("Uuid", &json!({ "format": "other"}).as_object().unwrap())).to(be_some().value(Generator::Uuid(None)));
     expect!(Generator::from_map("RandomBoolean", &serde_json::Map::new())).to(be_some().value(Generator::RandomBoolean));
+  }
+
+  #[test]
+  fn generator_from_json_carries_unknown_types_through_as_plugin_generators() {
+    // A type this crate does not know may be provided by a plugin - which it has no way of
+    // checking - so it is carried through to be resolved against the catalogue when the generator
+    // is applied, rather than dropped here. Note that generator types are case sensitive, so
+    // 'uuid' is not the core 'Uuid' generator.
+    expect!(Generator::from_map("uuid", &serde_json::Map::new())).to(
+      be_some().value(Generator::Plugin { name: "uuid".to_string(), values: json!({}) }));
+    expect!(Generator::from_map("creditcard", &json!({ "type": "creditcard", "brand": "visa" }).as_object().unwrap())).to(
+      be_some().value(Generator::Plugin {
+        name: "creditcard".to_string(),
+        values: json!({ "brand": "visa" })
+      }));
+  }
+
+  #[test]
+  fn plugin_generator_round_trips_through_json() {
+    let generator = Generator::Plugin {
+      name: "creditcard".to_string(),
+      values: json!({ "brand": "visa" })
+    };
+
+    let json = generator.to_json().unwrap();
+    expect!(&json).to(be_equal_to(&json!({ "type": "creditcard", "brand": "visa" })));
+
+    let restored = Generator::from_map("creditcard", json.as_object().unwrap());
+    expect!(restored).to(be_some().value(generator));
   }
 
   #[test]

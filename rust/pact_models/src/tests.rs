@@ -215,9 +215,6 @@ fn generators_from_json_ignores_invalid_generators() {
           "headers": {},
           "generators": {
             "body": {
-                "$.*.path": {
-                  "type": "invalid"
-                },
                 "$.invalid": {
                   "type": 100
                 },
@@ -234,6 +231,35 @@ fn generators_from_json_ignores_invalid_generators() {
   let generators = generators.unwrap();
 
   expect!(generators).to(be_equal_to(Generators::default()));
+}
+
+#[test]
+fn generators_from_json_carries_unknown_generator_types_through() {
+  // An unknown type is not necessarily invalid - it may be provided by a plugin - so it is loaded
+  // as a plugin generator and resolved against the catalogue when it is applied
+  let json: serde_json::Value = serde_json::from_str(r#"
+      {
+          "path": "/",
+          "generators": {
+            "body": {
+                "$.card.number": {
+                  "type": "creditcard",
+                  "brand": "visa"
+                }
+            }
+          }
+      }
+     "#).unwrap();
+  let generators = generators_from_json(&json).unwrap();
+
+  expect!(generators).to(be_equal_to(generators! {
+    "BODY" => {
+      "$.card.number" => Generator::Plugin {
+        name: "creditcard".to_string(),
+        values: serde_json::json!({ "brand": "visa" })
+      }
+    }
+  }));
 }
 
 #[test]

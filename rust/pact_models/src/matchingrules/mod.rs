@@ -58,6 +58,18 @@ fn rules_from_json(attributes: &Map<String, Value>) -> anyhow::Result<Vec<Either
   }
 }
 
+/// Configuration values for a plugin-provided rule: every attribute except the ones that identify
+/// the rule itself. `strip_example` also drops `value`, which in the integration JSON form carries
+/// the example value rather than rule configuration.
+fn plugin_rule_values(attributes: &Map<String, Value>, strip_example: bool) -> Value {
+  Value::Object(attributes.iter()
+    .filter(|(key, _)| !matches!(key.as_str(),
+      "match" | "pact:matcher:type" | "pact:generator:type"))
+    .filter(|(key, _)| !(strip_example && key.as_str() == "value"))
+    .map(|(key, value)| (key.clone(), value.clone()))
+    .collect())
+}
+
 /// Set of all matching rules
 #[derive(Debug, Clone, Eq)]
 pub enum MatchingRule {
@@ -106,7 +118,16 @@ pub enum MatchingRule {
   /// Matcher for keys in a map
   EachKey(MatchingRuleDefinition),
   /// Matcher for values in a collection. This delegates to the Values matcher for maps.
-  EachValue(MatchingRuleDefinition)
+  EachValue(MatchingRuleDefinition),
+  /// Matching rule provided by a plugin, carrying the rule name and its configuration values.
+  /// Which plugin (if any) provides a name is a property of the running plugin catalogue, not of
+  /// the Pact file, so this is what an otherwise unrecognised rule name is parsed into.
+  Plugin {
+    /// Name of the rule, which is also the key it is resolved by in the plugin catalogue
+    name: String,
+    /// Configuration values for the rule, stored alongside the name in the Pact file
+    values: Value
+  }
 }
 
 impl MatchingRule {
@@ -117,7 +138,11 @@ impl MatchingRule {
       Value::Object(m) => match m.get("match").or_else(|| m.get("pact:matcher:type")) {
         Some(match_val) => {
           let val = json_to_string(match_val);
-          MatchingRule::create(val.as_str(), value)
+          if m.contains_key("match") {
+            MatchingRule::create(val.as_str(), value)
+          } else {
+            MatchingRule::create_from_integration_json(val.as_str(), value)
+          }
         }
         None => if let Some(val) = m.get("regex") {
           Ok(MatchingRule::Regex(json_to_string(val)))
@@ -232,6 +257,15 @@ impl MatchingRule {
 
         Value::Object(map.clone())
       }
+      MatchingRule::Plugin { name, values } => {
+        let mut map = json!({ "match": name.as_str() });
+        if let (Some(map), Some(values)) = (map.as_object_mut(), values.as_object()) {
+          for (key, value) in values {
+            map.insert(key.clone(), value.clone());
+          }
+        }
+        map
+      }
     }
   }
 
@@ -254,6 +288,9 @@ impl MatchingRule {
 
   /// Returns the type name of this matching rule
   pub fn name(&self) -> String {
+    if let MatchingRule::Plugin { name, .. } = self {
+      return name.clone();
+    }
     match self {
       MatchingRule::Equality => "equality",
       MatchingRule::Regex(_) => "regex",
@@ -277,11 +314,32 @@ impl MatchingRule {
       MatchingRule::NotEmpty => "not-empty",
       MatchingRule::Semver => "semver",
       MatchingRule::EachKey(_) => "each-key",
-      MatchingRule::EachValue(_) => "each-value"
+      MatchingRule::EachValue(_) => "each-value",
+      MatchingRule::Plugin { .. } => unreachable!("handled above")
     }.to_string()
   }
 
+  /// Returns the configuration values for this matching rule, keyed by name.
+  ///
+  /// Unlike [`MatchingRule::values`], this supports rules whose configuration keys are not known
+  /// at compile time, which is what a plugin-provided rule needs.
+  pub fn value_map(&self) -> HashMap<String, Value> {
+    match self {
+      MatchingRule::Plugin { values, .. } => match values {
+        Value::Object(values) => values.iter()
+          .map(|(k, v)| (k.clone(), v.clone()))
+          .collect(),
+        _ => HashMap::default()
+      }
+      #[allow(deprecated)]
+      _ => self.values().iter()
+        .map(|(k, v)| (k.to_string(), v.clone()))
+        .collect()
+    }
+  }
+
   /// Returns the type name of this matching rule
+  #[deprecated(since = "1.3.14", note = "Use value_map instead, which supports plugin-provided rules")]
   pub fn values(&self) -> HashMap<&'static str, Value> {
     let empty = hashmap!{};
     match self {
@@ -336,11 +394,31 @@ impl MatchingRule {
 
         map
       }
+      MatchingRule::Plugin { .. } => empty
     }
   }
 
-  /// Creates a `MatchingRule` from a type and a map of attributes
+  /// Creates a `MatchingRule` from a type and a map of attributes.
+  ///
+  /// A rule type that is not one of the standard ones is not an error: it becomes a
+  /// [`MatchingRule::Plugin`] carrying the name and the remaining attributes, to be resolved
+  /// against the plugin catalogue when the rule is applied. A standard rule that is missing
+  /// required configuration still fails here, so the fallback cannot mask a real parse error.
   pub fn create(rule_type: &str, attributes: &Value) -> anyhow::Result<MatchingRule> {
+    MatchingRule::create_rule(rule_type, attributes, false)
+  }
+
+  /// Creates a `MatchingRule` from a type and a map of attributes in the integration JSON form
+  /// (i.e. from a `pact:matcher:type` value).
+  ///
+  /// This differs from [`MatchingRule::create`] only for plugin-provided rules: in the integration
+  /// form `value` carries the example value rather than rule configuration, so it is not stored
+  /// with the rule.
+  pub fn create_from_integration_json(rule_type: &str, attributes: &Value) -> anyhow::Result<MatchingRule> {
+    MatchingRule::create_rule(rule_type, attributes, true)
+  }
+
+  fn create_rule(rule_type: &str, attributes: &Value, integration_json: bool) -> anyhow::Result<MatchingRule> {
     trace!("rule_type: {}, attributes: {}", rule_type, attributes);
     let attributes = match attributes {
       Value::Object(values) => values.clone(),
@@ -479,7 +557,11 @@ impl MatchingRule {
         };
         Ok(MatchingRule::EachValue(definition))
       }
-      _ => Err(anyhow!("{} is not a valid matching rule type", rule_type)),
+      "" => Err(anyhow!("Matching rule type can not be empty")),
+      _ => Ok(MatchingRule::Plugin {
+        name: rule_type.to_string(),
+        values: plugin_rule_values(&attributes, integration_json)
+      })
     }
   }
 
@@ -522,6 +604,8 @@ impl MatchingRule {
       MatchingRule::Values => false,
       MatchingRule::EachValue(_) => false,
       MatchingRule::EachKey(_) => false,
+      // A plugin rule applies to the value at its path, not to that value's children
+      MatchingRule::Plugin { .. } => false,
       _ => true
     }
   }
@@ -574,7 +658,8 @@ impl MatchingRule {
       MatchingRule::NotEmpty => "must not be empty".to_string(),
       MatchingRule::Semver => "must match a semver version".to_string(),
       MatchingRule::EachKey(m) => format!("each key must match '{}'", m.expression()),
-      MatchingRule::EachValue(m) => format!("each value must match '{}'", m.expression())
+      MatchingRule::EachValue(m) => format!("each value must match '{}'", m.expression()),
+      MatchingRule::Plugin { name, .. } => format!("must match the '{}' rule provided by a plugin", name)
     }
   }
 
@@ -630,6 +715,10 @@ impl Hash for MatchingRule {
           }
         }
       }
+      MatchingRule::Plugin { name, values } => {
+        name.hash(state);
+        values.to_string().hash(state);
+      }
       _ => ()
     }
   }
@@ -650,6 +739,7 @@ impl PartialEq for MatchingRule {
       (MatchingRule::ArrayContains(variants1), MatchingRule::ArrayContains(variants2)) => variants1 == variants2,
       (MatchingRule::EachKey(definition1), MatchingRule::EachKey(definition2)) => definition1 == definition2,
       (MatchingRule::EachValue(definition1), MatchingRule::EachValue(definition2)) => definition1 == definition2,
+      (MatchingRule::Plugin { name: n1, values: v1 }, MatchingRule::Plugin { name: n2, values: v2 }) => n1 == n2 && v1 == v2,
       _ => mem::discriminant(self) == mem::discriminant(other)
     }
   }
@@ -2202,7 +2292,7 @@ mod tests {
     expect!(MatchingRule::from_json(&Value::from_str("100").unwrap())).to(be_err());
     expect!(MatchingRule::from_json(&Value::from_str("100.10").unwrap())).to(be_err());
     expect!(MatchingRule::from_json(&Value::from_str("{\"stuff\": 100}").unwrap())).to(be_err());
-    expect!(MatchingRule::from_json(&Value::from_str("{\"match\": \"stuff\"}").unwrap())).to(be_err());
+    expect!(MatchingRule::from_json(&Value::from_str("{\"match\": \"\"}").unwrap())).to(be_err());
 
     expect!(MatchingRule::from_json(&Value::from_str("{\"regex\": \"[0-9]\"}").unwrap())).to(
       be_ok().value(MatchingRule::Regex("[0-9]".to_string())));
@@ -2855,7 +2945,7 @@ mod tests {
 
   #[test]
   fn array_contains_values_round_trip() {
-    // Regression test: MatchingRule::values() is used by pact-plugin-driver to encode
+    // Regression test: MatchingRule::value_map() is used by pact-plugin-driver to encode
     // matching rules over the gRPC plugin protocol. The variants must serialise in a
     // form that MatchingRule::create() can deserialise — i.e. as objects with
     // `index` / `rules` / `generators` keys, not as arrays.
@@ -2864,10 +2954,68 @@ mod tests {
       (1, matchingrules_list! { "body"; "$.bar" => [ MatchingRule::Type ] }, HashMap::default()),
     ]);
 
-    let values = original.values();
+    let values = original.value_map();
     let attributes = json!({ "variants": values["variants"].clone() });
     let restored = MatchingRule::create("arrayContains", &attributes).unwrap();
 
     expect!(restored).to(be_equal_to(original));
+  }
+
+  #[test]
+  fn unknown_rule_names_become_plugin_rules() {
+    // A rule name this crate does not know may be provided by a plugin - which it has no way of
+    // checking - so it is carried through to be resolved against the catalogue when the rule is
+    // applied. Resolution failing is then reported against the value being matched.
+    expect!(MatchingRule::from_json(&json!({ "match": "creditcard", "brand": "visa" }))).to(
+      be_ok().value(MatchingRule::Plugin {
+        name: "creditcard".to_string(),
+        values: json!({ "brand": "visa" })
+      }));
+  }
+
+  #[test]
+  fn a_malformed_known_rule_still_fails_rather_than_becoming_a_plugin_rule() {
+    expect!(MatchingRule::create("regex", &json!({}))).to(be_err());
+    expect!(MatchingRule::create("include", &json!({}))).to(be_err());
+    expect!(MatchingRule::create("contentType", &json!({}))).to(be_err());
+    expect!(MatchingRule::create("arrayContains", &json!({}))).to(be_err());
+  }
+
+  #[test]
+  fn plugin_rule_from_integration_json_does_not_keep_the_example_value() {
+    // In the integration JSON form `value` is the example value, not rule configuration
+    expect!(MatchingRule::from_json(&json!({
+      "pact:matcher:type": "creditcard",
+      "brand": "visa",
+      "value": "4111111111111111"
+    }))).to(be_ok().value(MatchingRule::Plugin {
+      name: "creditcard".to_string(),
+      values: json!({ "brand": "visa" })
+    }));
+
+    // ... whereas in a persisted rule it is the default config-key slot
+    expect!(MatchingRule::from_json(&json!({ "match": "sometype", "value": "config" }))).to(
+      be_ok().value(MatchingRule::Plugin {
+        name: "sometype".to_string(),
+        values: json!({ "value": "config" })
+      }));
+  }
+
+  #[test]
+  fn plugin_rule_round_trips_through_json() {
+    let rule = MatchingRule::Plugin {
+      name: "creditcard".to_string(),
+      values: json!({ "brand": "visa" })
+    };
+
+    let json = rule.to_json();
+    expect!(&json).to(be_equal_to(&json!({ "match": "creditcard", "brand": "visa" })));
+    expect!(MatchingRule::from_json(&json)).to(be_ok().value(rule.clone()));
+
+    expect!(rule.name()).to(be_equal_to("creditcard".to_string()));
+    expect!(rule.value_map()).to(be_equal_to(hashmap!{
+      "brand".to_string() => json!("visa")
+    }));
+    expect!(rule.can_cascade()).to(be_false());
   }
 }

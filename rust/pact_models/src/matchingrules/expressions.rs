@@ -48,6 +48,19 @@
 //! | server      | Value must match the semver specification                                                             |                    | `matching(semver, '1.0.0')`                                                   |
 //! | contentType | Value must be of the provided content type. This will preform a magic test on the bytes of the value. | Content type       | `matching(contentType, 'application/xml', '<?xml?><test/>')`                  |
 //!
+//! ### Plugin-provided matching rules
+//!
+//! Any other name is taken to be a matching rule provided by a plugin, and is parsed into a
+//! [`MatchingRule::Plugin`] carrying the name and the optional configuration value. Nothing is
+//! checked here: the name is resolved against the plugin catalogue when the rule is applied, so a
+//! name no plugin provides fails then, reported against the value being matched.
+//!
+//! For example, `matching(creditcard, 'visa', '4111111111111111')` uses the `creditcard` rule with
+//! a configuration value of `visa`. The key that configuration value is stored under comes from
+//! the `config-key` value on the rule's catalogue entry (`brand`, for that plugin), defaulting to
+//! `value`. The consumer test has to load the plugin providing the rule before the expression is
+//! parsed for that lookup to resolve.
+//!
 //! The final form is a reference to another key. This is used to setup type matching using an example value, and is normally
 //! used for collections. The name of the key must be a string value in single quotes.
 //!
@@ -119,6 +132,7 @@ use bytes::{BufMut, BytesMut};
 use itertools::Either;
 use logos::{Lexer, Logos, Span};
 use semver::Version;
+use serde_json::{json, Value};
 use tracing::{instrument, trace, warn};
 
 use crate::expression_parser::DataType;
@@ -127,6 +141,7 @@ use crate::generators::Generator::ProviderStateGenerator;
 use crate::matchingrules::{MatchingRule, MatchingRuleCategory, RuleLogic};
 use crate::matchingrules::MatchingRule::{MaxType, MinType, NotEmpty};
 use crate::path_exp::DocPath;
+use crate::plugins::plugin_rule_config_key;
 
 /// Type to associate with an expression element
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -731,18 +746,9 @@ fn parse_matching_rule(lex: &mut logos::Lexer<MatcherDefinitionToken>, v: &str) 
       "boolean" => parse_boolean(lex, v),
       "contentType" => parse_content_type(lex, v),
       "semver" => parse_semver(lex, v),
-      _ => {
-        let mut buffer = BytesMut::new().writer();
-        let span = lex.span();
-        let report = Report::build(ReportKind::Error, ("expression", span.start..span.start))
-          .with_config(Config::default().with_color(false))
-          .with_message(format!("Expected the type of matcher, got '{}'", lex.slice()))
-          .with_label(Label::new(("expression", span)).with_message("This is not a valid matcher type"))
-          .with_note("Valid matchers are: equalTo, regex, type, datetime, date, time, include, number, integer, decimal, boolean, contentType, semver")
-          .finish();
-        report.write(("expression", Source::from(v)), &mut buffer)?;
-        let message = from_utf8(&*buffer.get_ref())?.to_string();
-        Err(anyhow!(message))
+      name => {
+        let name = name.to_string();
+        parse_plugin_rule(name.as_str(), lex, v)
       }
     }
   } else if let Ok(MatcherDefinitionToken::Dollar) = next {
@@ -758,6 +764,48 @@ fn parse_matching_rule(lex: &mut logos::Lexer<MatcherDefinitionToken>, v: &str) 
     report.write(("expression", Source::from(v)), &mut buffer)?;
     let message = from_utf8(&*buffer.get_ref())?.to_string();
     Err(anyhow!(message))
+  }
+}
+
+// name=ID COMMA ( config=primitiveValue COMMA )? example=primitiveValue
+//
+// A matcher name that is not one of the standard ones. It is not an error here: the name may be
+// provided by a plugin, which this crate has no way of checking, so it becomes a
+// MatchingRule::Plugin to be resolved against the plugin catalogue when the rule is applied.
+//
+// The optional configuration argument is stored under the key the rule's catalogue entry names in
+// its `config-key` value, which is why this needs the plugin support handler. With no handler
+// registered it falls back to `value`.
+fn parse_plugin_rule(
+  name: &str,
+  lex: &mut Lexer<MatcherDefinitionToken>,
+  v: &str
+) -> anyhow::Result<(String, ValueType, Option<MatchingRule>, Option<Generator>, Option<MatchingReference>)> {
+  parse_comma(lex, v)?;
+  let (first, first_type, first_generator) = parse_primitive_value(lex, v, false)?;
+
+  let (value, value_type, generator, values) = if lex.remainder().trim_start().starts_with(',') {
+    parse_comma(lex, v)?;
+    let (example, example_type, generator) = parse_primitive_value(lex, v, false)?;
+    let config = json!({ plugin_rule_config_key(name): config_value(first.as_str(), &first_type) });
+    (example, example_type, generator, config)
+  } else {
+    (first, first_type, first_generator, json!({}))
+  };
+
+  let rule = MatchingRule::Plugin { name: name.to_string(), values };
+  Ok((value, value_type, Some(rule), generator, None))
+}
+
+/// A configuration argument from a matching rule definition expression, as the JSON value it is
+/// stored as. The lexer hands back the source text, so the type it was written as is what decides
+/// whether `1` is stored as a number or a string.
+fn config_value(value: &str, value_type: &ValueType) -> Value {
+  match value_type {
+    ValueType::Integer => value.parse::<i64>().map(|v| json!(v)).unwrap_or_else(|_| json!(value)),
+    ValueType::Number | ValueType::Decimal => value.parse::<f64>().map(|v| json!(v)).unwrap_or_else(|_| json!(value)),
+    ValueType::Boolean => value.parse::<bool>().map(|v| json!(v)).unwrap_or_else(|_| json!(value)),
+    _ => json!(value)
   }
 }
 
@@ -1535,22 +1583,57 @@ mod test {
             |
             ".trim_margin().unwrap()));
 
+    // A name that is not one of the standard matchers is not an error - it may be provided by a
+    // plugin, which is resolved when the rule is applied. See parse_plugin_matching_rule_test.
     let mut lex = super::MatcherDefinitionToken::lexer("match(testABBC, '100')");
     lex.next();
     lex.next();
-    expect!(as_string!(super::parse_matching_rule(&mut lex, "match(testABBC, '100')"))).to(
-      be_err().value(
-        "|Error: Expected the type of matcher, got 'testABBC'
-            |   ╭─[ expression:1:7 ]
-            |   │
-            | 1 │ match(testABBC, '100')
-            |   │       ────┬─── \u{0020}
-            |   │           ╰───── This is not a valid matcher type
-            |   │\u{0020}
-            |   │ Note: Valid matchers are: equalTo, regex, type, datetime, date, time, include, number, integer, decimal, boolean, contentType, semver
-            |───╯
-            |
-            ".trim_margin().unwrap()));
+    expect!(super::parse_matching_rule(&mut lex, "match(testABBC, '100')").unwrap()).to(
+      be_equal_to(("100".to_string(), ValueType::String, Some(MatchingRule::Plugin {
+        name: "testABBC".to_string(),
+        values: json!({})
+      }), None, None)));
+  }
+
+  #[test]
+  fn parse_plugin_matching_rule_test() {
+    // With no configuration argument
+    expect!(super::parse_matcher_def("matching(creditcard, '4111111111111111')").unwrap()).to(
+      be_equal_to(MatchingRuleDefinition {
+        value: "4111111111111111".to_string(),
+        value_type: ValueType::String,
+        rules: vec![ Either::Left(MatchingRule::Plugin {
+          name: "creditcard".to_string(),
+          values: json!({})
+        }) ],
+        generator: None,
+        expression: "matching(creditcard, '4111111111111111')".to_string()
+      }));
+
+    // With one. No plugin support handler is registered in this test, so the configuration
+    // argument lands under the default `value` key rather than the rule's own config-key.
+    expect!(super::parse_matcher_def("matching(creditcard, 'visa', '4111111111111111')").unwrap()).to(
+      be_equal_to(MatchingRuleDefinition {
+        value: "4111111111111111".to_string(),
+        value_type: ValueType::String,
+        rules: vec![ Either::Left(MatchingRule::Plugin {
+          name: "creditcard".to_string(),
+          values: json!({ "value": "visa" })
+        }) ],
+        generator: None,
+        expression: "matching(creditcard, 'visa', '4111111111111111')".to_string()
+      }));
+
+    // A configuration argument keeps the type it was written as
+    expect!(super::parse_matcher_def("matching(somerule, 100, 'example')").unwrap().rules).to(
+      be_equal_to(vec![ Either::Left(MatchingRule::Plugin {
+        name: "somerule".to_string(),
+        values: json!({ "value": 100 })
+      }) ]));
+
+    // A malformed one still reports where it went wrong
+    expect!(super::parse_matcher_def("matching(creditcard)")).to(be_err());
+    expect!(super::parse_matcher_def("matching(creditcard, )")).to(be_err());
   }
 
   #[test]
