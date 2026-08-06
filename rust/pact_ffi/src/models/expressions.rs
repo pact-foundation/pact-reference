@@ -292,7 +292,10 @@ impl MatchingRuleIterator {
               MatchingRule::NotEmpty => None,
               MatchingRule::Semver => None,
               MatchingRule::EachKey(_) => None,
-              MatchingRule::EachValue(_) => None
+              MatchingRule::EachValue(_) => None,
+              // A plugin rule's configuration is a map of arbitrary keys, so unlike every other
+              // rule there is no single scalar to expose. The JSON form carries all of it.
+              MatchingRule::Plugin { values, .. } => Some(CString::new(values.to_string()).unwrap())
             };
             let rule_value = val.as_ref().map(|v| v.as_ptr()).unwrap_or_else(|| null());
             let rule_result = MatchingRuleResult::MatchingRule(rule_id(rule), rule_value, rule.clone());
@@ -346,7 +349,8 @@ fn rule_id(rule: &MatchingRule) -> u16 {
     MatchingRule::NotEmpty => 20,
     MatchingRule::Semver => 21,
     MatchingRule::EachKey(_) => 22,
-    MatchingRule::EachValue(_) => 23
+    MatchingRule::EachValue(_) => 23,
+    MatchingRule::Plugin { .. } => 24
   }
 }
 
@@ -425,6 +429,11 @@ ffi_fn! {
     /// | Semver | 21 |
     /// | EachKey | 22 |
     /// | EachValue | 23 |
+    /// | Plugin | 24 |
+    ///
+    /// A Plugin rule is one whose name is not a standard matching rule, so it is resolved against
+    /// the plugin catalogue when the rule is applied. Its associated value is the JSON object of
+    /// its configuration values, since unlike every other rule it has no single scalar value.
     ///
     /// # Safety
     ///
