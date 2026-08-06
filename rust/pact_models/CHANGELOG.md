@@ -1,5 +1,11 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.3.14 - Bugfix + Support for matching rules and generators provided by plugins
+
+* 57daad23 - feat(pact-models): Support for matching rules and generators provided by plugins (Ronald Holshausen, Thu Aug 6 10:11:20 2026 +1000)
+* 3208dd76 - fix(pact_models): V4 body with no content attribute is not a missing body (Endika Iglesias, Mon Aug 3 15:25:57 2026 +0200)
+* 9a3c59d0 - chore(pact_models): bump version to 1.3.14 [skip ci] (Ronald Holshausen, Mon Aug 3 17:06:08 2026 +1000)
+
 # 1.3.13 - Maintenance Release
 
 * 4f35334b - chore(pact_models): Update reqwest to 0.13.4 and set rustls-no-provider (Ronald Holshausen, Mon Aug 3 16:41:50 2026 +1000)
