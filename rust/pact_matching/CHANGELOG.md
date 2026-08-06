@@ -1,5 +1,14 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 2.0.10 - Support matching rules and generators from plugins
+
+* 8740c3fe - feat(v2-plugins): Support matching rules and generators from plugins (Ronald Holshausen, Thu Aug 6 15:13:56 2026 +1000)
+* 343a96fe - chore: Update pact-plugin-driver to 1.2.1 (Ronald Holshausen, Thu Aug 6 15:09:50 2026 +1000)
+* 4fba4ca2 - chore: Update pact_models to 1.3.14 (Ronald Holshausen, Thu Aug 6 11:25:12 2026 +1000)
+* 149b3e81 - chore: Update pact-plugin-driver to 1.2.0 (Ronald Holshausen, Wed Aug 5 15:43:01 2026 +1000)
+* 0ce1b247 - chore(pact-matching): reqwest form requires the form feature enabled (Ronald Holshausen, Tue Aug 4 10:30:31 2026 +1000)
+* a547439e - bump version to 2.0.10 [skip ci] (Ronald Holshausen, Tue Aug 4 09:41:59 2026 +1000)
+
 # 2.0.9 - Maintenance Release
 
 * c99c46c9 - chore(pact-matching): Update reqwest to 0.13.4 and set rustls-no-provider (Ronald Holshausen, Tue Aug 4 09:16:28 2026 +1000)
