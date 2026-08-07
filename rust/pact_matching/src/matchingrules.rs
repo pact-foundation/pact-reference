@@ -159,13 +159,42 @@ lazy_static! {
     }
     entries
   };
+
+  /// Transport and interaction entries to add to the plugin catalogue, for the interaction types
+  /// and transports this framework handles itself.
+  ///
+  /// These are not matching capabilities and nothing dispatches to them - they exist so a plugin
+  /// can ask, through `hostCapabilities` at `InitPlugin`, what the host it is running under can
+  /// carry. Pact-JVM has registered them since before plugins had capability negotiation
+  /// (`interactionCatalogueEntries` in `MatcherExecutor.kt`'s module) and this crate registered
+  /// none at all, so the same plugin got a different answer from the two implementations. Must
+  /// stay in step with that list.
+  static ref INTERACTION_CATALOGUE_ENTRIES: Vec<CatalogueEntry> = {
+    let mut entries = vec![];
+    for (entry_type, key) in [
+      (CatalogueEntryType::TRANSPORT, "http"),
+      (CatalogueEntryType::TRANSPORT, "https"),
+      (CatalogueEntryType::INTERACTION, "message"),
+      (CatalogueEntryType::INTERACTION, "synchronous-message")
+    ] {
+      entries.push(CatalogueEntry {
+        entry_type,
+        provider_type: CatalogueEntryProviderType::CORE,
+        plugin: None,
+        key: key.to_string(),
+        values: hashmap!{}
+      });
+    }
+    entries
+  };
 }
 
-/// Sets up all the core catalogue entries for matchers and generators
+/// Sets up all the core catalogue entries for matchers, generators, transports and interactions
 pub fn configure_core_catalogue() {
   #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))] register_core_entries(CONTENT_MATCHER_CATALOGUE_ENTRIES.as_ref());
   #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))] register_core_entries(MATCHER_CATALOGUE_ENTRIES.as_ref());
   #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))] register_core_entries(GENERATOR_CATALOGUE_ENTRIES.as_ref());
+  #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))] register_core_entries(INTERACTION_CATALOGUE_ENTRIES.as_ref());
   #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))] crate::core_capabilities::register_core_capabilities();
 }
 
@@ -2568,6 +2597,25 @@ mod tests {
 
     expect!(generator_names.difference(&entry_keys).collect::<Vec<_>>()).to(be_equal_to(Vec::<&String>::new()));
     expect!(entry_keys.difference(&generator_names).collect::<Vec<_>>()).to(be_equal_to(Vec::<&String>::new()));
+  }
+
+  /// The transports and interaction types this framework carries itself, as a plugin sees them in
+  /// `hostCapabilities`. Kept as an explicit list so a change here is a deliberate statement about
+  /// what the host supports, and so the drift from Pact-JVM that prompted adding them is visible.
+  #[test]
+  #[cfg(feature = "plugins")]
+  #[cfg(not(target_family = "wasm"))]
+  fn advertises_the_transports_and_interaction_types_this_framework_handles() {
+    let advertised = INTERACTION_CATALOGUE_ENTRIES.iter()
+      .map(|entry| format!("{}/{}", entry.entry_type, entry.key))
+      .collect::<HashSet<_>>();
+
+    expect!(advertised).to(be_equal_to(
+      ["transport/http", "transport/https", "interaction/message", "interaction/synchronous-message"]
+        .iter()
+        .map(|key| key.to_string())
+        .collect::<HashSet<_>>()
+    ));
   }
 
   /// The specification version is a value on the entry, not part of the key.

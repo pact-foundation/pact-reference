@@ -452,15 +452,18 @@ impl CoreFieldGenerator for CoreFieldValueGenerator {
     let example = request.example_value.as_ref()
       .map(FieldValue::from_proto)
       .unwrap_or(FieldValue::Json(serde_json::Value::Null));
-    let mode = match ProtoTestMode::try_from(request.test_mode) {
-      Ok(ProtoTestMode::Consumer) => GeneratorTestMode::Consumer,
-      _ => GeneratorTestMode::Provider
-    };
-
     // A generator that does not apply on this side of the test leaves the example value alone,
-    // the same as it would when applied to a body
-    if !generator.corresponds_to_mode(&mode) {
-      return Ok(GenerateFieldResponse { error: String::default(), value: Some(example.to_proto()) });
+    // the same as it would when applied to a body. An unknown mode applies it rather than guessing
+    // a side: guessing wrong turns `MockServerURL` into a silent no-op in a consumer test.
+    let mode = match ProtoTestMode::try_from(request.test_mode) {
+      Ok(ProtoTestMode::Consumer) => Some(GeneratorTestMode::Consumer),
+      Ok(ProtoTestMode::Provider) => Some(GeneratorTestMode::Provider),
+      _ => None
+    };
+    if let Some(mode) = &mode {
+      if !generator.corresponds_to_mode(mode) {
+        return Ok(GenerateFieldResponse { error: String::default(), value: Some(example.to_proto()) });
+      }
     }
 
     let context_values = request.test_context.as_ref()
@@ -593,6 +596,8 @@ pub(crate) fn register_core_capabilities() {
 #[cfg(test)]
 mod tests {
   use std::collections::HashSet;
+
+  use maplit::hashmap;
 
   use expectest::prelude::*;
   use pact_plugin_driver::proto_v2::{Generator as ProtoGenerator, MatchingRule as ProtoMatchingRule};
@@ -765,6 +770,26 @@ mod tests {
     expect!(response.error).to(be_equal_to(String::default()));
     expect!(FieldValue::from_proto(&response.value.unwrap()))
       .to(be_equal_to(FieldValue::Json(json!("http://localhost:1234/a"))));
+  }
+
+  /// An unknown mode is not a guess at a side: a consumer-only generator still applies, because
+  /// guessing "provider" would turn it into a silent no-op. The value it needs reaches it through
+  /// the request's test context, which is the only way proposal 006 lets a generator see host
+  /// state.
+  #[tokio::test]
+  async fn a_generator_runs_when_the_side_of_the_test_is_not_known() {
+    let mut request = generate_request("MockServerURL",
+      Some(proto_generator("MockServerURL", json!({ "example": "http://localhost:1234/a", "regex": ".*(/a)" }))),
+      FieldValue::Json(json!("http://localhost:1234/a")), ProtoTestMode::Unknown);
+    request.test_context = Some(to_proto_struct(&hashmap!{
+      "mockServer".to_string() => json!({ "url": "http://127.0.0.1:9876" })
+    }));
+
+    let response = CoreFieldValueGenerator.generate_field(request).await.unwrap();
+
+    expect!(response.error).to(be_equal_to(String::default()));
+    expect!(FieldValue::from_proto(&response.value.unwrap()))
+      .to(be_equal_to(FieldValue::Json(json!("http://127.0.0.1:9876/a"))));
   }
 
   #[tokio::test]
