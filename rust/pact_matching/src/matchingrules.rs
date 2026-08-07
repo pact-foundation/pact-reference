@@ -108,19 +108,53 @@ lazy_static! {
     entries
   };
 
-  static ref MATCHER_CATALOGUE_ENTRIES: Vec<CatalogueEntry> = {
+  /// Matching rule entries to add to the plugin catalogue, one per rule this crate implements.
+  ///
+  /// Each is keyed by the name the rule carries in a request - the same string
+  /// [`MatchingRule::name`] returns and the plugin driver puts in `MatchFieldRequest.rule.type` -
+  /// so a plugin handed a rule can name it straight back when it calls into the host, and does not
+  /// have to know which specification version introduced it. That version is a value on the entry
+  /// (`spec-version`) rather than part of the key. Must stay in step with `matcherCatalogueEntries`
+  /// in Pact-JVM's `MatcherExecutor.kt`, which differs only by the rules the two implement.
+  pub(crate) static ref MATCHER_CATALOGUE_ENTRIES: Vec<CatalogueEntry> = {
     let mut entries = vec![];
-    for matcher in ["v2-regex", "v2-type", "v3-number-type", "v3-integer-type", "v3-decimal-type",
-      "v3-date", "v3-time", "v3-datetime", "v2-min-type", "v2-max-type", "v2-minmax-type",
-      "v3-includes", "v3-null", "v4-equals-ignore-order", "v4-min-equals-ignore-order",
-      "v4-max-equals-ignore-order", "v4-minmax-equals-ignore-order", "v3-content-type",
-      "v4-array-contains", "v1-equality", "v4-not-empty", "v4-semver"] {
+    for (matcher, spec_version) in [("equality", "V1"), ("regex", "V2"), ("type", "V2"),
+      ("min-type", "V2"), ("max-type", "V2"), ("min-max-type", "V2"), ("include", "V3"),
+      ("number", "V3"), ("integer", "V3"), ("decimal", "V3"), ("null", "V3"), ("date", "V3"),
+      ("time", "V3"), ("datetime", "V3"), ("content-type", "V3"), ("values", "V3"),
+      ("array-contains", "V4"), ("boolean", "V4"), ("status-code", "V4"), ("not-empty", "V4"),
+      ("semver", "V4"), ("each-key", "V4"), ("each-value", "V4")] {
       entries.push(CatalogueEntry {
         entry_type: CatalogueEntryType::MATCHER,
         provider_type: CatalogueEntryProviderType::CORE,
         plugin: None,
         key: matcher.to_string(),
-        values: hashmap!{}
+        values: hashmap!{ "spec-version".to_string() => spec_version.to_string() }
+      });
+    }
+    entries
+  };
+
+  /// Generator entries to add to the plugin catalogue, one per generator this crate implements.
+  ///
+  /// Keyed the same way [`MATCHER_CATALOGUE_ENTRIES`] is - by the name the generator carries in a
+  /// request, which for generators is [`Generator::name`], the same `type` value the Pact file uses
+  /// and the plugin driver puts in `GenerateFieldRequest.generator.type`. That is `PascalCase` for
+  /// generators (`RandomInt`, `DateTime`) where it is kebab-case for matching rules; the point is
+  /// that it matches what a plugin was handed, not that it looks a particular way. Must stay in
+  /// step with `generatorCatalogueEntries` in Pact-JVM's `MatcherExecutor.kt`.
+  pub(crate) static ref GENERATOR_CATALOGUE_ENTRIES: Vec<CatalogueEntry> = {
+    let mut entries = vec![];
+    for (generator, spec_version) in [("RandomInt", "V3"), ("RandomDecimal", "V3"),
+      ("RandomHexadecimal", "V3"), ("RandomString", "V3"), ("RandomBoolean", "V3"),
+      ("Regex", "V3"), ("Uuid", "V3"), ("Date", "V3"), ("Time", "V3"), ("DateTime", "V3"),
+      ("ProviderState", "V3"), ("MockServerURL", "V4"), ("ArrayContains", "V4")] {
+      entries.push(CatalogueEntry {
+        entry_type: CatalogueEntryType::GENERATOR,
+        provider_type: CatalogueEntryProviderType::CORE,
+        plugin: None,
+        key: generator.to_string(),
+        values: hashmap!{ "spec-version".to_string() => spec_version.to_string() }
       });
     }
     entries
@@ -131,6 +165,7 @@ lazy_static! {
 pub fn configure_core_catalogue() {
   #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))] register_core_entries(CONTENT_MATCHER_CATALOGUE_ENTRIES.as_ref());
   #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))] register_core_entries(MATCHER_CATALOGUE_ENTRIES.as_ref());
+  #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))] register_core_entries(GENERATOR_CATALOGUE_ENTRIES.as_ref());
   #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))] crate::core_capabilities::register_core_capabilities();
 }
 
@@ -999,6 +1034,12 @@ impl <T: Debug + Display + PartialEq> DoMatch<&Vec<T>> for MatchingRule {
   }
 }
 
+/// The leading bytes of a value, for a mismatch message. `split_at` panics when asked for more
+/// bytes than there are, which any value shorter than the preview length would do.
+fn first_bytes(value: &Bytes) -> &[u8] {
+  &value[.. value.len().min(10)]
+}
+
 impl DoMatch<&Bytes> for MatchingRule {
   fn match_value(
     &self,
@@ -1030,7 +1071,7 @@ impl DoMatch<&Bytes> for MatchingRule {
           Ok(())
         } else {
           Err(anyhow!("Expected '{:?}...' ({} bytes) to be equal to '{:?}...' ({} bytes)",
-            expected_value.split_at(10).0, expected_value.len(), actual_value.split_at(10).0,
+            first_bytes(expected_value), expected_value.len(), first_bytes(actual_value),
             actual_value.len()))
         }
       },
@@ -1058,7 +1099,7 @@ impl DoMatch<&Bytes> for MatchingRule {
       }
       MatchingRule::Plugin { name, .. } => apply_plugin_rule(self, name, expected_value, actual_value),
       _ => if !cascaded || self.can_cascade() {
-        Err(anyhow!("Unable to match '{:?}...' ({} bytes) using {:?}", actual_value.split_at(10).0,
+        Err(anyhow!("Unable to match '{:?}...' ({} bytes) using {:?}", first_bytes(actual_value),
           actual_value.len(), self))
       } else {
         Ok(())
@@ -1624,6 +1665,7 @@ mod tests {
   use pact_models::{matchingrules, matchingrules_list};
   use pact_models::matchingrules::{MatchingRule, MatchingRuleCategory, RuleList};
   use pact_models::matchingrules::expressions::{MatchingRuleDefinition, ValueType};
+  #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))] use pact_models::generators::Generator;
   use pact_models::path_exp::DocPath;
   use pact_models::prelude::RuleLogic;
 
@@ -2418,6 +2460,126 @@ mod tests {
         <body>Don't forget me this weekend!</body>
       </note>"#;
       expect!(matcher.match_value("plain text", xml, false, false)).to(be_err());
+    }
+  }
+
+  /// The catalogue entry keys are the rule names, so a plugin can name a rule it was handed when it
+  /// calls back into the host. Adding a rule to `MatchingRule` without a catalogue entry would
+  /// leave it unreachable from a plugin, so this pins the two lists together. The `match` is
+  /// exhaustive on purpose: a new variant fails to compile here rather than going unnoticed.
+  #[test]
+  #[cfg(feature = "plugins")]
+  #[cfg(not(target_family = "wasm"))]
+  fn every_matching_rule_has_a_catalogue_entry_keyed_by_its_name() {
+    let rules = vec![
+      MatchingRule::Equality,
+      MatchingRule::Regex(".*".to_string()),
+      MatchingRule::Type,
+      MatchingRule::MinType(1),
+      MatchingRule::MaxType(1),
+      MatchingRule::MinMaxType(1, 2),
+      MatchingRule::Timestamp("yyyy".to_string()),
+      MatchingRule::Time("HH:mm".to_string()),
+      MatchingRule::Date("yyyy".to_string()),
+      MatchingRule::Include("a".to_string()),
+      MatchingRule::Number,
+      MatchingRule::Integer,
+      MatchingRule::Decimal,
+      MatchingRule::Null,
+      MatchingRule::ContentType("text/plain".to_string()),
+      MatchingRule::ArrayContains(vec![]),
+      MatchingRule::Values,
+      MatchingRule::Boolean,
+      MatchingRule::StatusCode(HttpStatus::Success),
+      MatchingRule::NotEmpty,
+      MatchingRule::Semver,
+      MatchingRule::EachKey(MatchingRuleDefinition::new("".to_string(), ValueType::String, MatchingRule::Equality, None, "".to_string())),
+      MatchingRule::EachValue(MatchingRuleDefinition::new("".to_string(), ValueType::String, MatchingRule::Equality, None, "".to_string()))
+    ];
+
+    // Exhaustiveness check - every variant above, and nothing left over except the plugin carrier,
+    // which names a rule the catalogue gets from the plugin rather than from here
+    for rule in &rules {
+      match rule {
+        MatchingRule::Equality | MatchingRule::Regex(_) | MatchingRule::Type |
+        MatchingRule::MinType(_) | MatchingRule::MaxType(_) | MatchingRule::MinMaxType(_, _) |
+        MatchingRule::Timestamp(_) | MatchingRule::Time(_) | MatchingRule::Date(_) |
+        MatchingRule::Include(_) | MatchingRule::Number | MatchingRule::Integer |
+        MatchingRule::Decimal | MatchingRule::Null | MatchingRule::ContentType(_) |
+        MatchingRule::ArrayContains(_) | MatchingRule::Values | MatchingRule::Boolean |
+        MatchingRule::StatusCode(_) | MatchingRule::NotEmpty | MatchingRule::Semver |
+        MatchingRule::EachKey(_) | MatchingRule::EachValue(_) => {},
+        MatchingRule::Plugin { .. } => panic!("a plugin rule is not a core catalogue entry")
+      }
+    }
+
+    let entry_keys = MATCHER_CATALOGUE_ENTRIES.iter()
+      .map(|entry| entry.key.clone())
+      .collect::<HashSet<_>>();
+    let rule_names = rules.iter()
+      .map(|rule| rule.name())
+      .collect::<HashSet<_>>();
+
+    expect!(rule_names.difference(&entry_keys).collect::<Vec<_>>()).to(be_equal_to(Vec::<&String>::new()));
+    expect!(entry_keys.difference(&rule_names).collect::<Vec<_>>()).to(be_equal_to(Vec::<&String>::new()));
+  }
+
+  /// The generator equivalent of
+  /// [`every_matching_rule_has_a_catalogue_entry_keyed_by_its_name`] - a generator without an entry
+  /// cannot be reached by a plugin calling back for it.
+  #[test]
+  #[cfg(feature = "plugins")]
+  #[cfg(not(target_family = "wasm"))]
+  fn every_generator_has_a_catalogue_entry_keyed_by_its_name() {
+    let generators = vec![
+      Generator::RandomInt(0, 10),
+      Generator::Uuid(None),
+      Generator::RandomDecimal(4),
+      Generator::RandomHexadecimal(4),
+      Generator::RandomString(4),
+      Generator::Regex(".*".to_string()),
+      Generator::Date(None, None),
+      Generator::Time(None, None),
+      Generator::DateTime(None, None),
+      Generator::RandomBoolean,
+      Generator::ProviderStateGenerator("a".to_string(), None),
+      Generator::MockServerURL("a".to_string(), ".*".to_string()),
+      Generator::ArrayContains(vec![])
+    ];
+
+    // Exhaustiveness check - a new variant fails to compile here rather than going unnoticed
+    for generator in &generators {
+      match generator {
+        Generator::RandomInt(_, _) | Generator::Uuid(_) | Generator::RandomDecimal(_) |
+        Generator::RandomHexadecimal(_) | Generator::RandomString(_) | Generator::Regex(_) |
+        Generator::Date(_, _) | Generator::Time(_, _) | Generator::DateTime(_, _) |
+        Generator::RandomBoolean | Generator::ProviderStateGenerator(_, _) |
+        Generator::MockServerURL(_, _) | Generator::ArrayContains(_) => {},
+        Generator::Plugin { .. } => panic!("a plugin generator is not a core catalogue entry")
+      }
+    }
+
+    let entry_keys = GENERATOR_CATALOGUE_ENTRIES.iter()
+      .map(|entry| entry.key.clone())
+      .collect::<HashSet<_>>();
+    let generator_names = generators.iter()
+      .map(|generator| generator.name())
+      .collect::<HashSet<_>>();
+
+    expect!(generator_names.difference(&entry_keys).collect::<Vec<_>>()).to(be_equal_to(Vec::<&String>::new()));
+    expect!(entry_keys.difference(&generator_names).collect::<Vec<_>>()).to(be_equal_to(Vec::<&String>::new()));
+  }
+
+  /// The specification version is a value on the entry, not part of the key.
+  #[test]
+  #[cfg(feature = "plugins")]
+  #[cfg(not(target_family = "wasm"))]
+  fn every_core_catalogue_entry_records_the_specification_version_it_was_introduced_in() {
+    for entry in MATCHER_CATALOGUE_ENTRIES.iter().chain(GENERATOR_CATALOGUE_ENTRIES.iter()) {
+      let version = entry.values.get("spec-version")
+        .unwrap_or_else(|| panic!("catalogue entry '{}' has no spec-version value", entry.key));
+      expect!(["V1", "V2", "V3", "V4"].contains(&version.as_str()))
+        .to(be_true());
     }
   }
 }
