@@ -1,5 +1,16 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.3.5 - Support matching rules and generators from plugins
+
+* 58814d2e - chore: Update pact_verifier to 1.4.7 (Ronald Holshausen, Fri Aug 7 10:41:49 2026 +1000)
+* a09d96cd - chore: Update pact_matching to 2.0.10 (Ronald Holshausen, Fri Aug 7 09:16:58 2026 +1000)
+* 4fba4ca2 - chore: Update pact_models to 1.3.14 (Ronald Holshausen, Thu Aug 6 11:25:12 2026 +1000)
+* 7a016cc2 - chore: Update pact_verifier to 1.4.6 (Ronald Holshausen, Wed Aug 5 11:18:27 2026 +1000)
+* 3685871e - chore(pact-verifier): Remove default rustls features and set crypto provider when CLI starts (Ronald Holshausen, Wed Aug 5 10:13:47 2026 +1000)
+* 32436afa - chore: Update pact-matching to 2.0.9 (Ronald Holshausen, Tue Aug 4 09:48:44 2026 +1000)
+* 0904b3d3 - chore: Update pact_models to 1.3.13 (Ronald Holshausen, Mon Aug 3 17:16:00 2026 +1000)
+* 99e15515 - bump version to 1.3.5 (Ronald Holshausen, Fri Jul 31 10:13:25 2026 +1000)
+
 # 1.3.4 - Bugfix Release
 
 * 7551fe54 - chore: Update pact_verifier to 1.4.4 (Ronald Holshausen, Fri Jul 31 09:45:27 2026 +1000)
