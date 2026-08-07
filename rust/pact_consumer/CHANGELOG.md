@@ -1,5 +1,19 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.4.10 - Support matching rules and generators from plugins
+
+* a5e557e5 - chore: Update pact_mock_server to 2.2.5 (Ronald Holshausen, Fri Aug 7 09:52:09 2026 +1000)
+* 64fcc4ba - Revert "update changelog for release 1.4.10 [skip ci]" (Ronald Holshausen, Fri Aug 7 09:22:45 2026 +1000)
+* 3316e6aa - update changelog for release 1.4.10 [skip ci] (Ronald Holshausen, Fri Aug 7 09:21:42 2026 +1000)
+* a09d96cd - chore: Update pact_matching to 2.0.10 (Ronald Holshausen, Fri Aug 7 09:16:58 2026 +1000)
+* 0a284f49 - fix(pact-verifier): Enable plugin driver default features if the plugin feature is enabled (Ronald Holshausen, Thu Aug 6 16:44:45 2026 +1000)
+* 8740c3fe - feat(v2-plugins): Support matching rules and generators from plugins (Ronald Holshausen, Thu Aug 6 15:13:56 2026 +1000)
+* 343a96fe - chore: Update pact-plugin-driver to 1.2.1 (Ronald Holshausen, Thu Aug 6 15:09:50 2026 +1000)
+* 4fba4ca2 - chore: Update pact_models to 1.3.14 (Ronald Holshausen, Thu Aug 6 11:25:12 2026 +1000)
+* 149b3e81 - chore: Update pact-plugin-driver to 1.2.0 (Ronald Holshausen, Wed Aug 5 15:43:01 2026 +1000)
+* 1d8bfcbf - chore(pact-consumer): Remove default rustls features (Ronald Holshausen, Wed Aug 5 09:18:18 2026 +1000)
+* d4f4bccf - bump version to 1.4.10 [skip ci] (Ronald Holshausen, Tue Aug 4 15:51:35 2026 +1000)
+
 # 1.4.9 - Bugfix Release
 
 * f4e1fab7 - fix(pact-consumer): do not panic if the DSL builder can not set the default crypto provider (Ronald Holshausen, Tue Aug 4 15:18:39 2026 +1000)
