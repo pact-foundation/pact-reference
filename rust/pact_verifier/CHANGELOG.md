@@ -1,5 +1,15 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.4.7 - Support matching rules and generators from plugins
+
+* 7486b0d0 - chore: Update pact_consumer to 1.4.10 (Ronald Holshausen, Fri Aug 7 10:20:39 2026 +1000)
+* a09d96cd - chore: Update pact_matching to 2.0.10 (Ronald Holshausen, Fri Aug 7 09:16:58 2026 +1000)
+* 0a284f49 - fix(pact-verifier): Enable plugin driver default features if the plugin feature is enabled (Ronald Holshausen, Thu Aug 6 16:44:45 2026 +1000)
+* 343a96fe - chore: Update pact-plugin-driver to 1.2.1 (Ronald Holshausen, Thu Aug 6 15:09:50 2026 +1000)
+* 4fba4ca2 - chore: Update pact_models to 1.3.14 (Ronald Holshausen, Thu Aug 6 11:25:12 2026 +1000)
+* 149b3e81 - chore: Update pact-plugin-driver to 1.2.0 (Ronald Holshausen, Wed Aug 5 15:43:01 2026 +1000)
+* 0546aa9a - chore(pact_verifier): bump version to 1.4.7 [skip ci] (Ronald Holshausen, Wed Aug 5 11:15:54 2026 +1000)
+
 # 1.4.6 - Maintenance Release
 
 * f7dbd608 - chore(pact-verifier): Cleanup crypto configure code in test (Ronald Holshausen, Wed Aug 5 10:46:15 2026 +1000)
