@@ -1,5 +1,12 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 2.0.11 - Support plugins calling core framework matching rules
+
+* 387a477e - chore: Update pact-plugin-driver to 1.2.2 (Ronald Holshausen, Mon Aug 10 16:39:48 2026 +1000)
+* 973d83c7 - feat(plugins): Advertise the transports and interaction types this framework handles (Ronald Holshausen, Fri Aug 7 17:06:19 2026 +1000)
+* 251d86bc - feat(plugins): Register the standard matching rules and generators as core plugin capabilities (Ronald Holshausen, Fri Aug 7 16:10:06 2026 +1000)
+* 323b7dd4 - bump version to 2.0.11 [skip ci] (Ronald Holshausen, Fri Aug 7 09:09:42 2026 +1000)
+
 # 2.0.10 - Support matching rules and generators from plugins
 
 * 8740c3fe - feat(v2-plugins): Support matching rules and generators from plugins (Ronald Holshausen, Thu Aug 6 15:13:56 2026 +1000)
