@@ -163,6 +163,10 @@ lazy_static! {
   /// Transport and interaction entries to add to the plugin catalogue, for the interaction types
   /// and transports this framework handles itself.
   ///
+  /// There is one interaction entry per interaction type a Pact file can record, and the transport
+  /// entries are a separate concern - it is only history that the request/response interaction is
+  /// the original Pact one carried over HTTP.
+  ///
   /// These are not matching capabilities and nothing dispatches to them - they exist so a plugin
   /// can ask, through `hostCapabilities` at `InitPlugin`, what the host it is running under can
   /// carry. Pact-JVM has registered them since before plugins had capability negotiation
@@ -174,6 +178,7 @@ lazy_static! {
     for (entry_type, key) in [
       (CatalogueEntryType::TRANSPORT, "http"),
       (CatalogueEntryType::TRANSPORT, "https"),
+      (CatalogueEntryType::INTERACTION, "request-response"),
       (CatalogueEntryType::INTERACTION, "message"),
       (CatalogueEntryType::INTERACTION, "synchronous-message")
     ] {
@@ -2611,7 +2616,13 @@ mod tests {
       .collect::<HashSet<_>>();
 
     expect!(advertised).to(be_equal_to(
-      ["transport/http", "transport/https", "interaction/message", "interaction/synchronous-message"]
+      [
+        "transport/http",
+        "transport/https",
+        "interaction/request-response",
+        "interaction/message",
+        "interaction/synchronous-message"
+      ]
         .iter()
         .map(|key| key.to_string())
         .collect::<HashSet<_>>()
