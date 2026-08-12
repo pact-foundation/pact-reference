@@ -159,6 +159,8 @@ pub fn send_metrics(event: MetricEvent) {
 pub async fn send_metrics_async(event: MetricEvent) {
   if do_not_track() {
     debug!("'PACT_DO_NOT_TRACK' environment variable is set, will not send metrics");
+  } else if rustls::crypto::CryptoProvider::get_default().is_none() {
+    debug!("No TLS provider, will not send metrics");
   } else {
     log_warning();
     let ci_context = if CIS.iter()

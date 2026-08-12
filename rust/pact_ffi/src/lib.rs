@@ -123,7 +123,14 @@ pub unsafe extern "C" fn pactffi_init_with_log_level(level: *const c_char) {
   if let Err(err) = tracing::subscriber::set_global_default(subscriber) {
     eprintln!("Failed to initialise global tracing subscriber - {err}");
   };
+
   init_plugin_log_sink();
+
+  if rustls::crypto::CryptoProvider::get_default().is_none() {
+    if let Err(_) = rustls::crypto::ring::default_provider().install_default() {
+      warn!("failed to installed the default crypto provider");
+    }
+  }
 }
 
 /// Enable ANSI coloured output on Windows. On non-Windows platforms, this function is a no-op.
