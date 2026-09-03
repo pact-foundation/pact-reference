@@ -1,5 +1,21 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 0.5.7 - TLS panic fix + v2 plugin support
+
+* 9930b06c - fix: panic when there is no configured TLS provider #546 (Ronald Holshausen, Wed Aug 12 11:08:13 2026 +1000)
+* e62d9e52 - chore: Update pact-plugin-driver to 1.2.3 (Ronald Holshausen, Wed Aug 12 11:00:09 2026 +1000)
+* be46ee48 - chore: Update pact_matching to 2.0.11 (Ronald Holshausen, Tue Aug 11 09:12:28 2026 +1000)
+* 387a477e - chore: Update pact-plugin-driver to 1.2.2 (Ronald Holshausen, Mon Aug 10 16:39:48 2026 +1000)
+* 58814d2e - chore: Update pact_verifier to 1.4.7 (Ronald Holshausen, Fri Aug 7 10:41:49 2026 +1000)
+* a5e557e5 - chore: Update pact_mock_server to 2.2.5 (Ronald Holshausen, Fri Aug 7 09:52:09 2026 +1000)
+* a09d96cd - chore: Update pact_matching to 2.0.10 (Ronald Holshausen, Fri Aug 7 09:16:58 2026 +1000)
+* 343a96fe - chore: Update pact-plugin-driver to 1.2.1 (Ronald Holshausen, Thu Aug 6 15:09:50 2026 +1000)
+* 4fba4ca2 - chore: Update pact_models to 1.3.14 (Ronald Holshausen, Thu Aug 6 11:25:12 2026 +1000)
+* 2a4dfb14 - feat(pact-ffi): Model support for matching rules and generators provided by plugins (Ronald Holshausen, Thu Aug 6 10:46:13 2026 +1000)
+* cd239b01 - feat(pact-ffi): Model support for matching rules and generators provided by plugins (Ronald Holshausen, Thu Aug 6 10:21:26 2026 +1000)
+* 149b3e81 - chore: Update pact-plugin-driver to 1.2.0 (Ronald Holshausen, Wed Aug 5 15:43:01 2026 +1000)
+* 409f3213 - bump version to 0.5.7 (Ronald Holshausen, Wed Aug 5 11:32:00 2026 +1000)
+
 # 0.5.6 - Bugfix Release
 
 * 7a016cc2 - chore: Update pact_verifier to 1.4.6 (Ronald Holshausen, Wed Aug 5 11:18:27 2026 +1000)
