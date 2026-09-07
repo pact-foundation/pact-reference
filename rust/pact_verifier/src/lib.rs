@@ -1522,9 +1522,13 @@ pub async fn verify_pact_internal<'a, F: RequestFilterExecutor, S: ProviderState
   }
 
   let mut errors: Vec<VerificationInteractionResult> = vec![];
+  let consumer_name = pact.consumer().name.clone();
+  let provider_name = pact.provider().name.clone();
   for (interaction, match_result) in results {
-    let mut description = format!("Verifying a pact between {} and {}",
-      pact.consumer().name.clone(), pact.provider().name.clone());
+    let mut description = format!("Verifying a pact between {} and {}", consumer_name, provider_name);
+    let provider_state_names = interaction.provider_states().iter()
+      .map(|state| state.name.clone())
+      .collect_vec();
 
     output.push(String::default());
     let duration = match match_result {
@@ -1618,8 +1622,11 @@ pub async fn verify_pact_internal<'a, F: RequestFilterExecutor, S: ProviderState
         errors.push(VerificationInteractionResult {
           interaction_id: interaction.id(),
           interaction_key,
+          consumer: consumer_name.clone(),
+          provider: provider_name.clone(),
           description: description.clone(),
           interaction_description: interaction.description(),
+          provider_states: provider_state_names.clone(),
           result: Ok(()),
           pending: pending || interaction.pending(),
           duration
@@ -1629,8 +1636,11 @@ pub async fn verify_pact_internal<'a, F: RequestFilterExecutor, S: ProviderState
         errors.push(VerificationInteractionResult {
           interaction_id: interaction.id(),
           interaction_key,
+          consumer: consumer_name.clone(),
+          provider: provider_name.clone(),
           description: description.clone(),
           interaction_description: interaction.description(),
+          provider_states: provider_state_names.clone(),
           result: Err(err.clone()),
           pending: pending || interaction.pending(),
           duration

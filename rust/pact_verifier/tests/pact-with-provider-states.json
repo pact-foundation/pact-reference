@@ -1,0 +1,39 @@
+{
+  "consumer": {
+    "name": "test_consumer"
+  },
+  "provider": {
+    "name": "test_provider"
+  },
+  "interactions": [
+    {
+      "description": "interaction without provider states",
+      "request": {
+        "method": "GET",
+        "path": "/"
+      },
+      "response": {
+        "status": 200
+      }
+    },
+    {
+      "description": "interaction with provider states",
+      "providerStates": [
+        { "name": "state one" },
+        { "name": "state two", "params": { "id": 1 } }
+      ],
+      "request": {
+        "method": "GET",
+        "path": "/"
+      },
+      "response": {
+        "status": 200
+      }
+    }
+  ],
+  "metadata": {
+    "pactSpecification": {
+      "version": "3.0.0"
+    }
+  }
+}

@@ -285,6 +285,9 @@ mod tests {
         VerificationInteractionResult {
           interaction_id: None,
           interaction_key: None,
+          consumer: "".to_string(),
+          provider: "".to_string(),
+          provider_states: vec![],
           description: "request 1".to_string(),
           interaction_description: "GET /foo returns 200".to_string(),
           result: Ok(()),
@@ -294,6 +297,9 @@ mod tests {
         VerificationInteractionResult {
           interaction_id: Some("interaction-123".to_string()),
           interaction_key: Some("key-abc".to_string()),
+          consumer: "".to_string(),
+          provider: "".to_string(),
+          provider_states: vec![],
           description: "request 2".to_string(),
           interaction_description: "POST /bar returns 201".to_string(),
           result: Ok(()),
@@ -323,6 +329,9 @@ mod tests {
         VerificationInteractionResult {
           interaction_id: None,
           interaction_key: None,
+          consumer: "".to_string(),
+          provider: "".to_string(),
+          provider_states: vec![],
           description: "request 1".to_string(),
           interaction_description: "GET /foo returns 200".to_string(),
           result: Err(MismatchResult::Error("Connection refused".to_string(), None)),
@@ -382,6 +391,9 @@ mod tests {
         VerificationInteractionResult {
           interaction_id: None,
           interaction_key: None,
+          consumer: "".to_string(),
+          provider: "".to_string(),
+          provider_states: vec![],
           description: "pending request".to_string(),
           interaction_description: "GET /pending-foo returns 200".to_string(),
           result: Err(MismatchResult::Error("Provider state setup failed".to_string(), None)),

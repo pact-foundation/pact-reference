@@ -702,6 +702,14 @@ ffi_fn! {
     /// Extracts the verification result as a JSON document. The returned string will need to be
     /// freed with the `free_string` function call to avoid leaking memory.
     ///
+    /// The document has the attributes `result` (overall pass/fail), `notices`, `output` (the
+    /// verification output lines), `errors`, `pendingErrors` and `interactionResults`. Each entry
+    /// in `interactionResults` has the attributes `consumer`, `provider`, `description`,
+    /// `providerStates`, `result` (`OK` or `Error`), `pending`, `duration`, a `mismatch` attribute
+    /// with the details when the result is `Error`, and `interactionId`/`interactionKey` when
+    /// they are known. See the JSON report section in the pact_verifier_cli documentation for
+    /// more details.
+    ///
     /// Will return a NULL pointer if the handle is invalid.
     fn pactffi_verifier_json(handle: *const handle::VerifierHandle) -> *const c_char {
       let handle = as_ref!(handle);

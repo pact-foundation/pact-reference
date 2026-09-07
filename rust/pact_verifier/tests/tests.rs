@@ -1260,3 +1260,45 @@ async fn verify_pact_with_redirects() {
 
   expect!(result.unwrap().results.get(0).unwrap().result.as_ref()).to(be_ok());
 }
+
+#[test_log::test(tokio::test)]
+async fn interaction_results_include_the_pact_and_provider_state_details() {
+  let provider = ProviderInfo {
+    name: "test_provider".to_string(),
+    host: "127.0.0.1".to_string(),
+    .. ProviderInfo::default()
+  };
+
+  let pact_file = fixture_path("pact-with-provider-states.json");
+  let pact = read_pact(pact_file.as_path()).unwrap();
+  let options: VerificationOptions<NullRequestFilterExecutor> = VerificationOptions::default();
+  let provider_states = Arc::new(DummyProviderStateExecutor{});
+
+  let result = verify_pact_internal(
+    &provider,
+    &FilterInfo::None,
+    pact,
+    &options,
+    &provider_states,
+    false,
+    Duration::default()
+  ).await.unwrap();
+
+  expect!(result.results.len()).to(be_equal_to(2));
+
+  let first = result.results.first().unwrap();
+  expect!(first.consumer.as_str()).to(be_equal_to("test_consumer"));
+  expect!(first.provider.as_str()).to(be_equal_to("test_provider"));
+  expect!(first.interaction_description.as_str()).to(be_equal_to("interaction without provider states"));
+  expect!(first.provider_states.is_empty()).to(be_true());
+  expect!(first.description.as_str()).to(be_equal_to(
+    "Verifying a pact between test_consumer and test_provider - interaction without provider states"));
+
+  let second = result.results.get(1).unwrap();
+  expect!(second.consumer.as_str()).to(be_equal_to("test_consumer"));
+  expect!(second.provider.as_str()).to(be_equal_to("test_provider"));
+  expect!(second.interaction_description.as_str()).to(be_equal_to("interaction with provider states"));
+  expect!(second.provider_states.clone()).to(be_equal_to(vec!["state one".to_string(), "state two".to_string()]));
+  expect!(second.description.as_str()).to(be_equal_to(
+    "Verifying a pact between test_consumer and test_provider Given state one And state two - interaction with provider states"));
+}
