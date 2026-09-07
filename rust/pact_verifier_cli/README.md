@@ -248,6 +248,37 @@ and Pact files.
 The `--last-failed` option will only execute interactions that have previously failed. It requires the `--json` option
 (the previous state will be loaded from this file).
 
+### JSON report (`--json`)
+
+The `--json` option writes the verification result as a JSON document. It has the following top-level attributes:
+
+| Attribute | Description |
+| --------- | ----------- |
+| `result` | Overall pass/fail result |
+| `notices` | Notices provided by the Pact Broker |
+| `output` | The human readable verification output, one entry per line |
+| `errors` | Failed interactions (`interaction` is the descriptive text, `mismatch` the details) |
+| `pendingErrors` | Failed interactions that are marked as pending and do not fail the verification |
+| `interactionResults` | One entry per verified interaction, in the order they were verified |
+
+Each entry in `interactionResults` has the following attributes:
+
+| Attribute | Description |
+| --------- | ----------- |
+| `consumer` | Name of the consumer of the Pact the interaction belongs to |
+| `provider` | Name of the provider of the Pact the interaction belongs to |
+| `description` | Interaction description from the Pact file |
+| `providerStates` | Names of the provider states of the interaction (empty if there are none) |
+| `result` | `OK` or `Error` |
+| `pending` | If the interaction (or the Pact) is pending |
+| `mismatch` | Only present when the result is `Error`. Same structure as the `mismatch` attribute in `errors` |
+| `duration` | Duration of the verification of the interaction |
+| `interactionId` | Only present for Pacts loaded from a Pact Broker |
+| `interactionKey` | Only present for V4 Pacts where the interaction has a key |
+
+The `consumer`, `provider` and `providerStates` attributes allow the results to be grouped by Pact, e.g. to report
+each Pact and interaction as a separate test case.
+
 ## Example run
 
 This will verify all the pacts for the `happy_provider` found in the pact broker (running on localhost) against the provider running on localhost port 5050. Only the pacts for the consumers `Consumer` and `Consumer2` will be verified.

@@ -357,6 +357,9 @@ async fn publish_successful_result_to_broker() {
   publish_result(&[VerificationInteractionResult {
       interaction_id: Some("1".to_string()),
       interaction_key: None,
+      consumer: "".to_string(),
+      provider: "".to_string(),
+      provider_states: vec![],
       description: "".to_string(),
       interaction_description: "".to_string(),
       result: Ok(()),
@@ -380,6 +383,9 @@ async fn publish_successful_result_to_broker() {
   super::publish_result(&[VerificationInteractionResult {
       interaction_id: Some("1".to_string()),
       interaction_key: None,
+      consumer: "".to_string(),
+      provider: "".to_string(),
+      provider_states: vec![],
       description: "".to_string(),
       interaction_description: "".to_string(),
       result: Ok(()),

@@ -15,10 +15,16 @@ pub struct VerificationInteractionResult {
   pub interaction_id: Option<String>,
   /// Interaction key (this will be set if the Pact is a V4 Pact)
   pub interaction_key: Option<String>,
+  /// Name of the consumer of the Pact the interaction belongs to
+  pub consumer: String,
+  /// Name of the provider of the Pact the interaction belongs to
+  pub provider: String,
   /// Descriptive text of the verification that was preformed
   pub description: String,
   /// Interaction description from the Pact file
   pub interaction_description: String,
+  /// Names of the provider states of the interaction, in the order they are defined in the Pact
+  pub provider_states: Vec<String>,
   /// Result of the verification
   pub result: Result<(), crate::MismatchResult>,
   /// If the Pact or interaction is pending
@@ -97,10 +103,22 @@ impl Into<Value> for &VerificationExecutionResult {
         if let Some(interaction_key) = &r.interaction_key {
           attributes.insert("interactionKey".to_string(), Value::String(interaction_key.clone()));
         }
+        attributes.insert("consumer".to_string(), Value::String(r.consumer.clone()));
+        attributes.insert("provider".to_string(), Value::String(r.provider.clone()));
         attributes.insert("description".to_string(), Value::String(r.interaction_description.clone()));
-        match r.result {
-          Ok(_) => attributes.insert("result".to_string(), Value::String("OK".to_string())),
-          Err(_) => attributes.insert("result".to_string(), Value::String("Error".to_string()))
+        attributes.insert("providerStates".to_string(), Value::Array(
+          r.provider_states.iter().map(|s| Value::String(s.clone())).collect()
+        ));
+        attributes.insert("pending".to_string(), Value::Bool(r.pending));
+        match &r.result {
+          Ok(_) => {
+            attributes.insert("result".to_string(), Value::String("OK".to_string()));
+          }
+          Err(err) => {
+            attributes.insert("result".to_string(), Value::String("Error".to_string()));
+            let mismatch: Value = (&VerificationMismatchResult::from(err)).into();
+            attributes.insert("mismatch".to_string(), mismatch);
+          }
         };
         attributes.insert("duration".to_string(), Value::String(format!("{:?}", r.duration)));
         Value::Object(attributes)
@@ -189,6 +207,7 @@ mod tests {
   use serde_json::{json, Value};
 
   use pact_matching::Mismatch;
+  use pact_models::sync_interaction::RequestResponseInteraction;
 
   use crate::{MismatchResult, VerificationExecutionResult};
   use crate::verification_result::{VerificationInteractionResult, VerificationMismatchResult};
@@ -315,6 +334,9 @@ mod tests {
         VerificationInteractionResult {
           interaction_id: None,
           interaction_key: None,
+          consumer: "Consumer A".to_string(),
+          provider: "Provider".to_string(),
+          provider_states: vec![],
           description: "".to_string(),
           interaction_description: "result-1".to_string(),
           result: Ok(()),
@@ -324,6 +346,9 @@ mod tests {
         VerificationInteractionResult {
           interaction_id: None,
           interaction_key: None,
+          consumer: "Consumer A".to_string(),
+          provider: "Provider".to_string(),
+          provider_states: vec![],
           description: "".to_string(),
           interaction_description: "result-2".to_string(),
           result: Err(MismatchResult::Error("test".to_string(), None)),
@@ -333,18 +358,35 @@ mod tests {
         VerificationInteractionResult {
           interaction_id: Some("test-id".to_string()),
           interaction_key: None,
+          consumer: "Consumer B".to_string(),
+          provider: "Provider".to_string(),
+          provider_states: vec!["state 1".to_string(), "state 2".to_string()],
           description: "".to_string(),
           interaction_description: "result-3".to_string(),
           result: Ok(()),
-          pending: false,
+          pending: true,
           duration: Default::default(),
         },
         VerificationInteractionResult {
           interaction_id: None,
           interaction_key: Some("test-key".to_string()),
+          consumer: "Consumer B".to_string(),
+          provider: "Provider".to_string(),
+          provider_states: vec![],
           description: "".to_string(),
           interaction_description: "result-4".to_string(),
-          result: Ok(()),
+          result: Err(MismatchResult::Mismatches {
+            mismatches: vec![
+              Mismatch::StatusMismatch {
+                expected: 200,
+                actual: 500,
+                mismatch: "expected 200 but was 500".to_string()
+              }
+            ],
+            expected: Box::new(RequestResponseInteraction::default()),
+            actual: Box::new(RequestResponseInteraction::default()),
+            interaction_id: None
+          }),
           pending: false,
           duration: Default::default(),
         }
@@ -358,26 +400,59 @@ mod tests {
       "errors": [],
       "interactionResults": [
         {
+          "consumer": "Consumer A",
           "description": "result-1",
           "duration": "0ns",
+          "pending": false,
+          "provider": "Provider",
+          "providerStates": [],
           "result": "OK",
         },
         {
+          "consumer": "Consumer A",
           "description": "result-2",
           "duration": "0ns",
+          "mismatch": {
+            "interactionId": "",
+            "message": "test",
+            "type": "error"
+          },
+          "pending": false,
+          "provider": "Provider",
+          "providerStates": [],
           "result": "Error",
         },
         {
+          "consumer": "Consumer B",
           "description": "result-3",
           "duration": "0ns",
           "interactionId": "test-id",
+          "pending": true,
+          "provider": "Provider",
+          "providerStates": ["state 1", "state 2"],
           "result": "OK",
         },
         {
+          "consumer": "Consumer B",
           "description": "result-4",
           "duration": "0ns",
           "interactionKey": "test-key",
-          "result": "OK",
+          "mismatch": {
+            "interactionId": "",
+            "mismatches": [
+              {
+                "actual": 500,
+                "expected": 200,
+                "mismatch": "expected 200 but was 500",
+                "type": "StatusMismatch"
+              }
+            ],
+            "type": "mismatches"
+          },
+          "pending": false,
+          "provider": "Provider",
+          "providerStates": [],
+          "result": "Error",
         }
       ],
       "notices": [],
