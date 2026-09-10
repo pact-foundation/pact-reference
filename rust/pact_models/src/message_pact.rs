@@ -305,18 +305,27 @@ impl ReadWritePact for MessagePact {
 
   fn merge(&self, pact: &dyn Pact) -> anyhow::Result<Box<dyn Pact + Send + Sync + RefUnwindSafe>> {
     if self.consumer.name == pact.consumer().name && self.provider.name == pact.provider().name {
-      let messages: Vec<Result<Message, String>> = self.messages.iter()
-        .merge_join_by(pact.interactions().iter(), |a, b| {
-          let cmp = Ord::cmp(&a.description, &b.description());
-          if cmp == Ordering::Equal && ! &a.provider_states().is_empty(){
-            Ord::cmp(&a.provider_states.iter().map(|p| p.name.clone()).collect::<Vec<String>>(),
-                     &b.provider_states().iter().map(|p| p.name.clone()).collect::<Vec<String>>())
-          } else {
-            cmp
-          }
-        })
+      let interaction_cmp = |a: &dyn Interaction, b: &dyn Interaction| {
+        let cmp = Ord::cmp(&a.description(), &b.description());
+        if cmp == Ordering::Equal && !a.provider_states().is_empty() {
+          Ord::cmp(&a.provider_states().iter().map(|p| p.name.clone()).collect::<Vec<String>>(),
+                   &b.provider_states().iter().map(|p| p.name.clone()).collect::<Vec<String>>())
+        } else {
+          cmp
+        }
+      };
+
+      // `merge_join_by` only produces correct results when both inputs are already sorted by
+      // its comparator, so both interaction lists must be sorted before joining them (see #550).
+      let mut self_messages = self.messages.clone();
+      self_messages.sort_by(|a, b| interaction_cmp(a, b));
+      let mut other_interactions = pact.interactions();
+      other_interactions.sort_by(|a, b| interaction_cmp(a.as_ref(), b.as_ref()));
+
+      let messages: Vec<Result<Message, String>> = self_messages.into_iter()
+        .merge_join_by(other_interactions, |a, b| interaction_cmp(a, b.as_ref()))
         .map(|either| match either {
-          Left(i) => Ok(i.clone()),
+          Left(i) => Ok(i),
           Right(i) => i.as_message()
             .ok_or(format!("Can't convert interaction of type {} to V3 Asynchronous/Messages", i.type_of())),
           Both(_, i) => i.as_message()

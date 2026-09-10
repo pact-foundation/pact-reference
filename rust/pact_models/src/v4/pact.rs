@@ -358,41 +358,54 @@ impl ReadWritePact for V4Pact {
 
   fn merge(&self, other: &dyn Pact) -> anyhow::Result<Box<dyn Pact + Send + Sync + RefUnwindSafe>> {
     if self.consumer.name == other.consumer().name && self.provider.name == other.provider().name {
+      let interaction_cmp = |a: &dyn V4Interaction, b: &dyn V4Interaction| {
+        match (a.key(), b.key()) {
+          (Some(key_a), Some(key_b)) => Ord::cmp(&key_a, &key_b),
+          (_, _) => {
+            let type_a = a.type_of();
+            let type_b = b.type_of();
+            let cmp = Ord::cmp(&a.description(), &b.description());
+            if cmp == Ordering::Equal && !a.provider_states().is_empty() {
+              let cmp = Ord::cmp(&a.provider_states().iter().map(|p| p.name.clone()).collect::<Vec<String>>(),
+              &b.provider_states().iter().map(|p| p.name.clone()).collect::<Vec<String>>());
+              if cmp == Ordering::Equal {
+                   Ord::cmp(&type_a, &type_b)
+              } else
+              {
+                cmp
+              }
+            }
+            else if cmp == Ordering::Equal && a.provider_states().is_empty() {
+              Ord::cmp(&type_a, &type_b)
+            }
+             else {
+              cmp
+            }
+          }
+        }
+      };
+
+      // `merge_join_by` only produces correct results when both inputs are already sorted by
+      // its comparator, so both interaction lists must be sorted before joining them (see #550).
+      let mut self_interactions: Vec<Box<dyn V4Interaction + Send + Sync + RefUnwindSafe>> = self.interactions.iter()
+        .map(|i| i.clone())
+        .collect();
+      self_interactions.sort_by(|a, b| interaction_cmp(a.as_ref(), b.as_ref()));
+      let mut other_interactions: Vec<Box<dyn V4Interaction + Send + Sync + RefUnwindSafe>> = other.interactions().iter()
+        .filter_map(|i| i.as_v4())
+        .collect();
+      other_interactions.sort_by(|a, b| interaction_cmp(a.as_ref(), b.as_ref()));
+
       let mut new_pact = V4Pact {
         consumer: self.consumer.clone(),
         provider: self.provider.clone(),
-        interactions: self.interactions.iter()
-          .merge_join_by(other.interactions().iter().map(|i| i.as_v4().unwrap()), |a, b| {
-            match (a.key(), b.key()) {
-              (Some(key_a), Some(key_b)) => Ord::cmp(&key_a, &key_b),
-              (_, _) => {
-                let type_a = a.type_of();
-                let type_b = b.type_of();
-                let cmp = Ord::cmp(&a.description(), &b.description());
-                if cmp == Ordering::Equal && !a.provider_states().is_empty() {
-                  let cmp = Ord::cmp(&a.provider_states().iter().map(|p| p.name.clone()).collect::<Vec<String>>(),
-                  &b.provider_states().iter().map(|p| p.name.clone()).collect::<Vec<String>>());
-                  if cmp == Ordering::Equal {
-                       Ord::cmp(&type_a, &type_b)
-                  } else
-                  {
-                    cmp
-                  }
-                }
-                else if cmp == Ordering::Equal && a.provider_states().is_empty() {
-                  Ord::cmp(&type_a, &type_b)
-                } 
-                 else {
-                  cmp
-                }
-              }
-            }
-          })
+        interactions: self_interactions.into_iter()
+          .merge_join_by(other_interactions, |a, b| interaction_cmp(a.as_ref(), b.as_ref()))
           .map(|either| {
             match either {
-              Left(i) => i.clone(),
+              Left(i) => i,
               Right(i) => i.boxed_v4(),
-              Both(i, _) => i.clone()
+              Both(i, _) => i
             }
           })
           .collect(),
@@ -881,6 +894,62 @@ mod tests {
     "name": "merge_provider"
   }}
 }}"#, PACT_RUST_VERSION.unwrap())));
+  }
+
+  // Regression test for #550. A test run (a mock server handle, in the real world) accumulates
+  // its declared interactions in declaration order and writes the whole, growing set out after
+  // each test via `write_pact`, which merges it with whatever is already on disk via
+  // `V4Pact::merge`. That merge pairs the two interaction lists with itertools `merge_join_by`,
+  // which only produces correct results when *both* sides are sorted by the same comparator.
+  // The file on disk is always sorted by description because `to_json` sorts before
+  // serialising, but the in-memory side here is left in declaration order - so once two
+  // interactions are declared out of alphabetical order, the join mispairs and every
+  // subsequent write re-appends interactions the file already holds.
+  #[test]
+  fn write_pact_test_should_not_duplicate_interactions_declared_out_of_sorted_order() {
+    let descriptions = [
+      "a status query for a domain being created",
+      "a status query awaiting validation",
+      "a status query with an issued certificate",
+      "a status query for a deployed domain",
+      "a status query for a domain being torn down"
+    ];
+
+    let mut dir = env::temp_dir();
+    let x = rand::random::<u16>();
+    dir.push(format!("pact_test_{}", x));
+
+    let mut path = None;
+    let mut declared: Vec<Box<dyn V4Interaction>> = vec![];
+    for (i, description) in descriptions.iter().enumerate() {
+      declared.push(Box::new(SynchronousHttp {
+        description: description.to_string(),
+        .. SynchronousHttp::default()
+      }));
+
+      let pact = V4Pact {
+        consumer: Consumer { name: "write_pact_test_consumer".into() },
+        provider: Provider { name: "write_pact_test_provider".into() },
+        interactions: declared.iter().map(|i| i.boxed_v4()).collect(),
+        .. V4Pact::default()
+      };
+      if path.is_none() {
+        dir.push(pact.default_file_name());
+        path = Some(dir.clone());
+      }
+
+      let overwrite = i == 0;
+      let result = write_pact(pact.boxed(), path.as_ref().unwrap().as_path(), PactSpecification::V4, overwrite);
+      expect!(result).to(be_ok());
+    }
+
+    let pact_file = read_pact_file(path.unwrap().to_str().unwrap()).unwrap_or_default();
+    fs::remove_dir_all(dir.parent().unwrap()).unwrap_or(());
+
+    let json: Value = serde_json::from_str(&pact_file).unwrap();
+    let interactions = json.get("interactions").unwrap().as_array().unwrap();
+
+    expect!(interactions.len()).to(be_equal_to(descriptions.len()));
   }
 
   #[test]

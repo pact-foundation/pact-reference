@@ -1196,7 +1196,79 @@ mod tests {
   }
 }"#);
   }
-  
+
+  // Regression test for #550, extended to V1-V3 Request/Response pacts.
+  // `RequestResponsePact::merge` pairs the two interaction lists with itertools `merge_join_by`,
+  // which only produces correct results when *both* sides are already sorted by the same
+  // comparator (description, then provider states). `self` here plays the role of the pact just
+  // read off disk (as `write_pact` passes it) and is properly sorted; `pact` plays the role of
+  // the newly built in-memory pact and is left in declaration order, with its first interaction
+  // sorting after the second. That's enough to make `merge_join_by` mispair: it advances past
+  // "awaiting validation" and "domain being created" on the "other" side while looking for a
+  // match for "deployed domain", then re-adds them again once it runs out of the "other" side -
+  // duplicating exactly the two interactions that were declared out of order, while "deployed
+  // domain" (declared first) pairs correctly and appears once.
+  #[test]
+  fn merge_should_not_duplicate_interactions_declared_out_of_sorted_order() {
+    let existing_pact = RequestResponsePact {
+      consumer: Consumer { name: "test_consumer".to_string() },
+      provider: Provider { name: "test_provider".to_string() },
+      interactions: vec![
+        RequestResponseInteraction { description: "a status query awaiting validation".to_string(), .. RequestResponseInteraction::default() },
+        RequestResponseInteraction { description: "a status query for a deployed domain".to_string(), .. RequestResponseInteraction::default() },
+        RequestResponseInteraction { description: "a status query for a domain being created".to_string(), .. RequestResponseInteraction::default() }
+      ],
+      .. RequestResponsePact::default()
+    };
+    let declared_pact = RequestResponsePact {
+      consumer: Consumer { name: "test_consumer".to_string() },
+      provider: Provider { name: "test_provider".to_string() },
+      interactions: vec![
+        RequestResponseInteraction { description: "a status query for a deployed domain".to_string(), .. RequestResponseInteraction::default() },
+        RequestResponseInteraction { description: "a status query awaiting validation".to_string(), .. RequestResponseInteraction::default() },
+        RequestResponseInteraction { description: "a status query for a domain being created".to_string(), .. RequestResponseInteraction::default() }
+      ],
+      .. RequestResponsePact::default()
+    };
+
+    let merged = existing_pact.merge(&declared_pact).unwrap();
+
+    expect!(merged.interactions().len()).to(be_equal_to(3));
+  }
+
+  // Regression test for #550, extended to V3 Message pacts. `MessagePact::merge` has the same
+  // unsorted `merge_join_by` pairing as `RequestResponsePact::merge` above - see that test for
+  // the full explanation.
+  #[test]
+  fn merge_message_pact_should_not_duplicate_interactions_declared_out_of_sorted_order() {
+    let existing_pact = MessagePact {
+      consumer: Consumer { name: "test_consumer".to_string() },
+      provider: Provider { name: "test_provider".to_string() },
+      messages: vec![
+        Message { description: "a status query awaiting validation".to_string(), .. Message::default() },
+        Message { description: "a status query for a deployed domain".to_string(), .. Message::default() },
+        Message { description: "a status query for a domain being created".to_string(), .. Message::default() }
+      ],
+      metadata: btreemap!{},
+      specification_version: PactSpecification::V3
+    };
+    let declared_pact = MessagePact {
+      consumer: Consumer { name: "test_consumer".to_string() },
+      provider: Provider { name: "test_provider".to_string() },
+      messages: vec![
+        Message { description: "a status query for a deployed domain".to_string(), .. Message::default() },
+        Message { description: "a status query awaiting validation".to_string(), .. Message::default() },
+        Message { description: "a status query for a domain being created".to_string(), .. Message::default() }
+      ],
+      metadata: btreemap!{},
+      specification_version: PactSpecification::V3
+    };
+
+    let merged = existing_pact.merge(&declared_pact).unwrap();
+
+    expect!(merged.interactions().len()).to(be_equal_to(3));
+  }
+
   #[test]
   fn write_pact_test_should_not_merge_pacts_with_conflicts() {
     let pact = RequestResponsePact { consumer: Consumer { name: "write_pact_test_consumer".to_string() },
