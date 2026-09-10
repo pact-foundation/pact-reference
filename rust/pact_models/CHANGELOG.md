@@ -1,5 +1,10 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.3.15 - Bugfix Release
+
+* 7452d828 - fix: sort interactions before merge_join_by to prevent duplicates on pact merge #550 (Ronald Holshausen, Thu Sep 10 15:52:38 2026 +1000)
+* ca3f8ba9 - chore(pact_models): bump version to 1.3.15 [skip ci] (Ronald Holshausen, Thu Aug 6 11:20:45 2026 +1000)
+
 # 1.3.14 - Bugfix + Support for matching rules and generators provided by plugins
 
 * 57daad23 - feat(pact-models): Support for matching rules and generators provided by plugins (Ronald Holshausen, Thu Aug 6 10:11:20 2026 +1000)
