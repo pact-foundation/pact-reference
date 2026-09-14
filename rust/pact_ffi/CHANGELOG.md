@@ -1,5 +1,11 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 0.5.8 - Bugfix Release
+
+* 71841f3c - chore: Update pact_models to 1.3.15 (Ronald Holshausen, Fri Sep 11 09:19:34 2026 +1000)
+* 8ef0c83f - feat(pact_verifier): include pact and mismatch details in interaction results (frudisch, Mon Sep 7 05:32:37 2026 +0200)
+* 66f17412 - bump version to 0.5.8 (Ronald Holshausen, Fri Sep 4 09:19:25 2026 +1000)
+
 # 0.5.7 - TLS panic fix + v2 plugin support
 
 * 9930b06c - fix: panic when there is no configured TLS provider #546 (Ronald Holshausen, Wed Aug 12 11:08:13 2026 +1000)
