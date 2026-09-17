@@ -33,6 +33,7 @@ pub mod error;
 pub mod log;
 pub mod models;
 pub(crate) mod util;
+pub use util::string::pactffi_string_delete;
 pub mod mock_server;
 pub mod verifier;
 pub mod plugins;
