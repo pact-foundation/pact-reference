@@ -3,7 +3,7 @@
 pub(crate) mod callback_layer;
 mod ffi;
 mod level_filter;
-mod logger;
+pub(crate) mod logger;
 mod sink;
 mod status;
 mod inmem_buffer;
@@ -17,7 +17,9 @@ pub use crate::log::ffi::{
     pactffi_log_to_stdout,
     pactffi_log_to_stderr,
     pactffi_log_to_file,
-    pactffi_log_to_buffer
+    pactffi_log_to_buffer,
+    pactffi_register_log_callback,
+    pactffi_set_log_callback_level
 };
 pub use crate::log::inmem_buffer::{
     fetch_buffer_contents,

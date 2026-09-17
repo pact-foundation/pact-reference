@@ -1,8 +1,5 @@
 //! Tracing layer which forwards log events to a registered C callback.
 
-// Not yet attached to a subscriber or exposed via FFI; a following change wires this in.
-#![allow(dead_code)]
-
 use std::ffi::CString;
 use std::fmt::Write;
 use std::sync::{Mutex, OnceLock};
@@ -59,6 +56,11 @@ pub(crate) fn set_callback_level(level: LevelFilter) {
 pub(crate) fn callback_level() -> LevelFilter {
   state().lock().unwrap().level
 }
+
+/// Serialises tests which mutate the global callback state, as the test harness runs them
+/// concurrently.
+#[cfg(test)]
+pub(crate) static TEST_LOCK: Mutex<()> = Mutex::new(());
 
 /// Collects the `message` field and any other fields of an event into a single string.
 #[derive(Default)]
@@ -125,14 +127,14 @@ impl<S: Subscriber> Layer<S> for CallbackLayer {
     let to_c = |s: &str| CString::new(s).unwrap_or_default();
     let test_run_id = to_c(current_test_run_id().as_deref().unwrap_or(""));
     let log_id = to_c(LOG_ID.try_with(|id| id.clone()).as_deref().unwrap_or(""));
-    let level = to_c(metadata.level().as_str());
+    let level_str = to_c(metadata.level().as_str());
     let target = to_c(metadata.target());
     let message = to_c(&visitor.into_message());
     unsafe {
       callback(
         log_id.as_ptr(),
         test_run_id.as_ptr(),
-        level.as_ptr(),
+        level_str.as_ptr(),
         target.as_ptr(),
         message.as_ptr(),
       );
@@ -165,6 +167,7 @@ mod tests {
 
   #[test]
   fn forwards_events_at_or_below_the_callback_level() {
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     let subscriber = tracing_subscriber::registry().with(CallbackLayer);
     register_callback(Some(capture));
     set_callback_level(LevelFilter::INFO);

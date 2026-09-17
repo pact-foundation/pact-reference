@@ -7,9 +7,11 @@ use std::str::from_utf8;
 
 use libc::{c_char, c_int};
 use log::{error, LevelFilter as LogLevelFilter};
+use tracing_log::AsTrace;
 
 use crate::error::set_error_msg;
 use crate::init_plugin_log_sink;
+use crate::log::callback_layer::{register_callback, set_callback_level, LogCallback};
 use crate::log::inmem_buffer::fetch_buffer_contents;
 use crate::log::level_filter::LevelFilter;
 use crate::log::logger::{add_sink, apply_logger, init_logger};
@@ -301,6 +303,45 @@ pub extern "C" fn pactffi_logger_apply() -> c_int {
     status as c_int
 }
 
+/// Register a callback to be invoked for each log event emitted by the Pact libraries, or
+/// deregister it by passing NULL.
+///
+/// The callback receives the ID of the operation which emitted the event (the mock server ID
+/// while handling a mock server request, or `verify:<provider name>` while verifying a
+/// provider), the test run ID set with `pactffi_set_test_run_id` on the emitting thread, the
+/// level (`TRACE`, `DEBUG`, `INFO`, `WARN` or `ERROR`), the target (Rust module path) and the
+/// message. Missing values are passed as empty strings.
+///
+/// Events are only forwarded at or below the level set with `pactffi_set_log_callback_level`,
+/// and only once a logger has been applied (with `pactffi_logger_apply`, one of the
+/// `pactffi_log_to_*` functions, or `pactffi_init*`).
+///
+/// The callback is invoked on the thread which emitted the event, which may be a runtime worker
+/// thread, so it must be thread-safe. It must not call back into pact_ffi from within the
+/// callback, and must not unwind.
+///
+/// # Safety
+///
+/// `callback` must be a valid function pointer or NULL.
+#[no_mangle]
+pub extern "C" fn pactffi_register_log_callback(callback: Option<LogCallback>) {
+  register_callback(callback);
+}
+
+/// Set the most verbose level at which log events are forwarded to the callback registered
+/// with `pactffi_register_log_callback`. Defaults to `LevelFilter_Off`.
+///
+/// The subscriber installed by `pactffi_logger_apply` and `pactffi_init_with_log_level` admits
+/// events up to the most verbose of the sink levels and this level, so this must be called
+/// before the logger is applied in order to receive events more verbose than the sinks. Once a
+/// logger is applied, changes to this level are effective only within that bound. With
+/// `pactffi_init`, the environment filter bounds what the callback receives.
+#[no_mangle]
+pub extern "C" fn pactffi_set_log_callback_level(level_filter: LevelFilter) {
+  let level_filter: LogLevelFilter = level_filter.into();
+  set_callback_level(level_filter.as_trace());
+}
+
 
 /// Fetch the in-memory logger buffer contents. This will only have any contents if the `buffer`
 /// sink has been configured to log to. The contents will be allocated on the heap and will need
@@ -343,9 +384,21 @@ mod tests {
   use std::ffi::CString;
 
   use expectest::prelude::*;
+  use tracing_core::LevelFilter as TracingLevelFilter;
 
+  use super::*;
+  use crate::log::callback_layer::{callback_level, TEST_LOCK};
   use crate::log::level_filter::LevelFilter;
   use crate::log::pactffi_logger_attach_sink;
+
+  #[test]
+  fn set_log_callback_level_round_trips() {
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    pactffi_set_log_callback_level(LevelFilter::Debug);
+    expect!(callback_level()).to(be_equal_to(TracingLevelFilter::DEBUG));
+    pactffi_set_log_callback_level(LevelFilter::Off);
+    expect!(callback_level()).to(be_equal_to(TracingLevelFilter::OFF));
+  }
 
   #[test]
   fn pactffi_logger_attach_sink_with_log_level_off() {

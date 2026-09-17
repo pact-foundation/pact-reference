@@ -15,6 +15,7 @@ use libc::c_char;
 use tracing::{debug, error, info, trace, warn};
 use tracing_core::{Level, LevelFilter};
 use tracing_log::AsLog;
+use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::FmtSubscriber;
 
 use models::message::Message;
@@ -24,6 +25,8 @@ use pact_models::interaction::Interaction;
 use pact_models::pact::Pact;
 use pact_models::v4::pact::V4Pact;
 
+use crate::log::callback_layer::CallbackLayer;
+use crate::log::logger::{sink_to_make_writer, subscriber_max_level};
 use crate::util::*;
 
 pub mod error;
@@ -90,7 +93,8 @@ pub unsafe extern "C" fn pactffi_init(log_env_var: *const c_char) {
       .with_env_filter(log_env_var)
       .with_thread_names(true)
       .with_ansi(false) // Pact .Net can't deal with ANSI escape codes
-      .finish();
+      .finish()
+      .with(CallbackLayer);
     if let Err(err) = tracing::subscriber::set_global_default(subscriber) {
       eprintln!("Failed to initialise global tracing subscriber - {err}");
     };
@@ -116,10 +120,12 @@ pub unsafe extern "C" fn pactffi_init(log_env_var: *const c_char) {
 pub unsafe extern "C" fn pactffi_init_with_log_level(level: *const c_char) {
   let log_level = log_level_filter_from_c_char(level);
   let subscriber = FmtSubscriber::builder()
-    .with_max_level(log_level)
+    .with_max_level(subscriber_max_level(log_level))
+    .with_writer(sink_to_make_writer("stderr", &log_level.as_log()))
     .with_thread_names(true)
     .with_ansi(false) // Pact .Net can't deal with ANSI escape codes
-    .finish();
+    .finish()
+    .with(CallbackLayer);
   if let Err(err) = tracing::subscriber::set_global_default(subscriber) {
     eprintln!("Failed to initialise global tracing subscriber - {err}");
   };
