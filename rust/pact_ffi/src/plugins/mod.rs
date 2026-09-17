@@ -182,15 +182,16 @@ pub unsafe extern "C" fn pactffi_set_test_run_id(test_run_id: *const c_char) {
 /// must be thread-safe. It must also not call back into pact_ffi from within the callback.
 ///
 /// Registering a new callback replaces any previously registered one. Pass NULL to deregister.
+/// Registering installs the plugin log sink, so plugin log entries are captured from this point
+/// whether or not `pactffi_init` was called.
 ///
 /// # Safety
 ///
 /// `callback` must be a valid function pointer or NULL.
 #[no_mangle]
 pub extern "C" fn pactffi_register_plugin_log_callback(callback: Option<PluginLogCallback>) {
-  if let Some(cb) = callback {
-    register_callback(cb);
-  }
+  crate::init_plugin_log_sink();
+  register_callback(callback);
 }
 
 /// Return all buffered plugin log entries for the given plugin instance ID as a
@@ -506,14 +507,28 @@ mod tests {
   use std::ptr::null;
 
   use expectest::prelude::*;
+  use libc::c_char;
   use pact_models::matchingrules::MatchingRule;
   use pact_models::v4::sync_message::SynchronousMessage;
   use pact_models::{matchingrules, matchingrules_list};
   use pact_plugin_driver::content::InteractionContents;
 
+  use crate::log::plugin_sink::callback_cell;
   use crate::mock_server::handles::{InteractionHandle, InteractionPart, PactHandle};
 
-  use super::{pactffi_interaction_contents, setup_sync_message_contents};
+  use super::{pactffi_interaction_contents, pactffi_register_plugin_log_callback, setup_sync_message_contents};
+
+  unsafe extern "C" fn noop_plugin_log(
+    _: *const c_char, _: *const c_char, _: *const c_char, _: *const c_char, _: *const c_char,
+  ) {}
+
+  #[test]
+  fn register_plugin_log_callback_with_null_deregisters() {
+    pactffi_register_plugin_log_callback(Some(noop_plugin_log));
+    expect!(callback_cell().lock().unwrap().is_some()).to(be_true());
+    pactffi_register_plugin_log_callback(None);
+    expect!(callback_cell().lock().unwrap().is_none()).to(be_true());
+  }
 
   #[test]
   fn pactffi_interaction_contents_with_invalid_content_type() {
