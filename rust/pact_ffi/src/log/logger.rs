@@ -8,11 +8,14 @@ use std::io::{stderr, stdout};
 
 use anyhow::anyhow;
 use log::{LevelFilter as LogLevelFilter, LevelFilter};
+use tracing_core::LevelFilter as TracingLevelFilter;
 use tracing_log::AsTrace;
 use tracing_subscriber::fmt::writer::{BoxMakeWriter, MakeWriterExt};
 use tracing_subscriber::FmtSubscriber;
+use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
+use crate::log::callback_layer::{callback_level, CallbackLayer};
 use crate::log::sink::Sink;
 
 thread_local! {
@@ -42,12 +45,12 @@ pub(crate) fn apply_logger() -> anyhow::Result<()> {
     LOGGER.with(|logger| {
       let mut logger_inner = logger.borrow_mut();
 
-      let max_level = logger_inner.iter()
+      let sink_level = logger_inner.iter()
         .max_by(|a, b| a.1.cmp(&b.1))
         .map(|l| l.1)
         .unwrap_or(LogLevelFilter::Info);
       let subscriber_builder = FmtSubscriber::builder()
-        .with_max_level(max_level.as_trace())
+        .with_max_level(subscriber_max_level(sink_level.as_trace()))
         .with_thread_names(true)
         .with_ansi(false) // Pact .Net can't deal with ANSI escape codes
       ;
@@ -60,15 +63,24 @@ pub(crate) fn apply_logger() -> anyhow::Result<()> {
 
         subscriber_builder.with_writer(writer).finish()
       } else {
-        subscriber_builder.with_writer(BoxMakeWriter::new(stdout)).finish()
+        // With no sinks attached, stdout stays at INFO regardless of the callback level.
+        let writer = sink_to_make_writer("stdout", &LogLevelFilter::Info);
+        subscriber_builder.with_writer(writer).finish()
       };
 
       logger_inner.clear();
-      subscriber.try_init().map_err(|err| anyhow!(err))
+      subscriber.with(CallbackLayer).try_init().map_err(|err| anyhow!(err))
     })
 }
 
-fn sink_to_make_writer(sink: &str, level: &LevelFilter) -> BoxMakeWriter {
+/// The level a subscriber must admit so that both its sinks and the callback layer receive
+/// every event they are configured for. Each sink filters at its own level, so a more verbose
+/// callback level does not change what the sinks write.
+pub(crate) fn subscriber_max_level(sink_level: TracingLevelFilter) -> TracingLevelFilter {
+  sink_level.max(callback_level())
+}
+
+pub(crate) fn sink_to_make_writer(sink: &str, level: &LevelFilter) -> BoxMakeWriter {
   // Safe to unwrap here, as the previous FFI step would have validated the sink and returned
   // an error back to the caller if the sink could not be constructed.
   let lvl = level.as_trace().into_level();
@@ -106,10 +118,28 @@ fn sink_to_make_writer(sink: &str, level: &LevelFilter) -> BoxMakeWriter {
 
 #[cfg(test)]
 mod tests {
+  use expectest::prelude::*;
   use log::LevelFilter;
   use tempfile::tempdir;
+  use tracing_core::LevelFilter as TracingLevelFilter;
 
-  use crate::log::logger::sink_to_make_writer;
+  use crate::log::callback_layer::{set_callback_level, TEST_LOCK};
+  use crate::log::logger::{sink_to_make_writer, subscriber_max_level};
+
+  #[test]
+  fn subscriber_max_level_is_the_more_verbose_of_sinks_and_callback() {
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+
+    set_callback_level(TracingLevelFilter::OFF);
+    expect!(subscriber_max_level(TracingLevelFilter::INFO)).to(be_equal_to(TracingLevelFilter::INFO));
+
+    set_callback_level(TracingLevelFilter::DEBUG);
+    expect!(subscriber_max_level(TracingLevelFilter::INFO)).to(be_equal_to(TracingLevelFilter::DEBUG));
+    expect!(subscriber_max_level(TracingLevelFilter::TRACE)).to(be_equal_to(TracingLevelFilter::TRACE));
+    expect!(subscriber_max_level(TracingLevelFilter::OFF)).to(be_equal_to(TracingLevelFilter::DEBUG));
+
+    set_callback_level(TracingLevelFilter::OFF);
+  }
 
   #[test]
   fn sink_to_make_writer_with_level_off() {
