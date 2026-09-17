@@ -1,5 +1,6 @@
 //! Sets up a log sink to view logs from the FFI.
 
+pub(crate) mod callback_layer;
 mod ffi;
 mod level_filter;
 mod logger;
@@ -22,3 +23,4 @@ pub use crate::log::inmem_buffer::{
     fetch_buffer_contents,
     write_to_log_buffer
 };
+pub use crate::log::callback_layer::LogCallback;
