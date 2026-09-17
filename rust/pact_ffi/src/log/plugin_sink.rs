@@ -22,7 +22,7 @@ pub type PluginLogCallback = unsafe extern "C" fn(
 static LOG_CALLBACK: OnceLock<Mutex<Option<PluginLogCallback>>> = OnceLock::new();
 static LOG_BUFFER: OnceLock<Mutex<HashMap<String, Vec<PluginLogEntry>>>> = OnceLock::new();
 
-fn callback_cell() -> &'static Mutex<Option<PluginLogCallback>> {
+pub(crate) fn callback_cell() -> &'static Mutex<Option<PluginLogCallback>> {
   LOG_CALLBACK.get_or_init(|| Mutex::new(None))
 }
 
@@ -30,9 +30,9 @@ pub(crate) fn buffer_cell() -> &'static Mutex<HashMap<String, Vec<PluginLogEntry
   LOG_BUFFER.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
-/// Register a C callback to be invoked for each plugin log entry.
-pub(crate) fn register_callback(cb: PluginLogCallback) {
-  *callback_cell().lock().unwrap() = Some(cb);
+/// Register the C callback invoked for each plugin log entry, or deregister it with `None`.
+pub(crate) fn register_callback(cb: Option<PluginLogCallback>) {
+  *callback_cell().lock().unwrap() = cb;
 }
 
 /// Return all buffered log entries for the given plugin instance ID.
@@ -76,5 +76,24 @@ impl PluginLogSink for FfiPluginLogSink {
         );
       }
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use expectest::prelude::*;
+
+  use super::*;
+
+  unsafe extern "C" fn noop(
+    _: *const c_char, _: *const c_char, _: *const c_char, _: *const c_char, _: *const c_char,
+  ) {}
+
+  #[test]
+  fn register_callback_with_none_deregisters() {
+    register_callback(Some(noop));
+    expect!(callback_cell().lock().unwrap().is_some()).to(be_true());
+    register_callback(None);
+    expect!(callback_cell().lock().unwrap().is_none()).to(be_true());
   }
 }

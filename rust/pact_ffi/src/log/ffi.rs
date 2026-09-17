@@ -9,6 +9,7 @@ use libc::{c_char, c_int};
 use log::{error, LevelFilter as LogLevelFilter};
 
 use crate::error::set_error_msg;
+use crate::init_plugin_log_sink;
 use crate::log::inmem_buffer::fetch_buffer_contents;
 use crate::log::level_filter::LevelFilter;
 use crate::log::logger::{add_sink, apply_logger, init_logger};
@@ -281,7 +282,8 @@ pub unsafe extern "C" fn pactffi_logger_attach_sink(
 /// will set the log level to info and the target to standard out.
 ///
 /// This function will install a global tracing subscriber. Any attempts to modify the logger
-/// after the call to `logger_apply` will fail.
+/// after the call to `logger_apply` will fail. It also installs the sink which delivers plugin
+/// log entries to `pactffi_register_plugin_log_callback` and `pactffi_get_plugin_logs`.
 ///
 /// # Error Handling
 ///
@@ -294,6 +296,7 @@ pub extern "C" fn pactffi_logger_apply() -> c_int {
         Ok(_) => Status::Success,
         Err(err) => Status::from(err),
     };
+    init_plugin_log_sink();
 
     status as c_int
 }

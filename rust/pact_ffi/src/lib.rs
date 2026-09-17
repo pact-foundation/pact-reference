@@ -40,9 +40,9 @@ const VERSION: &str = concat!(env!("CARGO_PKG_VERSION"), "\0");
 static PLUGIN_SINK_REGISTERED: OnceLock<()> = OnceLock::new();
 
 /// Register the FFI plugin log sink with the plugin driver exactly once.
-/// Called from all `pactffi_init*` functions so plugin log entries are always
-/// buffered and forwarded to any registered C callback.
-fn init_plugin_log_sink() {
+/// Called whenever a logger is applied or a plugin log callback is registered, so plugin
+/// log entries are buffered and forwarded regardless of how logging was initialised.
+pub(crate) fn init_plugin_log_sink() {
   PLUGIN_SINK_REGISTERED.get_or_init(|| {
     pact_plugin_driver::plugin_log_sink::set_plugin_log_sink(
       Box::new(crate::log::plugin_sink::FfiPluginLogSink)
