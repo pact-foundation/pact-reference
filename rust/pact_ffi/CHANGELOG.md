@@ -1,5 +1,13 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 0.5.9 - Expose a log callback for host language logging
+
+* d7879658 - docs(pact-ffi): publish pactffi_string_delete in the crate docs (JP-Ellis, Thu Sep 17 20:14:48 2026 +1000)
+* 3f511126 - feat(ffi): expose a log callback for host language logging (JP-Ellis, Thu Sep 17 21:48:33 2026 +1000)
+* 718b0f10 - feat(ffi): add a tracing layer forwarding events to a C callback (JP-Ellis, Thu Sep 17 21:41:09 2026 +1000)
+* 89e09e97 - feat(ffi): install the plugin log sink on callback registration (JP-Ellis, Thu Sep 17 21:31:51 2026 +1000)
+* 22a58148 - bump version to 0.5.9 (Yousaf Nabi, Mon Sep 14 15:37:50 2026 +0100)
+
 # 0.5.8 - Bugfix Release
 
 * 71841f3c - chore: Update pact_models to 1.3.15 (Ronald Holshausen, Fri Sep 11 09:19:34 2026 +1000)
