@@ -3110,9 +3110,9 @@ pub extern "C" fn pactffi_message_reify(message_handle: MessageHandle) -> *const
 /// This function must only ever be called from a foreign language. Calling it from a Rust function
 /// that has a Tokio runtime in its call stack can result in a deadlock.
 #[no_mangle]
-pub extern "C" fn pactffi_sync_message_reify(message_handle: MessageHandle) -> *const c_char {
+pub extern "C" fn pactffi_sync_message_generate_contents(message_handle: MessageHandle) -> *const c_char {
   let res = message_handle.with_message(&|_, inner, _spec_version| {
-    trace!("pactffi_sync_message_reify(message: {:?})", inner);
+    trace!("pactffi_sync_message_generate_contents(message: {:?})", inner);
     if let Some(message) = inner.as_v4_sync_message() {
       let (request, response) = block_on(apply_generators_to_sync_message(
         &message,
@@ -3600,7 +3600,7 @@ mod tests {
   }
 
   #[test]
-  fn pactffi_sync_message_reify_test() {
+  fn pactffi_sync_message_generate_contents_test() {
     let pact_handle = PactHandle::new("sync-message-reify-consumer", "sync-message-reify-provider");
     let description = CString::new("sync message reify").unwrap();
     let handle = pactffi_new_sync_message_interaction(pact_handle, description.as_ptr());
@@ -3612,11 +3612,11 @@ mod tests {
     assert!(pactffi_with_body(handle, InteractionPart::Request, content_type.as_ptr(), request_body.as_ptr()));
     assert!(pactffi_with_body(handle, InteractionPart::Response, content_type.as_ptr(), response_body.as_ptr()));
 
-    // `pactffi_sync_message_reify` takes a `MessageHandle`, which shares the same underlying
+    // `pactffi_sync_message_generate_contents` takes a `MessageHandle`, which shares the same underlying
     // interaction reference layout as `InteractionHandle`, exactly as `pactffi_message_reify` does
     // for asynchronous messages.
     let message_handle = MessageHandle { interaction_ref: handle.interaction_ref };
-    let res = pactffi_sync_message_reify(message_handle);
+    let res = pactffi_sync_message_generate_contents(message_handle);
     let reified = unsafe { CStr::from_ptr(res) }.to_str().unwrap().to_string();
 
     pactffi_free_pact_handle(pact_handle);
