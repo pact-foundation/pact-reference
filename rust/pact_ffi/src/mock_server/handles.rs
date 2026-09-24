@@ -3100,11 +3100,9 @@ pub extern "C" fn pactffi_message_reify(message_handle: MessageHandle) -> *const
   }
 }
 
-/// Reifies the given synchronous (request/response) message.
-///
-/// Reification is the process of stripping away any matchers, and returning the request and
-/// response contents with any configured generators applied, as they would be received by the
-/// consumer.
+/// Get the actual request and response contents for the given synchronous (request/response)
+/// message, with any matchers removed and any configured generators applied - i.e. the values
+/// a consumer would actually see.
 ///
 /// # Safety
 ///
