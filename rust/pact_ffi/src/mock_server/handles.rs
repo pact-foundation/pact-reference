@@ -144,6 +144,7 @@ use serde_json::{json, Value};
 use tracing::*;
 
 use pact_matching::generators::generate_message;
+use pact_matching::generators::apply_generators_to_sync_message;
 use pact_models::generators::GeneratorTestMode;
 use futures::executor::block_on;
 
@@ -411,7 +412,7 @@ impl MessageHandle {
       let specification = ref_mut.specification_version;
       ref_mut.pact.interactions.get_mut((interaction - 1) as usize)
         .map(|inner_i| {
-          if inner_i.is_message() {
+          if inner_i.is_message() || inner_i.is_v4_sync_message() {
             Some(f(interaction - 1, inner_i.as_mut(), specification))
           } else {
             error!("Interaction {:#x} is not a message interaction, it is {}", self.interaction_ref, inner_i.type_of());
@@ -3099,6 +3100,47 @@ pub extern "C" fn pactffi_message_reify(message_handle: MessageHandle) -> *const
   }
 }
 
+/// Reifies the given synchronous (request/response) message.
+///
+/// Reification is the process of stripping away any matchers, and returning the request and
+/// response contents with any configured generators applied, as they would be received by the
+/// consumer.
+///
+/// # Safety
+///
+/// The returned string needs to be deallocated with the `free_string` function.
+/// This function must only ever be called from a foreign language. Calling it from a Rust function
+/// that has a Tokio runtime in its call stack can result in a deadlock.
+#[no_mangle]
+pub extern "C" fn pactffi_sync_message_reify(message_handle: MessageHandle) -> *const c_char {
+  let res = message_handle.with_message(&|_, inner, _spec_version| {
+    trace!("pactffi_sync_message_reify(message: {:?})", inner);
+    if let Some(message) = inner.as_v4_sync_message() {
+      let (request, response) = block_on(apply_generators_to_sync_message(
+        &message,
+        &GeneratorTestMode::Consumer,
+        &hashmap!{},
+        &vec![],
+        &hashmap!{}
+      ));
+
+      // Synchronous messages only exist in the V4 Pact format, so the reified JSON always uses
+      // the V4 body envelope (a `contents.content` field), the same as the pact file itself.
+      SynchronousMessage { request, response, ..message }.to_json().to_string()
+    } else {
+      "".to_string()
+    }
+  });
+
+  match res {
+    Some(res) => {
+      let string = CString::new(res).unwrap();
+      string.into_raw() as *const c_char
+    },
+    None => CString::default().into_raw() as *const c_char
+  }
+}
+
 /// External interface to write out the message pact file. This function should
 /// be called if all the consumer tests have passed. The directory to write the file to is passed
 /// as the second parameter. If a NULL pointer is passed, the current working directory is used.
@@ -3299,7 +3341,7 @@ pub fn pact_default_file_name(handle: &PactHandle) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-  use std::ffi::CString;
+  use std::ffi::{CStr, CString};
 
   use either::Either;
   use expectest::prelude::*;
@@ -3559,6 +3601,32 @@ mod tests {
     );
   }
 
+  #[test]
+  fn pactffi_sync_message_reify_test() {
+    let pact_handle = PactHandle::new("sync-message-reify-consumer", "sync-message-reify-provider");
+    let description = CString::new("sync message reify").unwrap();
+    let handle = pactffi_new_sync_message_interaction(pact_handle, description.as_ptr());
+
+    let content_type = CString::new("application/json").unwrap();
+    let request_body = CString::new(r#"{"id": {"value":100,"pact:generator:type":"RandomInt","min":100,"max":100,"pact:matcher:type":"integer"}}"#).unwrap();
+    let response_body = CString::new(r#"{"result": "ok"}"#).unwrap();
+
+    assert!(pactffi_with_body(handle, InteractionPart::Request, content_type.as_ptr(), request_body.as_ptr()));
+    assert!(pactffi_with_body(handle, InteractionPart::Response, content_type.as_ptr(), response_body.as_ptr()));
+
+    // `pactffi_sync_message_reify` takes a `MessageHandle`, which shares the same underlying
+    // interaction reference layout as `InteractionHandle`, exactly as `pactffi_message_reify` does
+    // for asynchronous messages.
+    let message_handle = MessageHandle { interaction_ref: handle.interaction_ref };
+    let res = pactffi_sync_message_reify(message_handle);
+    let reified = unsafe { CStr::from_ptr(res) }.to_str().unwrap().to_string();
+
+    pactffi_free_pact_handle(pact_handle);
+
+    let json: serde_json::Value = serde_json::from_str(&reified).unwrap();
+    assert_eq!(json["request"]["contents"]["content"]["id"], serde_json::json!(100));
+    assert_eq!(json["response"][0]["contents"]["content"]["result"], serde_json::json!("ok"));
+  }
 
   #[test]
   fn pactffi_with_header_v2_simple_header() {
