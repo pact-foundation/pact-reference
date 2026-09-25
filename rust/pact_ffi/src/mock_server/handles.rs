@@ -150,6 +150,8 @@ use futures::executor::block_on;
 use crate::{convert_cstr, ffi_fn, safe_str};
 use crate::error::set_error_msg;
 use crate::mock_server::{generator_category, StringResult, xml};
+use crate::models::async_message::generate_async_message_contents;
+use crate::models::sync_message::generate_sync_message_contents;
 #[allow(deprecated)]
 use crate::mock_server::bodies::{
   empty_multipart_body,
@@ -292,13 +294,21 @@ impl InteractionHandle {
     trace!("with_interaction - index = {}, interaction = {}", index, interaction);
     trace!("with_interaction - keys = {:?}", handles.keys());
 
+    let interaction_index = match interaction.checked_sub(1) {
+      Some(interaction_index) => interaction_index,
+      None => {
+        debug!("Interaction index {} is not valid, expected a value >= 1", interaction);
+        return None;
+      }
+    };
+
     handles.get_mut(&index).map(|inner| {
       let inner_mut = &mut *inner.borrow_mut();
       trace!("with_interaction - inner = {:?}", inner_mut);
       let interactions = &mut inner_mut.pact.interactions;
-      match interactions.get_mut((interaction - 1) as usize) {
+      match interactions.get_mut(interaction_index as usize) {
         Some(inner_i) => {
-          Some(f(interaction - 1, inner_mut.mock_server_started, inner_i.as_mut()))
+          Some(f(interaction_index, inner_mut.mock_server_started, inner_i.as_mut()))
         },
         None => {
           debug!("Did not find interaction for index = {}, interaction = {}, pact has {} interactions",
@@ -406,13 +416,20 @@ impl MessageHandle {
     let mut handles = PACT_HANDLES.lock().unwrap();
     let index = (self.interaction_ref >> 16) as u16;
     let interaction = self.interaction_ref as u16;
+    let interaction_index = match interaction.checked_sub(1) {
+      Some(interaction_index) => interaction_index,
+      None => {
+        debug!("Interaction index {} is not valid, expected a value >= 1", interaction);
+        return None;
+      }
+    };
     handles.get_mut(&index).map(|inner| {
       let mut ref_mut = inner.borrow_mut();
       let specification = ref_mut.specification_version;
-      ref_mut.pact.interactions.get_mut((interaction - 1) as usize)
+      ref_mut.pact.interactions.get_mut(interaction_index as usize)
         .map(|inner_i| {
           if inner_i.is_message() {
-            Some(f(interaction - 1, inner_i.as_mut(), specification))
+            Some(f(interaction_index, inner_i.as_mut(), specification))
           } else {
             error!("Interaction {:#x} is not a message interaction, it is {}", self.interaction_ref, inner_i.type_of());
             None
@@ -3081,7 +3098,8 @@ pub extern "C" fn pactffi_message_reify(message_handle: MessageHandle) -> *const
           let message = block_on(generate_message(&message, &GeneratorTestMode::Consumer, &hashmap!{}, &vec![], &hashmap!{}));
           message.to_json(&spec_version).to_string()
         } else {
-          message.to_json().to_string()
+          let contents = block_on(generate_async_message_contents(&message));
+          AsynchronousMessage { contents, ..message }.to_json().to_string()
         },
         _ => "".to_string()
       }
@@ -3097,6 +3115,47 @@ pub extern "C" fn pactffi_message_reify(message_handle: MessageHandle) -> *const
     },
     None => CString::default().into_raw() as *const c_char
   }
+}
+
+/// Get the actual request and response contents for the given synchronous (request/response)
+/// message, with any configured generators applied - i.e. the values a consumer would actually
+/// see. The returned JSON does not include the matching rules or generators that produced those
+/// values.
+///
+/// # Safety
+///
+/// The returned string needs to be deallocated with the `pactffi_string_delete` function.
+/// This function must only ever be called from a foreign language. Calling it from a Rust function
+/// that has a Tokio runtime in its call stack can result in a deadlock.
+#[no_mangle]
+pub extern "C" fn pactffi_sync_message_generate_contents(interaction_handle: InteractionHandle) -> *const c_char {
+  // Take a copy of the message while the PACT_HANDLES lock is held, then release it before
+  // running the generators below, which can take a while with plugin content types or large
+  // bodies and would otherwise block every other FFI call in the meantime.
+  let message = interaction_handle.with_interaction(&|_, _, inner| {
+    trace!("pactffi_sync_message_generate_contents(interaction: {:?})", inner);
+    inner.as_v4_sync_message()
+  }).flatten();
+
+  let res = match message {
+    Some(message) => {
+      let (mut request, mut responses) = block_on(generate_sync_message_contents(&message));
+      request.matching_rules = MatchingRules::default();
+      request.generators = Generators::default();
+      for response in responses.iter_mut() {
+        response.matching_rules = MatchingRules::default();
+        response.generators = Generators::default();
+      }
+
+      // Synchronous messages only exist in the V4 Pact format, so the reified JSON always uses
+      // the V4 body envelope (a `contents.content` field), the same as the pact file itself.
+      SynchronousMessage { request, response: responses, ..message }.to_json().to_string()
+    },
+    None => "".to_string()
+  };
+
+  let string = CString::new(res).unwrap();
+  string.into_raw() as *const c_char
 }
 
 /// External interface to write out the message pact file. This function should
@@ -3299,7 +3358,7 @@ pub fn pact_default_file_name(handle: &PactHandle) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-  use std::ffi::CString;
+  use std::ffi::{CStr, CString};
 
   use either::Either;
   use expectest::prelude::*;
@@ -3559,6 +3618,55 @@ mod tests {
     );
   }
 
+  #[test]
+  fn pactffi_sync_message_generate_contents_test() {
+    let pact_handle = PactHandle::new("sync-message-reify-consumer", "sync-message-reify-provider");
+    let description = CString::new("sync message reify").unwrap();
+    let handle = pactffi_new_sync_message_interaction(pact_handle, description.as_ptr());
+
+    let content_type = CString::new("application/json").unwrap();
+    let request_body = CString::new(r#"{"id": {"value":100,"pact:generator:type":"RandomInt","min":1,"max":99,"pact:matcher:type":"integer"}}"#).unwrap();
+    let response_body = CString::new(r#"{"result": "ok"}"#).unwrap();
+
+    assert!(pactffi_with_body(handle, InteractionPart::Request, content_type.as_ptr(), request_body.as_ptr()));
+    assert!(pactffi_with_body(handle, InteractionPart::Response, content_type.as_ptr(), response_body.as_ptr()));
+
+    let res = pactffi_sync_message_generate_contents(handle);
+    let reified = unsafe { CStr::from_ptr(res) }.to_str().unwrap().to_string();
+    crate::pactffi_string_delete(res as *mut c_char);
+
+    pactffi_free_pact_handle(pact_handle);
+
+    let json: serde_json::Value = serde_json::from_str(&reified).unwrap();
+    let id = json["request"]["contents"]["content"]["id"].as_i64().unwrap();
+    assert!((1..=99).contains(&id), "expected generated id in 1..=99, got {}", id);
+    assert!(json["request"]["matchingRules"].is_null());
+    assert!(json["request"]["generators"].is_null());
+    assert_eq!(json["response"][0]["contents"]["content"]["result"], serde_json::json!("ok"));
+  }
+
+  #[test]
+  fn pactffi_message_reify_v4_applies_generators_test() {
+    let pact_handle = PactHandle::new("message-reify-v4-consumer", "message-reify-v4-provider");
+    pactffi_with_specification(pact_handle, PactSpecification::V4);
+    let description = CString::new("message reify v4").unwrap();
+    #[allow(deprecated)]
+    let handle = pactffi_new_async_message(pact_handle, description.as_ptr());
+
+    let content_type = CString::new("application/json").unwrap();
+    let request_body = CString::new(r#"{"id": {"value":100,"pact:generator:type":"RandomInt","min":1,"max":99,"pact:matcher:type":"integer"}}"#).unwrap();
+    let body_bytes = request_body.as_bytes();
+    pactffi_message_with_contents(handle, content_type.as_ptr(), body_bytes.as_ptr(), body_bytes.len());
+
+    let res = pactffi_message_reify(handle);
+    let reified = unsafe { CStr::from_ptr(res) }.to_str().unwrap().to_string();
+
+    pactffi_free_pact_handle(pact_handle);
+
+    let json: serde_json::Value = serde_json::from_str(&reified).unwrap();
+    let id = json["contents"]["content"]["id"].as_i64().unwrap();
+    assert!((1..=99).contains(&id), "expected generated id in 1..=99, got {}", id);
+  }
 
   #[test]
   fn pactffi_with_header_v2_simple_header() {
