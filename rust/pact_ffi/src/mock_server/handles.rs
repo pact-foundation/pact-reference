@@ -150,6 +150,7 @@ use futures::executor::block_on;
 use crate::{convert_cstr, ffi_fn, safe_str};
 use crate::error::set_error_msg;
 use crate::mock_server::{generator_category, StringResult, xml};
+use crate::models::async_message::generate_async_message_contents;
 use crate::models::sync_message::generate_sync_message_contents;
 #[allow(deprecated)]
 use crate::mock_server::bodies::{
@@ -3097,7 +3098,8 @@ pub extern "C" fn pactffi_message_reify(message_handle: MessageHandle) -> *const
           let message = block_on(generate_message(&message, &GeneratorTestMode::Consumer, &hashmap!{}, &vec![], &hashmap!{}));
           message.to_json(&spec_version).to_string()
         } else {
-          message.to_json().to_string()
+          let contents = block_on(generate_async_message_contents(&message));
+          AsynchronousMessage { contents, ..message }.to_json().to_string()
         },
         _ => "".to_string()
       }
@@ -3641,6 +3643,29 @@ mod tests {
     assert!(json["request"]["matchingRules"].is_null());
     assert!(json["request"]["generators"].is_null());
     assert_eq!(json["response"][0]["contents"]["content"]["result"], serde_json::json!("ok"));
+  }
+
+  #[test]
+  fn pactffi_message_reify_v4_applies_generators_test() {
+    let pact_handle = PactHandle::new("message-reify-v4-consumer", "message-reify-v4-provider");
+    pactffi_with_specification(pact_handle, PactSpecification::V4);
+    let description = CString::new("message reify v4").unwrap();
+    #[allow(deprecated)]
+    let handle = pactffi_new_async_message(pact_handle, description.as_ptr());
+
+    let content_type = CString::new("application/json").unwrap();
+    let request_body = CString::new(r#"{"id": {"value":100,"pact:generator:type":"RandomInt","min":1,"max":99,"pact:matcher:type":"integer"}}"#).unwrap();
+    let body_bytes = request_body.as_bytes();
+    pactffi_message_with_contents(handle, content_type.as_ptr(), body_bytes.as_ptr(), body_bytes.len());
+
+    let res = pactffi_message_reify(handle);
+    let reified = unsafe { CStr::from_ptr(res) }.to_str().unwrap().to_string();
+
+    pactffi_free_pact_handle(pact_handle);
+
+    let json: serde_json::Value = serde_json::from_str(&reified).unwrap();
+    let id = json["contents"]["content"]["id"].as_i64().unwrap();
+    assert!((1..=99).contains(&id), "expected generated id in 1..=99, got {}", id);
   }
 
   #[test]
