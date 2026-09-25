@@ -10,7 +10,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::generators::GeneratorTestMode;
-use crate::json_utils::json_deep_merge;
 use crate::path_exp::DocPath;
 
 /// Plugin configuration persisted in the pact file metadata
@@ -26,16 +25,35 @@ pub struct PluginData {
 }
 
 impl PluginData {
-  /// Deep merges the data with any existing data
+  /// Deep merges the data with any existing data. Objects are merged recursively, while any
+  /// other value (including arrays) replaces the existing one, so merging the same data more
+  /// than once gives the same result.
   pub fn merge(&mut self, data: &HashMap<String, Value>) {
     for (key, value) in data {
       let value = if let Some(v) = self.configuration.get(key) {
-        json_deep_merge(v, value)
+        merge_configuration(v, value)
       } else {
         value.clone()
       };
       self.configuration.insert(key.clone(), value);
     }
+  }
+}
+
+fn merge_configuration(value: &Value, other: &Value) -> Value {
+  match (value, other) {
+    (Value::Object(entries), Value::Object(other_entries)) => {
+      let mut map = entries.clone();
+      for (key, other_value) in other_entries {
+        let merged = match map.get(key) {
+          Some(existing) => merge_configuration(existing, other_value),
+          None => other_value.clone()
+        };
+        map.insert(key.clone(), merged);
+      }
+      Value::Object(map)
+    },
+    _ => other.clone()
   }
 }
 
@@ -105,4 +123,56 @@ pub fn plugin_rule_config_key(rule_name: &str) -> String {
   plugin_support()
     .and_then(|support| support.config_key(rule_name))
     .unwrap_or_else(|| "value".to_string())
+}
+
+#[cfg(test)]
+mod tests {
+  use expectest::prelude::*;
+  use maplit::hashmap;
+  use serde_json::json;
+
+  use super::PluginData;
+
+  #[test]
+  fn merge_combines_configuration_with_different_keys() {
+    let mut data = PluginData {
+      name: "protobuf".to_string(),
+      version: "0.5.0".to_string(),
+      configuration: hashmap!{ "hash-1".to_string() => json!({ "protoFile": "a" }) }
+    };
+    data.merge(&hashmap!{ "hash-2".to_string() => json!({ "protoFile": "b" }) });
+
+    expect!(data.configuration).to(be_equal_to(hashmap!{
+      "hash-1".to_string() => json!({ "protoFile": "a" }),
+      "hash-2".to_string() => json!({ "protoFile": "b" })
+    }));
+  }
+
+  #[test]
+  fn merge_merges_objects_recursively() {
+    let mut data = PluginData {
+      name: "avro".to_string(),
+      version: "0.1.0".to_string(),
+      configuration: hashmap!{ "hash-1".to_string() => json!({ "avroSchema": "a", "other": { "x": 1 } }) }
+    };
+    data.merge(&hashmap!{ "hash-1".to_string() => json!({ "recordName": "Item", "other": { "y": 2 } }) });
+
+    expect!(data.configuration).to(be_equal_to(hashmap!{
+      "hash-1".to_string() => json!({ "avroSchema": "a", "recordName": "Item", "other": { "x": 1, "y": 2 } })
+    }));
+  }
+
+  #[test]
+  fn merge_does_not_duplicate_array_values_when_the_same_data_is_merged_again() {
+    let config = hashmap!{ "hash-1".to_string() => json!({ "includes": ["a"] }) };
+    let mut data = PluginData {
+      name: "protobuf".to_string(),
+      version: "0.5.0".to_string(),
+      configuration: config.clone()
+    };
+    data.merge(&config);
+    data.merge(&config);
+
+    expect!(data.configuration).to(be_equal_to(config));
+  }
 }

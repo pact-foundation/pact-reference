@@ -96,9 +96,12 @@ impl V4Pact {
       .collect()
   }
 
+  /// Adds the plugin data to this Pact. If there is already an entry for the plugin, its
+  /// version is replaced and the configuration merged, so the new data takes precedence.
   fn add_plugin_data(&mut self, other_data: &PluginData) {
     if let Some(data) = self.plugin_data.iter_mut()
-      .find(|data| data.name == other_data.name && data.version == other_data.version) {
+      .find(|data| data.name == other_data.name) {
+      data.version = other_data.version.clone();
       data.merge(&other_data.configuration);
     } else {
       self.plugin_data.push(other_data.clone());
@@ -410,13 +413,18 @@ impl ReadWritePact for V4Pact {
           })
           .collect(),
         metadata: self.metadata.clone(),
-        plugin_data: self.plugin_data.clone()
+        plugin_data: if other.is_v4() {
+          other.as_v4_pact().unwrap_or_default().plugin_data
+        } else {
+          vec![]
+        }
       };
 
-      if other.is_v4() {
-        for plugin in other.as_v4_pact().unwrap_or_default().plugin_data {
-          new_pact.add_plugin_data(&plugin);
-        }
+      // The plugin data from this pact is added last so that it takes precedence, the same as
+      // the interactions. When writing a pact file, this pact is the new one and the other is
+      // the existing file.
+      for plugin in &self.plugin_data {
+        new_pact.add_plugin_data(plugin);
       }
 
       Ok(Box::new(new_pact))
@@ -499,6 +507,7 @@ mod tests {
   use crate::matchingrules::{Category, MatchingRule, MatchingRuleCategory, MatchingRules, RuleList, RuleLogic};
   use crate::pact::{Pact, ReadWritePact, write_pact};
   use crate::path_exp::DocPath;
+  use crate::plugins::PluginData;
   use crate::provider_states::ProviderState;
   use crate::v4::async_message::AsynchronousMessage;
   use crate::v4::http_parts::{HttpRequest, HttpResponse};
@@ -799,6 +808,65 @@ mod tests {
     "name": "write_pact_test_provider"
   }}
 }}"#, super::PACT_RUST_VERSION.unwrap()), pact_file);
+  }
+
+  #[test]
+  fn merge_combines_plugin_configuration_from_both_pacts() {
+    let mut existing = V4Pact { consumer: Consumer { name: "c".to_string() }, provider: Provider { name: "p".to_string() }, .. V4Pact::default() };
+    existing.add_plugin("protobuf", "0.5.0", Some(hashmap!{ "hash-1".to_string() => json!({ "protoFile": "a" }) })).unwrap();
+    let mut pact = V4Pact { consumer: Consumer { name: "c".to_string() }, provider: Provider { name: "p".to_string() }, .. V4Pact::default() };
+    pact.add_plugin("protobuf", "0.5.0", Some(hashmap!{ "hash-2".to_string() => json!({ "protoFile": "b" }) })).unwrap();
+
+    let merged = pact.merge(&existing).unwrap();
+
+    expect!(merged.plugin_data()).to(be_equal_to(vec![
+      PluginData {
+        name: "protobuf".to_string(),
+        version: "0.5.0".to_string(),
+        configuration: hashmap!{
+          "hash-1".to_string() => json!({ "protoFile": "a" }),
+          "hash-2".to_string() => json!({ "protoFile": "b" })
+        }
+      }
+    ]));
+  }
+
+  #[test]
+  fn merge_uses_the_plugin_version_and_configuration_from_the_new_pact() {
+    let mut existing = V4Pact { consumer: Consumer { name: "c".to_string() }, provider: Provider { name: "p".to_string() }, .. V4Pact::default() };
+    existing.add_plugin("protobuf", "0.3.0", Some(hashmap!{ "hash-1".to_string() => json!({ "protoFile": "old" }) })).unwrap();
+    let mut pact = V4Pact { consumer: Consumer { name: "c".to_string() }, provider: Provider { name: "p".to_string() }, .. V4Pact::default() };
+    pact.add_plugin("protobuf", "0.5.0", Some(hashmap!{ "hash-1".to_string() => json!({ "protoFile": "new" }) })).unwrap();
+
+    let merged = pact.merge(&existing).unwrap();
+
+    expect!(merged.plugin_data()).to(be_equal_to(vec![
+      PluginData {
+        name: "protobuf".to_string(),
+        version: "0.5.0".to_string(),
+        configuration: hashmap!{ "hash-1".to_string() => json!({ "protoFile": "new" }) }
+      }
+    ]));
+  }
+
+  #[test]
+  fn write_pact_test_should_not_duplicate_plugin_configuration_arrays() {
+    let dir = env::temp_dir();
+    let path = dir.join("write_pact_test_should_not_duplicate_plugin_configuration_arrays.json");
+    let _ = fs::remove_file(&path);
+    let config = hashmap!{ "hash-1".to_string() => json!({ "includes": ["a"] }) };
+
+    for _ in 0..3 {
+      let mut pact = V4Pact { consumer: Consumer { name: "c".to_string() }, provider: Provider { name: "p".to_string() }, .. V4Pact::default() };
+      pact.add_plugin("protobuf", "0.5.0", Some(config.clone())).unwrap();
+      write_pact(pact.boxed(), path.as_path(), PactSpecification::V4, false).unwrap();
+    }
+
+    let pact = V4Pact::read_pact(path.as_path());
+    let _ = fs::remove_file(&path);
+    expect!(pact.unwrap().plugin_data()).to(be_equal_to(vec![
+      PluginData { name: "protobuf".to_string(), version: "0.5.0".to_string(), configuration: config }
+    ]));
   }
 
   #[test]
