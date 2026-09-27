@@ -20,6 +20,18 @@ use crate::ptr;
 use crate::util::*;
 use crate::util::string::optional_str;
 
+/// Applies any configured generators to the contents of an `AsynchronousMessage`, returning the
+/// values a consumer would actually see.
+pub(crate) async fn generate_async_message_contents(message: &AsynchronousMessage) -> MessageContents {
+    apply_generators_to_async_message(
+        message,
+        &GeneratorTestMode::Consumer,
+        &HashMap::new(),
+        &Vec::new(),
+        &HashMap::new(),
+    ).await
+}
+
 ffi_fn! {
     /// Get a mutable pointer to a newly-created default message on the heap.
     ///
@@ -83,16 +95,7 @@ ffi_fn! {
     /// If the message is NULL, returns NULL.
     fn pactffi_async_message_generate_contents(message: *const AsynchronousMessage) -> *const MessageContents {
         let message = as_ref!(message);
-        let context = HashMap::new();
-        let plugin_data = Vec::new();
-        let interaction_data = HashMap::new();
-        let contents = block_on(apply_generators_to_async_message(
-            &message,
-            &GeneratorTestMode::Consumer,
-            &context,
-            &plugin_data,
-            &interaction_data,
-        ));
+        let contents = block_on(generate_async_message_contents(&message));
         ptr::raw_to(contents) as *const MessageContents
     } {
         std::ptr::null()

@@ -20,6 +20,20 @@ use crate::ptr;
 use crate::util::*;
 use crate::util::string::optional_str;
 
+/// Applies any configured generators to the request and response contents of a
+/// `SynchronousMessage`, returning the values a consumer would actually see. Matchers are left
+/// in place on the returned contents; callers that need the plain generated values without the
+/// matching rules and generators that produced them must strip those fields themselves.
+pub(crate) async fn generate_sync_message_contents(message: &SynchronousMessage) -> (MessageContents, Vec<MessageContents>) {
+    apply_generators_to_sync_message(
+        message,
+        &GeneratorTestMode::Consumer,
+        &HashMap::new(),
+        &Vec::new(),
+        &HashMap::new(),
+    ).await
+}
+
 ffi_fn! {
     /// Get a mutable pointer to a newly-created default message on the heap.
     ///
@@ -233,16 +247,7 @@ ffi_fn! {
     /// If the message is NULL, returns NULL.
     fn pactffi_sync_message_generate_request_contents(message: *const SynchronousMessage) -> *const MessageContents {
         let message = as_ref!(message);
-        let context = HashMap::new();
-        let plugin_data = Vec::new();
-        let interaction_data = HashMap::new();
-        let (contents, _) = block_on(apply_generators_to_sync_message(
-            &message,
-            &GeneratorTestMode::Consumer,
-            &context,
-            &plugin_data,
-            &interaction_data,
-        ));
+        let (contents, _) = block_on(generate_sync_message_contents(&message));
         ptr::raw_to(contents) as *const MessageContents
     } {
         std::ptr::null()
@@ -501,16 +506,7 @@ ffi_fn! {
             return Ok(std::ptr::null());
         }
 
-        let context = HashMap::new();
-        let plugin_data = Vec::new();
-        let interaction_data = HashMap::new();
-        let (_, mut responses) = block_on(apply_generators_to_sync_message(
-            &message,
-            &GeneratorTestMode::Consumer,
-            &context,
-            &plugin_data,
-            &interaction_data,
-        ));
+        let (_, mut responses) = block_on(generate_sync_message_contents(&message));
         ptr::raw_to(responses.swap_remove(index)) as *const MessageContents
     } {
         std::ptr::null()
