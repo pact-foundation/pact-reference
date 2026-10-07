@@ -42,10 +42,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install stable Rust toolchain
+      - name: Install release Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
+          # Rust 1.99 miscompiles C bool returns on Linux x86_64 (rust-lang/rust#163911).
+          toolchain: 1.98.1
           targets: ${{ matrix.targets }}
 
       - name: Rust caching

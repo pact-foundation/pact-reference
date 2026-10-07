@@ -20,6 +20,23 @@ It will additionally attempt to find and use `Doxygen` to generate C-friendly do
 
 **Note:** Linking to the generated static library on Linux requires you to also link to `pthread`, `dl` and `m`.
 
+## Release compiler
+
+The [release workflow](../../.github/workflows/release.yml) pins Rust to **1.98.1**
+to avoid the Linux x86_64 C boolean return regression in Rust 1.99, tracked in
+[rust-lang/rust#163911](https://github.com/rust-lang/rust/issues/163911).
+Optimized code can return the `Option<bool>::None` encoding (`2`) instead of
+the required false byte (`0`), causing foreign-language callers to interpret
+false results as true. The 0.5.10 Linux x86_64 release artifacts exhibited this
+issue; the same reduced example returns `0` with Rust 1.98.1.
+
+Keep the release compiler pinned until a corrected compiler is verified through
+a foreign-language caller. Rust-only tests can miss this regression because
+the lowest bit of the invalid return byte is still zero. This pin applies to
+native release builds, not the nightly toolchain used to generate C headers.
+Already-published artifacts are not repaired by this change; corrected artifacts
+require rebuilding and a separate release.
+
 ## Building with CMake
 
 For convenience, this tool integrates with CMake, which is setup to:
