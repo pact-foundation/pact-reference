@@ -619,6 +619,20 @@ pub trait ContentTypeHandler<T> {
     context: &HashMap<&str, Value>,
     matcher: &Box<dyn VariantMatcher + Send + Sync>
   );
+  /// Applies all the generators that correspond to the mode, shallowest paths first, so that a
+  /// generator that changes the shape of a value runs before the ones filling in what it creates.
+  fn apply_generators(
+    &mut self,
+    generators: &HashMap<DocPath, Generator>,
+    mode: &GeneratorTestMode,
+    context: &HashMap<&str, Value>,
+    matcher: &Box<dyn VariantMatcher + Send + Sync>
+  ) where Generator: GenerateValue<T> {
+    crate::generators::apply_generators(mode, generators, &mut |key, generator| {
+      debug!("Applying generator {:?} to key {}", generator, key);
+      self.apply_key(key, generator, context, matcher);
+    });
+  }
 }
 
 /// Data structure for representing a collection of generators
@@ -799,18 +813,26 @@ impl Default for Generators {
   }
 }
 
-/// If the mode applies, invoke the callback for each of the generators
+/// If the mode applies, invoke the callback for each of the generators, shallowest paths first.
 pub fn apply_generators<F>(
   mode: &GeneratorTestMode,
   generators: &HashMap<DocPath, Generator>,
   closure: &mut F
 ) where F: FnMut(&DocPath, &Generator) {
-  for (key, value) in generators {
-    if value.corresponds_to_mode(mode) {
-      let _scope = GeneratorScope::enter(mode, key);
-      closure(&key, &value)
-    }
+  for (key, generator) in sorted_by_path_depth(generators, mode) {
+    let _scope = GeneratorScope::enter(mode, key);
+    closure(key, generator)
   }
+}
+
+/// Orders the generators of a scope by path depth, shallowest first, so that a generator that
+/// changes the shape of a value runs before the ones filling in what it creates.
+fn sorted_by_path_depth<'a>(generators: &'a HashMap<DocPath, Generator>, mode: &GeneratorTestMode) -> Vec<(&'a DocPath, &'a Generator)> {
+  let mut entries: Vec<_> = generators.iter()
+    .filter(|(_, generator)| generator.corresponds_to_mode(mode))
+    .collect();
+  entries.sort_by_key(|(key, _)| key.len());
+  entries
 }
 
 /// Parses the generators from the Value structure
@@ -1355,13 +1377,7 @@ impl ContentTypeHandler<Value> for JsonHandler {
     context: &HashMap<&str, Value>,
     matcher: &Box<dyn VariantMatcher + Send + Sync>
   ) -> Result<OptionalBody, String> {
-    for (key, generator) in generators {
-      if generator.corresponds_to_mode(mode) {
-        debug!("Applying generator {:?} to key {}", generator, key);
-        let _scope = GeneratorScope::enter(mode, key);
-        self.apply_key(key, generator, context, matcher);
-      }
-    };
+    self.apply_generators(generators, mode, context, matcher);
     Ok(OptionalBody::Present(self.value.to_string().into(), Some("application/json".into()), None))
   }
 
@@ -2569,5 +2585,98 @@ mod tests2 {
   #[case(Generator::ArrayContains(vec![]), "ArrayContains")]
   fn generator_name_test(#[case] generator: Generator, #[case] name: &str) {
     expect!(generator.name()).to(be_equal_to(name));
+  }
+
+  use std::collections::HashMap;
+  use std::sync::{Arc, Once};
+  use anyhow::anyhow;
+  use crate::generators::{ContentTypeHandler, GeneratorTestMode, JsonHandler, NoopVariantMatcher, VariantMatcher};
+  use crate::path_exp::DocPath;
+  use crate::plugins::{set_plugin_support, PluginSupport};
+
+  /// Stands in for a plugin that provides a generator expanding an array template into `max`
+  /// clones of the template item. Registered once for the whole test binary; it answers for no
+  /// other generator name, so it is inert for every other test.
+  #[derive(Debug)]
+  struct TestPluginSupport;
+
+  static REGISTER_TEST_PLUGIN_SUPPORT: Once = Once::new();
+
+  fn register_test_plugin_support() {
+    REGISTER_TEST_PLUGIN_SUPPORT.call_once(|| set_plugin_support(Arc::new(TestPluginSupport)));
+  }
+
+  impl PluginSupport for TestPluginSupport {
+    fn config_key(&self, _rule_name: &str) -> Option<String> {
+      None
+    }
+
+    fn generate(
+      &self,
+      name: &str,
+      values: &Value,
+      example: &Value,
+      _mode: Option<GeneratorTestMode>,
+      _path: &DocPath,
+      _context: &HashMap<&str, Value>
+    ) -> anyhow::Result<Value> {
+      match name {
+        "TestRandomArray" => match example {
+          Value::Array(template) => {
+            let max = values.get("max").and_then(|v| v.as_u64()).unwrap_or(3).max(1) as usize;
+            let item = template.first().cloned().unwrap_or(Value::Null);
+            Ok(Value::Array((0..max).map(|_| item.clone()).collect()))
+          }
+          _ => Err(anyhow!("TestRandomArray can only be applied to arrays"))
+        }
+        _ => Err(anyhow!("generator '{}' is not provided by this plugin", name))
+      }
+    }
+  }
+
+  #[test]
+  fn shallower_generators_are_applied_before_deeper_ones() {
+    register_test_plugin_support();
+    let body = json!({ "items": [{ "name": "xxx" }] });
+    let mut handler = JsonHandler { value: body };
+    let generators = hashmap!{
+      DocPath::new_unwrap("$.items") => Generator::Plugin { name: "TestRandomArray".to_string(), values: json!({ "min": 3, "max": 3 }) },
+      DocPath::new_unwrap("$.items[*].name") => Generator::RandomString(5)
+    };
+    handler.process_body(&generators, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher {}.boxed()).unwrap();
+
+    let items = handler.value["items"].as_array().unwrap();
+    expect!(items.len()).to(be_equal_to(3));
+    // The data generator ran after the array at the shallower path was expanded, so every
+    // clone got its own value; had it run first, all the clones would share one
+    for i in 1..items.len() {
+      expect!(&items[i]["name"]).not_to(be_equal_to(&items[i - 1]["name"]));
+    }
+  }
+
+  #[test]
+  fn nested_generators_are_applied_outermost_first() {
+    register_test_plugin_support();
+    let body = json!({ "orders": [{ "items": [{ "name": "xxx" }] }] });
+    let mut handler = JsonHandler { value: body };
+    let generators = hashmap!{
+      DocPath::new_unwrap("$.orders") => Generator::Plugin { name: "TestRandomArray".to_string(), values: json!({ "min": 2, "max": 2 }) },
+      DocPath::new_unwrap("$.orders[*].items") => Generator::Plugin { name: "TestRandomArray".to_string(), values: json!({ "min": 3, "max": 3 }) },
+      DocPath::new_unwrap("$.orders[*].items[*].name") => Generator::RandomString(5)
+    };
+    handler.process_body(&generators, &GeneratorTestMode::Consumer, &hashmap!{}, &NoopVariantMatcher {}.boxed()).unwrap();
+
+    let orders = handler.value["orders"].as_array().unwrap();
+    expect!(orders.len()).to(be_equal_to(2));
+    let mut names: Vec<&str> = vec![];
+    for order in orders {
+      let items = order["items"].as_array().unwrap();
+      expect!(items.len()).to(be_equal_to(3));
+      for item in items {
+        names.push(item["name"].as_str().unwrap());
+      }
+    }
+    let unique: std::collections::HashSet<&&str> = names.iter().collect();
+    expect!(unique.len()).to(be_equal_to(names.len()));
   }
 }

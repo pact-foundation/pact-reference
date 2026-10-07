@@ -8,7 +8,7 @@ use tracing::{debug, error, trace};
 use anyhow::{anyhow, Result};
 use itertools::Itertools;
 
-use crate::generators::{ContentTypeHandler, Generator, GeneratorScope, GeneratorTestMode, VariantMatcher, GenerateValue};
+use crate::generators::{ContentTypeHandler, Generator, GeneratorTestMode, VariantMatcher, GenerateValue};
 use crate::path_exp::DocPath;
 use crate::bodies::OptionalBody;
 
@@ -26,13 +26,7 @@ impl <'a> ContentTypeHandler<String> for XmlHandler<'a> {
     context: &HashMap<&str, Value>,
     matcher: &Box<dyn VariantMatcher + Send + Sync>
   ) -> Result<OptionalBody, String> {
-    for (key, generator) in generators {
-      if generator.corresponds_to_mode(mode) {
-        debug!("Applying generator {:?} to key {}", generator, key);
-        let _scope = GeneratorScope::enter(mode, key);
-        self.apply_key(key, generator, context, matcher);
-      }
-    };
+    self.apply_generators(generators, mode, context, matcher);
 
     let mut w = Vec::new();
     match format_document(&self.value, &mut w) {
