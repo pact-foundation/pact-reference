@@ -1,5 +1,10 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 0.5.10 - [Feature Release]
+
+* 83e9936c - feat(ffi): add pactffi_sync_message_generate_contents for sync message consumer tests (#555) (Fábio André Ramos Rodrigues, Mon Sep 28 00:44:23 2026 +0100)
+* d86f3792 - bump version to 0.5.10 (Ronald Holshausen, Thu Sep 24 11:30:06 2026 +1000)
+
 # 0.5.9 - Expose a log callback for host language logging
 
 * d7879658 - docs(pact-ffi): publish pactffi_string_delete in the crate docs (JP-Ellis, Thu Sep 17 20:14:48 2026 +1000)
