@@ -3744,15 +3744,15 @@ mod tests {
   }
 
   #[rstest]
-  #[case::same_values(r#"{"status": "shipped", "count": 12, "price": 12.5, "shippedAt": "2024-10-12 03:31:11"}"#, 0)]
-  #[case::other_values_of_the_same_type(r#"{"status": "pending", "count": 3, "price": 0.25, "shippedAt": "2026-01-01 00:00:00"}"#, 0)]
-  #[case::unexpected_keys_are_allowed(r#"{"status": "pending", "count": 3, "price": 0.25, "shippedAt": "2026-01-01 00:00:00", "extra": true}"#, 0)]
-  #[case::string_instead_of_string_type(r#"{"status": 1, "count": 3, "price": 0.25, "shippedAt": "2026-01-01 00:00:00"}"#, 1)]
-  #[case::decimal_instead_of_integer(r#"{"status": "pending", "count": 3.5, "price": 0.25, "shippedAt": "2026-01-01 00:00:00"}"#, 1)]
-  #[case::integer_instead_of_decimal(r#"{"status": "pending", "count": 3, "price": 1, "shippedAt": "2026-01-01 00:00:00"}"#, 1)]
-  #[case::datetime_not_matching_regex(r#"{"status": "pending", "count": 3, "price": 0.25, "shippedAt": "01/01/2026"}"#, 1)]
-  #[case::missing_key(r#"{"count": 3, "price": 0.25, "shippedAt": "2026-01-01 00:00:00"}"#, 1)]
-  fn pactffi_sync_message_match_response_contents_test(#[case] actual: &str, #[case] expected_mismatches: usize) {
+  #[case::same_values(r#"{"status": "shipped", "count": 12, "price": 12.5, "shippedAt": "2024-10-12 03:31:11"}"#, None)]
+  #[case::other_values_of_the_same_type(r#"{"status": "pending", "count": 3, "price": 0.25, "shippedAt": "2026-01-01 00:00:00"}"#, None)]
+  #[case::unexpected_keys_are_allowed(r#"{"status": "pending", "count": 3, "price": 0.25, "shippedAt": "2026-01-01 00:00:00", "extra": true}"#, None)]
+  #[case::string_instead_of_string_type(r#"{"status": 1, "count": 3, "price": 0.25, "shippedAt": "2026-01-01 00:00:00"}"#, Some("status"))]
+  #[case::decimal_instead_of_integer(r#"{"status": "pending", "count": 3.5, "price": 0.25, "shippedAt": "2026-01-01 00:00:00"}"#, Some("count"))]
+  #[case::integer_instead_of_decimal(r#"{"status": "pending", "count": 3, "price": 1, "shippedAt": "2026-01-01 00:00:00"}"#, Some("price"))]
+  #[case::datetime_not_matching_regex(r#"{"status": "pending", "count": 3, "price": 0.25, "shippedAt": "01/01/2026"}"#, Some("shippedAt"))]
+  #[case::missing_key(r#"{"count": 3, "price": 0.25, "shippedAt": "2026-01-01 00:00:00"}"#, Some("status"))]
+  fn pactffi_sync_message_match_response_contents_test(#[case] actual: &str, #[case] mismatched_field: Option<&str>) {
     let (pact_handle, handle) = sync_message_with_response("sync-message-match-response", r#"{
       "status": {"pact:matcher:type": "type", "value": "shipped"},
       "count": {"pact:matcher:type": "integer", "value": 12},
@@ -3763,8 +3763,18 @@ mod tests {
     let mismatches = match_response(handle, 0, actual);
     pactffi_free_pact_handle(pact_handle);
 
+    // The number and paths of mismatches differ between the V1 and V2 matching engines (e.g. a missing
+    // key is one mismatch in V1, and both a type mismatch and a missing entry in V2), so only check that
+    // the contents matched, or that a mismatch was reported for the expected field
     let mismatches = mismatches.expect("expected a JSON array of mismatches");
-    assert_eq!(mismatches.as_array().unwrap().len(), expected_mismatches, "mismatches: {}", mismatches);
+    let mismatches = mismatches.as_array().unwrap();
+    match mismatched_field {
+      None => assert!(mismatches.is_empty(), "expected no mismatches, got: {:?}", mismatches),
+      Some(field) => assert!(
+        mismatches.iter().any(|mismatch| mismatch.to_string().contains(field)),
+        "expected a mismatch for '{}', got: {:?}", field, mismatches
+      )
+    }
   }
 
   #[test]
@@ -3776,7 +3786,7 @@ mod tests {
     pactffi_free_pact_handle(pact_handle);
 
     assert_eq!(same, Some(serde_json::json!([])));
-    assert_eq!(different.unwrap().as_array().unwrap().len(), 1);
+    assert!(!different.unwrap().as_array().unwrap().is_empty());
   }
 
   #[test]
