@@ -143,6 +143,7 @@ use pact_models::v4::synch_http::SynchronousHttp;
 use serde_json::{json, Value};
 use tracing::*;
 
+use pact_matching::{match_message_contents, CoreMatchingContext, DiffConfig};
 use pact_matching::generators::generate_message;
 use pact_models::generators::GeneratorTestMode;
 use futures::executor::block_on;
@@ -3158,6 +3159,77 @@ pub extern "C" fn pactffi_sync_message_generate_contents(interaction_handle: Int
   string.into_raw() as *const c_char
 }
 
+ffi_fn! {
+  /// Match the given contents against an expected response of a synchronous (request/response)
+  /// message, applying the response's matching rules. This is the same check the verifier makes
+  /// against the provider's response, so a consumer test can check the response its handler
+  /// produces, e.g. a type matcher accepts any value of the same type as the example.
+  ///
+  /// Only the response contents are compared; unexpected keys in the actual contents are allowed.
+  ///
+  /// * `interaction` - Handle to a synchronous message interaction.
+  /// * `index` - Index of the expected response (0 for the first response).
+  /// * `content_type` - Content type of the actual contents. If NULL, the content type of the
+  ///   expected response is used.
+  /// * `contents` - Actual contents as a NULL-terminated string.
+  ///
+  /// Returns a JSON array of mismatches, which is empty if the contents matched. Returns NULL if
+  /// the handle is not a synchronous message interaction, the index is out of range, the contents
+  /// are NULL, or a string parameter is not valid UTF-8.
+  ///
+  /// # Safety
+  ///
+  /// The returned string needs to be deallocated with the `pactffi_string_delete` function.
+  /// This function must only ever be called from a foreign language. Calling it from a Rust
+  /// function that has a Tokio runtime in its call stack can result in a deadlock.
+  fn pactffi_sync_message_match_response_contents(
+    interaction: InteractionHandle,
+    index: size_t,
+    content_type: *const c_char,
+    contents: *const c_char
+  ) -> *const c_char {
+    let contents = convert_cstr("contents", contents)
+      .ok_or_else(|| anyhow!("contents is NULL or not valid UTF-8"))?;
+    let content_type = if content_type.is_null() {
+      None
+    } else {
+      let content_type = convert_cstr("content_type", content_type)
+        .ok_or_else(|| anyhow!("content_type is not valid UTF-8"))?;
+      Some(ContentType::parse(content_type).map_err(|err| anyhow!("invalid content type '{}': {}", content_type, err))?)
+    };
+
+    // Copy the expected response while the PACT_HANDLES lock is held, and match after releasing it
+    let expected = interaction.with_interaction(&|_, _, inner| {
+      trace!("pactffi_sync_message_match_response_contents(interaction: {:?}, index: {})", inner, index);
+      inner.as_v4_sync_message().and_then(|message| message.response.get(index).cloned())
+    })
+      .flatten()
+      .ok_or_else(|| anyhow!("interaction is not a synchronous message or has no response at index {}", index))?;
+
+    let content_type = content_type.or_else(|| expected.message_content_type());
+    let actual = MessageContents {
+      contents: OptionalBody::Present(Bytes::from(contents.to_string()), content_type, None),
+      .. MessageContents::default()
+    };
+
+    // Same context as pact_matching::match_sync_message_response, which the verifier uses
+    let context = CoreMatchingContext {
+      matchers: expected.matching_rules.rules_for_category("content").unwrap_or_default(),
+      config: DiffConfig::AllowUnexpectedKeys,
+      matching_spec: PactSpecification::V4,
+      .. CoreMatchingContext::default()
+    };
+    let mismatches = block_on(match_message_contents(&expected, &actual, &context))
+      .err()
+      .unwrap_or_default();
+
+    let json = Value::Array(mismatches.iter().map(|mismatch| mismatch.to_json()).collect());
+    CString::new(json.to_string())?.into_raw() as *const c_char
+  } {
+    std::ptr::null()
+  }
+}
+
 /// External interface to write out the message pact file. This function should
 /// be called if all the consumer tests have passed. The directory to write the file to is passed
 /// as the second parameter. If a NULL pointer is passed, the current working directory is used.
@@ -3643,6 +3715,90 @@ mod tests {
     assert!(json["request"]["matchingRules"].is_null());
     assert!(json["request"]["generators"].is_null());
     assert_eq!(json["response"][0]["contents"]["content"]["result"], serde_json::json!("ok"));
+  }
+
+  fn sync_message_with_response(test_name: &str, response_body: &str) -> (PactHandle, InteractionHandle) {
+    let pact_handle = PactHandle::new(test_name, "sync-message-match-provider");
+    let description = CString::new(test_name).unwrap();
+    let handle = pactffi_new_sync_message_interaction(pact_handle, description.as_ptr());
+
+    let content_type = CString::new("application/json").unwrap();
+    let request_body = CString::new(r#"{"id": 1}"#).unwrap();
+    let response_body = CString::new(response_body).unwrap();
+    assert!(pactffi_with_body(handle, InteractionPart::Request, content_type.as_ptr(), request_body.as_ptr()));
+    assert!(pactffi_with_body(handle, InteractionPart::Response, content_type.as_ptr(), response_body.as_ptr()));
+
+    (pact_handle, handle)
+  }
+
+  fn match_response(handle: InteractionHandle, index: usize, actual: &str) -> Option<serde_json::Value> {
+    let actual = CString::new(actual).unwrap();
+    let res = pactffi_sync_message_match_response_contents(handle, index, std::ptr::null(), actual.as_ptr());
+    if res.is_null() {
+      None
+    } else {
+      let json = unsafe { CStr::from_ptr(res) }.to_str().unwrap().to_string();
+      crate::pactffi_string_delete(res as *mut c_char);
+      Some(serde_json::from_str(&json).unwrap())
+    }
+  }
+
+  #[rstest]
+  #[case::same_values(r#"{"status": "shipped", "count": 12, "price": 12.5, "shippedAt": "2024-10-12 03:31:11"}"#, 0)]
+  #[case::other_values_of_the_same_type(r#"{"status": "pending", "count": 3, "price": 0.25, "shippedAt": "2026-01-01 00:00:00"}"#, 0)]
+  #[case::unexpected_keys_are_allowed(r#"{"status": "pending", "count": 3, "price": 0.25, "shippedAt": "2026-01-01 00:00:00", "extra": true}"#, 0)]
+  #[case::string_instead_of_string_type(r#"{"status": 1, "count": 3, "price": 0.25, "shippedAt": "2026-01-01 00:00:00"}"#, 1)]
+  #[case::decimal_instead_of_integer(r#"{"status": "pending", "count": 3.5, "price": 0.25, "shippedAt": "2026-01-01 00:00:00"}"#, 1)]
+  #[case::integer_instead_of_decimal(r#"{"status": "pending", "count": 3, "price": 1, "shippedAt": "2026-01-01 00:00:00"}"#, 1)]
+  #[case::datetime_not_matching_regex(r#"{"status": "pending", "count": 3, "price": 0.25, "shippedAt": "01/01/2026"}"#, 1)]
+  #[case::missing_key(r#"{"count": 3, "price": 0.25, "shippedAt": "2026-01-01 00:00:00"}"#, 1)]
+  fn pactffi_sync_message_match_response_contents_test(#[case] actual: &str, #[case] expected_mismatches: usize) {
+    let (pact_handle, handle) = sync_message_with_response("sync-message-match-response", r#"{
+      "status": {"pact:matcher:type": "type", "value": "shipped"},
+      "count": {"pact:matcher:type": "integer", "value": 12},
+      "price": {"pact:matcher:type": "decimal", "value": 12.5},
+      "shippedAt": {"pact:matcher:type": "regex", "regex": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$", "value": "2024-10-12 03:31:11"}
+    }"#);
+
+    let mismatches = match_response(handle, 0, actual);
+    pactffi_free_pact_handle(pact_handle);
+
+    let mismatches = mismatches.expect("expected a JSON array of mismatches");
+    assert_eq!(mismatches.as_array().unwrap().len(), expected_mismatches, "mismatches: {}", mismatches);
+  }
+
+  #[test]
+  fn pactffi_sync_message_match_response_contents_without_matchers_uses_equality() {
+    let (pact_handle, handle) = sync_message_with_response("sync-message-match-equality", r#"{"status": "shipped"}"#);
+
+    let same = match_response(handle, 0, r#"{"status": "shipped"}"#);
+    let different = match_response(handle, 0, r#"{"status": "pending"}"#);
+    pactffi_free_pact_handle(pact_handle);
+
+    assert_eq!(same, Some(serde_json::json!([])));
+    assert_eq!(different.unwrap().as_array().unwrap().len(), 1);
+  }
+
+  #[test]
+  fn pactffi_sync_message_match_response_contents_invalid_index_returns_null() {
+    let (pact_handle, handle) = sync_message_with_response("sync-message-match-index", r#"{"status": "shipped"}"#);
+
+    let result = match_response(handle, 1, r#"{"status": "shipped"}"#);
+    pactffi_free_pact_handle(pact_handle);
+
+    assert_eq!(result, None);
+  }
+
+  #[test]
+  fn pactffi_sync_message_match_response_contents_not_a_sync_message_returns_null() {
+    let pact_handle = PactHandle::new("sync-message-match-http", "sync-message-match-provider");
+    let description = CString::new("http interaction").unwrap();
+    let handle = pactffi_new_interaction(pact_handle, description.as_ptr());
+
+    let result = match_response(handle, 0, r#"{"status": "shipped"}"#);
+    pactffi_free_pact_handle(pact_handle);
+
+    assert_eq!(result, None);
   }
 
   #[test]
