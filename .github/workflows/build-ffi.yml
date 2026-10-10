@@ -61,6 +61,11 @@ jobs:
             shared-mime-info \
             gettext
 
+      - name: Check plugin log callback headers
+        if: runner.os == 'Linux'
+        working-directory: rust/pact_ffi
+        run: bash tests/check-plugin-log-callback.sh
+
       - name: Run C consumer examples
         working-directory: c/consumer
         run: just run

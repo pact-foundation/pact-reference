@@ -28,7 +28,7 @@ use tokio::time::sleep;
 use tracing::{debug, error};
 
 use crate::error::{catch_panic, set_error_msg};
-use crate::log::plugin_sink::{get_logs, register_callback, PluginLogCallback};
+use crate::log::plugin_sink::{get_logs, register_callback};
 use crate::mock_server::handles::{InteractionHandle, InteractionPart, PactHandle};
 use crate::string::if_null;
 use crate::{ffi_fn, safe_str, RUNTIME};
@@ -189,7 +189,16 @@ pub unsafe extern "C" fn pactffi_set_test_run_id(test_run_id: *const c_char) {
 ///
 /// `callback` must be a valid function pointer or NULL.
 #[no_mangle]
-pub extern "C" fn pactffi_register_plugin_log_callback(callback: Option<PluginLogCallback>) {
+pub extern "C" fn pactffi_register_plugin_log_callback(
+  // Spell out the function pointer so cbindgen does not emit an opaque Option<PluginLogCallback>.
+  callback: Option<unsafe extern "C" fn(
+    plugin_instance_id: *const c_char,
+    test_run_id: *const c_char,
+    level: *const c_char,
+    target: *const c_char,
+    message: *const c_char,
+  )>,
+) {
   crate::init_plugin_log_sink();
   register_callback(callback);
 }
