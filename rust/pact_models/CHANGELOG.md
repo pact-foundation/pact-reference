@@ -1,5 +1,11 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 1.3.16 - Body generator fix
+
+* fab0da69 - feat(models): apply body generators shallowest-path-first (#558) (Tien Vo Xuan, Fri Oct 9 05:23:29 2026 +0700)
+* 1ad011ba - fix(models): make plugin data merge idempotent and let the newer pact win (Ronald Holshausen, Fri Sep 25 10:39:57 2026 +1000)
+* f648e622 - chore(pact_models): bump version to 1.3.16 [skip ci] (Ronald Holshausen, Thu Sep 10 16:23:42 2026 +1000)
+
 # 1.3.15 - Bugfix Release
 
 * 7452d828 - fix: sort interactions before merge_join_by to prevent duplicates on pact merge #550 (Ronald Holshausen, Thu Sep 10 15:52:38 2026 +1000)
