@@ -2921,7 +2921,7 @@ dependencies = [
 
 [[package]]
 name = "pact_ffi"
-version = "0.5.10"
+version = "0.5.11"
 dependencies = [
  "ansi_term",
  "anyhow",
