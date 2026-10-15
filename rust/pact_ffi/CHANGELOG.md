@@ -1,5 +1,13 @@
 To generate the log, run `git log --pretty='* %h - %s (%an, %ad)' TAGNAME..HEAD .` replacing TAGNAME and HEAD as appropriate.
 
+# 0.5.11 - Feature Release
+
+* fa7d0c76 - fix(ffi): make plugin log callbacks callable from C (w3lld1, Sat Oct 10 07:50:16 2026 +0200)
+* 669bc567 - chore: Update pact-models to 1.3.16 (Ronald Holshausen, Sat Oct 10 11:55:46 2026 +1100)
+* cb9c197c - test(ffi): don't depend on engine-specific mismatch counts (Fabio Rodrigues, Thu Oct 8 14:31:19 2026 +0100)
+* 2a38f700 - feat(ffi): add pactffi_sync_message_match_response_contents (Fabio Rodrigues, Thu Oct 8 14:10:17 2026 +0100)
+* 7a0e6a5a - fix(ci): pin release Rust to 1.98.1 for correct FFI bool returns (Yousaf Nabi, Wed Oct 7 17:51:19 2026 +0100)
+
 # 0.5.10 - [Feature Release]
 
 * 83e9936c - feat(ffi): add pactffi_sync_message_generate_contents for sync message consumer tests (#555) (Fábio André Ramos Rodrigues, Mon Sep 28 00:44:23 2026 +0100)
