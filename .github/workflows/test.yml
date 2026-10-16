@@ -384,3 +384,13 @@ jobs:
         env:
           HEAD_REF: ${{ github.head_ref }}
         run: .github/scripts/release-deps.sh "${HEAD_REF#release/}"
+
+      # Builds the crate as crates.io will: against the released versions of
+      # its siblings, without the workspace's path and patch overrides. A
+      # crate using a sibling's unreleased code fails here, not after its tag.
+      - name: Package against released dependencies
+        if: ${{ !github.event.pull_request.draft }}
+        working-directory: rust
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: cargo package -p "${HEAD_REF#release/}" --locked

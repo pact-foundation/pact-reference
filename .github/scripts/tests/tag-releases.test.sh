@@ -5,6 +5,10 @@ script="$here/../tag-releases.sh"
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
+# A local crates.io index; the test crates' names exist on the real one.
+mkdir -p "$work/index/1"
+export CRATES_INDEX_URL="file://$work/index"
+
 git init -q --bare "$work/remote.git"
 git init -q "$work/repo"
 cd "$work/repo"
@@ -50,4 +54,14 @@ merge=$(git rev-parse HEAD)
 out=$("$script" ws/Cargo.toml origin)
 [[ "$out" == "a-v1.0.1" ]] || { echo "FAIL merge run: got <$out>"; exit 1; }
 [[ $(git rev-parse 'a-v1.0.1^{commit}') == "$merge" ]] || { echo "FAIL a-v1.0.1 is not on the merge commit"; exit 1; }
+
+# A version already on crates.io without a tag (a migration tag that was
+# never pushed) is not tagged: the tag would land on the wrong commit and
+# start a release of that version.
+echo '{"name":"b","vers":"1.2.0"}' > "$work/index/1/b"
+sed -i.bak 's/^version = "1.1.0"/version = "1.2.0"/' ws/b/Cargo.toml && rm ws/b/Cargo.toml.bak
+git commit -qam "chore(b): version already published"
+out=$("$script" ws/Cargo.toml origin 2>&1)
+git rev-parse -q --verify refs/tags/b-v1.2.0 >/dev/null && { echo "FAIL b-v1.2.0 was tagged"; exit 1; }
+grep -q '::warning::.*b 1.2.0' <<<"$out" || { echo "FAIL no warning: <$out>"; exit 1; }
 echo PASS
