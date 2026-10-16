@@ -101,6 +101,21 @@ jobs:
           echo "login=${APP_SLUG}[bot]" >> "$GITHUB_OUTPUT"
           echo "author=${APP_SLUG}[bot] <${id}+${APP_SLUG}[bot]@users.noreply.github.com>" >> "$GITHUB_OUTPUT"
 
+      # Between a release tag and its crates.io publish, release-plz would
+      # compare master against a registry that lacks the new version. Wait
+      # for the publish instead.
+      - name: Check for a release still being published
+        id: lag
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"$/\1/p' "rust/$CRATE/Cargo.toml" | head -1)
+          if git rev-parse -q --verify "refs/tags/$CRATE-v$version" >/dev/null \
+              && ! .github/scripts/crate-published.sh "$CRATE" "$version"; then
+            echo "pending=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::$CRATE $version is tagged but not yet on crates.io; skipping until it is."
+          else
+            echo "pending=false" >> "$GITHUB_OUTPUT"
+          fi
+
       # A release PR with commits from people is theirs: regenerating it
       # would force-push over their edits.
       - name: Check for manual edits
@@ -130,21 +145,21 @@ jobs:
           fi
 
       - name: Install Rust
-        if: steps.manual.outputs.edited == 'false'
+        if: steps.manual.outputs.edited == 'false' && steps.lag.outputs.pending == 'false'
         uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f  # v2.0.0
         with:
           build-warnings: warn
           cache: false
 
       - name: Install tools
-        if: steps.manual.outputs.edited == 'false'
+        if: steps.manual.outputs.edited == 'false' && steps.lag.outputs.pending == 'false'
         uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8  # v5.1.2
         with:
           install_args: aqua:release-plz/release-plz github:obi1kenobi/cargo-semver-checks
           cache_save: false
 
       - name: Update version and changelog
-        if: steps.manual.outputs.edited == 'false'
+        if: steps.manual.outputs.edited == 'false' && steps.lag.outputs.pending == 'false'
         run: >-
           release-plz update
           -p "$CRATE"
@@ -153,7 +168,7 @@ jobs:
 
       - name: Describe the release
         id: release
-        if: steps.manual.outputs.edited == 'false'
+        if: steps.manual.outputs.edited == 'false' && steps.lag.outputs.pending == 'false'
         run: |
           version=$(cargo metadata --format-version 1 --no-deps --manifest-path rust/Cargo.toml \
             | jq -r --arg c "$CRATE" '.packages[] | select(.name == $c) | .version')

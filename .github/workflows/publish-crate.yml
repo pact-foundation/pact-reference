@@ -40,6 +40,11 @@ jobs:
             echo "version=${tag##*-v}"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          ref: ${{ steps.crate.outputs.tag }}
+
       # A re-run after a later step failed must not fail on "already exists".
       - name: Check whether this version is already published
         id: published
@@ -47,19 +52,12 @@ jobs:
           NAME: ${{ steps.crate.outputs.name }}
           VERSION: ${{ steps.crate.outputs.version }}
         run: |
-          path="${NAME:0:2}/${NAME:2:2}/${NAME}"
-          if curl -fsS "https://index.crates.io/${path}" | jq -e --arg v "$VERSION" 'select(.vers == $v)' >/dev/null; then
+          if .github/scripts/crate-published.sh "$NAME" "$VERSION"; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
             echo "::notice::${NAME} ${VERSION} is already on crates.io; skipping."
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
-
-      - name: Checkout
-        if: steps.published.outputs.exists == 'false'
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-        with:
-          ref: ${{ steps.crate.outputs.tag }}
 
       - name: Install Rust
         if: steps.published.outputs.exists == 'false'
