@@ -53,8 +53,11 @@ jobs:
   # Run 'dist plan' (or host) to determine what tasks we need to do
   plan:
     # hand edit: drafts and non-release PRs skip the release build.
+    # TEMPORARY: the `ci/release-plz` line builds every artifact on the
+    # release-process PR itself, before it merges. Drop it before merge.
     if: >-
       github.event_name != 'pull_request'
+      || github.head_ref == 'ci/release-plz'
       || (!github.event.pull_request.draft
           && (github.head_ref == 'release/pact_ffi' || github.head_ref == 'release/pact_verifier_cli'))
     runs-on: "ubuntu-22.04"
