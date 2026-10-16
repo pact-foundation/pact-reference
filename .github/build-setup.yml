@@ -3,11 +3,13 @@
 # musl builds run cargo through dist-cargo.sh, which links pact_ffi's musl
 # CRT dynamically and keeps the cross-rs toolchain in charge of aarch64.
 # dist checks for cargo-zigbuild before an aarch64-musl build; the stub
-# satisfies that check and forwards to the same script.
+# satisfies that check and forwards to the same script. The cross-rs
+# images lack xz, which dist's installer needs.
 - name: Route musl builds through dist-cargo.sh
   if: contains(join(matrix.targets, ','), 'musl')
   shell: bash
   run: |
+    command -v xz >/dev/null || { apt-get update -q && apt-get install -y -q --no-install-recommends xz-utils; }
     script="$GITHUB_WORKSPACE/.github/scripts/dist-cargo.sh"
     bin="$RUNNER_TEMP/dist-cargo-bin"
     mkdir -p "$bin"
