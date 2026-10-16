@@ -1,0 +1,12 @@
+#:schema https://mise.jdx.dev/schema/mise.json
+
+# Development tooling. Rust itself is read from `rust-toolchain.toml`.
+[tools]
+"aqua:cargo-bins/cargo-binstall" = "1.23.0"
+"aqua:nextest-rs/nextest/cargo-nextest" = "0.9.148"
+"cargo:cbindgen" = "0.29.4"
+"github:taiki-e/cargo-hack" = "0.6.45"
+just = "1.59.0"
+
+[settings]
+idiomatic_version_file_enable_tools = ["rust"]
