@@ -28,6 +28,11 @@ use pact_models::sync_pact::RequestResponsePact;
 use pact_models::v4::http_parts::{HttpRequest, HttpResponse};
 use pact_models::v4::synch_http::SynchronousHttp;
 
+/// Installs the rustls crypto provider that a test's own HTTP clients need.
+fn install_crypto_provider() {
+  let _ = rustls::crypto::ring::default_provider().install_default();
+}
+
 /// This is supposed to be a doctest in mod, but it's breaking there, so
 /// we have an executable copy here.
 #[test_log::test(tokio::test)]
@@ -107,6 +112,7 @@ async fn mock_server_passing_validation() -> anyhow::Result<()> {
 
 #[test_log::test]
 fn mock_server_passing_validation_blocking() -> anyhow::Result<()> {
+  install_crypto_provider();
   let alice_service = PactBuilder::new_v4("BlockingConsumer", "Alice Service")
     .interaction("a retrieve Mallory request", "", |mut i| {
       i.given("there is some good mallory");
@@ -331,6 +337,7 @@ async fn post_json_with_incorrect_content_type() {
 // Issue #300
 #[test_log::test(tokio::test)]
 async fn multi_value_headers()     {
+  install_crypto_provider();
   let alice_service = PactBuilder::new_v4("Consumer", "Alice Service")
     .interaction("a retrieve Mallory request", "", |mut i| {
       i.given("there is some good mallory");

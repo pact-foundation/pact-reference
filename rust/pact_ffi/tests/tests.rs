@@ -89,6 +89,13 @@ use pact_models::matchingrules::{MatchingRule, RuleLogic};
 use pact_models::matchingrules::matchers_to_json;
 use pact_models::path_exp::DocPath;
 
+/// HTTP client for calling mock servers.
+/// It installs the rustls crypto provider, which the library installs only on its own code paths.
+fn http_client() -> Client {
+  let _ = rustls::crypto::ring::default_provider().install_default();
+  Client::default()
+}
+
 #[test]
 fn post_to_mock_server_with_mismatches() {
   // Refactored to use pactffi_create_mock_server_for_transport and pact handle API
@@ -112,7 +119,7 @@ fn post_to_mock_server_with_mismatches() {
   let port = pactffi_create_mock_server_for_transport(pact_handle, address.as_ptr(), 0, null(), null());
   expect!(port).to(be_greater_than(0));
 
-  let client = Client::default();
+  let client = http_client();
   client.post(format!("http://127.0.0.1:{}/path", port).as_str())
     .header(CONTENT_TYPE, "application/json")
     .body(r#"{"foo":"no-very-bar"}"#)
@@ -527,7 +534,7 @@ fn http_consumer_feature_test() {
   // Mock server has started, we can't now modify the pact
   expect!(pactffi_upon_receiving(interaction.clone(), description.as_ptr())).to(be_false());
 
-  let client = Client::default();
+  let client = http_client();
   let result = client.post(format!("http://127.0.0.1:{}/request/9999?foo=baz", port).as_str())
     .header("Content-Type", "application/json")
     .header("Authorization", "Bearer 9999")
@@ -596,7 +603,7 @@ fn http_xml_consumer_feature_test() {
   // Mock server has started, we can't now modify the pact
   expect!(pactffi_upon_receiving(interaction.clone(), description.as_ptr())).to(be_false());
 
-  let client = Client::default();
+  let client = http_client();
   let result = client.get(format!("http://127.0.0.1:{}/xml", port).as_str())
     .header("Accept", "application/xml")
     .send();
@@ -716,7 +723,7 @@ fn http_xml_consumer_with_examples_and_content_test() {
 
   expect!(port).to(be_greater_than(0));
 
-  let client = Client::default();
+  let client = http_client();
   let result = client.get(format!("http://127.0.0.1:{}/items", port).as_str())
     .header("Accept", "application/xml")
     .send();
@@ -827,7 +834,7 @@ fn pactffi_with_binary_file_feature_test(specification: PactSpecification, expec
   let port = pactffi_create_mock_server_for_transport(pact_handle.clone(), address.as_ptr(), 0, null(), null());
   expect!(port).to(be_greater_than(0));
 
-  let client = Client::default();
+  let client = http_client();
   let result = client.post(format!("http://127.0.0.1:{}/upload", port).as_str())
     .header("Content-Type", "image/gif")
     .body(buffer)
@@ -951,7 +958,7 @@ fn each_value_matcher() {
 
   expect!(port).to(be_greater_than(0));
 
-  let client = Client::default();
+  let client = http_client();
   let result = client.put(format!("http://127.0.0.1:{}/book", port).as_str())
     .header("Content-Type", "application/json")
     .body(r#"{"id1": "book100", "id2": "book2"}"#)
@@ -1019,7 +1026,7 @@ fn each_key_matcher() {
 
   expect!(port).to(be_greater_than(0));
 
-  let client = Client::default();
+  let client = http_client();
   let result = client.put(format!("http://127.0.0.1:{}/book", port).as_str())
     .header("Content-Type", "application/json")
     .body(r#"{"1": "foo","not valid": 1,"key": "value","key2": "value"}"#)
@@ -1103,7 +1110,7 @@ fn array_contains_matcher() {
 
   expect!(port).to(be_greater_than(0));
 
-  let client = Client::default();
+  let client = http_client();
   let result = client.get(format!("http://127.0.0.1:{}/book", port).as_str())
     .header("Content-Type", "application/json")
     .send();
@@ -1167,7 +1174,7 @@ fn multiple_query_values_with_regex_matcher() {
   let port = pactffi_create_mock_server_for_transport(pact_handle.clone(), address.as_ptr(), 0, null(), null());
   expect!(port).to(be_greater_than(0));
 
-  let client = Client::default();
+  let client = http_client();
   let result = client.get(format!("http://127.0.0.1:{}/request?foo=1&foo=443&foo=112", port).as_str())
     .send();
 
@@ -1869,7 +1876,7 @@ fn combined_each_key_and_each_value_matcher() {
 
   expect!(port).to(be_greater_than(0));
 
-  let client = Client::default();
+  let client = http_client();
   let json_body = json!({
     "results": {
       "KGK-9954356": {
@@ -1936,7 +1943,7 @@ fn matching_definition_expressions_matcher() {
 
   expect!(port).to(be_greater_than(0));
 
-  let client = Client::default();
+  let client = http_client();
   let json_body = json!({
     "results": {
       "KGK-9954356": {
@@ -1999,7 +2006,7 @@ fn returns_mock_server_logs() {
     let _ = rustls::crypto::ring::default_provider().install_default();
   }
 
-  let client = Client::default();
+  let client = http_client();
   client.post(format!("http://127.0.0.1:{}/path", port).as_str())
     .header(CONTENT_TYPE, "application/json")
     .body(r#"{"foo":"no-very-bar"}"#)
@@ -2095,7 +2102,7 @@ fn http_form_urlencoded_consumer_feature_test() {
   // Mock server has started, we can't now modify the pact
   expect!(pactffi_upon_receiving(interaction.clone(), description.as_ptr())).to(be_false());
 
-  let client = Client::default();
+  let client = http_client();
   let result = client.post(format!("http://127.0.0.1:{}/form-urlencoded", port).as_str())
     .header("Accept", "application/x-www-form-urlencoded")
     .header("Content-Type", "application/x-www-form-urlencoded")
@@ -2144,7 +2151,7 @@ fn time_matcher_in_query_parameters() {
   let port = pactffi_create_mock_server_for_transport(pact_handle.clone(), address.as_ptr(), 0, null(), null());
   expect!(port).to(be_greater_than(0));
 
-  let client = Client::default();
+  let client = http_client();
   let result = client.get(format!("http://127.0.0.1:{}/request?item=12:13", port).as_str())
     .send();
 
@@ -2193,7 +2200,7 @@ fn numeric_matcher_passing_test_sending_string_value() {
   let port = pactffi_create_mock_server_for_transport(pact_handle.clone(), address.as_ptr(), 0, null(), null());
   expect!(port).to(be_greater_than(0));
 
-  let client = Client::default();
+  let client = http_client();
   let _result = client.post(format!("http://127.0.0.1:{}/request", port).as_str())
     .header("Content-Type", "application/json")
     .body(r#"{"key2":"456","key1":"321.1"}"#)
@@ -2245,7 +2252,7 @@ fn include_matcher_in_query_parameters() {
   let port = pactffi_create_mock_server_for_transport(pact_handle.clone(), address.as_ptr(), 0, null(), null());
   expect!(port).to(be_greater_than(0));
 
-  let client = Client::default();
+  let client = http_client();
   let result = client.get(format!("http://127.0.0.1:{}/request?item=subway", port).as_str())
     .send();
 
@@ -2304,7 +2311,7 @@ fn mime_multipart() {
   let port = pactffi_create_mock_server_for_transport(pact_handle.clone(), address.as_ptr(), 0, null(), null());
   expect!(port).to(be_greater_than(0));
 
-  let client = Client::default();
+  let client = http_client();
   let form = reqwest::blocking::multipart::Form::new().text("baz", "bat");
   let result = client.post(format!("http://127.0.0.1:{}/formpost", port).as_str())
     .multipart(form)
@@ -2378,7 +2385,7 @@ fn date_matcher_in_response_body_with_generator_type() {
     ))
     .to(be_false());
 
-    let client = Client::default();
+    let client = http_client();
     let result = client
         .get(format!("http://127.0.0.1:{}/request", port).as_str())
         .send();
@@ -2455,7 +2462,7 @@ fn date_matcher_in_response_body_without_generator_type() {
     ))
     .to(be_false());
 
-    let client = Client::default();
+    let client = http_client();
     let result = client
         .get(format!("http://127.0.0.1:{}/request", port).as_str())
         .send();
@@ -2558,7 +2565,7 @@ fn mime_multipart_with_json_and_image() {
   expect!(port).to(be_greater_than(0));
 
   // Make actual request with different JSON values and the same JPEG structure
-  let client = Client::default();
+  let client = http_client();
   let form = reqwest::blocking::multipart::Form::new()
     .text("metadata", r#"{"name":"different","size":200}"#)
     .part(
