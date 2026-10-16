@@ -41,8 +41,9 @@ jobs:
       - name: Install release Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          # Rust 1.99 miscompiles C bool returns on Linux x86_64 (rust-lang/rust#163911).
-          toolchain: 1.98.1
+          # Must match rust-toolchain.toml, which overrides `rustup default`;
+          # `targets` only reaches the toolchain named here.
+          toolchain: 1.99.1
           targets: ${{ matrix.targets }}
 
       - name: Rust caching
