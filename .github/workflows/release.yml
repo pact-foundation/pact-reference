@@ -99,6 +99,9 @@ jobs:
           HEAD_REF: ${{ github.head_ref }}
         run: |
           crate=${HEAD_REF#release/}
+          # TEMPORARY: the release-process PR gates pact_ffi, the first
+          # release. Drop before merge.
+          [[ $HEAD_REF != ci/release-plz ]] || crate=pact_ffi
           version=$(sed -n 's/^version = "\(.*\)"$/\1/p' "rust/$crate/Cargo.toml" | head -1)
           echo "tag=$crate-v$version" >> "$GITHUB_OUTPUT"
       - id: plan
