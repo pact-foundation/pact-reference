@@ -312,14 +312,9 @@ jobs:
           install_args: github:taiki-e/cargo-hack
           cache_save: ${{ github.ref == 'refs/heads/master' }}
 
-      # pact-plugin-driver calls `Utc::now()` without enabling chrono's `clock`
-      # feature, so pact_matching fails to build with `plugins` alone. Check
-      # that combination again once the driver enables `clock`.
       - name: Check each feature
         working-directory: rust
-        run: |
-          cargo hack check --workspace --exclude pact_matching --each-feature --no-dev-deps
-          cargo hack check -p pact_matching --each-feature --no-dev-deps --exclude-features plugins
+        run: cargo hack check --workspace --each-feature --no-dev-deps
 
   wasm:
     name: WASM
