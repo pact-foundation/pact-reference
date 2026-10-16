@@ -10,3 +10,9 @@ just = "1.59.0"
 
 [settings]
 idiomatic_version_file_enable_tools = ["rust"]
+
+# Install cargo tools from prebuilt binaries only, falling back to
+# cargo-quickinstall's builds; never compile them from source.
+[settings.cargo]
+binstall_only = true
+binstall_quickinstall = true
