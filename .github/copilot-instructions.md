@@ -97,5 +97,5 @@ Key architectural boundaries:
 - `pact_models` is patched in `rust/Cargo.toml` via `[patch.crates-io]` to the local path. Changes there automatically affect workspace crates without publishing.
 - Logging and test output are centered on `tracing`/`tracing-subscriber`; tests commonly use `test-log` so `RUST_LOG=debug` is useful when debugging failures.
 - Common test helpers across crates are `rstest`, `expectest`, `hamcrest2`, and `pretty_assertions`. Follow those existing choices before introducing new test utilities.
-- CI exercises more than the default happy path: full workspace build/test, Linux `cargo clippy`, `cargo check --no-default-features`, WASM builds for `pact_models` and `pact_matching`, and a separate run with `PACT_MATCHING_ENGINE=v2`.
+- CI (`.github/workflows/test.yml`) runs on Linux, macOS and Windows: nextest plus doctests, the compatibility suite, the FFI C examples, a musl build, `cargo hack check --each-feature`, WASM builds for `pact_models` and `pact_matching`, Linux `cargo clippy`, and an advisory run with `PACT_MATCHING_ENGINE=v2`.
 - Commit messages follow Conventional Changelog style (`feat:`, `fix:`, `chore:`, `refactor:`).

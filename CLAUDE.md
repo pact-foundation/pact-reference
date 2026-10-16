@@ -24,6 +24,10 @@ cargo test
 # Run tests for a specific crate
 cargo test --package pact_models
 
+# Run tests with nextest, as CI does (install tools with `mise install`)
+cargo nextest run --workspace
+cargo test --workspace --doc   # nextest skips doctests
+
 # Run a single test by name (exact match)
 cargo test --package pact_models -- my_test_name --exact
 
@@ -90,6 +94,7 @@ pact_verifier_cli  pact_ffi      ← Standalone CLI / C FFI bindings
 
 - **Rust edition**: 2024 for all crates except `pact_ffi` (2021).
 - **Minimum Rust version**: 1.88.0 (required for edition 2024).
+- **Toolchain**: pinned in the root `rust-toolchain.toml`; auxiliary tools (nextest, cargo-hack, cbindgen, just) are pinned in `mise.toml`. cbindgen alone needs a nightly toolchain, for macro expansion.
 - **Async runtime**: `tokio` throughout (except WASM builds).
 - **Logging**: `tracing` / `tracing-subscriber` (not `log`).
 - **Test helpers**: `rstest`, `hamcrest2`, `expectest`, `pretty_assertions` are common dev-dependencies.
