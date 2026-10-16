@@ -22,6 +22,9 @@ strip = true
 opt-level = "z"
 codegen-units = 1
 
+[profile.dist]
+inherits = "release"
+
 # Release-speed optimisations with debug symbols retained — for flamegraph/perf.
 [profile.profiling]
 inherits = "release"
