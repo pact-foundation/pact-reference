@@ -353,7 +353,7 @@ mod tests {
 
   #[test]
   fn convert_request_to_native_request_test() {
-    let client = reqwest::Client::new();
+    let client = crate::tests::http_client();
     let base_url = "http://example.test:8080".to_string();
     let request = HttpRequest::default();
     let request_builder = create_native_request(&client, &base_url, &request, &hashmap!{}).unwrap().build().unwrap();
@@ -365,7 +365,7 @@ mod tests {
 
   #[test]
   fn convert_request_to_native_request_with_query_parameters() {
-    let client = reqwest::Client::new();
+    let client = crate::tests::http_client();
     let base_url = "http://example.test:8080".to_string();
     let request = HttpRequest {
       query: Some(hashmap!{
@@ -382,7 +382,7 @@ mod tests {
 
   #[test]
   fn convert_request_to_native_request_with_headers() {
-    let client = reqwest::Client::new();
+    let client = crate::tests::http_client();
     let base_url = "http://example.test:8080".to_string();
     let request = HttpRequest {
       headers: Some(hashmap! {
@@ -406,7 +406,7 @@ mod tests {
 
   #[test]
   fn convert_request_to_native_request_with_body() {
-    let client = reqwest::Client::new();
+    let client = crate::tests::http_client();
     let base_url = "http://example.test:8080".to_string();
     let request = HttpRequest {
       body: OptionalBody::from("body"),
@@ -421,7 +421,7 @@ mod tests {
 
   #[test]
   fn convert_request_to_native_request_with_null_body() {
-    let client = reqwest::Client::new();
+    let client = crate::tests::http_client();
     let base_url = "http://example.test:8080".to_string();
     let request = HttpRequest {
       body: OptionalBody::Null,
@@ -436,7 +436,7 @@ mod tests {
 
   #[test]
   fn convert_request_to_native_request_with_json_null_body() {
-    let client = reqwest::Client::new();
+    let client = crate::tests::http_client();
     let base_url = "http://example.test:8080".to_string();
     let request = HttpRequest {
       headers: Some(hashmap! {
@@ -493,7 +493,7 @@ mod tests {
 
   #[test]
   fn convert_request_to_native_request_with_custom_headers() {
-    let client = reqwest::Client::new();
+    let client = crate::tests::http_client();
     let base_url = "http://example.test:8080".to_string();
     let request = HttpRequest {
       headers: Some(hashmap! {
