@@ -1,0 +1,6 @@
+[profile.ci]
+# Report every failure in one run.
+fail-fast = false
+
+# Flag tests slower than 60 s; kill them after 5 periods.
+slow-timeout = { period = "60s", terminate-after = 5 }
