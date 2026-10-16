@@ -28,4 +28,26 @@ git -C "$work/remote.git" rev-parse -q --verify refs/tags/b-v1.0.0 >/dev/null ||
 
 out=$("$script" ws/Cargo.toml origin)
 [[ -z "$out" ]] || { echo "FAIL second run should tag nothing: got <$out>"; exit 1; }
+
+# A run can start after later commits land (GitHub drops pending runs in
+# a concurrency group). The tag still marks the commit that set the version.
+sed -i.bak 's/^version = "1.0.0"/version = "1.1.0"/' ws/b/Cargo.toml && rm ws/b/Cargo.toml.bak
+git commit -qam "chore(b): release v1.1.0"
+release=$(git rev-parse HEAD)
+echo later > later.txt && git add later.txt && git commit -qm "docs: later change"
+out=$("$script" ws/Cargo.toml origin)
+[[ "$out" == "b-v1.1.0" ]] || { echo "FAIL bump run: got <$out>"; exit 1; }
+[[ $(git rev-parse 'b-v1.1.0^{commit}') == "$release" ]] || { echo "FAIL b-v1.1.0 is not on the release commit"; exit 1; }
+
+# A release PR merged with a merge commit: the tag goes on the merge.
+git switch -qc release/a
+sed -i.bak 's/^version = "1.0.0"/version = "1.0.1"/' ws/a/Cargo.toml && rm ws/a/Cargo.toml.bak
+git commit -qam "chore(a): release v1.0.1"
+git switch -q -
+echo more > more.txt && git add more.txt && git commit -qm "docs: concurrent change"
+git merge -q --no-ff -m "Merge release/a" release/a
+merge=$(git rev-parse HEAD)
+out=$("$script" ws/Cargo.toml origin)
+[[ "$out" == "a-v1.0.1" ]] || { echo "FAIL merge run: got <$out>"; exit 1; }
+[[ $(git rev-parse 'a-v1.0.1^{commit}') == "$merge" ]] || { echo "FAIL a-v1.0.1 is not on the merge commit"; exit 1; }
 echo PASS
