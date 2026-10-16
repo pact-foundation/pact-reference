@@ -55,6 +55,7 @@ uuid = { version = "1.24.0", features = ["v4"] }
 fs2 = "0.4.3"
 onig = { version = "6.5.1", default-features = false }
 reqwest = { version = "0.13.4", default-features = false, features = ["rustls-no-provider", "blocking", "json"] }
+rustls = { version = "0.23.43", default-features = false, features = ["ring", "logging", "tls12", "std"] }
 
 [dev-dependencies]
 expectest = "0.12.0"
