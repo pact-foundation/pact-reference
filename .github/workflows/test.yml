@@ -1,0 +1,362 @@
+---
+name: Test
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  FORCE_COLOR: '1'
+  NEXTEST_PROFILE: ci
+  PACT_DO_NOT_TRACK: 'true'
+
+jobs:
+  # MARK: Sentinel
+
+  complete:
+    name: CI complete
+    if: always()
+    needs:
+      - test
+      - compat
+      - ffi
+      - musl
+      - features
+      - wasm
+      - clippy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any job failed
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
+
+  # MARK: Cross-platform
+
+  test:
+    name: Test (${{ matrix.os }})
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      # Windows builds are dominated by filesystem overhead; ReFS Dev Drives
+      # avoid most of it.
+      - name: Set up Dev Drive
+        if: runner.os == 'Windows'
+        uses: samypr100/setup-dev-drive@562171fe8df7401fdf582d766cd3b6ab80d5b1a0  # v4.1.0
+        with:
+          drive-size: 12GB
+          workspace-copy: true
+          env-mapping: |
+            CARGO_HOME,{{ DEV_DRIVE }}/.cargo
+            RUSTUP_HOME,{{ DEV_DRIVE }}/.rustup
+
+      - name: Resolve workspace root
+        shell: bash
+        run: echo "WORKSPACE_ROOT=${DEV_DRIVE_WORKSPACE:-$GITHUB_WORKSPACE}" >> "$GITHUB_ENV"
+
+      - name: Install macOS dependencies
+        if: runner.os == 'macOS'
+        run: brew install shared-mime-info
+
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f  # v2.0.0
+        with:
+          build-warnings: warn
+          cache-workspaces: ${{ env.WORKSPACE_ROOT }}/rust -> target
+          cache-save-if: ${{ github.ref == 'refs/heads/master' }}
+
+      - name: Install tools
+        uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8  # v5.1.2
+        with:
+          working_directory: ${{ env.WORKSPACE_ROOT }}
+          install_args: aqua:nextest-rs/nextest/cargo-nextest
+          cache_save: ${{ github.ref == 'refs/heads/master' }}
+
+      - name: Run tests
+        working-directory: ${{ env.WORKSPACE_ROOT }}/rust
+        env:
+          RUST_LOG: debug
+        run: cargo nextest run --workspace
+
+      # nextest does not run doctests.
+      - name: Run doctests
+        working-directory: ${{ env.WORKSPACE_ROOT }}/rust
+        run: cargo test --workspace --doc
+
+      - name: Run mock server log test
+        working-directory: ${{ env.WORKSPACE_ROOT }}/rust
+        run: cargo nextest run -p pact_ffi --run-ignored only -E 'test(=returns_mock_server_logs)'
+
+      - name: Run tests with the V2 matching engine
+        if: runner.os == 'Linux'
+        continue-on-error: true
+        working-directory: ${{ env.WORKSPACE_ROOT }}/rust
+        env:
+          RUST_LOG: debug
+          PACT_MATCHING_ENGINE: v2
+          PACT_V2_MATCHING_LOG_EXECUTED_PLAN: '1'
+        run: cargo nextest run --workspace
+
+  compat:
+    name: Compatibility suite (${{ matrix.os }})
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Set up Dev Drive
+        if: runner.os == 'Windows'
+        uses: samypr100/setup-dev-drive@562171fe8df7401fdf582d766cd3b6ab80d5b1a0  # v4.1.0
+        with:
+          drive-size: 12GB
+          workspace-copy: true
+          env-mapping: |
+            CARGO_HOME,{{ DEV_DRIVE }}/.cargo
+            RUSTUP_HOME,{{ DEV_DRIVE }}/.rustup
+
+      - name: Resolve workspace root
+        shell: bash
+        run: echo "WORKSPACE_ROOT=${DEV_DRIVE_WORKSPACE:-$GITHUB_WORKSPACE}" >> "$GITHUB_ENV"
+
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f  # v2.0.0
+        with:
+          build-warnings: warn
+          cache-workspaces: ${{ env.WORKSPACE_ROOT }}/compatibility-suite -> target
+          cache-save-if: ${{ github.ref == 'refs/heads/master' }}
+
+      # The cucumber binaries use `harness = false`, which nextest cannot drive.
+      - name: Run cucumber suites
+        working-directory: ${{ env.WORKSPACE_ROOT }}/compatibility-suite
+        run: cargo test
+
+  ffi:
+    name: FFI (${{ matrix.os }})
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Set up Dev Drive
+        if: runner.os == 'Windows'
+        uses: samypr100/setup-dev-drive@562171fe8df7401fdf582d766cd3b6ab80d5b1a0  # v4.1.0
+        with:
+          drive-size: 12GB
+          workspace-copy: true
+          env-mapping: |
+            CARGO_HOME,{{ DEV_DRIVE }}/.cargo
+            RUSTUP_HOME,{{ DEV_DRIVE }}/.rustup
+
+      - name: Resolve workspace root
+        run: echo "WORKSPACE_ROOT=${DEV_DRIVE_WORKSPACE:-$GITHUB_WORKSPACE}" >> "$GITHUB_ENV"
+
+      - name: Install macOS dependencies
+        if: runner.os == 'macOS'
+        run: brew install shared-mime-info gettext
+
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f  # v2.0.0
+        with:
+          build-warnings: warn
+          cache-workspaces: ${{ env.WORKSPACE_ROOT }}/rust -> target
+          cache-save-if: ${{ github.ref == 'refs/heads/master' }}
+
+      # cbindgen's macro expansion passes `-Zunpretty=expanded`, which only
+      # nightly accepts. The library itself builds with the pinned toolchain.
+      - name: Install nightly for cbindgen
+        run: rustup toolchain install nightly --profile minimal
+
+      - name: Install tools
+        uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8  # v5.1.2
+        with:
+          working_directory: ${{ env.WORKSPACE_ROOT }}
+          install_args: cargo:cbindgen just
+          cache_save: ${{ github.ref == 'refs/heads/master' }}
+
+      - name: Install Conan
+        uses: conan-io/setup-conan@ed3942a6883243f4af84e13e49c972f9440fa1c2  # v1.4.0
+
+      - name: Restore Conan packages
+        id: conan-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: ~/.conan2/p
+          key: conan-${{ runner.os }}-${{ hashFiles('c/*/conanfile.txt') }}
+          restore-keys: conan-${{ runner.os }}-
+
+      - name: Check plugin log callback headers
+        if: runner.os == 'Linux'
+        working-directory: ${{ env.WORKSPACE_ROOT }}/rust/pact_ffi
+        run: bash tests/check-plugin-log-callback.sh
+
+      - name: Build pact_ffi and run its examples
+        working-directory: ${{ env.WORKSPACE_ROOT }}
+        run: .github/scripts/ffi-examples.sh
+
+      - name: Run C consumer example
+        working-directory: ${{ env.WORKSPACE_ROOT }}/c/consumer
+        run: PACT_FFI_PREBUILT_DIR="$WORKSPACE_ROOT/rust/pact_ffi/build/install" just run
+
+      - name: Run C provider example
+        working-directory: ${{ env.WORKSPACE_ROOT }}/c/provider
+        run: PACT_FFI_PREBUILT_DIR="$WORKSPACE_ROOT/rust/pact_ffi/build/install" just run
+
+      - name: Save Conan packages
+        if: github.ref == 'refs/heads/master' && steps.conan-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: ~/.conan2/p
+          key: conan-${{ runner.os }}-${{ hashFiles('c/*/conanfile.txt') }}
+
+  # MARK: Linux-only
+
+  musl:
+    name: Test (musl)
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    # The image's own toolchain is unused; rustup installs the pinned one
+    # from rust-toolchain.toml on first use.
+    container: rust:alpine
+    steps:
+      - name: Install build dependencies
+        run: >-
+          apk add --no-cache bash git musl-dev openssl-dev shared-mime-info
+          protobuf protobuf-dev tzdata zlib-dev
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f  # v2.0.0
+        with:
+          build-warnings: warn
+          components: rustfmt
+          cache-workspaces: rust -> target
+          cache-save-if: ${{ github.ref == 'refs/heads/master' }}
+
+      - name: Build and test
+        working-directory: rust
+        env:
+          TZ: UTC
+        run: |
+          cargo build
+          cargo test
+
+  features:
+    name: Feature combinations
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f  # v2.0.0
+        with:
+          build-warnings: warn
+          cache-workspaces: rust -> target
+          cache-save-if: ${{ github.ref == 'refs/heads/master' }}
+
+      - name: Install tools
+        uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8  # v5.1.2
+        with:
+          install_args: github:taiki-e/cargo-hack
+          cache_save: ${{ github.ref == 'refs/heads/master' }}
+
+      # pact-plugin-driver calls `Utc::now()` without enabling chrono's `clock`
+      # feature, so pact_matching fails to build with `plugins` alone. Check
+      # that combination again once the driver enables `clock`.
+      - name: Check each feature
+        working-directory: rust
+        run: |
+          cargo hack check --workspace --exclude pact_matching --each-feature --no-dev-deps
+          cargo hack check -p pact_matching --each-feature --no-dev-deps --exclude-features plugins
+
+  wasm:
+    name: WASM
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f  # v2.0.0
+        with:
+          build-warnings: warn
+          target: wasm32-wasip2
+          cache-workspaces: rust -> target
+          cache-save-if: ${{ github.ref == 'refs/heads/master' }}
+
+      - name: Build pact_models
+        working-directory: rust/pact_models
+        run: cargo build --target wasm32-wasip2
+
+      - name: Build pact_matching
+        working-directory: rust/pact_matching
+        run: cargo build --target wasm32-wasip2
+
+  clippy:
+    name: Clippy
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f  # v2.0.0
+        with:
+          build-warnings: warn
+          components: clippy
+          cache-workspaces: rust -> target
+          cache-save-if: ${{ github.ref == 'refs/heads/master' }}
+
+      # No `-D warnings`: only deny-by-default lints fail the job.
+      - name: Run clippy
+        working-directory: rust
+        run: cargo clippy
