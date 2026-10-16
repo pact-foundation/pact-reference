@@ -41,6 +41,13 @@ use crate::VERIFIER_VERSION;
 
 use super::{execute_state_change, filter_consumers, filter_interaction, FilterInfo};
 
+/// HTTP client for tests that call servers directly.
+/// It installs the rustls crypto provider, which production code installs before building its own clients.
+pub(crate) fn http_client() -> Client {
+  let _ = rustls::crypto::ring::default_provider().install_default();
+  Client::new()
+}
+
 #[test]
 fn if_no_interaction_filter_is_defined_returns_true() {
   let interaction = RequestResponseInteraction::default();

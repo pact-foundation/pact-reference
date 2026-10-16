@@ -268,7 +268,7 @@ mod tests {
     })
     .await;
 
-    let client = reqwest::Client::new();
+    let client = crate::tests::http_client();
     let request = client.get(&url);
     // retries=3: attempt 1 → 429, attempt 2 → 429, attempt 3 → 200
     let result = with_retries(3, request).await;
@@ -281,7 +281,7 @@ mod tests {
   async fn with_retries_does_not_retry_404_responses() {
     let (url, call_count) = spawn_server(|_| axum::http::StatusCode::NOT_FOUND.into_response()).await;
 
-    let client = reqwest::Client::new();
+    let client = crate::tests::http_client();
     let request = client.get(&url);
     let result = with_retries(3, request).await;
     // 404 is not retryable — should get a response after exactly 1 call
@@ -295,7 +295,7 @@ mod tests {
     let (url, call_count) =
       spawn_server(|_| axum::http::StatusCode::TOO_MANY_REQUESTS.into_response()).await;
 
-    let client = reqwest::Client::new();
+    let client = crate::tests::http_client();
     let request = client.get(&url);
     // retries=0 must not panic and must send the request exactly once
     let result = with_retries(0, request).await;
@@ -321,7 +321,7 @@ mod tests {
     })
     .await;
 
-    let client = reqwest::Client::new();
+    let client = crate::tests::http_client();
     let request = client.get(&url);
     let result = with_retries(3, request).await;
     assert!(result.is_ok());
