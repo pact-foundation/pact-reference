@@ -30,6 +30,12 @@ impl HttpAuth {
 
 /// Fetches the JSON from a URL
 pub fn fetch_json_from_url(url: &String, auth: &Option<HttpAuth>) -> anyhow::Result<(String, Value)> {
+  if rustls::crypto::CryptoProvider::get_default().is_none() {
+    if let Err(_) = rustls::crypto::ring::default_provider().install_default() {
+      tracing::warn!("failed to installed the default crypto provider");
+    }
+  }
+
   let client = Client::builder()
     .user_agent(concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")))
     .build()
@@ -80,5 +86,18 @@ impl Display for HttpAuth {
 impl Default for HttpAuth {
   fn default() -> Self {
     HttpAuth::User("".to_string(), None)
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::fetch_json_from_url;
+
+  #[test]
+  fn fetch_json_from_url_installs_rustls_provider() {
+    let result = fetch_json_from_url(&"http://127.0.0.1:0".to_string(), &None);
+
+    assert!(result.is_err());
+    assert!(rustls::crypto::CryptoProvider::get_default().is_some());
   }
 }
