@@ -4,11 +4,18 @@
 # name with an `openssl dgst -r`-style `.sha256` file.
 #
 # Usage: legacy-artifacts.sh <tag> <out-dir>
-# Needs GH_TOKEN and GITHUB_REPOSITORY, and LLVM for the Windows import
-# libraries (see import-lib.sh).
+# Needs GH_TOKEN and GITHUB_REPOSITORY, LLVM for the Windows import
+# libraries (see import-lib.sh), and readelf.
+#
+# Linux binaries must link the C library downstream installers expect (see
+# check-linkage.sh); a mismatch fails the job before anything is uploaded.
 set -euo pipefail
 
 scripts=$(cd "$(dirname "$0")" && pwd)
+# The oldest glibc among supported major distributions: RHEL 8 and its
+# rebuilds. dist-workspace.toml builds linux-gnu in manylinux_2_28 to match.
+GLIBC_FLOOR=2.28
+
 tag=$1
 out=$(mkdir -p "$2" && cd "$2" && pwd)
 package=${tag%-v*}
@@ -52,7 +59,9 @@ case "$package" in
             aarch64-pc-windows-msvc:pact-verifier.exe:pact-verifier-windows-aarch64.exe.gz
         do
             IFS=: read -r target file name <<<"$entry"
-            gzip_and_sum "$(extract "$target" "$file")" "$name"
+            path=$(extract "$target" "$file")
+            [[ $target != *linux-musl ]] || "$scripts/check-linkage.sh" "$path" musl
+            gzip_and_sum "$path" "$name"
         done
         ;;
     pact_ffi)
@@ -63,7 +72,12 @@ case "$package" in
             aarch64-unknown-linux-musl:linux-aarch64-musl
         do
             IFS=: read -r target suffix <<<"$entry"
-            gzip_and_sum "$(extract "$target" libpact_ffi.so)" "libpact_ffi-$suffix.so.gz"
+            so=$(extract "$target" libpact_ffi.so)
+            case "$target" in
+                *-musl) "$scripts/check-linkage.sh" "$so" musl ;;
+                *) "$scripts/check-linkage.sh" "$so" gnu "$GLIBC_FLOOR" ;;
+            esac
+            gzip_and_sum "$so" "libpact_ffi-$suffix.so.gz"
             gzip_and_sum "$(extract "$target" libpact_ffi.a)" "libpact_ffi-$suffix.a.gz"
         done
         for entry in x86_64-apple-darwin:macos-x86_64 aarch64-apple-darwin:macos-aarch64; do
