@@ -104,17 +104,20 @@ jobs:
           RUST_LOG: debug
         run: cargo nextest run --workspace
 
-      # nextest does not run doctests.
+      # nextest does not run doctests. This step and the ones below run even
+      # when nextest fails, so one failure does not hide the rest.
       - name: Run doctests
+        if: ${{ !cancelled() }}
         working-directory: ${{ env.WORKSPACE_ROOT }}/rust
-        run: cargo test --workspace --doc
+        run: cargo test --workspace --doc --no-fail-fast
 
       - name: Run mock server log test
+        if: ${{ !cancelled() }}
         working-directory: ${{ env.WORKSPACE_ROOT }}/rust
         run: cargo nextest run -p pact_ffi --run-ignored only -E 'test(=returns_mock_server_logs)'
 
       - name: Run tests with the V2 matching engine
-        if: runner.os == 'Linux'
+        if: ${{ !cancelled() && runner.os == 'Linux' }}
         continue-on-error: true
         working-directory: ${{ env.WORKSPACE_ROOT }}/rust
         env:
@@ -162,7 +165,7 @@ jobs:
       # The cucumber binaries use `harness = false`, which nextest cannot drive.
       - name: Run cucumber suites
         working-directory: ${{ env.WORKSPACE_ROOT }}/compatibility-suite
-        run: cargo test
+        run: cargo test --no-fail-fast
 
   ffi:
     name: FFI (${{ matrix.os }})
@@ -266,7 +269,7 @@ jobs:
       - name: Install build dependencies
         run: >-
           apk add --no-cache bash git musl-dev openssl-dev shared-mime-info
-          protobuf protobuf-dev tzdata zlib-dev
+          protobuf protobuf-dev tar tzdata zlib-dev
 
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -285,7 +288,7 @@ jobs:
           TZ: UTC
         run: |
           cargo build
-          cargo test
+          cargo test --no-fail-fast
 
   features:
     name: Feature combinations
