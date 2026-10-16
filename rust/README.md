@@ -94,9 +94,7 @@ This will compile all the libraries and put the generated files in `rust/target/
 
 ### Releasing
 
-The released libraries for each module are built by a GH action that attaches the libraries to the GH release for each
-crate. To release a crate, run the `release.groovy` script in the crate directory. This will guide you through the
-release process for the crate. Then create a GH release using the tag and changelog created by the script.
+See [RELEASING.md](../RELEASING.md).
 
 ## Contributing
 

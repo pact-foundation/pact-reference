@@ -1,6 +1,0 @@
-FROM rust:stretch
-
-RUN rustup install stable && rustup default stable
-RUN rustup component add rustfmt
-
-ENTRYPOINT ["/bin/bash"]
