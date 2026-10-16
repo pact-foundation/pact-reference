@@ -182,6 +182,8 @@ pub unsafe extern "C" fn pactffi_set_test_run_id(test_run_id: *const c_char) {
 /// must be thread-safe. It must also not call back into pact_ffi from within the callback.
 ///
 /// Registering a new callback replaces any previously registered one. Pass NULL to deregister.
+/// Once this function returns, the previous callback is not running on any thread and is not
+/// invoked again, so the caller may release it.
 /// Registering installs the plugin log sink, so plugin log entries are captured from this point
 /// whether or not `pactffi_init` was called.
 ///
@@ -522,7 +524,7 @@ mod tests {
   use pact_models::{matchingrules, matchingrules_list};
   use pact_plugin_driver::content::InteractionContents;
 
-  use crate::log::plugin_sink::callback_cell;
+  use crate::log::plugin_sink::{callback_cell, TEST_LOCK};
   use crate::mock_server::handles::{InteractionHandle, InteractionPart, PactHandle};
 
   use super::{pactffi_interaction_contents, pactffi_register_plugin_log_callback, setup_sync_message_contents};
@@ -533,6 +535,7 @@ mod tests {
 
   #[test]
   fn register_plugin_log_callback_with_null_deregisters() {
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
     pactffi_register_plugin_log_callback(Some(noop_plugin_log));
     expect!(callback_cell().lock().unwrap().is_some()).to(be_true());
     pactffi_register_plugin_log_callback(None);

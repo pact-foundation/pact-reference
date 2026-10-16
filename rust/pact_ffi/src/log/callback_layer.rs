@@ -2,7 +2,7 @@
 
 use std::ffi::CString;
 use std::fmt::Write;
-use std::sync::{Mutex, OnceLock};
+use std::sync::{OnceLock, RwLock};
 
 use libc::c_char;
 use pact_mock_server::LOG_ID;
@@ -36,31 +36,36 @@ struct CallbackState {
   level: LevelFilter,
 }
 
-static STATE: OnceLock<Mutex<CallbackState>> = OnceLock::new();
+// `CallbackLayer` holds a read guard while the callback runs, so taking the write guard waits
+// for every invocation in progress. A callback which calls back into pact_ffi can deadlock.
+static STATE: OnceLock<RwLock<CallbackState>> = OnceLock::new();
 
-fn state() -> &'static Mutex<CallbackState> {
-  STATE.get_or_init(|| Mutex::new(CallbackState { callback: None, level: LevelFilter::OFF }))
+fn state() -> &'static RwLock<CallbackState> {
+  STATE.get_or_init(|| RwLock::new(CallbackState { callback: None, level: LevelFilter::OFF }))
 }
 
 /// Register the C callback, or deregister it with `None`.
+///
+/// Returns once no thread is running the previously registered callback, so the caller may
+/// release it.
 pub(crate) fn register_callback(callback: Option<LogCallback>) {
-  state().lock().unwrap().callback = callback;
+  state().write().unwrap().callback = callback;
 }
 
 /// Set the most verbose level forwarded to the callback.
 pub(crate) fn set_callback_level(level: LevelFilter) {
-  state().lock().unwrap().level = level;
+  state().write().unwrap().level = level;
 }
 
 /// The most verbose level forwarded to the callback.
 pub(crate) fn callback_level() -> LevelFilter {
-  state().lock().unwrap().level
+  state().read().unwrap().level
 }
 
 /// Serialises tests which mutate the global callback state, as the test harness runs them
 /// concurrently.
 #[cfg(test)]
-pub(crate) static TEST_LOCK: Mutex<()> = Mutex::new(());
+pub(crate) static TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 /// Collects the `message` field and any other fields of an event into a single string.
 #[derive(Default)]
@@ -110,14 +115,10 @@ pub(crate) struct CallbackLayer;
 
 impl<S: Subscriber> Layer<S> for CallbackLayer {
   fn on_event(&self, event: &Event<'_>, _ctx: Context<'_, S>) {
-    // Copy the state out so the lock is not held while the callback runs.
-    let (callback, level) = {
-      let state = state().lock().unwrap();
-      (state.callback, state.level)
-    };
-    let Some(callback) = callback else { return };
+    let state = state().read().unwrap();
+    let Some(callback) = state.callback else { return };
     let metadata = event.metadata();
-    if level < *metadata.level() {
+    if state.level < *metadata.level() {
       return;
     }
 
@@ -145,7 +146,10 @@ impl<S: Subscriber> Layer<S> for CallbackLayer {
 #[cfg(test)]
 mod tests {
   use std::ffi::CStr;
+  use std::sync::atomic::{AtomicBool, Ordering};
   use std::sync::Mutex;
+  use std::thread;
+  use std::time::Duration;
 
   use expectest::prelude::*;
   use tracing_subscriber::layer::SubscriberExt;
@@ -189,6 +193,46 @@ mod tests {
     expect!(level.as_str()).to(be_equal_to("INFO"));
     expect!(target.as_str()).to(be_equal_to("pact_ffi::tests"));
     expect!(message.as_str()).to(be_equal_to("hello world answer=42"));
+  }
+
+  static ENTERED: AtomicBool = AtomicBool::new(false);
+  static RELEASED: AtomicBool = AtomicBool::new(false);
+  static FINISHED: AtomicBool = AtomicBool::new(false);
+
+  unsafe extern "C" fn blocking(
+    _: *const c_char, _: *const c_char, _: *const c_char, _: *const c_char, _: *const c_char,
+  ) {
+    ENTERED.store(true, Ordering::SeqCst);
+    while !RELEASED.load(Ordering::SeqCst) {
+      thread::sleep(Duration::from_millis(1));
+    }
+    FINISHED.store(true, Ordering::SeqCst);
+  }
+
+  #[test]
+  fn deregistering_waits_for_a_running_callback() {
+    let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    register_callback(Some(blocking));
+    set_callback_level(LevelFilter::INFO);
+
+    let emitter = thread::spawn(|| {
+      let subscriber = tracing_subscriber::registry().with(CallbackLayer);
+      tracing::subscriber::with_default(subscriber, || tracing::info!("blocked"));
+    });
+    while !ENTERED.load(Ordering::SeqCst) {
+      thread::sleep(Duration::from_millis(1));
+    }
+    let deregister = thread::spawn(|| {
+      register_callback(None);
+      FINISHED.load(Ordering::SeqCst)
+    });
+    thread::sleep(Duration::from_millis(50));
+    RELEASED.store(true, Ordering::SeqCst);
+
+    let finished_before_return = deregister.join().unwrap();
+    emitter.join().unwrap();
+    set_callback_level(LevelFilter::OFF);
+    expect!(finished_before_return).to(be_true());
   }
 
   #[test]
