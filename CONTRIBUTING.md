@@ -64,12 +64,4 @@ Plain `cargo test` also runs the whole suite, doctests included.
 
 ### Releasing
 
-The released libraries for each module are built by a GH action that attaches the libraries to the GH release for each
-crate. To release a crate, run the `release.groovy` script in the crate directory. This will guide you through the
-release process for the crate. Then create a GH release using the tag and changelog created by the script.
-
-To be able to release a component, you need to:
-1. Have an account on [crates.io](crates.io). Go to that site, and select "Log in with GitHub". It will auto-create your user account.
-2. Get a maintainer to invite you to the crate for the component.
-3. Accept the invite on crates.io. This will allow you to release the Rust crate to crates.io.
-4. 
+See [RELEASING.md](RELEASING.md).

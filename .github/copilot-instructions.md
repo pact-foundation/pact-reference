@@ -53,15 +53,6 @@ cargo test --test v3_message
 cargo test --test v4
 ```
 
-Cross-platform MUSL builds use the project Docker image:
-
-```bash
-docker run --rm --user "$(id -u)":"$(id -g)" \
-  -v $(pwd):/workspace -w /workspace/rust \
-  -t -e TZ=UTC pactfoundation/rust-musl-build \
-  ./scripts/ci-musl-build.sh
-```
-
 ## High-level architecture
 
 This repository is the Rust reference implementation of Pact and exposes the same core through Rust crates, a C-compatible FFI layer, and a verifier CLI.
