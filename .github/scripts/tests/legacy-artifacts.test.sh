@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Runs legacy-artifacts.sh against archives in dist's layout, served by a
 # stub `gh`, and checks the output names against the assets of the last
-# pre-dist releases. Needs network access (for real Windows DLLs) and
-# LLVM (see import-lib.sh).
+# pre-dist releases. Needs network access (for the released binaries it
+# repackages), LLVM (see import-lib.sh) and readelf.
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 script="$here/../legacy-artifacts.sh"
@@ -44,10 +44,18 @@ pack() {
     fi
 }
 
-base=https://github.com/pact-foundation/pact-reference/releases/download/libpact_ffi-v0.5.11
+# Real binaries where the script inspects them: Windows DLLs for the import
+# libraries, Linux libraries and executables for the linkage checks.
+releases=https://github.com/pact-foundation/pact-reference/releases/download
+fetch() {
+    mkdir -p "$(dirname "$2")"
+    curl -fsSL "$releases/$1" | gunzip > "$2"
+}
 for arch in x86_64 aarch64; do
-    mkdir -p "$work/stage/pact_ffi-$arch-pc-windows-msvc"
-    curl -fsSL "$base/pact_ffi-windows-$arch.dll.gz" | gunzip > "$work/stage/pact_ffi-$arch-pc-windows-msvc/pact_ffi.dll"
+    fetch "libpact_ffi-v0.5.11/pact_ffi-windows-$arch.dll.gz" "$work/stage/pact_ffi-$arch-pc-windows-msvc/pact_ffi.dll"
+    fetch "libpact_ffi-v0.5.11/libpact_ffi-linux-$arch.so.gz" "$work/stage/pact_ffi-$arch-unknown-linux-gnu/libpact_ffi.so"
+    fetch "libpact_ffi-v0.5.11/libpact_ffi-linux-$arch-musl.so.gz" "$work/stage/pact_ffi-$arch-unknown-linux-musl/libpact_ffi.so"
+    fetch "pact_verifier_cli-v1.3.5/pact-verifier-linux-$arch.gz" "$work/stage/pact_verifier_cli-$arch-unknown-linux-musl/pact-verifier"
 done
 
 for t in x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu x86_64-unknown-linux-musl aarch64-unknown-linux-musl; do
@@ -83,6 +91,15 @@ done
 out="$work/out-pact_verifier_cli-v1.4.0"
 read -r sum name < "$out/pact-verifier-linux-x86_64.gz.sha256"
 [[ $name == "*pact-verifier-linux-x86_64.gz" && ${#sum} == 64 ]] || { echo "FAIL checksum format: $sum $name"; exit 1; }
-[[ $(gunzip -c "$out/pact-verifier-linux-x86_64.gz") == "pact_verifier_cli x86_64-unknown-linux-musl pact-verifier" ]] \
+cmp -s <(gunzip -c "$out/pact-verifier-linux-x86_64.gz") "$work/stage/pact_verifier_cli-x86_64-unknown-linux-musl/pact-verifier" \
     || { echo "FAIL Linux CLI asset is not the musl build"; exit 1; }
+
+# A glibc-linked musl library must stop the job.
+cp "$work/stage/pact_ffi-x86_64-unknown-linux-gnu/libpact_ffi.so" "$work/stage/pact_ffi-x86_64-unknown-linux-musl/libpact_ffi.so"
+rm "$fixtures/pact_ffi-x86_64-unknown-linux-musl.tar.xz"
+pack pact_ffi x86_64-unknown-linux-musl libpact_ffi.so libpact_ffi.a
+if "$script" pact_ffi-v0.5.12 "$work/out-bad" >/dev/null 2>&1; then
+    echo "FAIL a glibc-linked musl library was accepted"
+    exit 1
+fi
 echo PASS
