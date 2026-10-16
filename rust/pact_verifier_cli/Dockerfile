@@ -1,17 +1,18 @@
-ARG ARCH=
-FROM rust:1-alpine3.21 AS builder
-ARG BIN_ARCH=x86_64
-ARG VERSION=1.1.1
+# Packages the static musl pact-verifier from a dist release.
+FROM alpine:3.22 AS fetch
+ARG VERSION
+ARG TARGETARCH
+RUN apk add --no-cache curl xz
+RUN case "$TARGETARCH" in \
+        amd64) target=x86_64-unknown-linux-musl ;; \
+        arm64) target=aarch64-unknown-linux-musl ;; \
+        *) echo "unsupported architecture: $TARGETARCH" >&2; exit 1 ;; \
+    esac \
+    && curl -fsSL "https://github.com/pact-foundation/pact-reference/releases/download/pact_verifier_cli-v${VERSION}/pact_verifier_cli-${target}.tar.xz" \
+       | tar xJ --strip-components=1 \
+    && install -m 0755 pact-verifier /pact-verifier
 
-RUN wget -O pact-verifier.gz https://github.com/pact-foundation/pact-reference/releases/download/pact_verifier_cli-v${VERSION}/pact-verifier-linux-${BIN_ARCH}.gz
-RUN gunzip pact-verifier.gz
-RUN chmod +x pact-verifier
-
-# Now, we need to build our _real_ Docker container, copying in the executable.
-FROM alpine:3.21
+FROM alpine:3.22
 RUN apk --no-cache add ca-certificates
-COPY --from=builder \
-    /pact-verifier \
-    /usr/local/bin/
-
+COPY --from=fetch /pact-verifier /usr/local/bin/pact-verifier
 ENTRYPOINT ["/usr/local/bin/pact-verifier"]
