@@ -10,7 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.comment.body == '/jira ticket' }}
     steps:
-    - run: echo ${{ github.event.comment.body }}
+    - env:
+        COMMENT_BODY: ${{ github.event.comment.body }}
+      run: echo "$COMMENT_BODY"
     
     - name: Login
       uses: atlassian/gajira-login@v3
@@ -20,7 +22,10 @@ jobs:
         JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
     
     - name: SearchParam
-      run: echo 'summary ~ ${{ toJSON(github.event.issue.title)}} AND project=${{ secrets.JIRA_PROJECT }}'
+      env:
+        ISSUE_TITLE: ${{ toJSON(github.event.issue.title) }}
+        JIRA_PROJECT: ${{ secrets.JIRA_PROJECT }}
+      run: echo "summary ~ ${ISSUE_TITLE} AND project=${JIRA_PROJECT}"
     
     - name: Search
       id: search
