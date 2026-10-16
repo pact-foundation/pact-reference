@@ -43,25 +43,6 @@ You can also optionally install the built artifacts as follows:
 $ cmake --install . --prefix=<install location (omit to install globally)>
 ```
 
-## Conan recipes
-
-The library files (lib and DLLs) are published as Conan recipes to the repository at https://pactfoundation.jfrog.io/artifactory/api/conan/pactfoundation-conan.
-To use it with a CMake project, add that repository as a Conan remote and then use Conan to generate
-the CMake dependency files for your project. There are two recipes, `pact_ffi` to use the static lib and
-`pact_ffi_dll` to use the dynamic lib.
-
-```console
-$ conan remote add pact-foundation https://pactfoundation.jfrog.io/artifactory/api/conan/pactfoundation-conan
-$ conan search pact_ffi -r=pact-foundation
-Existing package recipes:
-
-pact_ffi/0.0.0@pact/beta
-$ conan search pact_ffi_dll -r=pact-foundation
-Existing package recipes:
-
-pact_ffi_dll/0.0.0@pact/beta
-```
-
 ## Examples
 
 This project also includes example uses which depend on the crate via CMake.
