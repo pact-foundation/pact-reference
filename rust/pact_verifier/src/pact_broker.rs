@@ -665,6 +665,12 @@ fn handle_validation_errors(body: Value) -> PactBrokerError {
 
 impl Default for HALClient {
   fn default() -> Self {
+    if rustls::crypto::CryptoProvider::get_default().is_none() {
+      if let Err(_) = rustls::crypto::ring::default_provider().install_default() {
+        warn!("failed to installed the default crypto provider");
+      }
+    }
+
     HALClient {
       client: reqwest::ClientBuilder::new()
         .user_agent(concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION")))
@@ -1527,6 +1533,12 @@ mod tests {
 
     expect!(result.clone()).to(be_err());
     expect!(pact_broker.metrics().requests).to(be_equal_to(expected_requests ));
+  }
+
+  #[test]
+  fn default_client_installs_the_crypto_provider() {
+    let _client = HALClient::default();
+    expect!(rustls::crypto::CryptoProvider::get_default()).to(be_some());
   }
 
   #[test]
