@@ -11,10 +11,15 @@ manifest=$1
 remote=$2
 
 cargo metadata --format-version 1 --no-deps --manifest-path "$manifest" \
-    | jq -r '.packages[] | "\(.name)-v\(.version)"' \
-    | while read -r tag; do
+    | jq -r '.packages[] | [.name, .version, .manifest_path] | @tsv' \
+    | while IFS=$'\t' read -r name version crate_manifest; do
+        tag="$name-v$version"
         git rev-parse -q --verify "refs/tags/$tag" >/dev/null && continue
-        git tag -a "$tag" -m "$tag"
+        # Tag the commit on master's first-parent line that set this
+        # version, which is the release PR's merge (squash or merge commit),
+        # even when later commits have landed since.
+        commit=$(git log -1 --first-parent --diff-merges=first-parent --no-patch --format=%H -G "^version = \"${version//./\\.}\"" -- "$crate_manifest")
+        git tag -a "$tag" -m "$tag" "${commit:-HEAD}"
         git push -q "$remote" "refs/tags/$tag"
         echo "$tag"
     done
