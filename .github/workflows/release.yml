@@ -60,8 +60,9 @@ jobs:
     runs-on: "ubuntu-22.04"
     outputs:
       val: ${{ steps.plan.outputs.manifest }}
-      tag: ${{ !github.event.pull_request && github.ref_name || '' }}
-      tag-flag: ${{ !github.event.pull_request && format('--tag={0}', github.ref_name) || '' }}
+      # hand edit: a release gate builds the release PR's own tag.
+      tag: ${{ !github.event.pull_request && github.ref_name || steps.pr-tag.outputs.tag }}
+      tag-flag: ${{ format('--tag={0}', !github.event.pull_request && github.ref_name || steps.pr-tag.outputs.tag) }}
       publishing: ${{ !github.event.pull_request }}
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -85,9 +86,21 @@ jobs:
       # functionality based on whether this is a pull_request, and whether it's from a fork.
       # (PRs run on the *source* but secrets are usually on the *target* -- that's *good*
       # but also really annoying to build CI around when it needs secrets to work right.)
+      # hand edit: without a tag, dist plans every dist crate at once and
+      # refuses crates with unrelated versions. A release PR names its
+      # crate in its branch, and its manifest holds the version.
+      - name: Resolve the release PR's tag
+        id: pr-tag
+        if: github.event.pull_request
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          crate=${HEAD_REF#release/}
+          version=$(sed -n 's/^version = "\(.*\)"$/\1/p' "rust/$crate/Cargo.toml" | head -1)
+          echo "tag=$crate-v$version" >> "$GITHUB_OUTPUT"
       - id: plan
         run: |
-          dist ${{ (!github.event.pull_request && format('host --steps=create --tag={0}', github.ref_name)) || 'plan' }} --output-format=json > plan-dist-manifest.json
+          dist ${{ (!github.event.pull_request && format('host --steps=create --tag={0}', github.ref_name)) || format('plan --tag={0}', steps.pr-tag.outputs.tag) }} --output-format=json > plan-dist-manifest.json
           echo "dist ran successfully"
           cat plan-dist-manifest.json
           echo "manifest=$(jq -c "." plan-dist-manifest.json)" >> "$GITHUB_OUTPUT"
