@@ -11,7 +11,7 @@ if(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/conan_toolchain.cmake")
     include("${CMAKE_CURRENT_BINARY_DIR}/conan_toolchain.cmake")
 endif()
 
-get_filename_component(PACT_FFI_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../rust/pact_ffi" ABSOLUTE)
+get_filename_component(PACT_FFI_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../crates/pact_ffi" ABSOLUTE)
 
 ################################################################################
 # Project definition

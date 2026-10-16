@@ -88,7 +88,7 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f  # v2.0.0
         with:
           build-warnings: warn
-          cache-workspaces: ${{ env.WORKSPACE_ROOT }}/rust -> target
+          cache-workspaces: ${{ env.WORKSPACE_ROOT }} -> target
           cache-save-if: ${{ github.ref == 'refs/heads/master' }}
 
       - name: Install tools
@@ -99,7 +99,7 @@ jobs:
           cache_save: ${{ github.ref == 'refs/heads/master' }}
 
       - name: Run tests
-        working-directory: ${{ env.WORKSPACE_ROOT }}/rust
+        working-directory: ${{ env.WORKSPACE_ROOT }}
         env:
           RUST_LOG: debug
         run: cargo nextest run --workspace
@@ -108,18 +108,18 @@ jobs:
       # when nextest fails, so one failure does not hide the rest.
       - name: Run doctests
         if: ${{ !cancelled() }}
-        working-directory: ${{ env.WORKSPACE_ROOT }}/rust
+        working-directory: ${{ env.WORKSPACE_ROOT }}
         run: cargo test --workspace --doc --no-fail-fast
 
       - name: Run mock server log test
         if: ${{ !cancelled() }}
-        working-directory: ${{ env.WORKSPACE_ROOT }}/rust
+        working-directory: ${{ env.WORKSPACE_ROOT }}
         run: cargo nextest run -p pact_ffi --run-ignored only -E 'test(=returns_mock_server_logs)'
 
       - name: Run tests with the V2 matching engine
         if: ${{ !cancelled() && runner.os == 'Linux' }}
         continue-on-error: true
-        working-directory: ${{ env.WORKSPACE_ROOT }}/rust
+        working-directory: ${{ env.WORKSPACE_ROOT }}
         env:
           RUST_LOG: debug
           PACT_MATCHING_ENGINE: v2
@@ -206,7 +206,7 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f  # v2.0.0
         with:
           build-warnings: warn
-          cache-workspaces: ${{ env.WORKSPACE_ROOT }}/rust -> target
+          cache-workspaces: ${{ env.WORKSPACE_ROOT }} -> target
           cache-save-if: ${{ github.ref == 'refs/heads/master' }}
 
       # cbindgen's macro expansion passes `-Zunpretty=expanded`, which only
@@ -234,20 +234,20 @@ jobs:
 
       - name: Check plugin log callback headers
         if: runner.os == 'Linux'
-        working-directory: ${{ env.WORKSPACE_ROOT }}/rust/pact_ffi
+        working-directory: ${{ env.WORKSPACE_ROOT }}/crates/pact_ffi
         run: bash tests/check-plugin-log-callback.sh
 
       - name: Build pact_ffi and run its examples
-        working-directory: ${{ env.WORKSPACE_ROOT }}/rust/pact_ffi
+        working-directory: ${{ env.WORKSPACE_ROOT }}/crates/pact_ffi
         run: ./ci-build.sh
 
       - name: Run C consumer example
         working-directory: ${{ env.WORKSPACE_ROOT }}/c/consumer
-        run: PACT_FFI_PREBUILT_DIR="$WORKSPACE_ROOT/rust/pact_ffi/build/install" just run
+        run: PACT_FFI_PREBUILT_DIR="$WORKSPACE_ROOT/crates/pact_ffi/build/install" just run
 
       - name: Run C provider example
         working-directory: ${{ env.WORKSPACE_ROOT }}/c/provider
-        run: PACT_FFI_PREBUILT_DIR="$WORKSPACE_ROOT/rust/pact_ffi/build/install" just run
+        run: PACT_FFI_PREBUILT_DIR="$WORKSPACE_ROOT/crates/pact_ffi/build/install" just run
 
       - name: Save Conan packages
         if: github.ref == 'refs/heads/master' && steps.conan-cache.outputs.cache-hit != 'true'
@@ -279,11 +279,10 @@ jobs:
         with:
           build-warnings: warn
           components: rustfmt
-          cache-workspaces: rust -> target
+          cache-workspaces: . -> target
           cache-save-if: ${{ github.ref == 'refs/heads/master' }}
 
       - name: Build and test
-        working-directory: rust
         env:
           TZ: UTC
         run: |
@@ -302,7 +301,7 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f  # v2.0.0
         with:
           build-warnings: warn
-          cache-workspaces: rust -> target
+          cache-workspaces: . -> target
           cache-save-if: ${{ github.ref == 'refs/heads/master' }}
 
       - name: Install tools
@@ -315,7 +314,6 @@ jobs:
       # feature, so pact_matching fails to build with `plugins` alone. Check
       # that combination again once the driver enables `clock`.
       - name: Check each feature
-        working-directory: rust
         run: |
           cargo hack check --workspace --exclude pact_matching --each-feature --no-dev-deps
           cargo hack check -p pact_matching --each-feature --no-dev-deps --exclude-features plugins
@@ -333,15 +331,15 @@ jobs:
         with:
           build-warnings: warn
           target: wasm32-wasip2
-          cache-workspaces: rust -> target
+          cache-workspaces: . -> target
           cache-save-if: ${{ github.ref == 'refs/heads/master' }}
 
       - name: Build pact_models
-        working-directory: rust/pact_models
+        working-directory: crates/pact_models
         run: cargo build --target wasm32-wasip2
 
       - name: Build pact_matching
-        working-directory: rust/pact_matching
+        working-directory: crates/pact_matching
         run: cargo build --target wasm32-wasip2
 
   clippy:
@@ -357,10 +355,9 @@ jobs:
         with:
           build-warnings: warn
           components: clippy
-          cache-workspaces: rust -> target
+          cache-workspaces: . -> target
           cache-save-if: ${{ github.ref == 'refs/heads/master' }}
 
       # No `-D warnings`: only deny-by-default lints fail the job.
       - name: Run clippy
-        working-directory: rust
         run: cargo clippy
