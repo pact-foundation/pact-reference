@@ -38,12 +38,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # With no `toolchain` input, the action installs the one pinned in
+      # rust-toolchain.toml and adds the matrix target to it.
       - name: Install release Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f  # v2.0.0
         with:
-          # Rust 1.99 miscompiles C bool returns on Linux x86_64 (rust-lang/rust#163911).
-          toolchain: 1.98.1
-          targets: ${{ matrix.targets }}
+          target: ${{ matrix.targets }}
+          build-warnings: warn
+          cache: false
 
       - name: Rust caching
         uses: Swatinem/rust-cache@v2
