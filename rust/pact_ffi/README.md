@@ -14,7 +14,7 @@ documentation on the integration JSON format is [IntegrationJson.md](https://git
 This crates requires:
 
 - `cbindgen`, a tool for automatically generating the header file needed for C users of the crate.
-- A nightly-channel version of Cargo (needed for an unstable flag used by `cbindgen` to get the macro-expanded contents of the crate source).
+- A nightly Rust toolchain, used only by `cbindgen` for an unstable flag that gets the macro-expanded contents of the crate source. The library itself builds with the toolchain pinned in `rust-toolchain.toml`.
 
 It will additionally attempt to find and use `Doxygen` to generate C-friendly documentation (you can of course alternatively use `cargo doc` to get Rustdoc documentation).
 
