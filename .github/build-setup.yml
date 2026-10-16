@@ -1,0 +1,12 @@
+# Steps dist runs before `dist build` in each per-target build job.
+
+# A cdylib on a `crt-static` musl target is dropped by rustc, so pact_ffi
+# links the musl CRT dynamically; the CLI stays fully static. dist appends
+# `+crt-static` to RUSTFLAGS for musl, and CARGO_ENCODED_RUSTFLAGS takes
+# precedence over RUSTFLAGS.
+- name: Use dynamic musl CRT for pact_ffi
+  if: >-
+    contains(join(matrix.targets, ','), 'musl')
+    && (startsWith(github.ref_name, 'pact_ffi-v') || github.head_ref == 'release/pact_ffi')
+  shell: bash
+  run: echo "CARGO_ENCODED_RUSTFLAGS=-Ctarget-feature=-crt-static" >> "$GITHUB_ENV"

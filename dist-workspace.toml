@@ -1,0 +1,31 @@
+[workspace]
+members = ["cargo:rust"]
+
+[dist]
+cargo-dist-version = "0.33.0"
+ci = "github"
+installers = []
+dist = false
+targets = [
+  "aarch64-apple-darwin",
+  "aarch64-pc-windows-msvc",
+  "aarch64-unknown-linux-gnu",
+  "aarch64-unknown-linux-musl",
+  "x86_64-apple-darwin",
+  "x86_64-pc-windows-msvc",
+  "x86_64-unknown-linux-gnu",
+  "x86_64-unknown-linux-musl",
+]
+# Link the MSVC runtime dynamically, as releases always have; consumers of
+# the static library build against the same runtime.
+msvc-crt-static = false
+# The release workflow carries hand edits (release-PR gating, cbindgen for
+# the headers); see the comments marked `hand edit` in
+# .github/workflows/release.yml.
+allow-dirty = ["ci"]
+pr-run-mode = "upload"
+publish-jobs = ["./publish-crate"]
+post-announce-jobs = ["./legacy-artifacts", "./publish-containers"]
+github-build-setup = "../build-setup.yml"
+github-custom-runners = { aarch64-unknown-linux-gnu = "ubuntu-24.04-arm", aarch64-unknown-linux-musl = "ubuntu-24.04-arm", x86_64-apple-darwin = "macos-15-intel", aarch64-apple-darwin = "macos-15" }
+github-custom-job-permissions = { publish-crate = { contents = "read", id-token = "write" }, legacy-artifacts = { contents = "write" }, publish-containers = { contents = "read", packages = "write" } }
