@@ -86,6 +86,17 @@ for case in pact_ffi-v0.5.12:legacy-expected-ffi.txt pact_verifier_cli-v1.4.0:le
     fi
 done
 
+# LEGACY_ARCHIVES reads a directory of archives (a downloaded release gate
+# run) in place of the release, and needs no gh at all.
+(
+    PATH=${PATH#"$work/bin:"}
+    LEGACY_ARCHIVES=$fixtures "$script" pact_ffi-v0.5.12 "$work/out-dir"
+)
+if ! diff -q "$work/out-pact_ffi-v0.5.12" "$work/out-dir" >/dev/null; then
+    echo "FAIL LEGACY_ARCHIVES output differs from the release output"
+    exit 1
+fi
+
 # Each checksum file names its asset in `openssl dgst -r` style, and each
 # asset unpacks to what the archive held.
 out="$work/out-pact_verifier_cli-v1.4.0"
