@@ -23,6 +23,20 @@ A release pull request cannot merge while it requires a workspace crate version 
    3. A GitHub release is created with the changelog section and any artifacts.
 3. After a `pact_verifier_cli` release, the `pactfoundation/pact-verifier` image is pushed to Docker Hub and GHCR.
 
+## Checking a release gate build
+
+Before merging a `pact_ffi` or `pact_verifier_cli` release pull request, check the artifacts its release gate built. This needs `gh`, LLVM (`llvm-dlltool`, `llvm-readobj`) and `readelf`.
+
+```sh
+gh run download <run id> -p 'artifacts-*' -D gate
+mkdir -p gate-flat
+find gate -type f \( -name '*.tar.xz' -o -name '*.zip' -o -name 'pact*.h' \) -exec cp {} gate-flat/ \;
+LEGACY_ARCHIVES=gate-flat .github/scripts/legacy-artifacts.sh <crate>-v<version> out
+diff .github/scripts/tests/legacy-expected-ffi.txt <(ls out | sort)  # or legacy-expected-cli.txt
+```
+
+The script fails if a Linux library links the wrong C library, or needs a glibc newer than 2.28. The `diff` prints nothing when the legacy asset names match.
+
 ## Legacy asset names
 
 Until 2027-06-30, each `pact_ffi` release is mirrored to a `libpact_ffi-v<version>` release that carries the pre-dist asset names. Each `pact_verifier_cli` release also carries `pact-verifier-<os>-<arch>.gz`.
