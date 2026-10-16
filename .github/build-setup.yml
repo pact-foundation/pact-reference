@@ -1,12 +1,17 @@
 # Steps dist runs before `dist build` in each per-target build job.
 
-# A cdylib on a `crt-static` musl target is dropped by rustc, so pact_ffi
-# links the musl CRT dynamically; the CLI stays fully static. dist appends
-# `+crt-static` to RUSTFLAGS for musl, and CARGO_ENCODED_RUSTFLAGS takes
-# precedence over RUSTFLAGS.
-- name: Use dynamic musl CRT for pact_ffi
-  if: >-
-    contains(join(matrix.targets, ','), 'musl')
-    && (startsWith(github.ref_name, 'pact_ffi-v') || github.head_ref == 'release/pact_ffi')
+# musl builds run cargo through dist-cargo.sh, which links pact_ffi's musl
+# CRT dynamically and keeps the cross-rs toolchain in charge of aarch64.
+# dist checks for cargo-zigbuild before an aarch64-musl build; the stub
+# satisfies that check and forwards to the same script.
+- name: Route musl builds through dist-cargo.sh
+  if: contains(join(matrix.targets, ','), 'musl')
   shell: bash
-  run: echo "CARGO_ENCODED_RUSTFLAGS=-Ctarget-feature=-crt-static" >> "$GITHUB_ENV"
+  run: |
+    script="$GITHUB_WORKSPACE/.github/scripts/dist-cargo.sh"
+    bin="$RUNNER_TEMP/dist-cargo-bin"
+    mkdir -p "$bin"
+    printf '#!/bin/sh\nexec "%s" "$@"\n' "$script" > "$bin/cargo-zigbuild"
+    chmod +x "$bin/cargo-zigbuild"
+    echo "$bin" >> "$GITHUB_PATH"
+    echo "CARGO=$script" >> "$GITHUB_ENV"

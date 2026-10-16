@@ -137,9 +137,16 @@ jobs:
             curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
             echo "$HOME/.cargo/bin" >> $GITHUB_PATH
           fi
-      - name: "Use dynamic musl CRT for pact_ffi"
-        if: "contains(join(matrix.targets, ','), 'musl') && (startsWith(github.ref_name, 'pact_ffi-v') || github.head_ref == 'release/pact_ffi')"
-        run: "echo \"CARGO_ENCODED_RUSTFLAGS=-Ctarget-feature=-crt-static\" >> \"$GITHUB_ENV\""
+      - name: "Route musl builds through dist-cargo.sh"
+        if: "contains(join(matrix.targets, ','), 'musl')"
+        run: |
+          script="$GITHUB_WORKSPACE/.github/scripts/dist-cargo.sh"
+          bin="$RUNNER_TEMP/dist-cargo-bin"
+          mkdir -p "$bin"
+          printf '#!/bin/sh\nexec "%s" "$@"\n' "$script" > "$bin/cargo-zigbuild"
+          chmod +x "$bin/cargo-zigbuild"
+          echo "$bin" >> "$GITHUB_PATH"
+          echo "CARGO=$script" >> "$GITHUB_ENV"
         shell: "bash"
       - uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
         with:
