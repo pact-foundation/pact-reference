@@ -4,8 +4,11 @@
 # name with an `openssl dgst -r`-style `.sha256` file.
 #
 # Usage: legacy-artifacts.sh <tag> <out-dir>
-# Needs GH_TOKEN and GITHUB_REPOSITORY, LLVM for the Windows import
-# libraries (see import-lib.sh), and readelf.
+# Reads the release's assets with gh (needs GH_TOKEN and
+# GITHUB_REPOSITORY), or, with LEGACY_ARCHIVES set, from that directory:
+# for example a release gate run's artifacts, to check them before a tag.
+# Needs LLVM for the Windows import libraries (see import-lib.sh), and
+# readelf.
 #
 # Linux binaries must link the C library downstream installers expect (see
 # check-linkage.sh); a mismatch fails the job before anything is uploaded.
@@ -23,6 +26,16 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 cd "$work"
 
+# Copies release asset <name> into <dir>.
+download() {
+    local name=$1 dir=$2
+    if [[ -n ${LEGACY_ARCHIVES-} ]]; then
+        cp "$LEGACY_ARCHIVES/$name" "$dir/"
+    else
+        gh release download "$tag" --repo "$GITHUB_REPOSITORY" -p "$name" -D "$dir" --clobber
+    fi
+}
+
 gzip_and_sum() {
     local src=$1 name=$2
     gzip --no-name --best --stdout "$src" > "$out/$name"
@@ -35,7 +48,7 @@ extract() {
     local target=$1 file=$2 archive path
     if [[ ! -d "$target" ]]; then
         if [[ $target == *windows* ]]; then archive="$package-$target.zip"; else archive="$package-$target.tar.xz"; fi
-        gh release download "$tag" --repo "$GITHUB_REPOSITORY" -p "$archive" --clobber
+        download "$archive" .
         mkdir "$target"
         case "$archive" in
             *.zip) unzip -q "$archive" -d "$target" ;;
@@ -95,7 +108,8 @@ case "$package" in
             gzip_and_sum "$target/pact_ffi.dll.lib" "pact_ffi-windows-$arch.dll.lib.gz"
             gzip_and_sum "$(extract "$target" pact_ffi.lib)" "pact_ffi-windows-$arch.lib.gz"
         done
-        gh release download "$tag" --repo "$GITHUB_REPOSITORY" -p pact.h -p pact-cpp.h -D "$out" --clobber
+        download pact.h "$out"
+        download pact-cpp.h "$out"
         ;;
     *)
         echo "No legacy assets for $package" >&2
