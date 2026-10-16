@@ -4,3 +4,13 @@ fail-fast = false
 
 # Flag tests slower than 60 s; kill them after 5 periods.
 slow-timeout = { period = "60s", terminate-after = 5 }
+
+# pact_verifier's unit tests merge their mock servers' interactions into
+# shared pact files. Pact writes lock only within a process, and nextest runs
+# each test in its own, so concurrent runs read each other's truncated files.
+[test-groups]
+pact-verifier-pact-files = { max-threads = 1 }
+
+[[profile.default.overrides]]
+filter = 'package(pact_verifier) & kind(lib) & test(/^(pact_broker::)?tests::/)'
+test-group = 'pact-verifier-pact-files'
