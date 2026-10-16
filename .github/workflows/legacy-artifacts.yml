@@ -1,0 +1,103 @@
+---
+# Republishes pre-dist asset names for downstream installers that still
+# hard-code them. pact_ffi assets also go to a `libpact_ffi-v<version>`
+# release, the URL those installers build.
+#
+# Self-disables on 2027-06-30; delete this file, the
+# `./legacy-artifacts` entry in the dist config, and
+# .github/scripts/legacy-artifacts.sh and import-lib.sh afterwards, then
+# run `dist generate`.
+name: Legacy artifacts
+
+on:
+  workflow_call:
+    inputs:
+      plan:
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: dist release tag to backfill (e.g. pact_ffi-v0.5.12)
+        type: string
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  legacy-artifacts:
+    name: Publish legacy-named assets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve tag
+        id: tag
+        env:
+          PLAN: ${{ inputs.plan }}
+          MANUAL_TAG: ${{ inputs.tag }}
+        run: |
+          if [[ -n "$PLAN" ]]; then
+            echo "tag=$(jq -r '.announcement_tag' <<<"$PLAN")" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=$MANUAL_TAG" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check cutoff date
+        id: cutoff
+        run: |
+          if [[ "$(date -u +%Y-%m-%d)" < "2027-06-30" ]]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Past the 2027-06-30 cutoff; legacy assets are no longer published."
+          fi
+
+      - name: Checkout
+        if: steps.cutoff.outputs.enabled == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      # import-lib.sh rebuilds the Windows import libraries with LLVM.
+      - name: Install LLVM
+        if: steps.cutoff.outputs.enabled == 'true'
+        run: |
+          if ! ls /usr/lib/llvm-*/bin/llvm-dlltool >/dev/null 2>&1; then
+            sudo apt-get update -q
+            sudo apt-get install -y -q --no-install-recommends llvm
+          fi
+
+      - name: Build legacy assets
+        if: steps.cutoff.outputs.enabled == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: .github/scripts/legacy-artifacts.sh "$TAG" "$RUNNER_TEMP/legacy"
+
+      - name: Upload legacy assets
+        if: steps.cutoff.outputs.enabled == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          shopt -s nullglob
+          files=("$RUNNER_TEMP"/legacy/*)
+          (( ${#files[@]} )) || exit 0
+          case "$TAG" in
+            pact_ffi-v*)
+              version=${TAG##*-v}
+              legacy="libpact_ffi-v$version"
+              # Release tags are annotated; the legacy tag points at the commit.
+              sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" --jq .object.sha)
+              if [[ $(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" --jq .object.type) == tag ]]; then
+                sha=$(gh api "repos/$GITHUB_REPOSITORY/git/tags/$sha" --jq .object.sha)
+              fi
+              gh api "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/$legacy" -f "sha=$sha" >/dev/null 2>&1 || true
+              gh release view "$legacy" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+                gh release create "$legacy" --repo "$GITHUB_REPOSITORY" --latest=false \
+                  --title "pact_ffi $version (legacy asset names)" \
+                  --notes "Legacy-named assets for [pact_ffi-v$version](https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG). These names are published until 2027-06-30."
+              gh release upload "$legacy" --repo "$GITHUB_REPOSITORY" --clobber "${files[@]}"
+              ;;
+            *)
+              gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber "${files[@]}"
+              ;;
+          esac
