@@ -10,11 +10,9 @@ This is the reference implementation of [Pact](https://pact.io) contract testing
 
 ## Build & Test Commands
 
-All Cargo commands must be run from the `rust/` subdirectory (the workspace root):
+Cargo commands run from the repository root, which is the workspace root. Crates live under `crates/`.
 
 ```bash
-cd rust
-
 # Build all crates
 cargo build
 
@@ -57,7 +55,7 @@ cargo build --target wasm32-wasip2
 
 ```bash
 docker run --rm --user "$(id -u)":"$(id -g)" \
-  -v $(pwd):/workspace -w /workspace/rust \
+  -v $(pwd):/workspace -w /workspace \
   -t -e TZ=UTC pactfoundation/rust-musl-build \
   ./scripts/ci-musl-build.sh
 ```
@@ -98,7 +96,7 @@ pact_verifier_cli  pact_ffi      ← Standalone CLI / C FFI bindings
 - **Async runtime**: `tokio` throughout (except WASM builds).
 - **Logging**: `tracing` / `tracing-subscriber` (not `log`).
 - **Test helpers**: `rstest`, `hamcrest2`, `expectest`, `pretty_assertions` are common dev-dependencies.
-- **Workspace patch**: `pact_models` is patched in `rust/Cargo.toml` to always use the local path (`./pact_models`), so changes propagate across all crates without a publish.
+- **Workspace patch**: `pact_models` is patched in the root `Cargo.toml` to always use the local path (`./crates/pact_models`), so changes propagate across all crates without a publish.
 
 ## Commit Messages
 

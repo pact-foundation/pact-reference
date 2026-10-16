@@ -1,0 +1,56 @@
+[package]
+name = "pact_consumer"
+version = "1.4.11"
+authors = ["Ronald Holshausen <ronald.holshausen@gmail.com>", "Eric Kidd <git@randomhacks.net>"]
+edition = "2024"
+description = "Pact-Rust module that provides support for writing consumer pact tests"
+homepage = "https://www.pact.io"
+repository = "https://github.com/pact-foundation/pact-reference/blob/master/crates/pact_consumer"
+readme = "README.md"
+keywords = ["testing", "pact", "cdc"]
+license = "MIT AND Apache-2.0"
+exclude = [
+    "*.iml"
+]
+
+[features]
+default = ["datetime", "xml", "plugins", "multipart", "tls", "colour"]
+datetime = ["pact_models/datetime", "pact_matching/datetime", "pact_mock_server/datetime", "pact-plugin-driver?/datetime"] # Support for date/time matchers and expressions
+xml = ["pact_models/xml", "pact_matching/xml", "pact_mock_server/xml", "pact-plugin-driver?/xml"] # support for matching XML documents
+plugins = ["dep:pact-plugin-driver", "dep:uuid", "pact_matching/plugins", "pact_mock_server/plugins", "pact-plugin-driver/default"]
+multipart = ["pact_matching/multipart", "pact_mock_server/multipart"] # suport for MIME multipart bodies
+tls = ["pact_mock_server/tls"]
+colour = ["dep:yansi"]
+
+[dependencies]
+anyhow = "1.0.104"
+async-trait = "0.1.91"
+bytes = "1.12.1"
+itertools = "0.15.0"
+maplit = "1.0.2"
+pact_matching = { version = "~2.0.11", path = "../pact_matching", default-features = false }
+pact_mock_server = { version = "~2.2.5", default-features = false }
+pact_models = { version = "~1.3.16", default-features = false }
+pact-plugin-driver = { version = "~1.2.3", optional = true, default-features = false }
+uuid = { version = "1.24.0", features = ["v4"], optional = true }
+regex = "1.13.1"
+rustls = { version = "0.23.43", default-features = false, features = ["ring", "logging", "tls12", "std"] }
+serde_json = "1.0.151"
+termsize = "0.1.9"
+tokio = { version = "1.53.1", features = ["full"] }
+tracing = "0.1.44"
+url = "2.5.8"
+yansi = { version = "1.0.1", optional = true }
+
+[dev-dependencies]
+env_logger = "0.11.11"
+expectest = "0.12.0"
+reqwest = { version = "0.13.4", default-features = false, features = ["rustls-no-provider", "blocking", "json"] }
+serde = { version = "1.0.229", features = ["derive"] }
+rand = "0.8.7"
+tempfile = "3.27.0"
+tokio-test = "0.4.5"
+test-log = { version = "0.2.21", features = ["trace"] }
+tracing-subscriber = { version = "0.3.23", features = ["env-filter", "tracing-log", "fmt"] }
+pretty_assertions = "1.4.1"
+proclaim-it = "0.0.1"

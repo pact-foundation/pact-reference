@@ -15,7 +15,7 @@ It exposes the core functionality through various crates, as part of the Pact Ru
 
 ### Rust
 
-For Rust projects, you can use the Rust crates from this library in your project directly. Refer to the [Rust project readme](rust/README.md).
+For Rust projects, you can use the Rust crates from this library in your project directly. Refer to the [Rust project readme](crates/README.md).
 
 ### FFI
 
@@ -45,7 +45,7 @@ Lastly, you can also refer to [Hello Pact FFI](https://github.com/YOU54F/hello_f
 This project contains code to support exposing the core functionality through CLI (Command Line Interface).
 
 * [pact_mock_server_cli](https://github.com/pact-foundation/pact-core-mock-server/tree/main/pact_mock_server_cli)
-* [pact_verifier_cli](https://github.com/pact-foundation/pact-reference/tree/master/rust/pact_verifier_cli)
+* [pact_verifier_cli](https://github.com/pact-foundation/pact-reference/tree/master/crates/pact_verifier_cli)
 * [pact-stub-server-cli](https://github.com/pact-foundation/pact-stub-server)
 
 They are distributed in binary & Docker formats.
@@ -57,11 +57,10 @@ To build the libraries in this project, you need a working Rust environment.  Re
 The build tool used is `cargo`.
 
 ```shell
-cd rust
 cargo build
 ```
 
-This will compile all the libraries and put the generated files in `rust/target/debug`.
+This will compile all the libraries and put the generated files in `target/debug`.
 
 ## Contributing
 
@@ -69,7 +68,7 @@ See [CONTRIBUTING](CONTRIBUTING.md) (PRs are always welcome!).
 
 ## Documentation
 
-Rust library documentation is published to the Rust documentation site [`docs.rs`](https://docs.rs). Refer to the [Rust project README](rust/README.md).
+Rust library documentation is published to the Rust documentation site [`docs.rs`](https://docs.rs). Refer to the [Rust project README](crates/README.md).
 
 Additional documentation can be found at the main [Pact website](https://pact.io).
 

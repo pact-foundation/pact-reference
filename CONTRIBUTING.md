@@ -42,11 +42,10 @@ To build the libraries in this project, you need a working Rust environment. Ref
 The build tool used is `cargo`.
 
 ```shell
-cd rust
 cargo build
 ```
 
-This will compile all the libraries and put the generated files in `rust/target/debug`.
+This will compile all the libraries and put the generated files in `target/debug`.
 
 ### Releasing
 
