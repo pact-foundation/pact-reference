@@ -78,10 +78,24 @@ else()
         MANIFEST_PATH "${PACT_FFI_ROOT}/Cargo.toml"
         CRATE_TYPES cdylib
     )
-    corrosion_experimental_cbindgen(
-        TARGET pact_ffi
-        HEADER_NAME pact.h
+
+    # cbindgen's macro expansion needs nightly; the library itself builds
+    # with the toolchain pinned in rust-toolchain.toml.
+    find_program(CBINDGEN_EXECUTABLE cbindgen REQUIRED)
+    set(PACT_FFI_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/pact_ffi/include")
+    file(MAKE_DIRECTORY "${PACT_FFI_INCLUDE_DIR}")
+    add_custom_command(
+        OUTPUT "${PACT_FFI_INCLUDE_DIR}/pact.h"
+        COMMAND rustup run nightly "${CBINDGEN_EXECUTABLE}"
+            --config "${PACT_FFI_ROOT}/cbindgen.toml"
+            --crate pact_ffi
+            --output "${PACT_FFI_INCLUDE_DIR}/pact.h"
+        WORKING_DIRECTORY "${PACT_FFI_ROOT}"
+        COMMENT "Generating pact.h with cbindgen"
     )
+    add_custom_target(pact_ffi_header DEPENDS "${PACT_FFI_INCLUDE_DIR}/pact.h")
+    add_dependencies(pact_ffi pact_ffi_header)
+    target_include_directories(pact_ffi INTERFACE "${PACT_FFI_INCLUDE_DIR}")
 endif()
 
 target_link_libraries(

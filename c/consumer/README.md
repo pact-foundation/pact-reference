@@ -33,7 +33,8 @@ The results of the tests are printed to stdout and will exit with a non-zero sta
 
 The tests require:
 
-- A C compiler and a nightly Rust toolchain (the justfile selects nightly, which `cbindgen` needs to generate the header)
+- A C compiler and the Rust toolchain pinned in `rust-toolchain.toml`
+- `cbindgen` and a nightly Rust toolchain, which `cbindgen` needs to generate the header
 - CMake (version 3.24 or higher)
 - Conan (version 2.0 or higher)
 
