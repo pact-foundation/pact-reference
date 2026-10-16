@@ -1,3 +1,7 @@
+# Without PACT_FFI_PREBUILT_DIR, Corrosion builds pact_ffi, and cbindgen's
+# macro expansion needs a nightly toolchain.
+export RUSTUP_TOOLCHAIN := env("RUSTUP_TOOLCHAIN", "nightly")
+
 [unix]
 build:
     conan install . --output-folder=build --build=missing

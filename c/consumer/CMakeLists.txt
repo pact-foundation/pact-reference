@@ -11,16 +11,6 @@ if(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/conan_toolchain.cmake")
     include("${CMAKE_CURRENT_BINARY_DIR}/conan_toolchain.cmake")
 endif()
 
-# We use [corrosion](https://github.com/corrosion-rs/corrosion) to integrate
-# Rust into our C project.
-include(FetchContent)
-FetchContent_Declare(
-    Corrosion
-    GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
-    GIT_TAG v0.5
-)
-FetchContent_MakeAvailable(Corrosion)
-
 get_filename_component(PACT_FFI_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../rust/pact_ffi" ABSOLUTE)
 
 ################################################################################
@@ -56,14 +46,44 @@ find_package(ZLIB REQUIRED)
 # dependencies' build scripts (e.g. mlua's vendored Lua), which cargo bakes
 # into the cdylib at link time but does not surface to corrosion for the
 # staticlib, causing missing symbol errors when linking against libpact_ffi.a.
-corrosion_import_crate(
-    MANIFEST_PATH "${PACT_FFI_ROOT}/Cargo.toml"
-    CRATE_TYPES cdylib
-)
-corrosion_experimental_cbindgen(
-    TARGET pact_ffi
-    HEADER_NAME pact.h
-)
+# PACT_FFI_PREBUILT_DIR names an install prefix holding lib/ and
+# include/pact.h. CI sets it to reuse one release build across projects;
+# without it, Corrosion builds pact_ffi from source.
+if(DEFINED ENV{PACT_FFI_PREBUILT_DIR})
+    file(TO_CMAKE_PATH "$ENV{PACT_FFI_PREBUILT_DIR}" PACT_FFI_PREBUILT_DIR)
+    add_library(pact_ffi SHARED IMPORTED)
+    if(WIN32)
+        set_target_properties(pact_ffi PROPERTIES
+            IMPORTED_LOCATION "${PACT_FFI_PREBUILT_DIR}/lib/pact_ffi.dll"
+            IMPORTED_IMPLIB "${PACT_FFI_PREBUILT_DIR}/lib/pact_ffi.dll.lib")
+    elseif(APPLE)
+        set_target_properties(pact_ffi PROPERTIES
+            IMPORTED_LOCATION "${PACT_FFI_PREBUILT_DIR}/lib/libpact_ffi.dylib")
+    else()
+        set_target_properties(pact_ffi PROPERTIES
+            IMPORTED_LOCATION "${PACT_FFI_PREBUILT_DIR}/lib/libpact_ffi.so")
+    endif()
+    target_include_directories(pact_ffi INTERFACE "${PACT_FFI_PREBUILT_DIR}/include")
+else()
+    # We use [corrosion](https://github.com/corrosion-rs/corrosion) to
+    # integrate Rust into our C project.
+    include(FetchContent)
+    FetchContent_Declare(
+        Corrosion
+        GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
+        GIT_TAG v0.5
+    )
+    FetchContent_MakeAvailable(Corrosion)
+
+    corrosion_import_crate(
+        MANIFEST_PATH "${PACT_FFI_ROOT}/Cargo.toml"
+        CRATE_TYPES cdylib
+    )
+    corrosion_experimental_cbindgen(
+        TARGET pact_ffi
+        HEADER_NAME pact.h
+    )
+endif()
 
 target_link_libraries(
     pact_ffi
@@ -104,6 +124,14 @@ if(WIN32)
         powrprof   # Power Management (CallNtPowerInformation)
         psapi      # Process Status API (GetProcessMemoryInfo, GetModuleFileNameExW)
     )
+endif()
+
+# The run recipe loads the library from beside the executable, where
+# Corrosion would have built it, so copy the prebuilt one there.
+if(DEFINED ENV{PACT_FFI_PREBUILT_DIR})
+    add_custom_command(TARGET pact-consumer POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_FILE:pact_ffi> $<TARGET_FILE_DIR:pact-consumer>)
 endif()
 
 # Link macOS system frameworks if building on Apple platforms
