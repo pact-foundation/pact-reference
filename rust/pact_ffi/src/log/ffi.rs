@@ -320,6 +320,10 @@ pub extern "C" fn pactffi_logger_apply() -> c_int {
 /// thread, so it must be thread-safe. It must not call back into pact_ffi from within the
 /// callback, and must not unwind.
 ///
+/// Registering replaces any previously registered callback. Once this function returns, the
+/// previous callback is not running on any thread and is not invoked again, so the caller may
+/// release it.
+///
 /// # Safety
 ///
 /// `callback` must be a valid function pointer or NULL.
