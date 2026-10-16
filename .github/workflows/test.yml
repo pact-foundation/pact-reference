@@ -40,6 +40,7 @@ jobs:
       - features
       - wasm
       - clippy
+      - release-deps
     runs-on: ubuntu-latest
     steps:
       - name: Fail if any job failed
@@ -360,3 +361,26 @@ jobs:
       - name: Run clippy
         working-directory: rust
         run: cargo clippy
+
+  # MARK: Release PRs
+
+  release-deps:
+    name: Release dependencies
+    if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'release/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f  # v2.0.0
+        with:
+          build-warnings: warn
+          cache: false
+
+      - name: Check workspace dependencies are released
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: .github/scripts/release-deps.sh "${HEAD_REF#release/}"
