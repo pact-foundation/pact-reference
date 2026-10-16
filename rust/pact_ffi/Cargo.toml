@@ -74,4 +74,4 @@ package-libraries = ["cdylib", "cstaticlib"]
 
 [[package.metadata.dist.extra-artifacts]]
 artifacts = ["pact.h", "pact-cpp.h"]
-build = ["rust/pact_ffi/build-headers.sh"]
+build = ["./build-headers.sh"]
