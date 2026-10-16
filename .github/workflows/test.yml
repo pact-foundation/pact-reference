@@ -218,7 +218,7 @@ jobs:
         uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8  # v5.1.2
         with:
           working_directory: ${{ env.WORKSPACE_ROOT }}
-          install_args: cargo:cbindgen just
+          install_args: aqua:cargo-bins/cargo-binstall cargo:cbindgen just
           cache_save: ${{ github.ref == 'refs/heads/master' }}
 
       - name: Install Conan

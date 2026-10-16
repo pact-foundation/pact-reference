@@ -7,3 +7,9 @@
 "cargo:cbindgen" = "0.29.4"
 "github:taiki-e/cargo-hack" = "0.6.45"
 just = "1.59.0"
+
+# Install cargo tools from prebuilt binaries only, falling back to
+# cargo-quickinstall's builds; never compile them from source.
+[settings.cargo]
+binstall_only = true
+binstall_quickinstall = true
