@@ -48,6 +48,20 @@ cargo build
 
 This will compile all the libraries and put the generated files in `rust/target/debug`.
 
+The root `rust-toolchain.toml` pins the Rust version. [mise](https://mise.jdx.dev) manages the rest of the dev tooling; run `mise install` from the repository root to install it.
+
+### Testing
+
+CI runs the tests with [nextest](https://nexte.st). nextest skips doctests, so run those separately:
+
+```shell
+cd rust
+cargo nextest run --workspace
+cargo test --workspace --doc
+```
+
+Plain `cargo test` also runs the whole suite, doctests included.
+
 ### Releasing
 
 The released libraries for each module are built by a GH action that attaches the libraries to the GH release for each
