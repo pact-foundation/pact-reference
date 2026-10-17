@@ -1,0 +1,200 @@
+---
+name: Release PR
+
+on:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+# Runs never overlap, so two runs can't race on the same tag. GitHub drops
+# a pending run when a newer one queues; the newer run tags every
+# untagged version, so no release is lost.
+concurrency:
+  group: release-pr
+  cancel-in-progress: false
+
+jobs:
+  # MARK: Tag
+
+  tag:
+    name: Tag released versions
+    if: github.repository == 'pact-foundation/pact-reference'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510  # v3.3.0
+        with:
+          app-id: ${{ vars.PACT_FOUNDATION_BOT_APP_ID }}
+          private-key: ${{ secrets.PACT_FOUNDATION_BOT_PRIVATE_KEY }}
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Configure git identity
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        run: |
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "$(gh api "/users/${APP_SLUG}[bot]" --jq .id)+${APP_SLUG}[bot]@users.noreply.github.com"
+
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f  # v2.0.0
+        with:
+          build-warnings: warn
+          cache: false
+
+      # The checkout's credentials are the App token, so the tag pushes
+      # start the release workflow.
+      - name: Tag merged releases
+        run: .github/scripts/tag-releases.sh rust/Cargo.toml origin
+
+  # MARK: Prepare
+
+  prepare:
+    name: Prepare (${{ matrix.crate }})
+    needs: tag
+    if: github.repository == 'pact-foundation/pact-reference'
+    strategy:
+      fail-fast: false
+      matrix:
+        crate:
+          - pact_models
+          - pact_matching
+          - pact_consumer
+          - pact_verifier
+          - pact_verifier_cli
+          - pact_ffi
+    runs-on: ubuntu-latest
+    env:
+      CRATE: ${{ matrix.crate }}
+      BRANCH: release/${{ matrix.crate }}
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510  # v3.3.0
+        with:
+          app-id: ${{ vars.PACT_FOUNDATION_BOT_APP_ID }}
+          private-key: ${{ secrets.PACT_FOUNDATION_BOT_PRIVATE_KEY }}
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Resolve bot identity
+        id: bot
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        run: |
+          id=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)
+          echo "login=${APP_SLUG}[bot]" >> "$GITHUB_OUTPUT"
+          echo "author=${APP_SLUG}[bot] <${id}+${APP_SLUG}[bot]@users.noreply.github.com>" >> "$GITHUB_OUTPUT"
+
+      # Between a release tag and its crates.io publish, release-plz would
+      # compare master against a registry that lacks the new version. Wait
+      # for the publish instead.
+      - name: Check for a release still being published
+        id: lag
+        run: |
+          version=$(sed -n 's/^version = "\(.*\)"$/\1/p' "rust/$CRATE/Cargo.toml" | head -1)
+          if git rev-parse -q --verify "refs/tags/$CRATE-v$version" >/dev/null \
+              && ! .github/scripts/crate-published.sh "$CRATE" "$version"; then
+            echo "pending=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::$CRATE $version is tagged but not yet on crates.io; skipping until it is."
+          else
+            echo "pending=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # A release PR with commits from people is theirs: regenerating it
+      # would force-push over their edits.
+      - name: Check for manual edits
+        id: manual
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          BOT: ${{ steps.bot.outputs.login }}
+        run: |
+          others=$(gh pr view "$BRANCH" --json state,commits --jq '
+            select(.state == "OPEN")
+            | [.commits[].authors[].login | select(. != env.BOT)] | length' 2>/dev/null || true)
+          if [[ "${others:-0}" -gt 0 ]]; then
+            echo "edited=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "edited=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Note that regeneration is paused
+        if: steps.manual.outputs.edited == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          marker='<!-- release-pr:paused -->'
+          if ! gh pr view "$BRANCH" --json comments --jq '.comments[].body' | grep -qF "$marker"; then
+            gh pr comment "$BRANCH" --body "$marker
+          This release PR has commits from people, so the release bot no longer regenerates it from \`master\`. Close it to get a fresh one."
+          fi
+
+      - name: Install Rust
+        if: steps.manual.outputs.edited == 'false' && steps.lag.outputs.pending == 'false'
+        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f  # v2.0.0
+        with:
+          build-warnings: warn
+          cache: false
+
+      - name: Install tools
+        if: steps.manual.outputs.edited == 'false' && steps.lag.outputs.pending == 'false'
+        uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8  # v5.1.2
+        with:
+          install_args: aqua:release-plz/release-plz github:obi1kenobi/cargo-semver-checks
+          cache_save: false
+
+      - name: Update version and changelog
+        if: steps.manual.outputs.edited == 'false' && steps.lag.outputs.pending == 'false'
+        run: >-
+          release-plz update
+          -p "$CRATE"
+          --manifest-path rust/Cargo.toml
+          --config rust/release-plz.toml
+
+      - name: Describe the release
+        id: release
+        if: steps.manual.outputs.edited == 'false' && steps.lag.outputs.pending == 'false'
+        run: |
+          version=$(cargo metadata --format-version 1 --no-deps --manifest-path rust/Cargo.toml \
+            | jq -r --arg c "$CRATE" '.packages[] | select(.name == $c) | .version')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            .github/scripts/changelog-section.sh "rust/$CRATE/CHANGELOG.md" "$version" > "$RUNNER_TEMP/body.md"
+          fi
+
+      - name: Open or update the release PR
+        if: steps.release.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1  # v8.1.1
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          branch: ${{ env.BRANCH }}
+          base: master
+          draft: true
+          title: "chore(${{ matrix.crate }}): release v${{ steps.release.outputs.version }}"
+          commit-message: "chore(${{ matrix.crate }}): release v${{ steps.release.outputs.version }}"
+          body-path: ${{ runner.temp }}/body.md
+          author: ${{ steps.bot.outputs.author }}
+          committer: ${{ steps.bot.outputs.author }}
+
+      - name: Close a release PR with nothing to release
+        if: steps.release.outputs.changed == 'false'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: gh pr close "$BRANCH" --delete-branch 2>/dev/null || true

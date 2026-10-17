@@ -1,11 +1,11 @@
 [package]
 name = "pact_ffi"
-version = "0.5.12"
+version = "0.5.11"
 authors = ["Ronald Holshausen <ronald.holshausen@gmail.com>", "Matt Fellows <matt.fellows@onegeek.com.au>", "Andrew Lilley Brinker <abrinker@mitre.org>", "Caleb Stepanian <cstepanian@mitre.org>"]
 edition = "2021"
 description = "Pact interface for foreign languages."
 homepage = "https://www.pact.io"
-repository = "https://github.com/pact-foundation/pact-reference/blob/master/rust/pact_ffi"
+repository = "https://github.com/pact-foundation/pact-reference"
 readme = "README.md"
 keywords = ["testing", "pact", "cdc", "mockserver", "ffi"]
 license = "MIT"
@@ -67,3 +67,11 @@ crate-type = ["cdylib", "staticlib", "rlib"]
 
 [build-dependencies]
 os_info = { version = "3.14.0", default-features = false }
+
+[package.metadata.dist]
+dist = true
+package-libraries = ["cdylib", "cstaticlib"]
+
+[[package.metadata.dist.extra-artifacts]]
+artifacts = ["pact.h", "pact-cpp.h"]
+build = ["./build-headers.sh"]

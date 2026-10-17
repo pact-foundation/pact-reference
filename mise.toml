@@ -2,9 +2,12 @@
 
 # Development tooling. Rust itself is read from `rust-toolchain.toml`.
 [tools]
+"aqua:axodotdev/cargo-dist" = "0.33.0"
 "aqua:cargo-bins/cargo-binstall" = "1.23.0"
 "aqua:nextest-rs/nextest/cargo-nextest" = "0.9.148"
+"aqua:release-plz/release-plz" = "0.3.172"
 "cargo:cbindgen" = "0.29.4"
+"github:obi1kenobi/cargo-semver-checks" = "0.51.0"
 "github:taiki-e/cargo-hack" = "0.6.45"
 just = "1.59.0"
 

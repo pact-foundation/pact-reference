@@ -53,15 +53,6 @@ cargo build --release
 cargo build --target wasm32-wasip2
 ```
 
-### Cross-compilation / MUSL static builds
-
-```bash
-docker run --rm --user "$(id -u)":"$(id -g)" \
-  -v $(pwd):/workspace -w /workspace/rust \
-  -t -e TZ=UTC pactfoundation/rust-musl-build \
-  ./scripts/ci-musl-build.sh
-```
-
 ## Crate Architecture
 
 The dependency graph flows upward — each layer depends on those below it:
@@ -114,4 +105,4 @@ BDD-style integration tests covering V1–V4 spec compliance live in `/compatibi
 
 ## Releasing
 
-Each crate has a `release.groovy` script that guides the release process and updates changelogs. Releases are published to [crates.io](https://crates.io) and tagged on GitHub. CI builds attach platform binaries to each GH release.
+See RELEASING.md: per-crate draft release PRs (release-plz), tags `<crate>-v<version>`, dist builds, crates.io trusted publishing.
