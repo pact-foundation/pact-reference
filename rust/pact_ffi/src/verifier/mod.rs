@@ -174,6 +174,11 @@ ffi_fn! {
     /// (> 0, true) or as query parameters (== 0, false). Set it to greater than zero to turn the
     /// option on.
     ///
+    /// A state change request that fails with a 5xx, 408 or 429 response is retried up to 8
+    /// times, with an exponential back-off starting at 500 ms. The
+    /// `PACT_PROVIDER_STATE_CHANGE_RETRIES` environment variable changes the number of retries
+    /// (`0` disables them); it is read when this function is called.
+    ///
     /// # Safety
     ///
     /// All string fields must contain valid UTF-8. Invalid UTF-8

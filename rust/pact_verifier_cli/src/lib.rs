@@ -219,6 +219,13 @@
 //! This option will cause the verifier to also make a tear down request after the main request is made. It will receive a 
 //! field in the body or a query parameter named `action` with the value `teardown`.
 //!
+//! #### Retrying failed state change requests
+//!
+//! A state change request that fails with a 5xx, 408 or 429 response is retried up to 8 times, waiting 500 ms before
+//! the first retry and doubling the wait each time, so a state change URL that keeps failing takes about two minutes
+//! to fail the interaction. Any other failure is not retried. To change the number of retries, set the
+//! `PACT_PROVIDER_STATE_CHANGE_RETRIES` environment variable; `0` disables them.
+//!
 //! #### `--consumer-version-selectors`
 //!
 //! Accepts a set of [Consumer Version Selectors](https://docs.pact.io/pact_broker/advanced_topics/consumer_version_selectors/) encoded as JSON.

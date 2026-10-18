@@ -109,14 +109,36 @@ pub struct HttpRequestProviderStateExecutor {
   pub retries: u8
 }
 
+/// Environment variable that overrides how many times a failed provider state change request is
+/// retried. Retries apply to 5xx, 408 and 429 responses, with an exponential back-off starting at
+/// 500 ms. Zero disables them.
+pub const STATE_CHANGE_RETRIES_ENV: &str = "PACT_PROVIDER_STATE_CHANGE_RETRIES";
+
+/// How many times a failed provider state change request is retried when nothing overrides it.
+pub const DEFAULT_STATE_CHANGE_RETRIES: u8 = 8;
+
+/// The number of state change retries an override asks for, or the default when there is no
+/// override or it is not a number from 0 to 255.
+fn state_change_retries(value: Option<String>) -> u8 {
+  match value {
+    None => DEFAULT_STATE_CHANGE_RETRIES,
+    Some(value) => value.trim().parse().unwrap_or_else(|_| {
+      warn!("Ignoring {}='{}' as it is not a number from 0 to 255, using the default of {}",
+        STATE_CHANGE_RETRIES_ENV, value, DEFAULT_STATE_CHANGE_RETRIES);
+      DEFAULT_STATE_CHANGE_RETRIES
+    })
+  }
+}
+
 impl Default for HttpRequestProviderStateExecutor {
-  /// Create a default executor
+  /// Create a default executor. The number of retries is read from the
+  /// `PACT_PROVIDER_STATE_CHANGE_RETRIES` environment variable, defaulting to 8.
   fn default() -> HttpRequestProviderStateExecutor {
     HttpRequestProviderStateExecutor {
       state_change_url: None,
       state_change_teardown: false,
       state_change_body: true,
-      retries: 8
+      retries: state_change_retries(std::env::var(STATE_CHANGE_RETRIES_ENV).ok())
     }
   }
 }
@@ -176,5 +198,31 @@ impl ProviderStateExecutor for HttpRequestProviderStateExecutor {
     self: &Self,
   ) -> bool {
     return self.state_change_teardown;
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use expectest::prelude::*;
+
+  use super::{DEFAULT_STATE_CHANGE_RETRIES, state_change_retries};
+
+  #[test]
+  fn state_change_retries_defaults_to_eight() {
+    expect!(state_change_retries(None)).to(be_equal_to(DEFAULT_STATE_CHANGE_RETRIES));
+    expect!(DEFAULT_STATE_CHANGE_RETRIES).to(be_equal_to(8));
+  }
+
+  #[test]
+  fn state_change_retries_can_be_overridden() {
+    expect!(state_change_retries(Some("3".to_string()))).to(be_equal_to(3));
+    expect!(state_change_retries(Some(" 0 ".to_string()))).to(be_equal_to(0));
+  }
+
+  #[test]
+  fn state_change_retries_ignores_an_override_that_is_not_a_count() {
+    expect!(state_change_retries(Some("lots".to_string()))).to(be_equal_to(DEFAULT_STATE_CHANGE_RETRIES));
+    expect!(state_change_retries(Some("-1".to_string()))).to(be_equal_to(DEFAULT_STATE_CHANGE_RETRIES));
+    expect!(state_change_retries(Some("256".to_string()))).to(be_equal_to(DEFAULT_STATE_CHANGE_RETRIES));
   }
 }
