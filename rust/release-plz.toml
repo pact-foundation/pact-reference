@@ -27,6 +27,7 @@ commit_parsers = [
   { group = "<!-- 50 -->🚜 Refactor", message = "^refactor" },
   { group = "<!-- 51 -->⚡️ Performance", message = "^perf" },
   { group = "<!-- 60 -->📚 Documentation", message = "^docs" },
+  { group = "<!-- 70 -->🏗️ Build and CI", message = "^(build|ci)" },
   { group = "<!-- 80 -->🧪 Testing", message = "^test" },
   { group = "<!-- 98 -->↩️ Revert", message = "^revert" },
   { group = "<!-- 99 -->🛠️ Miscellaneous Tasks", message = "^chore" },
