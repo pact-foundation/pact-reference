@@ -108,7 +108,7 @@ jobs:
         run: |
           version=$(sed -n 's/^version = "\(.*\)"$/\1/p' "rust/$CRATE/Cargo.toml" | head -1)
           if git rev-parse -q --verify "refs/tags/$CRATE-v$version" >/dev/null \
-              && ! .github/scripts/crate-published.sh "$CRATE" "$version"; then
+              && ! curl -fso /dev/null -A 'pact-foundation/pact-reference release' "https://crates.io/api/v1/crates/$CRATE/$version"; then
             echo "pending=true" >> "$GITHUB_OUTPUT"
             echo "::notice::$CRATE $version is tagged but not yet on crates.io; skipping until it is."
           else

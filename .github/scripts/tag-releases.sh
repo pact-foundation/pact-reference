@@ -7,7 +7,6 @@
 # Usage: tag-releases.sh <manifest-path> <remote>
 set -euo pipefail
 
-scripts=$(cd "$(dirname "$0")" && pwd)
 manifest=$1
 remote=$2
 
@@ -18,7 +17,7 @@ cargo metadata --format-version 1 --no-deps --manifest-path "$manifest" \
         git rev-parse -q --verify "refs/tags/$tag" >/dev/null && continue
         # Published but untagged means a missing migration tag or a manual
         # publish, never a release PR merge: tagging would start a release.
-        if "$scripts/crate-published.sh" "$name" "$version"; then
+        if curl -fso /dev/null -A 'pact-foundation/pact-reference release' "https://crates.io/api/v1/crates/$name/$version"; then
             echo "::warning::$name $version is on crates.io but has no $tag tag; not tagging it." >&2
             continue
         fi
