@@ -93,9 +93,9 @@ jobs:
 
       - name: Install tools
         uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8  # v5.1.2
+        timeout-minutes: 3
         with:
           working_directory: ${{ env.WORKSPACE_ROOT }}
-          install_args: aqua:nextest-rs/nextest/cargo-nextest
           cache_save: ${{ github.ref == 'refs/heads/master' }}
 
       - name: Run tests
@@ -214,13 +214,11 @@ jobs:
       - name: Install nightly for cbindgen
         run: rustup toolchain install nightly --profile minimal
 
-      # mise's `cargo:` backend requires mise's own `rust` tool, which resolves
-      # to the toolchain already installed from rust-toolchain.toml.
       - name: Install tools
         uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8  # v5.1.2
+        timeout-minutes: 3
         with:
           working_directory: ${{ env.WORKSPACE_ROOT }}
-          install_args: rust aqua:cargo-bins/cargo-binstall cargo:cbindgen just
           cache_save: ${{ github.ref == 'refs/heads/master' }}
 
       - name: Install Conan
@@ -309,8 +307,8 @@ jobs:
 
       - name: Install tools
         uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8  # v5.1.2
+        timeout-minutes: 3
         with:
-          install_args: github:taiki-e/cargo-hack
           cache_save: ${{ github.ref == 'refs/heads/master' }}
 
       - name: Check each feature
