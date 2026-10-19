@@ -4,6 +4,11 @@
 set -euo pipefail
 
 ffi_dir=$(cd "$(dirname "$0")" && pwd)
+# dist's global build job has no mise; install the version mise.toml pins.
+if ! command -v cbindgen >/dev/null; then
+    version=$(sed -n 's/^"cargo:cbindgen" = "\(.*\)"$/\1/p' "$ffi_dir/../../mise.toml")
+    cargo install cbindgen --locked --version "$version"
+fi
 # cbindgen expands macros with -Zunpretty=expanded, a nightly-only flag.
 rustup run nightly rustc --version >/dev/null 2>&1 \
     || rustup toolchain install nightly --profile minimal
