@@ -210,6 +210,22 @@ jobs:
             ${{ steps.cargo-dist.outputs.paths }}
             ${{ env.BUILD_MANIFEST_NAME }}
 
+  # hand edit: one check for branch protection to require. The build jobs
+  # are skipped on other PRs, and a target's failure skips the jobs after
+  # it; a skipped required check counts as passing.
+  gate:
+    name: Release gate complete
+    if: always()
+    needs:
+      - plan
+      - build-local-artifacts
+      - build-global-artifacts
+    runs-on: "ubuntu-22.04"
+    steps:
+      - name: Fail if any job failed
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
+
   # Build and package all the platform-agnostic(ish) things
   build-global-artifacts:
     needs:
