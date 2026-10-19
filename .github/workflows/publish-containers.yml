@@ -21,6 +21,10 @@ permissions:
 jobs:
   publish:
     name: Build and push pact-verifier images
+    # dist runs this after every release; only pact_verifier_cli has an image.
+    if: >-
+      inputs.plan == ''
+      || startsWith(fromJson(inputs.plan || '{}').announcement_tag, 'pact_verifier_cli-v')
     runs-on: ubuntu-latest
     steps:
       - name: Resolve version
@@ -31,36 +35,27 @@ jobs:
         run: |
           if [[ -n "$PLAN" ]]; then
             tag=$(jq -r '.announcement_tag' <<<"$PLAN")
-          else
-            tag="pact_verifier_cli-v$MANUAL_VERSION"
-          fi
-          if [[ "$tag" == pact_verifier_cli-v* ]]; then
             echo "version=${tag##*-v}" >> "$GITHUB_OUTPUT"
           else
-            echo "version=" >> "$GITHUB_OUTPUT"
+            echo "version=$MANUAL_VERSION" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Checkout
-        if: steps.version.outputs.version != ''
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       - name: Set up QEMU
-        if: steps.version.outputs.version != ''
         uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1  # v4.4.0
 
       - name: Set up Buildx
-        if: steps.version.outputs.version != ''
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069  # v4.4.1
 
       - name: Log in to Docker Hub
-        if: steps.version.outputs.version != ''
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f  # v4.6.0
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
       - name: Log in to GHCR
-        if: steps.version.outputs.version != ''
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f  # v4.6.0
         with:
           registry: ghcr.io
@@ -68,7 +63,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push
-        if: steps.version.outputs.version != ''
         working-directory: rust/pact_verifier_cli
         env:
           VERSION: ${{ steps.version.outputs.version }}
