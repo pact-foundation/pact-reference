@@ -49,6 +49,12 @@ on:
       - 'pact_ffi-v[0-9]+.[0-9]+.[0-9]+*'
       - 'pact_verifier_cli-v[0-9]+.[0-9]+.[0-9]+*'
 
+# hand edit: a push to a release PR supersedes its running gate build. Tag
+# runs each get their own group and are never cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   # Run 'dist plan' (or host) to determine what tasks we need to do
   plan:
