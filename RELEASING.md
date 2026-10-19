@@ -56,6 +56,13 @@ gh run rerun <run id> --failed
 
 Publishing skips a version already on crates.io. Don't re-run the whole workflow: release creation fails once the GitHub release exists.
 
+If `announce` created the GitHub release but failed while uploading to it, re-running it fails on the existing release. Upload the run's archives by hand instead, then run the legacy and container steps below. This needs write access to releases.
+
+```sh
+gh run download <run id> -p 'artifacts-*' -D artifacts
+find artifacts -type f ! -name '*-dist-manifest.json' -exec gh release upload <crate>-v<version> --clobber {} +
+```
+
 ### Release again after a failed release
 
 A tag whose release can never succeed, e.g. one that needs a code fix, blocks its crate. While the tagged version is missing from crates.io, the Release PR workflow skips that crate. Deleting the tag doesn't help: the next push to `master` would tag the same version again.
