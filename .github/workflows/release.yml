@@ -49,12 +49,6 @@ on:
       - 'pact_ffi-v[0-9]+.[0-9]+.[0-9]+*'
       - 'pact_verifier_cli-v[0-9]+.[0-9]+.[0-9]+*'
 
-# hand edit: a push to a release PR supersedes its running gate build. Tag
-# runs each get their own group and are never cancelled.
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
 jobs:
   # Run 'dist plan' (or host) to determine what tasks we need to do
   plan:
@@ -246,13 +240,6 @@ jobs:
           name: cargo-dist-cache
           path: ~/.cargo/bin/
       - run: chmod +x ~/.cargo/bin/dist
-      # hand edit: prebuilt cbindgen for the headers. build-setup.yml steps
-      # reach only the per-target jobs.
-      - name: Install cbindgen
-        uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8  # v5.1.2
-        timeout-minutes: 3
-        with:
-          cache_save: false
       # Get all the local artifacts for the global tasks to use (for e.g. checksums)
       - name: Fetch local artifacts
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
