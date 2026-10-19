@@ -7,11 +7,15 @@
 # Reads the release's assets with gh (needs GH_TOKEN and
 # GITHUB_REPOSITORY), or, with LEGACY_ARCHIVES set, from that directory:
 # for example a release gate run's artifacts, to check them before a tag.
-# Needs LLVM for the Windows import libraries (see import-lib.sh), and
+# Needs LLVM for the Windows import libraries (see legacy-import-lib.sh), and
 # readelf.
 #
 # Linux binaries must link the C library downstream installers expect (see
-# check-linkage.sh); a mismatch fails the job before anything is uploaded.
+# legacy-check-linkage.sh); a mismatch fails the job before anything is uploaded.
+#
+# Only the legacy asset names (pact_ffi and pact_verifier_cli) need this.
+# Delete it with the other legacy-* files once neither crate publishes
+# them; see .github/workflows/legacy-artifacts.yml.
 set -euo pipefail
 
 scripts=$(cd "$(dirname "$0")" && pwd)
@@ -73,7 +77,7 @@ case "$package" in
         do
             IFS=: read -r target file name <<<"$entry"
             path=$(extract "$target" "$file")
-            [[ $target != *linux-musl ]] || "$scripts/check-linkage.sh" "$path" musl
+            [[ $target != *linux-musl ]] || "$scripts/legacy-check-linkage.sh" "$path" musl
             gzip_and_sum "$path" "$name"
         done
         ;;
@@ -87,8 +91,8 @@ case "$package" in
             IFS=: read -r target suffix <<<"$entry"
             so=$(extract "$target" libpact_ffi.so)
             case "$target" in
-                *-musl) "$scripts/check-linkage.sh" "$so" musl ;;
-                *) "$scripts/check-linkage.sh" "$so" gnu "$GLIBC_FLOOR" ;;
+                *-musl) "$scripts/legacy-check-linkage.sh" "$so" musl ;;
+                *) "$scripts/legacy-check-linkage.sh" "$so" gnu "$GLIBC_FLOOR" ;;
             esac
             gzip_and_sum "$so" "libpact_ffi-$suffix.so.gz"
             gzip_and_sum "$(extract "$target" libpact_ffi.a)" "libpact_ffi-$suffix.a.gz"
@@ -103,7 +107,7 @@ case "$package" in
         for arch in x86_64 aarch64; do
             target=$arch-pc-windows-msvc
             dll=$(extract "$target" pact_ffi.dll)
-            "$scripts/import-lib.sh" "$dll" "$arch" "$target/pact_ffi.dll.lib"
+            "$scripts/legacy-import-lib.sh" "$dll" "$arch" "$target/pact_ffi.dll.lib"
             gzip_and_sum "$dll" "pact_ffi-windows-$arch.dll.gz"
             gzip_and_sum "$target/pact_ffi.dll.lib" "pact_ffi-windows-$arch.dll.lib.gz"
             gzip_and_sum "$(extract "$target" pact_ffi.lib)" "pact_ffi-windows-$arch.lib.gz"

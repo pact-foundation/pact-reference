@@ -3,10 +3,10 @@
 # hard-code them. pact_ffi assets also go to a `libpact_ffi-v<version>`
 # release, the URL those installers build.
 #
-# Self-disables on 2027-06-30; delete this file, the
-# `./legacy-artifacts` entry in the dist config, and
-# .github/scripts/legacy-artifacts.sh and import-lib.sh afterwards, then
-# run `dist generate`.
+# Self-disables on 2027-06-30. Once no legacy assets are needed, for
+# either crate, delete this file, the `./legacy-artifacts` entries in
+# dist-workspace.toml and every .github/scripts/legacy-* file, then run
+# `dist generate`.
 name: Legacy artifacts
 
 on:
@@ -56,7 +56,7 @@ jobs:
         if: steps.cutoff.outputs.enabled == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
-      # import-lib.sh rebuilds the Windows import libraries with LLVM.
+      # legacy-import-lib.sh rebuilds the Windows import libraries with LLVM.
       - name: Install LLVM
         if: steps.cutoff.outputs.enabled == 'true'
         run: |
