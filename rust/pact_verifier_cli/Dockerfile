@@ -1,8 +1,9 @@
-# Packages the static musl pact-verifier from a dist release.
-FROM alpine:3.22 AS fetch
+# Packages the static musl pact-verifier from a dist release. No step runs
+# on the target platform, so a multi-platform build needs no emulation.
+FROM --platform=$BUILDPLATFORM alpine:3.22 AS fetch
 ARG VERSION
 ARG TARGETARCH
-RUN apk add --no-cache curl xz
+RUN apk add --no-cache ca-certificates curl xz
 RUN case "$TARGETARCH" in \
         amd64) target=x86_64-unknown-linux-musl ;; \
         arm64) target=aarch64-unknown-linux-musl ;; \
@@ -13,6 +14,6 @@ RUN case "$TARGETARCH" in \
     && install -m 0755 pact-verifier /pact-verifier
 
 FROM alpine:3.22
-RUN apk --no-cache add ca-certificates
+COPY --from=fetch /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=fetch /pact-verifier /usr/local/bin/pact-verifier
 ENTRYPOINT ["/usr/local/bin/pact-verifier"]
