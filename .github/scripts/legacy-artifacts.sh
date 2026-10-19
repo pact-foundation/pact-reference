@@ -12,11 +12,28 @@
 #
 # Linux binaries must link the C library downstream installers expect (see
 # legacy-check-linkage.sh); a mismatch fails the job before anything is uploaded.
-#
-# Only the legacy asset names (pact_ffi and pact_verifier_cli) need this.
-# Delete it with the other legacy-* files once neither crate publishes
-# them; see .github/workflows/legacy-artifacts.yml.
 set -euo pipefail
+
+# MARK: Cut-off
+
+# CUTOFF is the single source of the legacy cut-off date. From that date
+# this script writes nothing, so no legacy assets are published. After it,
+# delete:
+# - .github/workflows/legacy-artifacts.yml;
+# - the `legacy-artifacts` entries in dist-workspace.toml, then run
+#   `dist generate` and re-apply the `hand edit` changes to release.yml;
+# - every .github/scripts/legacy-* file;
+# - RELEASING.md's legacy sections.
+# legacy-check-linkage.sh is the only check of the glibc floor and musl
+# linkage; move it into the release gate first to keep those checks.
+CUTOFF=2027-06-30
+
+if [[ ! "$(date -u +%Y-%m-%d)" < "$CUTOFF" ]]; then
+    echo "::notice::Past the $CUTOFF legacy cut-off; no legacy assets are written."
+    exit 0
+fi
+
+# MARK: Build
 
 scripts=$(cd "$(dirname "$0")" && pwd)
 # The oldest glibc among supported major distributions: RHEL 8 and its
