@@ -77,7 +77,7 @@ jobs:
               cutoff=$(sed -n 's/^CUTOFF=//p' .github/scripts/legacy-artifacts.sh)
               gh api "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/$legacy" -f "sha=$sha" >/dev/null 2>&1 || true
               gh release view "$legacy" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
-                gh release create "$legacy" --repo "$GITHUB_REPOSITORY" --latest=false \
+                gh release create "$legacy" --repo "$GITHUB_REPOSITORY" --target "$sha" --latest=false \
                   --title "pact_ffi $version (legacy asset names)" \
                   --notes "Legacy-named assets for [pact_ffi-v$version](https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG). These names are published until $cutoff."
               gh release upload "$legacy" --repo "$GITHUB_REPOSITORY" --clobber "${files[@]}"
