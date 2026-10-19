@@ -18,7 +18,7 @@ use serde_json::Value::Object;
 use tracing::debug;
 use pact_models::bodies::OptionalBody;
 use pact_models::content_types::TEXT;
-use pact_models::headers::{MULTI_VALUE_HEADERS, PARAMETERISED_HEADERS};
+use pact_models::headers::{MULTI_VALUE_HEADERS, PARAMETERISED_HEADERS, SINGLE_VALUE_HEADERS};
 use pact_models::json_utils::json_to_string;
 use pact_models::http_parts::HttpPart;
 use pact_models::matchingrules::{MatchingRule, RuleList, RuleLogic};
@@ -1989,11 +1989,21 @@ fn setup_header_plan<T: HttpPart>(
 
         let item_path = DocPath::root().join(key);
         let path = doc_path.join(key);
+        let actual_value = if value.len() > 1
+          && !SINGLE_VALUE_HEADERS.contains(&key.to_lowercase().as_str())
+          && !PARAMETERISED_HEADERS.contains(&key.to_lowercase().as_str())
+          && !MULTI_VALUE_HEADERS.contains(&key.to_lowercase().as_str()) {
+          let mut split_values = ExecutionPlanNode::action("header:split-values");
+          split_values.add(ExecutionPlanNode::resolve_value(path.clone()));
+          split_values
+        } else {
+          ExecutionPlanNode::resolve_value(path.clone())
+        };
         if context.matcher_is_defined(&item_path) {
           let matchers = context.select_best_matcher(&item_path);
           item_node.add(ExecutionPlanNode::annotation(format!("{} {}", key, matchers.generate_description(true))));
           presence_check.add(build_matching_rule_node(&ExecutionPlanNode::value_node(item_value),
-            &ExecutionPlanNode::resolve_value(&path), &matchers, true,
+            &actual_value, &matchers, true,
             context.config.show_types_in_errors));
         } else if PARAMETERISED_HEADERS.contains(&key.to_lowercase().as_str()) {
           item_node.add(ExecutionPlanNode::annotation(format!("{}={}", key, item_value.to_string())));
@@ -2031,7 +2041,7 @@ fn setup_header_plan<T: HttpPart>(
           } else {
             item_check
               .add(ExecutionPlanNode::value_node(item_value))
-              .add(ExecutionPlanNode::resolve_value(doc_path.join(key)))
+              .add(actual_value)
               .add(ExecutionPlanNode::value_node(NodeValue::NULL))
               .add(ExecutionPlanNode::value_node(context.config.show_types_in_errors));
           }
