@@ -52,7 +52,7 @@ jobs:
           NAME: ${{ steps.crate.outputs.name }}
           VERSION: ${{ steps.crate.outputs.version }}
         run: |
-          if .github/scripts/crate-published.sh "$NAME" "$VERSION"; then
+          if curl -fso /dev/null -A 'pact-foundation/pact-reference release' "https://crates.io/api/v1/crates/$NAME/$VERSION"; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
             echo "::notice::${NAME} ${VERSION} is already on crates.io; skipping."
           else
