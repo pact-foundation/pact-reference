@@ -29,11 +29,13 @@ pr-run-mode = "upload"
 # The GitHub release follows the crates.io publish, so a failed publish
 # leaves no release behind.
 github-release = "announce"
+global-artifacts-jobs = ["./check-artifacts"]
 publish-jobs = ["./publish-crate"]
 post-announce-jobs = ["./legacy-artifacts", "./publish-containers"]
 github-build-setup = "../build-setup.yml"
 
 [dist.github-custom-job-permissions]
+check-artifacts = { contents = "read" }
 publish-crate = { contents = "read", id-token = "write" }
 legacy-artifacts = { contents = "write" }
 publish-containers = { contents = "read", packages = "write" }
