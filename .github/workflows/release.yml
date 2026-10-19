@@ -228,8 +228,8 @@ jobs:
       # reach only the per-target jobs.
       - name: Install cbindgen
         uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8  # v5.1.2
+        timeout-minutes: 3
         with:
-          install_args: aqua:cargo-bins/cargo-binstall cargo:cbindgen
           cache_save: false
       # Get all the local artifacts for the global tasks to use (for e.g. checksums)
       - name: Fetch local artifacts
