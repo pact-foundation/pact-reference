@@ -1,6 +1,6 @@
 # Changelog
 
-# 1.4.7 - Support matching rules and generators from plugins
+## 1.4.7 - Support matching rules and generators from plugins
 
 * 7486b0d0 - chore: Update pact_consumer to 1.4.10 (Ronald Holshausen, Fri Aug 7 10:20:39 2026 +1000)
 * a09d96cd - chore: Update pact_matching to 2.0.10 (Ronald Holshausen, Fri Aug 7 09:16:58 2026 +1000)
@@ -10,7 +10,7 @@
 * 149b3e81 - chore: Update pact-plugin-driver to 1.2.0 (Ronald Holshausen, Wed Aug 5 15:43:01 2026 +1000)
 * 0546aa9a - chore(pact_verifier): bump version to 1.4.7 [skip ci] (Ronald Holshausen, Wed Aug 5 11:15:54 2026 +1000)
 
-# 1.4.6 - Maintenance Release
+## 1.4.6 - Maintenance Release
 
 * f7dbd608 - chore(pact-verifier): Cleanup crypto configure code in test (Ronald Holshausen, Wed Aug 5 10:46:15 2026 +1000)
 * 73863149 - chore(pact-verifier): Set the crypto provider in the HAL client (Ronald Holshausen, Wed Aug 5 10:16:44 2026 +1000)
@@ -18,7 +18,7 @@
 * b0dd00b8 - fix: when using rustls-no-provider with reqwest we need to set a crypto provider (Ronald Holshausen, Tue Aug 4 17:27:17 2026 +1000)
 * d46ff922 - chore(pact_verifier): bump version to 1.4.6 [skip ci] (Ronald Holshausen, Tue Aug 4 15:58:40 2026 +1000)
 
-# 1.4.5 - Maintenance Release
+## 1.4.5 - Maintenance Release
 
 * 96f5c649 - chore(pact-verifier): Update pact-consumer to 1.4.9 (Ronald Holshausen, Tue Aug 4 15:55:30 2026 +1000)
 * 921fd399 - Revert "chore(pact_verifier): update changelog for release 1.4.5 [skip ci]" (Ronald Holshausen, Tue Aug 4 15:49:31 2026 +1000)
@@ -30,7 +30,7 @@
 * 0904b3d3 - chore: Update pact_models to 1.3.13 (Ronald Holshausen, Mon Aug 3 17:16:00 2026 +1000)
 * 00fa02aa - chore(pact_verifier): bump version to 1.4.5 [skip ci] (Ronald Holshausen, Fri Jul 31 09:34:10 2026 +1000)
 
-# 1.4.4 - Bugfix Release
+## 1.4.4 - Bugfix Release
 
 * bada2558 - chore: Update pact_consumer to 1.4.6 (Ronald Holshausen, Fri Jul 31 09:29:47 2026 +1000)
 * b194fd45 - Revert "chore(pact_verifier): update changelog for release 1.4.4 [skip ci]" (Ronald Holshausen, Thu Jul 30 16:54:21 2026 +1000)
@@ -45,28 +45,28 @@
 * 51d9f5fb - chore: Update pact-plugin-driver to 1.0.0-beta.6 (Ronald Holshausen, Thu Jul 2 17:08:12 2026 +1000)
 * 89822e2c - chore(pact_verifier): bump version to 1.4.4 [skip ci] (Ronald Holshausen, Wed Jun 24 15:14:39 2026 +1000)
 
-# 1.4.3 - V2 plugin logging improvements
+## 1.4.3 - V2 plugin logging improvements
 
 * 8a70209b - chore: Update pact_consumer to 1.4.5 (Ronald Holshausen, Wed Jun 24 15:10:51 2026 +1000)
 * fb8a0a95 - chore: Update pact_matching to 2.0.7 (Ronald Holshausen, Wed Jun 24 15:01:51 2026 +1000)
 * 40318b16 - feat(008): Plugin observability — test run ID correlation and FFI log sink (#537) (Ronald Holshausen, Wed Jun 24 10:08:42 2026 +1000)
 * c85c020a - chore(pact_verifier): bump version to 1.4.3 [skip ci] (Ronald Holshausen, Fri Jun 19 09:51:52 2026 +1000)
 
-# 1.4.2 - Maintenance Release
+## 1.4.2 - Maintenance Release
 
 * 4fa2a6f5 - chore: Update pact_matching to 2.0.6 (Ronald Holshausen, Fri Jun 19 09:31:54 2026 +1000)
 * 46a285ae - chore: Update pact_models to 1.3.11 (Ronald Holshausen, Thu Jun 18 16:00:45 2026 +1000)
 * b0554f31 - chore: add crate name and version to all http clients (JP-Ellis, Thu Jun 18 09:26:08 2026 +1000)
 * ca18d2db - bump version to 1.4.2 (Ronald Holshausen, Tue Jun 9 16:52:05 2026 +1000)
 
-# 1.4.1 - Support V2 plugins
+## 1.4.1 - Support V2 plugins
 
 * 50fb5a6f - chore: Update pact_matching to 2.0.5 and pact_mock_server to 2.2.2 (Ronald Holshausen, Tue Jun 9 15:20:14 2026 +1000)
 * 8ec724bb - chore: Update pact-plugin-driver to 1.0.0-beta.2 to support V2 plugins (Ronald Holshausen, Tue Jun 9 14:49:40 2026 +1000)
 * a579270d - chore: update Pact plugin driver to version supporting initial V2 plugins (Ronald Holshausen, Fri May 29 13:41:41 2026 +1000)
 * 9df6c7f5 - bump version to 1.4.1 (Ronald Holshausen, Wed May 27 16:30:08 2026 +1000)
 
-# 1.4.0 - Add retry logic when interacting with a Pact broker
+## 1.4.0 - Add retry logic when interacting with a Pact broker
 
 * 3a6e45ef - chore: Update pact_matching to 2.0.4 (Ronald Holshausen, Wed May 27 16:26:53 2026 +1000)
 * 27a68723 - test: fix error from upstream error format change (JP-Ellis, Wed May 27 15:19:55 2026 +1000)
@@ -75,14 +75,14 @@
 * 8f86cd92 - fix: verifier retry logic (JP-Ellis, Tue May 26 10:43:08 2026 +1000)
 * 2e9a89f8 - bump version to 1.3.6 (Ronald Holshausen, Thu Apr 30 09:22:26 2026 +1000)
 
-# 1.3.5 - Maintenance Release
+## 1.3.5 - Maintenance Release
 
 * 620632a2 - feat(pact_verifier): Display any references in the verifier output (#528) (Ronald Holshausen, Thu Apr 30 09:12:59 2026 +1000)
 * 22d7c32d - chore: Update pact_consumer to 1.4.3 (Ronald Holshausen, Wed Apr 29 17:22:31 2026 +1000)
 * 27c4aa20 - chore: Update pact_models to 1.3.10 (Ronald Holshausen, Wed Apr 29 17:20:36 2026 +1000)
 * 3a587b09 - bump version to 1.3.5 (Ronald Holshausen, Thu Feb 19 11:01:06 2026 +1100)
 
-# 1.3.4 - Maintenance Release
+## 1.3.4 - Maintenance Release
 
 * ea571fbe - chore(pact_verifier): Update dependencies (Ronald Holshausen, Thu Feb 19 10:44:44 2026 +1100)
 * 0c9a0b27 - chore: Update pact_matching to 2.0.3 (Ronald Holshausen, Thu Feb 19 10:16:12 2026 +1100)
@@ -93,7 +93,7 @@
 * eaaee9de - chore: Upgrade pact_models to 1.3.7 (Ronald Holshausen, Tue Sep 16 13:57:37 2025 +1000)
 * 4d7f186c - bump version to 1.3.4 (Ronald Holshausen, Wed Aug 20 09:38:11 2025 +1000)
 
-# 1.3.3 - Maintenance Release
+## 1.3.3 - Maintenance Release
 
 * a77b53c8 - chore: Update pact_matching to 2.0.1 (Ronald Holshausen, Fri Aug 1 09:16:28 2025 +1000)
 * c480357e - Chore: Update pact_matching to 2.0.0 (Ronald Holshausen, Thu Jul 31 15:40:59 2025 +1000)
@@ -103,7 +103,7 @@
 * cfc5e44d - chore(v2-matching-engine): Fix after refactor of match_response function (Ronald Holshausen, Fri Jul 25 10:29:09 2025 +1000)
 * 24bc59a7 - bump version to 1.3.3 (Ronald Holshausen, Fri Jun 20 11:21:42 2025 +1000)
 
-# 1.3.2 - Support exit-on-first-error and last-failed options
+## 1.3.2 - Support exit-on-first-error and last-failed options
 
 * 31113440 - feat(pact_verifier_cli): Implement the --last-failed CLI flag #494 (Ronald Holshausen, Fri Jun 20 11:03:44 2025 +1000)
 * a8c50d56 - feat(pact_verifier): Adds details of the verified interactions to the JSON output #494 (Ronald Holshausen, Thu Jun 19 14:51:50 2025 +1000)
@@ -114,7 +114,7 @@
 * 68d55bf9 - chore(pact_verifier): Update dependencies (Ronald Holshausen, Wed Jun 18 14:44:43 2025 +1000)
 * 1f0f1c4f - bump version to 1.3.2 (Ronald Holshausen, Thu Jun 12 09:25:22 2025 +1000)
 
-# 1.3.1 - Maintenance Release
+## 1.3.1 - Maintenance Release
 
 * 5371ee6f - chore(pact_verifier): Update pact_consumer to 1.4.1 (Ronald Holshausen, Wed Jun 11 16:29:07 2025 +1000)
 * 3f883a8d - fix(Alpine): Update pact_matching to 2.0.0-beta.3 (Ronald Holshausen, Wed Jun 11 13:46:00 2025 +1000)
@@ -123,7 +123,7 @@
 * 18e53fbd - chore: Update pact_models to 1.3.2 (Ronald Holshausen, Wed Jun 11 10:16:03 2025 +1000)
 * e2027e97 - bump version to 1.3.1 (Ronald Holshausen, Wed May 21 15:07:33 2025 +1000)
 
-# 1.3.0 - Update to Rust 2024 and pact_matching 2.0.0-beta
+## 1.3.0 - Update to Rust 2024 and pact_matching 2.0.0-beta
 
 * 71b1b7ed - chore(pact_consumer): Update pact_mock_server to 2.1.0 (Ronald Holshausen, Wed May 21 14:44:21 2025 +1000)
 * 0649f61f - chore: Update pact_matching to 2.0.0-beta.1 (Ronald Holshausen, Wed May 21 12:04:10 2025 +1000)
@@ -146,7 +146,7 @@
 * 11cd9dc0 - Merge branch 'master' into feat/matching-engine-v2 (Ronald Holshausen, Fri Oct 25 10:01:15 2024 +1100)
 * 02e2ae13 - chore: Bump pact_matching to 2.0.0-beta.0 (Ronald Holshausen, Tue Jul 30 11:40:20 2024 +1000)
 
-# 1.2.5 - Bugfix Release
+## 1.2.5 - Bugfix Release
 
 * 5ad52f84 - chore(pact_verifier): Update dependencies (Ronald Holshausen, Wed Mar 19 13:47:29 2025 +1100)
 * e32f0dbd - fix: Upgrade pact-plugin-driver to 0.7.3 (Ronald Holshausen, Wed Mar 19 11:20:39 2025 +1100)
@@ -165,7 +165,7 @@
 * dc441709 - chore: Upgrade pact_matching to 1.2.7 (Ronald Holshausen, Tue Aug 27 14:57:12 2024 +1000)
 * b33fa126 - bump version to 1.2.5 (Ronald Holshausen, Tue Aug 13 15:39:33 2024 +1000)
 
-# 1.2.4 - Bugfix Release
+## 1.2.4 - Bugfix Release
 
 * 978677cc - chore: Upgrade pact_matching to 1.2.6 (Ronald Holshausen, Tue Aug 13 15:27:49 2024 +1000)
 * 9a7eef75 - chore: Upgrade pact_models to 1.2.4 (Ronald Holshausen, Tue Aug 13 11:51:06 2024 +1000)
@@ -177,7 +177,7 @@
 * 25fd9c56 - chore: Update release script (Ronald Holshausen, Wed Jul 17 15:12:37 2024 +1000)
 * c8d297f2 - bump version to 1.2.4 (Ronald Holshausen, Wed Jul 17 15:12:16 2024 +1000)
 
-# 1.2.3 - Bugfix Release
+## 1.2.3 - Bugfix Release
 
 * bb9fc1be - chore: Upgrade pact_matching to 1.2.5 (Ronald Holshausen, Wed Jul 17 14:34:04 2024 +1000)
 * fd9ff70a - chore: Upgrade pact_models to 1.2.2 (Ronald Holshausen, Wed Jul 17 11:15:34 2024 +1000)
@@ -189,7 +189,7 @@
 * 0e2e1b8a - chore: Cleanup compiler deprecation warnings (Ronald Holshausen, Fri Jun 14 11:25:56 2024 +1000)
 * 570b1425 - bump version to 1.2.3 (Ronald Holshausen, Fri Jun 14 11:17:36 2024 +1000)
 
-# 1.2.2 - Feature Release
+## 1.2.2 - Feature Release
 
 * 7f741c7e - chore(pact_verifier): Update dependencies (Ronald Holshausen, Fri Jun 14 10:50:11 2024 +1000)
 * c32e07c8 - chore: Upgrade pact_consumer to 1.2.2 (Ronald Holshausen, Fri Jun 14 10:41:31 2024 +1000)
@@ -200,7 +200,7 @@
 * e44458a8 - chore(pact_verifier): Exclude parameters from the span which are included in the previous span (Ronald Holshausen, Mon May 13 14:15:18 2024 +1000)
 * fe92d88e - bump version to 1.2.2 (Ronald Holshausen, Wed May 8 15:13:26 2024 +1000)
 
-# 1.2.1 - Maintenance Release
+## 1.2.1 - Maintenance Release
 
 * c3cae83e - chore: Upgrade pact_consumer to 1.2.2 (Ronald Holshausen, Wed May 8 14:46:19 2024 +1000)
 * fa2b1d09 - chore: Upgrade pact_matching to 1.2.2 (Ronald Holshausen, Tue May 7 10:50:08 2024 +1000)
@@ -210,7 +210,7 @@
 * 758f4c03 - chore: Update pact_matching to 1.2.1 (Ronald Holshausen, Tue Apr 16 16:29:38 2024 +1000)
 * 05c8d536 - bump version to 1.2.1 (Ronald Holshausen, Tue Apr 16 15:37:53 2024 +1000)
 
-# 1.2.0 - Maintenance Release
+## 1.2.0 - Maintenance Release
 
 * dffbc8e7 - chore(pact_consumer): Bump minor version (Ronald Holshausen, Tue Apr 16 11:49:14 2024 +1000)
 * d625bded - Revert "update changelog for release 1.2.0" (Ronald Holshausen, Tue Apr 16 11:31:14 2024 +1000)
@@ -221,7 +221,7 @@
 * d6125b75 - chore(pact_matching): Bump minor version (Ronald Holshausen, Tue Apr 16 10:16:44 2024 +1000)
 * 1664bcbc - bump version to 1.1.1 (Ronald Holshausen, Mon Feb 19 11:34:09 2024 +1100)
 
-# 1.1.0 - Maintenance Release
+## 1.1.0 - Maintenance Release
 
 * 04959d7d - feat(verifier): Include interaction description in verification results #292 (Ronald Holshausen, Mon Feb 19 07:39:21 2024 +1100)
 * 2b5148b9 - feat(verifier): Add the client language to the verification results if set #307 (Ronald Holshausen, Mon Feb 19 06:44:24 2024 +1100)
@@ -238,7 +238,7 @@
 * 1c3208e4 - chore: Upgrade pact_consumer to 1.1.1 (Ronald Holshausen, Sat Jan 20 22:04:39 2024 +1100)
 * 86cb58dc - bump version to 1.0.6 (Ronald Holshausen, Sat Jan 20 20:37:10 2024 +1100)
 
-# 1.0.5 - Bugfix Release
+## 1.0.5 - Bugfix Release
 
 * bff1d573 - chore: Upgrade dependencies (Ronald Holshausen, Sat Jan 20 20:23:10 2024 +1100)
 * e552bdce - chore: Upgrade pact_matching to 1.1.9 (Ronald Holshausen, Sat Jan 20 15:13:13 2024 +1100)
@@ -251,7 +251,7 @@
 * ab3f9a56 - fix(verifier): default error formatter does not display the inner error #351 (Ronald Holshausen, Thu Dec 21 15:18:31 2023 +1100)
 * aa07cdd5 - bump version to 1.0.5 (Ronald Holshausen, Wed Dec 20 14:39:08 2023 +1100)
 
-# 1.0.4 - Maintenance Release
+## 1.0.4 - Maintenance Release
 
 * f8c09785 - Revert "update changelog for release 1.0.4" (Ronald Holshausen, Wed Dec 20 14:26:46 2023 +1100)
 * 71cfff46 - update changelog for release 1.0.4 (Ronald Holshausen, Wed Dec 20 14:25:12 2023 +1100)
@@ -264,7 +264,7 @@
 * 04bad264 - chore: Upgrade pact_matching to 1.1.6 (Ronald Holshausen, Fri Sep 22 11:03:38 2023 +1000)
 * 2bac8b7a - bump version to 1.0.4 (Ronald Holshausen, Tue Aug 29 10:00:03 2023 +1000)
 
-# 1.0.3 - Bugfix Release
+## 1.0.3 - Bugfix Release
 
 * 3ec99c41 - chore: Upgrade pact_matching to 1.1.5 (Ronald Holshausen, Fri Aug 18 15:40:02 2023 +1000)
 * 40009089 - Merge pull request #308 from tienvx/fix-wrong-plugin-version (Ronald Holshausen, Fri Aug 18 14:01:37 2023 +1000)
@@ -275,13 +275,13 @@
 * 24ed7835 - chore: Upgrade pact-models to 1.1.10 (Ronald Holshausen, Fri Aug 4 16:11:24 2023 +1000)
 * e191e072 - bump version to 1.0.3 (Ronald Holshausen, Thu Jul 27 15:03:17 2023 +1000)
 
-# 1.0.2 - Bugfix Release
+## 1.0.2 - Bugfix Release
 
 * 8f88192e - chore: Upgrade pact_matching to 1.1.4 (Ronald Holshausen, Thu Jul 27 14:35:27 2023 +1000)
 * 4a01919a - chore: Upgrade pact_models to 1.1.9 (Ronald Holshausen, Thu Jul 27 10:24:00 2023 +1000)
 * 7e1a102e - bump version to 1.0.2 (Ronald Holshausen, Wed Jul 12 11:20:41 2023 +1000)
 
-# 1.0.1 - Bugfix Release
+## 1.0.1 - Bugfix Release
 
 * c2aad1ac - chore: Add support for datetime, xml, multipart and plugins crate features (Ronald Holshausen, Wed Jul 12 11:15:37 2023 +1000)
 * 348eb3f3 - chore: Upgrade pact_matcing to 1.1.3 (Ronald Holshausen, Tue Jul 11 11:38:26 2023 +1000)
@@ -301,7 +301,7 @@
 * c2d925e9 - chore: Upgrade pact_consumer to 1.0.0 (Ronald Holshausen, Tue May 23 16:05:12 2023 +1000)
 * c3a88262 - bump version to 1.0.1 (Ronald Holshausen, Tue May 23 15:23:22 2023 +1000)
 
-# 1.0.0 - Bugfixes + Update Pact models to 1.1 (breaking change)
+## 1.0.0 - Bugfixes + Update Pact models to 1.1 (breaking change)
 
 * ca1e37fb - chore: Upgrade pact_verifier to 1.0.0 (Ronald Holshausen, Tue May 23 15:16:08 2023 +1000)
 * 71b38a87 - fix: Add Custom Header option not replacing already existing headers #275 (Ronald Holshausen, Tue May 23 15:05:20 2023 +1000)
@@ -315,7 +315,7 @@
 * 59946c3f - fix: hanlde validation errors from Pactbroker correctly #273 (Ronald Holshausen, Mon May 8 15:40:11 2023 +1000)
 * 00301196 - bump version to 0.15.4 (Ronald Holshausen, Tue Apr 18 15:18:36 2023 +1000)
 
-# 0.15.3 - Bugfix Release
+## 0.15.3 - Bugfix Release
 
 * 0bcba082 - chore: Upgrade pact_matching to 1.0.8 (Ronald Holshausen, Tue Apr 18 13:14:38 2023 +1000)
 * 6c14abfd - chore: Upgrade pact_models to 1.0.13 (Ronald Holshausen, Tue Apr 18 13:00:01 2023 +1000)
@@ -326,7 +326,7 @@
 * 779a59f0 - fix: Upgrade pact-plugin-driver to 0.4.1 (fixes an issue introduced in 0.4.0 with shared channels to plugins) (Ronald Holshausen, Wed Apr 5 17:01:18 2023 +1000)
 * b4c09bee - bump version to 0.15.3 (Ronald Holshausen, Wed Apr 5 10:02:37 2023 +1000)
 
-# 0.15.2 - Maintenance Release
+## 0.15.2 - Maintenance Release
 
 * 126cf462 - chore: Upgrade pact_matching to 1.0.7 (Ronald Holshausen, Tue Apr 4 15:12:28 2023 +1000)
 * 6f0c4b2f - feat: Upgrade pact-plugin-driver to 0.4.0 which uses a shared gRPC channel to each plugin (Ronald Holshausen, Tue Apr 4 14:32:36 2023 +1000)
@@ -334,7 +334,7 @@
 * c6b66a28 - chore: Test was failing with dates where day of the month has one digit (Ronald Holshausen, Mon Apr 3 11:55:45 2023 +1000)
 * 2e3feacd - bump version to 0.15.2 (Ronald Holshausen, Wed Mar 15 15:16:42 2023 +1100)
 
-# 0.15.1 - Bugfix Release
+## 0.15.1 - Bugfix Release
 
 * 11c701b4 - fix: Upgrade pact_matching to 1.0.6 (fixes some issues with matching HTTP headers) (Ronald Holshausen, Wed Mar 15 14:54:54 2023 +1100)
 * 7e72df6e - chore: add a verification test with a Last-Modified header #259 (Ronald Holshausen, Wed Mar 15 14:33:59 2023 +1100)
@@ -344,7 +344,7 @@
 * 57728a01 - chore: update pact-plugin-driver to 0.3.3 (Ronald Holshausen, Tue Mar 14 17:19:20 2023 +1100)
 * b87ea333 - bump version to 0.15.1 (Ronald Holshausen, Thu Mar 2 12:50:29 2023 +1100)
 
-# 0.15.0 - Supports JUnit XML report files
+## 0.15.0 - Supports JUnit XML report files
 
 * 9629c351 - chore: dump minor version of pact_verifier as some signatures have changed (Ronald Holshausen, Thu Mar 2 12:10:35 2023 +1100)
 * c9333f94 - feat: add option to generate JUnit XML report format for consumption by CI servers #257 (Ronald Holshausen, Thu Mar 2 10:48:56 2023 +1100)
@@ -352,13 +352,13 @@
 * 1355837e - refactor: add timeing to load pact operations (Ronald Holshausen, Mon Feb 27 14:10:29 2023 +1100)
 * 50ecb585 - bump version to 0.14.1 (Ronald Holshausen, Thu Feb 16 14:14:18 2023 +1100)
 
-# 0.14.0 - Bugfix Release
+## 0.14.0 - Bugfix Release
 
 * c368c651 - fix: Pass any custom header values on to the plugin verification call (Ronald Holshausen, Thu Feb 16 13:52:03 2023 +1100)
 * 0676047e - chore: Upgrade pact-plugin-driver to 0.3.2 (Ronald Holshausen, Thu Feb 16 12:09:46 2023 +1100)
 * 8ad10cc2 - bump version to 0.13.22 (Ronald Holshausen, Fri Feb 10 13:27:34 2023 +1100)
 
-# 0.13.21 - Bugfix Release
+## 0.13.21 - Bugfix Release
 
 * 0a248af1 - fix: Verification output comes from the plugin, so do not display any when a plugin is used (Ronald Holshausen, Fri Feb 10 12:46:13 2023 +1100)
 * 1e7331f1 - fix: Upgrade plugin driver to 0.3.1 (Ronald Holshausen, Wed Feb 8 13:28:07 2023 +1100)
@@ -366,7 +366,7 @@
 * 0b70060f - chore: Upgrade pact-plugin-driver and base64 crates (supports message metadata) (Ronald Holshausen, Mon Feb 6 14:56:29 2023 +1100)
 * 6e41c5ee - bump version to 0.13.21 (Ronald Holshausen, Wed Jan 11 15:42:41 2023 +1100)
 
-# 0.13.20 - Bugfix Release
+## 0.13.20 - Bugfix Release
 
 * ee69e75c - chore: Upgrade base64 crate (Ronald Holshausen, Wed Jan 11 15:38:21 2023 +1100)
 * c1b22f1c - chore: Upgrade pact_matching to 1.0.3 (Ronald Holshausen, Wed Jan 11 15:19:29 2023 +1100)
@@ -380,7 +380,7 @@
 * 3aecb702 - chore: require tracing-subscriber for tests for crates that use pact_models #239 (Ronald Holshausen, Thu Dec 22 14:37:01 2022 +1100)
 * 24429923 - bump version to 0.13.20 (Ronald Holshausen, Mon Dec 19 16:16:05 2022 +1100)
 
-# 0.13.19 - Add user-agent header + Support generators in plugins
+## 0.13.19 - Add user-agent header + Support generators in plugins
 
 * e827f591 - chore: Upgrade pact_matching to 1.0.2 (Ronald Holshausen, Mon Dec 19 15:30:14 2022 +1100)
 * 8bb2534d - feat: add user-agent header to the HALClient (andrisak, Sat Dec 17 12:42:05 2022 +0100)
@@ -388,20 +388,20 @@
 * 1ab47c6f - chore: Upgrade Tokio to latest (Ronald Holshausen, Fri Dec 16 16:31:31 2022 +1100)
 * 46868427 - bump version to 0.13.19 (Ronald Holshausen, Wed Dec 14 17:12:51 2022 +1100)
 
-# 0.13.18 - Maintenance Release
+## 0.13.18 - Maintenance Release
 
 * fb2f4204 - chore: Upgrade pact_matching to 1.0.1 (Ronald Holshausen, Wed Dec 14 17:03:31 2022 +1100)
 * 8be00f0c - chore: Upgrade pact-plugin-driver to 0.2.1 (Ronald Holshausen, Wed Dec 14 14:55:32 2022 +1100)
 * c5e3431c - bump version to 0.13.18 (Ronald Holshausen, Mon Dec 12 11:13:47 2022 +1100)
 
-# 0.13.17 - Bugfix + Support plugins generating interaction content
+## 0.13.17 - Bugfix + Support plugins generating interaction content
 
 * e7a1b9f2 - chore: Upgrade pact_matching to 1.0 and plugin driver to 0.2 (Ronald Holshausen, Fri Dec 9 17:29:33 2022 +1100)
 * 9fc56580 - fix: add tests for PUT and POST requests #220 (Ronald Holshausen, Thu Dec 1 11:42:31 2022 +1100)
 * 77a7c8ba - fix: make HAL client fetch and fetch link functions support brokers hosted with context paths #220 (Ronald Holshausen, Wed Nov 30 18:20:23 2022 +1100)
 * 3d85ba0b - bump version to 0.13.17 (Ronald Holshausen, Mon Nov 28 15:02:29 2022 +1100)
 
-# 0.13.16 - Bugfix Release
+## 0.13.16 - Bugfix Release
 
 * 2802fffd - chore: Upgrade pact_matching to 0.12.15 (Ronald Holshausen, Mon Nov 28 14:29:43 2022 +1100)
 * c9721fd5 - chore: Upgrade pact_models to 1.0.1 and pact-plugin-driver to 0.1.16 (Ronald Holshausen, Mon Nov 28 14:10:53 2022 +1100)
@@ -409,7 +409,7 @@
 * 33a784a0 - fix: add test for publish verification result issue #231 (Ronald Holshausen, Mon Nov 28 11:04:38 2022 +1100)
 * 35202f6b - bump version to 0.13.16 (Ronald Holshausen, Mon Nov 7 14:05:55 2022 +1100)
 
-# 0.13.15 - Maintenance Release
+## 0.13.15 - Maintenance Release
 
 * 5d88913a - chore: Upgrade all dependencies (Ronald Holshausen, Mon Nov 7 14:01:55 2022 +1100)
 * 8ec8fe9b - chore: Upgrade pact_consumer to 0.10.0 (Ronald Holshausen, Mon Nov 7 13:15:23 2022 +1100)
@@ -419,7 +419,7 @@
 * 965a1c41 - fix: Upgrade plugin driver to 0.1.13 (fixes issue loading plugin when there are multiple versions for the same plugin) (Ronald Holshausen, Wed Oct 5 17:29:37 2022 +1100)
 * 4298db15 - bump version to 0.13.15 (Ronald Holshausen, Wed Sep 28 10:32:17 2022 +1000)
 
-# 0.13.14 - Maintenance Release
+## 0.13.14 - Maintenance Release
 
 * 02d9e2cb - chore: Upgrade pact matching crate to 0.12.12 (Ronald Holshausen, Wed Sep 28 10:11:11 2022 +1000)
 * b8d263f7 - fix(verifier): fix typos in the implementation of Display on the PactSource enum (Jerry Wang, Wed Sep 21 22:32:56 2022 -0700)
@@ -427,12 +427,12 @@
 * ac4fe73f - chore: fix to release scripts (Ronald Holshausen, Wed Sep 7 10:51:01 2022 +1000)
 * c13c3f42 - bump version to 0.13.14 (Ronald Holshausen, Wed Sep 7 09:50:47 2022 +1000)
 
-# 0.13.13 - Bugfix Release
+## 0.13.13 - Bugfix Release
 
 * 7f51bdc6 - fix: publishing provider branch was broken when invoked via a webhook call (Ronald Holshausen, Tue Sep 6 18:15:16 2022 +1000)
 * da163c42 - bump version to 0.13.13 (Ronald Holshausen, Wed Aug 31 16:06:30 2022 +1000)
 
-# 0.13.12 - Bugfix Release
+## 0.13.12 - Bugfix Release
 
 * 8663cd3f - feat: add ignore-no-pacts-error to the verifier CLI #213 (Ronald Holshausen, Wed Aug 31 15:19:31 2022 +1000)
 * f8db90d2 - fix: Upgrade pact_models to 0.4.5 - fixes FFI bug with generators for request paths (Ronald Holshausen, Fri Aug 26 11:44:08 2022 +1000)
@@ -440,7 +440,7 @@
 * 43be2e83 - feat: do not output an error if no_pacts_is_error is false and no pacts were found to verify #213 (Ronald Holshausen, Fri Aug 19 16:49:19 2022 +1000)
 * 786f002d - bump version to 0.13.12 (Ronald Holshausen, Thu Aug 18 16:31:02 2022 +1000)
 
-# 0.13.11 - Maintenance Release
+## 0.13.11 - Maintenance Release
 
 * d6eaf9cf - chore: Upgrade pact_consumer to 0.9.6 (Ronald Holshausen, Thu Aug 18 16:14:44 2022 +1000)
 * 1b1c77e6 - chore: cleanup some compiler warnings (Ronald Holshausen, Thu Aug 18 16:06:43 2022 +1000)
@@ -449,7 +449,7 @@
 * 8056d7e9 - fix: get verify_provider_async to wait on the metric call (Ronald Holshausen, Thu Aug 11 16:16:18 2022 +1000)
 * 6c932b32 - bump version to 0.13.11 (Ronald Holshausen, Wed Aug 10 12:54:55 2022 +1000)
 
-# 0.13.10 - Support multiple protocol transports with the verifier
+## 0.13.10 - Support multiple protocol transports with the verifier
 
 * 4c8ee7f9 - chore: cleanup some deprecation warnings (Ronald Holshausen, Wed Aug 10 12:49:55 2022 +1000)
 * 7b6a919b - chore: Upgrade pact_matching crate to 0.12.10 (Ronald Holshausen, Wed Aug 10 12:37:11 2022 +1000)
@@ -463,13 +463,13 @@
 * 8cc29482 - feat: add CLI options to provide different ports when there are different transports (Ronald Holshausen, Wed Aug 3 11:53:31 2022 +1000)
 * 7673269a - bump version to 0.13.10 (Ronald Holshausen, Wed Jul 20 12:39:25 2022 +1000)
 
-# 0.13.9 - Add option to disable color output
+## 0.13.9 - Add option to disable color output
 
 * 40f7bdc4 - feat: add verification option to disable ANSI escape codes in output #203 (Ronald Holshausen, Wed Jul 20 12:18:12 2022 +1000)
 * 9a6c846f - chore: Upgrade pact_matching to 0.12.9 (Ronald Holshausen, Fri Jun 10 15:46:07 2022 +1000)
 * a73c75ec - bump version to 0.13.9 (Ronald Holshausen, Tue Jun 7 10:58:54 2022 +1000)
 
-# 0.13.8 - Support publishing results from webhook calls
+## 0.13.8 - Support publishing results from webhook calls
 
 * 18118e82 - feat: add retries to the provider state change calls #197 (Ronald Holshausen, Tue Jun 7 09:10:23 2022 +1000)
 * 6cae9b09 - fix: State change descriptions were not being displayed along with the interaction description (Ronald Holshausen, Mon Jun 6 17:09:44 2022 +1000)
@@ -478,7 +478,7 @@
 * e671e3dd - chore: Upgrade pact_consumer to 0.9.5 (Ronald Holshausen, Mon May 30 12:30:00 2022 +1000)
 * 3088d117 - bump version to 0.13.8 (Ronald Holshausen, Mon May 30 12:16:57 2022 +1000)
 
-# 0.13.7 - Maintenance Release
+## 0.13.7 - Maintenance Release
 
 * bcddbcfb - chore: Upgrade pact_matching to 0.12.8 (Ronald Holshausen, Mon May 30 11:52:26 2022 +1000)
 * 80256458 - chore: Upgrade pact-plugin-driver to 0.1.8 (Ronald Holshausen, Mon May 30 11:36:54 2022 +1000)
@@ -489,7 +489,7 @@
 * 1d06f19f - chore: Upgrade pact_consumer to 0.9.3 (Ronald Holshausen, Wed May 11 18:03:10 2022 +1000)
 * b7c5cbec - bump version to 0.13.7 (Ronald Holshausen, Wed May 11 17:38:48 2022 +1000)
 
-# 0.13.6 - Maintenance Release
+## 0.13.6 - Maintenance Release
 
 * db94b1aa - chore: update readme (Ronald Holshausen, Wed May 11 17:30:50 2022 +1000)
 * 072996b4 - chore: switch from logging crate to tracing crate (Ronald Holshausen, Wed May 11 17:22:14 2022 +1000)
@@ -499,7 +499,7 @@
 * 020b5715 - chore: upgrade pact_models to 0.4.1 (Ronald Holshausen, Wed May 11 11:36:57 2022 +1000)
 * 79005d0e - bump version to 0.13.6 (Ronald Holshausen, Wed Apr 27 15:17:32 2022 +1000)
 
-# 0.13.5 - Supports verification via plugins
+## 0.13.5 - Supports verification via plugins
 
 * bcae77b4 - chore: upgrade pact_matching to 0.12.6 (Ronald Holshausen, Wed Apr 27 14:29:26 2022 +1000)
 * bc4f04df - feat: deal with verification output from plugins (Ronald Holshausen, Wed Apr 27 11:17:25 2022 +1000)
@@ -512,7 +512,7 @@
 * 96a9985a - chore: Upgrade pact_consumer to 0.9.1 (Ronald Holshausen, Wed Apr 13 16:20:14 2022 +1000)
 * 36dcfcbc - bump version to 0.13.5 (Ronald Holshausen, Wed Apr 13 16:02:02 2022 +1000)
 
-# 0.13.4 - Bugfix Release
+## 0.13.4 - Bugfix Release
 
 * 0df06dd2 - chore: Upgrade pact_matching to 0.12.5 (Ronald Holshausen, Wed Apr 13 15:38:49 2022 +1000)
 * 49640c5f - chore: minor update to release scripts (Ronald Holshausen, Wed Apr 13 15:32:46 2022 +1000)
@@ -525,7 +525,7 @@
 * 8f1e9506 - chore: cleanup (Ronald Holshausen, Thu Mar 24 14:49:33 2022 +1100)
 * fd515bda - bump version to 0.13.4 (Ronald Holshausen, Thu Mar 24 14:48:13 2022 +1100)
 
-# 0.13.3 - Maintenance Release
+## 0.13.3 - Maintenance Release
 
 * f1f6c980 - chore: disable Pact tests to resolve cyclic dependency issue (Ronald Holshausen, Thu Mar 24 14:26:10 2022 +1100)
 * d06faac5 - update changelog for release 0.13.3 (Ronald Holshausen, Thu Mar 24 14:16:41 2022 +1100)
@@ -537,7 +537,7 @@
 * 31c0c368 - chore: update pact_consumer (Ronald Holshausen, Fri Mar 4 15:08:41 2022 +1100)
 * 3eed67e8 - bump version to 0.13.3 (Ronald Holshausen, Fri Mar 4 14:39:55 2022 +1100)
 
-# 0.13.2 - Maintenance Release
+## 0.13.2 - Maintenance Release
 
 * 8894fdfd - chore: update pact_matching to 0.12.3 (Ronald Holshausen, Fri Mar 4 14:09:17 2022 +1100)
 * 8e864502 - chore: update all dependencies (Ronald Holshausen, Fri Mar 4 13:29:59 2022 +1100)
@@ -545,14 +545,14 @@
 * 74bd4531 - feat: add support for custom headers with the verifier FFI calls #182 (Ronald Holshausen, Mon Feb 28 13:58:46 2022 +1100)
 * 6634953f - bump version to 0.13.2 (Ronald Holshausen, Thu Feb 3 13:39:59 2022 +1100)
 
-# 0.13.1 - Updated req/res logging for FFI calls
+## 0.13.1 - Updated req/res logging for FFI calls
 
 * 4f47ff65 - feat: log request/response bodies at debug level (Ronald Holshausen, Thu Feb 3 13:14:35 2022 +1100)
 * 3423354a - chore: update schema for verification results JSON (Ronald Holshausen, Tue Feb 1 12:21:21 2022 +1100)
 * 4a407202 - chore: add draft schema for verification results JSON (Ronald Holshausen, Tue Feb 1 11:17:43 2022 +1100)
 * d093f7d7 - bump version to 0.13.1 (Ronald Holshausen, Mon Jan 31 11:52:34 2022 +1100)
 
-# 0.13.0 - Capture output/results from the verification process
+## 0.13.0 - Capture output/results from the verification process
 
 * d0fa29dc - feat: add json output to the verifier CLI (Ronald Holshausen, Fri Jan 28 15:21:17 2022 +1100)
 * bf152233 - feat: Capture all the results from the verification process (Ronald Holshausen, Fri Jan 28 11:28:38 2022 +1100)
@@ -561,7 +561,7 @@
 * 042d580e - chore: Upgrade pact consumer to 0.8.5 (Ronald Holshausen, Mon Jan 17 17:13:55 2022 +1100)
 * 9e2388de - bump version to 0.12.5 (Ronald Holshausen, Mon Jan 17 17:05:04 2022 +1100)
 
-# 0.12.4 - Bugfix Release
+## 0.12.4 - Bugfix Release
 
 * 5e4c68ef - chore: update pact matching to 0.12.2 (Ronald Holshausen, Mon Jan 17 16:29:21 2022 +1100)
 * 80b241c5 - chore: Upgrade plugin driver crate to 0.0.17 (Ronald Holshausen, Mon Jan 17 11:22:48 2022 +1100)
@@ -569,18 +569,18 @@
 * c2089645 - fix: log crate version must be fixed across all crates (including plugin driver) (Ronald Holshausen, Fri Jan 14 16:10:50 2022 +1100)
 * 924ddb60 - bump version to 0.12.4 (Ronald Holshausen, Tue Jan 4 13:08:32 2022 +1100)
 
-# 0.12.3 - Maintenance Release
+## 0.12.3 - Maintenance Release
 
 * e5961b33 - chore: Update pact_matching 0.12.1, pact_models 0.2.6 (Ronald Holshausen, Tue Jan 4 12:59:44 2022 +1100)
 * d670585a - chore: Update plugin driver to 0.0.16 (Ronald Holshausen, Tue Jan 4 09:37:21 2022 +1100)
 * 549788cd - bump version to 0.12.3 (Ronald Holshausen, Fri Dec 31 15:35:25 2021 +1100)
 
-# 0.12.2 - Maintenance Release
+## 0.12.2 - Maintenance Release
 
 * 9c2810ad - chore: Upgrade pact-plugin-driver to 0.0.15 (Ronald Holshausen, Fri Dec 31 15:12:56 2021 +1100)
 * 2bd44009 - bump version to 0.12.2 (Ronald Holshausen, Thu Dec 30 15:29:33 2021 +1100)
 
-# 0.12.1 - Maintenance Release
+## 0.12.1 - Maintenance Release
 
 * 0a6e7d9d - refactor: Convert MatchingContext to a trait and use DocPath instead of string slices (Ronald Holshausen, Wed Dec 29 14:24:39 2021 +1100)
 * 52bc1735 - chore: update pact_matching crate to 0.11.5 (Ronald Holshausen, Thu Dec 23 13:12:08 2021 +1100)
@@ -589,7 +589,7 @@
 * 8911d5b0 - chore: update to latest plugin driver crate (metrics fixes) (Ronald Holshausen, Mon Dec 20 12:11:35 2021 +1100)
 * 9d4cc4ef - bump version to 0.12.1 (Ronald Holshausen, Wed Dec 15 13:34:36 2021 +1100)
 
-# 0.12.0 - Bugfix + add metrics for validation
+## 0.12.0 - Bugfix + add metrics for validation
 
 * f8042d6b - feat: add metrics event for provider verification (Ronald Holshausen, Tue Dec 14 17:29:44 2021 +1100)
 * 4f1ba7d9 - chore: update to the latest plugin driver (Ronald Holshausen, Tue Dec 14 13:55:02 2021 +1100)
@@ -598,7 +598,7 @@
 * 5f782d67 - fix(verifier): the state_change_teardown option didn't appear to actually be used (Mike Geeves, Mon Dec 6 11:46:58 2021 +0000)
 * 04dd9ab2 - bump version to 0.11.3 (Ronald Holshausen, Thu Dec 2 12:15:29 2021 +1100)
 
-# 0.11.2 - Bugfix Release
+## 0.11.2 - Bugfix Release
 
 * 9f7e22dc - Revert "update changelog for release 0.11.2" (Ronald Holshausen, Thu Dec 2 11:46:17 2021 +1100)
 * 707f8f98 - update changelog for release 0.11.2 (Ronald Holshausen, Thu Dec 2 11:45:02 2021 +1100)
@@ -610,13 +610,13 @@
 * fc5be202 - fix: update to latest driver crate (Ronald Holshausen, Tue Nov 16 16:19:02 2021 +1100)
 * 1be76c50 - bump version to 0.11.2 (Ronald Holshausen, Tue Nov 16 12:26:51 2021 +1100)
 
-# 0.11.1 - Update to latest models and plugin driver crates
+## 0.11.1 - Update to latest models and plugin driver crates
 
 * 5d974c4a - chore: update to latest models and plugin driver crates (Ronald Holshausen, Tue Nov 16 11:56:53 2021 +1100)
 * 6dfec56a - chore: drop beta from pact_consumer version (Ronald Holshausen, Thu Nov 4 16:08:47 2021 +1100)
 * 41fc4380 - bump version to 0.11.1 (Ronald Holshausen, Thu Nov 4 16:06:08 2021 +1100)
 
-# 0.11.0 - Pact V4 release
+## 0.11.0 - Pact V4 release
 
 * 400a1231 - chore: drop beta from pact_verifier version (Ronald Holshausen, Thu Nov 4 15:56:22 2021 +1100)
 * bd2bd0ec - chore: drop beta from pact_matching version (Ronald Holshausen, Wed Nov 3 13:28:35 2021 +1100)
@@ -626,13 +626,13 @@
 * 630e8f9c - bump version to 0.11.0-beta.3 (Ronald Holshausen, Tue Oct 19 17:40:52 2021 +1100)
 * d171edfd - feat: support provider branches (Matt Fellows, Wed Sep 29 22:47:21 2021 +1000)
 
-# 0.11.0-beta.2 - Bugfix Release
+## 0.11.0-beta.2 - Bugfix Release
 
 * 1677501d - refactor: moved consumer version selector functions from pact_ffi crate (Ronald Holshausen, Tue Oct 19 17:31:13 2021 +1100)
 * 918e5beb - fix: update to latest models and plugin driver crates (Ronald Holshausen, Tue Oct 19 17:09:48 2021 +1100)
 * 1539050c - bump version to 0.11.0-beta.2 (Ronald Holshausen, Tue Oct 19 11:44:42 2021 +1100)
 
-# 0.11.0-beta.1 - Plugin support with verifying pacts
+## 0.11.0-beta.1 - Plugin support with verifying pacts
 
 * 3819522d - chore: update to the latest matching and mock server crates (Ronald Holshausen, Tue Oct 19 11:34:18 2021 +1100)
 * aa434ba3 - chore: update to latest driver crate (Ronald Holshausen, Tue Oct 19 11:09:46 2021 +1100)
@@ -653,14 +653,14 @@
 * b71dcabf - refactor(plugins): rename ContentTypeOverride -> ContentTypeHint (Ronald Holshausen, Tue Sep 14 15:08:52 2021 +1000)
 * 9c7af69a - bump version to 0.11.0-beta.1 (Ronald Holshausen, Mon Sep 13 12:14:46 2021 +1000)
 
-# 0.10.13 - support native TLS certs
+## 0.10.13 - support native TLS certs
 
 * 42be9eb8 - feat: add FFI functions to extract logs from a verifcation run (Ronald Holshausen, Tue Sep 28 12:48:40 2021 +1000)
 * df715cd5 - feat: support native TLS. Fixes #144 (Matt Fellows, Mon Sep 20 13:00:33 2021 +1000)
 * 05f4c3de - feat: add verifier ffi function set verification options (tienvx, Wed Sep 8 23:48:13 2021 +0700)
 * 5ac0d219 - bump version to 0.10.13 (Ronald Holshausen, Wed Sep 8 10:32:49 2021 +1000)
 
-# 0.11.0-beta.0 - Support for plugins when verifying pacts
+## 0.11.0-beta.0 - Support for plugins when verifying pacts
 
 * f55440c6 - chore: Bump verifier lib version to 0.11.0-beta.0 (Ronald Holshausen, Mon Sep 13 12:04:19 2021 +1000)
 * 03ebe632 - Merge branch 'master' into feat/plugins (Ronald Holshausen, Mon Sep 13 12:01:13 2021 +1000)
@@ -683,19 +683,19 @@
 * bdfc6f02 - feat(plugins): Load required plugins when verifying a V4 pact (Ronald Holshausen, Wed Aug 11 14:23:54 2021 +1000)
 * dfe3cd42 - chore: bump minor version of Pact verifier libs (Ronald Holshausen, Mon Aug 9 15:10:47 2021 +1000)
 
-# 0.10.12 - Maintenance Release
+## 0.10.12 - Maintenance Release
 
 * 9e582360 - chore: add verifier ffi function update provider state (tienvx, Sun Aug 29 22:20:28 2021 +0700)
 * 46135a16 - chore: add verifier FFI functions for directory, URL and Pact broker sources (Ronald Holshausen, Tue Aug 24 10:14:46 2021 +1000)
 * e340d2f1 - bump version to 0.10.12 (Ronald Holshausen, Sun Aug 22 15:37:43 2021 +1000)
 
-# 0.10.11 - Bugfix Release
+## 0.10.11 - Bugfix Release
 
 * 0e62fe40 - chore: set regex version to 1 (Ronald Holshausen, Sun Aug 22 15:30:12 2021 +1000)
 * c274ca1a - fix: use the pacts for verification endpoint if the conusmer selectors are specified #133 (Ronald Holshausen, Sun Aug 22 11:51:22 2021 +1000)
 * f56b52b2 - bump version to 0.10.11 (Ronald Holshausen, Tue Aug 17 10:48:38 2021 +1000)
 
-# 0.10.10 - Bugfix Release
+## 0.10.10 - Bugfix Release
 
 * b5a7b779 - feat: support new selectors (Matt Fellows, Mon Aug 9 13:27:33 2021 +1000)
 * 8bcd1c7e - fix: min/max type matchers must not apply the limits when cascading (Ronald Holshausen, Sun Aug 8 15:50:40 2021 +1000)
@@ -707,7 +707,7 @@
 * b3a6f193 - chore: rename header PACT_MESSAGE_METADATA -> Pact-Message-Metadata (Matt Fellows, Tue Jul 13 11:32:25 2021 +1000)
 * 0591fc47 - bump version to 0.10.10 (Ronald Holshausen, Sun Jul 11 17:31:00 2021 +1000)
 
-# 0.10.9 - Moved structs to models crate + bugfixes and enhancements
+## 0.10.9 - Moved structs to models crate + bugfixes and enhancements
 
 * e2e10241 - refactor: moved Request and Response structs to the models crate (Ronald Holshausen, Wed Jul 7 18:09:36 2021 +1000)
 * 9e8b01d7 - refactor: move HttpPart struct to models crate (Ronald Holshausen, Wed Jul 7 15:59:34 2021 +1000)
@@ -721,7 +721,7 @@
 * 7d69ec97 - bump version to 0.10.9 (Ronald Holshausen, Wed Jun 23 13:19:38 2021 +1000)
 * d3406650 - refactor: moved matching rules and generators to models crate (part 1) (Ronald Holshausen, Wed Jun 23 12:58:30 2021 +1000)
 
-# 0.10.8 - Refactor + Bugfixes
+## 0.10.8 - Refactor + Bugfixes
 
 * 84f01d31 - chore: cleanup pedning output (Ronald Holshausen, Fri Jun 11 16:28:28 2021 +1000)
 * e4927337 - chore: cleanup unused vars (Ronald Holshausen, Fri Jun 11 16:20:36 2021 +1000)
@@ -737,7 +737,7 @@
 * 205b6621 - update changelog for release 0.10.8 (Ronald Holshausen, Sun May 30 18:44:14 2021 +1000)
 * 4a079c64 - bump version to 0.10.8 (Ronald Holshausen, Sun May 30 18:25:27 2021 +1000)
 
-# 0.10.7 - V4 featues + bugfixes
+## 0.10.7 - V4 featues + bugfixes
 
 * 905118e - Merge pull request #109 from tonynguyenit18/fix/unmatched-expected-and-response-headers-with-multiple-value (Ronald Holshausen, Sun May 30 10:19:51 2021 +1000)
 * eef6b08 - fix: correct headers attribute with multiple values might not be matched (Tony Nguyen, Sat May 29 20:55:35 2021 +0700)
@@ -765,11 +765,11 @@
 * a0f6a1d - refactor: Use Anyhow instead of `io::Result` (Caleb Stepanian, Wed Apr 7 16:17:35 2021 -0400)
 * dcd6bed - bump version to 0.8.16 (Matt Fellows, Wed Apr 7 14:09:37 2021 +1000)
 
-# 0.10.6 - Bugfix Release
+## 0.10.6 - Bugfix Release
 
 * 63fcf49 - feat: enable consumer code to use the new Value matcher (Matt Fellows, Wed Apr 7 14:01:00 +1000)
 
-# 0.10.5 - Bugfix Release
+## 0.10.5 - Bugfix Release
 
 * 32ba4b1 - chore: update pact_matching to latest (Matt Fellows, Wed Apr 7 13:12:36 2021 +1000)
 * fdae684 - update changelog for release 0.10.5 (Matt Fellows, Wed Apr 7 12:29:58 2021 +1000)
@@ -783,7 +783,7 @@
 * 4fe65fb - feat(V4): Update matching code to use matchingRules.content for V4 messages (Ronald Holshausen, Mon Mar 8 12:10:31 2021 +1100)
 * 4dc5373 - bump version to 0.10.5 (Ronald Holshausen, Wed Feb 10 15:54:50 2021 +1100)
 
-# 0.10.5 - pw
+## 0.10.5 - pw
 
 * 31e5c9c - chore: update pact_matching dependency for pact_verifier (Matt Fellows, Wed Apr 7 12:21:27 2021 +1000)
 * 7cded70 - update changelog for release 0.10.5 (Matt Fellows, Wed Apr 7 12:10:43 2021 +1000)
@@ -795,7 +795,7 @@
 * 4fe65fb - feat(V4): Update matching code to use matchingRules.content for V4 messages (Ronald Holshausen, Mon Mar 8 12:10:31 2021 +1100)
 * 4dc5373 - bump version to 0.10.5 (Ronald Holshausen, Wed Feb 10 15:54:50 2021 +1100)
 
-# 0.10.5 - Bugfix Release
+## 0.10.5 - Bugfix Release
 
 * 89240d8 - Merge pull request #95 from pact-foundation/fix/params-missing-on-provider-state-change (Ronald Holshausen, Sun Mar 14 17:20:01 2021 +1100)
 * 17682dc - fix: add missing params to provider state change executor (Matt Fellows, Sat Mar 13 08:37:46 2021 +1100)
@@ -805,13 +805,13 @@
 * 4fe65fb - feat(V4): Update matching code to use matchingRules.content for V4 messages (Ronald Holshausen, Mon Mar 8 12:10:31 2021 +1100)
 * 4dc5373 - bump version to 0.10.5 (Ronald Holshausen, Wed Feb 10 15:54:50 2021 +1100)
 
-# 0.10.4 - add final newline to verifier output
+## 0.10.4 - add final newline to verifier output
 
 * 8c2152e - fix: add final newline to verifier output (Jest will overwrite it with the test name) (Ronald Holshausen, Tue Feb 9 14:15:19 2021 +1100)
 * 0a2aad9 - chore: correct release script (Ronald Holshausen, Mon Feb 8 16:14:20 2021 +1100)
 * f952467 - bump version to 0.10.4 (Ronald Holshausen, Mon Feb 8 16:04:33 2021 +1100)
 
-# 0.10.3 - Fixes + add callback timeout option for verifcation callbacks
+## 0.10.3 - Fixes + add callback timeout option for verifcation callbacks
 
 * 49a3cf2 - refactor: use bytes crate instead of vector of bytes for body content (Ronald Holshausen, Sun Feb 7 14:43:40 2021 +1100)
 * 4afa86a - fix: add callback timeout option for verifcation callbacks (Ronald Holshausen, Sat Feb 6 12:27:32 2021 +1100)
@@ -821,19 +821,19 @@
 * e5b1f93 - fix: clippy error (Ronald Holshausen, Mon Jan 25 10:26:58 2021 +1100)
 * e10047a - bump version to 0.10.3 (Ronald Holshausen, Mon Jan 25 10:20:40 2021 +1100)
 
-# 0.10.2 - made pact broker module public so it can be used by other crates
+## 0.10.2 - made pact broker module public so it can be used by other crates
 
 * c8f7091 - feat: made pact broker module public so it can be used by other crates (Ronald Holshausen, Sun Jan 24 18:24:30 2021 +1100)
 * fb4e996 - bump version to 0.10.2 (Ronald Holshausen, Mon Jan 11 10:28:35 2021 +1100)
 
-# 0.10.1 - Updated dependencies
+## 0.10.1 - Updated dependencies
 
 * 1ac3548 - chore: upgrade env_logger to 0.8 (Audun Halland, Sat Jan 9 09:50:27 2021 +0100)
 * 9a8a63f - chore: upgrade quickcheck (Audun Halland, Sat Jan 9 08:46:51 2021 +0100)
 * 3a6945e - chore: Upgrade reqwest to 0.11 and hence tokio to 1.0 (Ronald Holshausen, Wed Jan 6 15:34:47 2021 +1100)
 * b79e3a1 - bump version to 0.10.1 (Ronald Holshausen, Tue Jan 5 14:24:47 2021 +1100)
 
-# 0.10.0 - TLS support via FFI + non-blocking verify interaction
+## 0.10.0 - TLS support via FFI + non-blocking verify interaction
 
 * 39c3816 - fix: using `clone` on a double-reference (Ronald Holshausen, Mon Jan 4 17:32:50 2021 +1100)
 * 484b747 - fix: verify interaction was blocking the thread (Ronald Holshausen, Mon Jan 4 17:12:38 2021 +1100)
@@ -842,26 +842,26 @@
 * 6cec6c7 - feat: allow https scheme and ability to disable ssl verification (Matt Fellows, Thu Dec 31 12:10:57 2020 +1100)
 * ed410bd - bump version to 0.9.6 (Ronald Holshausen, Thu Dec 31 15:14:30 2020 +1100)
 
-# 0.9.5 - Supports generators associated with array contains matcher variants
+## 0.9.5 - Supports generators associated with array contains matcher variants
 
 * 144b6aa - chore: upgrade dependencies to latest (Ronald Holshausen, Thu Dec 31 14:58:09 2020 +1100)
 * 09513de - feat: add verifiedBy to the verified results (Ronald Holshausen, Tue Dec 29 12:05:07 2020 +1100)
 * 12c42c3 - bump version to 0.9.5 (Matt Fellows, Mon Nov 23 07:44:42 2020 +1100)
 * 71a5847 - chore: update rust deps (Matt Fellows, Sun Nov 22 23:59:29 2020 +1100)
 
-# 0.9.4 - Bugfix Release
+## 0.9.4 - Bugfix Release
 
 * 52aa549 - chore: improve mismatch output + notices for pacts for verification (Matt Fellows, Sun Nov 22 23:23:15 2020 +1100)
 * d481bc1 - fix: pacts for verification unmarshal fails if 'pending' attr is not returned in response (Matt Fellows, Sun Nov 22 22:31:31 2020 +1100)
 * 5058a2d - feat: include the mockserver URL and port in the verification context (Ronald Holshausen, Fri Nov 20 16:43:10 2020 +1100)
 * a752d6c - bump version to 0.9.4 (Ronald Holshausen, Tue Nov 17 16:58:25 2020 +1100)
 
-# 0.9.3 - Support provider state injected values
+## 0.9.3 - Support provider state injected values
 
 * 850282d - fix: times with millisecond precision less 3 caused chronos to panic (Ronald Holshausen, Tue Nov 17 16:29:47 2020 +1100)
 * 13ce2f2 - fix: introduce GeneratorTestMode and restrict provider state generator to the provider side (Ronald Holshausen, Mon Nov 16 15:00:01 2020 +1100)
 
-# 0.9.2 - Support Pacts for Verification API
+## 0.9.2 - Support Pacts for Verification API
 
 * bbd5364 - test: add negative test case for pacts for verification api (Matt Fellows, Wed Nov 11 08:42:47 2020 +1100)
 * b3cca0d - test: add basic pact test for pacts for verification feature (Matt Fellows, Wed Nov 11 00:30:45 2020 +1100)
@@ -876,7 +876,7 @@
 * 5e0e470 - chore: bump minor version of pact_consumer crate (Ronald Holshausen, Fri Oct 16 13:22:12 2020 +1100)
 * 3a93fd8 - bump version to 0.9.2 (Ronald Holshausen, Fri Oct 16 12:18:50 2020 +1100)
 
-# 0.9.1 - arrayContains matcher + text/xml content type
+## 0.9.1 - arrayContains matcher + text/xml content type
 
 * 4ef2db6 - Merge branch 'feat/v4-spec' (Ronald Holshausen, Thu Oct 15 17:02:44 2020 +1100)
 * 2fb0c6e - fix: fix the build after refactoring the pact write function (Ronald Holshausen, Wed Oct 14 11:07:57 2020 +1100)
@@ -885,7 +885,7 @@
 * 29ba743 - feat: add a mock server config struct (Ronald Holshausen, Thu Sep 24 10:30:59 2020 +1000)
 * 0b03551 - bump version to 0.9.1 (Ronald Holshausen, Mon Sep 14 17:21:57 2020 +1000)
 
-# 0.9.0 - Verifying Message Pacts
+## 0.9.0 - Verifying Message Pacts
 
 * ef5f88c - chore: bump minor version of the pact_verifier crate (Ronald Holshausen, Mon Sep 14 17:13:45 2020 +1000)
 * 865327d - feat: handle comparing content types correctly (Ronald Holshausen, Mon Sep 14 16:37:11 2020 +1000)
@@ -899,7 +899,7 @@
 * a05bcbb - refactor: renamed Pact to RequestResponsePact (Ronald Holshausen, Sun Sep 13 12:45:34 2020 +1000)
 * 19290e8 - bump version to 0.8.4 (Ronald Holshausen, Sun Aug 23 16:58:25 2020 +1000)
 
-# 0.8.3 - implemented provider state generator
+## 0.8.3 - implemented provider state generator
 
 * b186ce9 - chore: update all dependent crates (Ronald Holshausen, Sun Aug 23 16:49:00 2020 +1000)
 * 61ca3d7 - chore: update matching crate to latest (Ronald Holshausen, Sun Aug 23 16:37:58 2020 +1000)
@@ -909,14 +909,14 @@
 * ed207a7 - chore: updated readmes for docs site (Ronald Holshausen, Sun Jun 28 10:04:09 2020 +1000)
 * 8cdcad0 - bump version to 0.8.3 (Ronald Holshausen, Wed Jun 24 11:46:03 2020 +1000)
 
-# 0.8.2 - Updated XML Matching
+## 0.8.2 - Updated XML Matching
 
 * 8cf70cc - chore: update to latest matching crate (Ronald Holshausen, Wed Jun 24 11:37:49 2020 +1000)
 * a15edea - chore: try set the content type on the body if known (Ronald Holshausen, Tue Jun 23 16:53:32 2020 +1000)
 * 875d426 - chore: switch to Rust TLS so we dont have to link to openssl libs (Ronald Holshausen, Sun May 31 09:57:41 2020 +1000)
 * df5796f - bump version to 0.8.2 (Ronald Holshausen, Sun May 24 14:02:11 2020 +1000)
 
-# 0.8.1 - Bugfixes + update matching crate to 0.6.0
+## 0.8.1 - Bugfixes + update matching crate to 0.6.0
 
 * bea787c - chore: bump matching crate version to 0.6.0 (Ronald Holshausen, Sat May 23 17:56:04 2020 +1000)
 * 61ab50f - fix: date/time matchers fallback to the old key (Ronald Holshausen, Fri May 15 11:27:27 2020 +1000)
@@ -928,7 +928,7 @@
 * bd10d00 - Avoid deprecated Error::description in favor of Display trait (Caleb Stepanian, Mon Mar 30 16:49:13 2020 -0400)
 * c04c0af - bump version to 0.8.1 (Ronald Holshausen, Fri Mar 13 10:06:29 2020 +1100)
 
-# 0.8.0 - Added callback handlers + Bugfixes
+## 0.8.0 - Added callback handlers + Bugfixes
 
 * 2920364 - fix: date and time matchers with JSON (Ronald Holshausen, Thu Mar 12 16:07:05 2020 +1100)
 * 126b463 - fix: provider state handlers must be synchronous so they are executed for the actual request (Ronald Holshausen, Thu Mar 12 14:16:03 2020 +1100)
@@ -943,7 +943,7 @@
 * d944a60 - chore: added callback executors so test code can called during verification (Ronald Holshausen, Sun Feb 23 18:43:49 2020 +1100)
 * 639c1fd - bump version to 0.7.1 (Ronald Holshausen, Sun Jan 19 12:03:44 2020 +1100)
 
-# 0.7.0 - Convert to async/await
+## 0.7.0 - Convert to async/await
 
 * 70a33dd - chore: bump minor version of pact_verifier (Ronald Holshausen, Sun Jan 19 11:51:36 2020 +1100)
 * 9d3ad57 - chore: bump minor version of pact consumer crate (Ronald Holshausen, Sun Jan 19 11:40:27 2020 +1100)
@@ -965,7 +965,7 @@
 * 924452f - 2018 edition autofix "cargo fix --edition" (Audun Halland, Sat Nov 16 22:27:42 2019 +0100)
 * d566d23 - bump version to 0.6.2 (Ronald Holshausen, Fri Sep 27 15:17:24 2019 +1000)
 
-# 0.6.1 - Bugfix + Oniguruma crate for regex matching
+## 0.6.1 - Bugfix + Oniguruma crate for regex matching
 
 * 173bf22 - chore: use the matching lib with the Oniguruma crate #46 (Ronald Holshausen, Fri Sep 27 15:02:03 2019 +1000)
 * defe890 - fix: switch to the Oniguruma crate for regex matching #46 (Ronald Holshausen, Fri Sep 27 14:35:16 2019 +1000)
@@ -973,7 +973,7 @@
 * 48f998d - bump version to 0.6.1 (Ronald Holshausen, Sun Sep 22 17:56:20 2019 +1000)
 * 0c5d6c2 - fix: pact_consumer should be a dev dependency (Ronald Holshausen, Sun Sep 22 17:48:35 2019 +1000)
 
-# 0.6.0 - Publishing verification results
+## 0.6.0 - Publishing verification results
 
 * 2e07d77 - chore: set the version of the pact matching crate (Ronald Holshausen, Sun Sep 22 17:24:02 2019 +1000)
 * eef3d97 - feat: added some tests for publishing verification results to the pact broker #44 (Ronald Holshausen, Sun Sep 22 16:44:52 2019 +1000)
@@ -981,7 +981,7 @@
 * cb30a2f - feat: added the ProviderStateGenerator as a generator type (Ronald Holshausen, Sun Sep 8 16:29:46 2019 +1000)
 * 1e17ca8 - bump version to 0.5.2 (Ronald Holshausen, Sat Aug 24 12:39:55 2019 +1000)
 
-# 0.5.1 - Use reqwest for better HTTP/S support, support headers with multiple values
+## 0.5.1 - Use reqwest for better HTTP/S support, support headers with multiple values
 
 * f79b033 - chore: update terminal support in release scripts (Ronald Holshausen, Sat Aug 24 12:25:28 2019 +1000)
 * b8019ba - chore: bump the version of the matching lib (Ronald Holshausen, Sat Aug 24 12:22:35 2019 +1000)
@@ -998,7 +998,7 @@
 * aa1b714 - Switch pact_broker/HAL client to use reqwest instead of hyper directly (Audun Halland, Sun Jul 28 15:48:31 2019 +0200)
 * 8b9648c - bump version to 0.5.1 (Ronald Holshausen, Sat Jul 27 17:29:57 2019 +1000)
 
-# 0.5.0 - Upgrade to non-blocking Hyper 0.12
+## 0.5.0 - Upgrade to non-blocking Hyper 0.12
 
 * 89e58cc - chore: update release script (Ronald Holshausen, Sat Jul 27 17:10:06 2019 +1000)
 * d842100 - chore: bump component versions to 0.5.0 (Ronald Holshausen, Sat Jul 27 15:44:51 2019 +1000)
@@ -1028,7 +1028,7 @@
 * 386ab52 - fix: corrected the release scripts to check for a version parameter (Ronald Holshausen, Sun Apr 8 13:44:57 2018 +1000)
 * b5e0666 - bump version to 0.4.1 (Ronald Holshausen, Sat Apr 7 15:02:43 2018 +1000)
 
-# 0.4.0 - First V3 specification release
+## 0.4.0 - First V3 specification release
 
 * f63f339 - replaced use of try macro with ? (Ronald Holshausen, Tue Nov 7 16:31:39 2017 +1100)
 * c4d424b - Wired in the generated request/response into the mock server and verifier (Ronald Holshausen, Tue Nov 7 16:27:01 2017 +1100)
@@ -1050,7 +1050,7 @@
 * 5a7a65e - Merge branch 'master' into v3-spec (Ronald Holshausen, Wed Aug 24 21:02:23 2016 +1000)
 * 539eb48 - updated all the readmes and cargo manefests for v3 (Ronald Holshausen, Tue Jul 19 15:46:18 2016 +1000)
 
-# 0.3.0 - Backported matching rules from V3 branch
+## 0.3.0 - Backported matching rules from V3 branch
 
 * 3c09f5b - Update the dependent modules for the verifier (Ronald Holshausen, Fri Nov 3 14:42:09 2017 +1100)
 * 8c50392 - update changelog for release 0.3.0 (Ronald Holshausen, Fri Nov 3 14:27:40 2017 +1100)
@@ -1064,7 +1064,7 @@
 * 17d6e98 - bump version to 0.2.2 (Ronald Holshausen, Wed May 17 10:23:34 2017 +1000)
 
 
-# 0.2.1 - Replace rustc_serialize with serde_json
+## 0.2.1 - Replace rustc_serialize with serde_json
 
 * a1f78f9 - Move linux specific bits out of the release script (Ronald Holshausen, Wed May 17 10:18:37 2017 +1000)
 * efe4ca7 - Cleanup unused imports and unreachable pattern warning messages (Anthony Damtsis, Tue May 16 10:31:29 2017 +1000)
@@ -1072,7 +1072,7 @@
 * a59fb98 - Migrate remaining pact modules over to serde (Anthony Damtsis, Mon May 15 16:59:04 2017 +1000)
 * 3ca29d6 - bump version to 0.2.1 (Ronald Holshausen, Sun Oct 9 17:06:35 2016 +1100)
 
-# 0.2.0 - V2 specification implementation
+## 0.2.0 - V2 specification implementation
 
 * 91f5315 - update the references to the spec in the verifier library to V2 (Ronald Holshausen, Sun Oct 9 16:59:45 2016 +1100)
 * e2f88b8 - update the verifier library to use the published consumer library (Ronald Holshausen, Sun Oct 9 16:57:34 2016 +1100)
@@ -1080,7 +1080,7 @@
 * 574e072 - upadte versions for V2 branch and fix an issue with loading JSON bodies encoded as a string (Ronald Holshausen, Sun Oct 9 15:31:57 2016 +1100)
 * dabe425 - bump version to 0.1.1 (Ronald Holshausen, Sun Oct 9 10:40:39 2016 +1100)
 
-# 0.1.0 - V1.1 specification implementation
+## 0.1.0 - V1.1 specification implementation
 
 * 7b66941 - Update the deps for pact verifier library (Ronald Holshausen, Sun Oct 9 10:32:47 2016 +1100)
 * 1f3f3f1 - correct the versions of the inter-dependent projects as they were causing the build to fail (Ronald Holshausen, Sat Oct 8 17:41:57 2016 +1100)
@@ -1088,4 +1088,4 @@
 * 1246784 - correct the verifier library release script (Ronald Holshausen, Tue Sep 27 20:57:13 2016 +1000)
 * f0ce08a - bump version to 0.0.1 (Ronald Holshausen, Tue Sep 27 20:43:34 2016 +1000)
 
-# 0.0.0 - First Release
+## 0.0.0 - First Release

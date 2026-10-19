@@ -1,6 +1,6 @@
 # Changelog
 
-# 0.5.11 - Feature Release
+## 0.5.11 - Feature Release
 
 * fa7d0c76 - fix(ffi): make plugin log callbacks callable from C (w3lld1, Sat Oct 10 07:50:16 2026 +0200)
 * 669bc567 - chore: Update pact-models to 1.3.16 (Ronald Holshausen, Sat Oct 10 11:55:46 2026 +1100)
@@ -8,12 +8,12 @@
 * 2a38f700 - feat(ffi): add pactffi_sync_message_match_response_contents (Fabio Rodrigues, Thu Oct 8 14:10:17 2026 +0100)
 * 7a0e6a5a - fix(ci): pin release Rust to 1.98.1 for correct FFI bool returns (Yousaf Nabi, Wed Oct 7 17:51:19 2026 +0100)
 
-# 0.5.10 - [Feature Release]
+## 0.5.10 - [Feature Release]
 
 * 83e9936c - feat(ffi): add pactffi_sync_message_generate_contents for sync message consumer tests (#555) (Fábio André Ramos Rodrigues, Mon Sep 28 00:44:23 2026 +0100)
 * d86f3792 - bump version to 0.5.10 (Ronald Holshausen, Thu Sep 24 11:30:06 2026 +1000)
 
-# 0.5.9 - Expose a log callback for host language logging
+## 0.5.9 - Expose a log callback for host language logging
 
 * d7879658 - docs(pact-ffi): publish pactffi_string_delete in the crate docs (JP-Ellis, Thu Sep 17 20:14:48 2026 +1000)
 * 3f511126 - feat(ffi): expose a log callback for host language logging (JP-Ellis, Thu Sep 17 21:48:33 2026 +1000)
@@ -21,13 +21,13 @@
 * 89e09e97 - feat(ffi): install the plugin log sink on callback registration (JP-Ellis, Thu Sep 17 21:31:51 2026 +1000)
 * 22a58148 - bump version to 0.5.9 (Yousaf Nabi, Mon Sep 14 15:37:50 2026 +0100)
 
-# 0.5.8 - Bugfix Release
+## 0.5.8 - Bugfix Release
 
 * 71841f3c - chore: Update pact_models to 1.3.15 (Ronald Holshausen, Fri Sep 11 09:19:34 2026 +1000)
 * 8ef0c83f - feat(pact_verifier): include pact and mismatch details in interaction results (frudisch, Mon Sep 7 05:32:37 2026 +0200)
 * 66f17412 - bump version to 0.5.8 (Ronald Holshausen, Fri Sep 4 09:19:25 2026 +1000)
 
-# 0.5.7 - TLS panic fix + v2 plugin support
+## 0.5.7 - TLS panic fix + v2 plugin support
 
 * 9930b06c - fix: panic when there is no configured TLS provider #546 (Ronald Holshausen, Wed Aug 12 11:08:13 2026 +1000)
 * e62d9e52 - chore: Update pact-plugin-driver to 1.2.3 (Ronald Holshausen, Wed Aug 12 11:00:09 2026 +1000)
@@ -43,7 +43,7 @@
 * 149b3e81 - chore: Update pact-plugin-driver to 1.2.0 (Ronald Holshausen, Wed Aug 5 15:43:01 2026 +1000)
 * 409f3213 - bump version to 0.5.7 (Ronald Holshausen, Wed Aug 5 11:32:00 2026 +1000)
 
-# 0.5.6 - Bugfix Release
+## 0.5.6 - Bugfix Release
 
 * 7a016cc2 - chore: Update pact_verifier to 1.4.6 (Ronald Holshausen, Wed Aug 5 11:18:27 2026 +1000)
 * 2bd503ac - chore(pact-ffi): fix independant test (Ronald Holshausen, Wed Aug 5 09:10:06 2026 +1000)
@@ -55,7 +55,7 @@
 * 0904b3d3 - chore: Update pact_models to 1.3.13 (Ronald Holshausen, Mon Aug 3 17:16:00 2026 +1000)
 * b674cfce - bump version to 0.5.6 (Ronald Holshausen, Fri Jul 31 10:28:19 2026 +1000)
 
-# 0.5.5 - Bugfix Release
+## 0.5.5 - Bugfix Release
 
 * 7551fe54 - chore: Update pact_verifier to 1.4.4 (Ronald Holshausen, Fri Jul 31 09:45:27 2026 +1000)
 * dae8ec0e - chore: Update pact_mock_server to 2.0.8 (Ronald Holshausen, Thu Jul 30 17:26:10 2026 +1000)
@@ -81,7 +81,7 @@
 * bdfe6f68 - fix(pact-ffi): pactffi_create_mock_server_for_transport is unable to start a TLS mock server (Ronald Holshausen, Tue May 5 16:01:31 2026 +1000)
 * 4420a878 - bump version to 0.5.5 (Ronald Holshausen, Thu Apr 30 10:33:24 2026 +1000)
 
-# 0.5.4 - Maintenance Release
+## 0.5.4 - Maintenance Release
 
 * 28c540cd - chore: Update pact_verifier to 1.3.5 (Ronald Holshausen, Thu Apr 30 10:04:40 2026 +1000)
 * 27c4aa20 - chore: Update pact_models to 1.3.10 (Ronald Holshausen, Wed Apr 29 17:20:36 2026 +1000)
@@ -94,7 +94,7 @@
 * 3d289f52 - test(pact_ffi): Test xml content (tien.xuan.vo, Sun Mar 22 19:57:16 2026 +0700)
 * 0f04596d - bump version to 0.5.4 (Ronald Holshausen, Thu Feb 19 11:46:41 2026 +1100)
 
-# 0.5.3 - Maintenance Release
+## 0.5.3 - Maintenance Release
 
 * f818fe62 - chore: Fix flaky test on CI (Ronald Holshausen, Thu Feb 19 11:23:18 2026 +1100)
 * 1d9105de - chore: Update pact_verifier to 1.3.4 (Ronald Holshausen, Thu Feb 19 11:08:03 2026 +1100)
@@ -107,13 +107,13 @@
 * 55be8997 - chore(pact_consumer): update bytes to 1.11.1 to resolve RUSTSEC-2026-0007 chore(pact_ffi): update bytes to 1.11.1 to resolve RUSTSEC-2026-0007 (Andrew Tecey, Mon Feb 9 14:25:43 2026 +0000)
 * b8ecf51d - bump version to 0.5.3 (Ronald Holshausen, Thu Jan 15 09:58:31 2026 +1100)
 
-# 0.5.2 - Bugfix Release
+## 0.5.2 - Bugfix Release
 
 * 7473d61f - chore(pact_ffi): Remove the deprecated Clap-based FFI functions (Ronald Holshausen, Thu Jan 15 09:39:00 2026 +1100)
 * f0fc2a93 - fix(pact_ffi): update mock server status functions to use the server manager Tokio runtime #511 (Ronald Holshausen, Wed Jan 14 16:51:19 2026 +1100)
 * a6bdccd7 - bump version to 0.5.2 (Ronald Holshausen, Tue Jan 13 16:15:59 2026 +1100)
 
-# 0.5.1 - Bugfix Release
+## 0.5.1 - Bugfix Release
 
 * 93b0d736 - chore(pact_ffi): Cleanup some compiler warnings (Ronald Holshausen, Tue Jan 13 15:42:57 2026 +1100)
 * afbcd605 - fix(pact_ffi): Update to mockserver 2.0 crate dropped support for mock servers from plugins #510 (Ronald Holshausen, Tue Jan 13 15:31:27 2026 +1100)
@@ -124,7 +124,7 @@
 * 6f9b0737 - chore(pact_ffi): Update dependencies (Ronald Holshausen, Tue Jan 13 12:00:59 2026 +1100)
 * c171b42b - bump version to 0.5.1 (Ronald Holshausen, Thu Dec 18 15:09:42 2025 +1100)
 
-# 0.5.0 - 2.0 Mock server + removed some deprecated functions
+## 0.5.0 - 2.0 Mock server + removed some deprecated functions
 
 * 2eacbdb7 - chore: Bump minor version of pact_ffi (Ronald Holshausen, Thu Dec 18 15:05:22 2025 +1100)
 * 9d1a12a8 - feat(ffi): upgrade mock server to v2 (JP-Ellis, Tue Dec 16 10:25:23 2025 +1100)
@@ -141,7 +141,7 @@
 * 0c8187dc - Merge branch 'pact_ffi/0.4.28' (Ronald Holshausen, Thu Jul 17 16:04:12 2025 +1000)
 * 01052fd4 - bump version to 0.4.29 (Ronald Holshausen, Thu Jul 17 15:10:53 2025 +1000)
 
-# 0.4.28 - Maintenance Release
+## 0.4.28 - Maintenance Release
 
 * 4fc0136c - chore: Upgrade pact_verifier to 1.3.2 (Ronald Holshausen, Fri Jun 20 11:33:58 2025 +1000)
 * 42b0b285 - chore(pact-ffi): Update pact_mock_server to 1.2.16 (Ronald Holshausen, Wed Jun 11 15:33:46 2025 +1000)
@@ -168,7 +168,7 @@
 * 11cd9dc0 - Merge branch 'master' into feat/matching-engine-v2 (Ronald Holshausen, Fri Oct 25 10:01:15 2024 +1100)
 * 02e2ae13 - chore: Bump pact_matching to 2.0.0-beta.0 (Ronald Holshausen, Tue Jul 30 11:40:20 2024 +1000)
 
-# 0.4.27 - Bugfix Release
+## 0.4.27 - Bugfix Release
 
 * df9beec3 - chore: Upgrade pact_verifier to 1.2.5 (Ronald Holshausen, Wed Mar 19 14:08:12 2025 +1100)
 * e32f0dbd - fix: Upgrade pact-plugin-driver to 0.7.3 (Ronald Holshausen, Wed Mar 19 11:20:39 2025 +1100)
@@ -182,7 +182,7 @@
 * d93dfb3f - fix: Do not apply date/time matchers at the collection level #483 (Ronald Holshausen, Wed Jan 29 14:34:31 2025 +1100)
 * 283fcb12 - bump version to 0.4.27 (Ronald Holshausen, Fri Dec 20 14:19:23 2024 +1100)
 
-# 0.4.26 - Re-release FFI
+## 0.4.26 - Re-release FFI
 
 * 823b009a - Reapply "chore(ci): refactor release pipeline" (Ronald Holshausen, Fri Dec 20 11:08:57 2024 +1100)
 * 9321da66 - Revert "chore(release): Rename MacOS artifacts correctly" (Ronald Holshausen, Fri Dec 20 11:07:26 2024 +1100)
@@ -198,7 +198,7 @@
 * fab32aa0 - chore: Upgrade pact_models to 1.2.6 (Ronald Holshausen, Wed Dec 11 15:28:01 2024 +1100)
 * 7792c635 - bump version to 0.4.25 (Ronald Holshausen, Fri Nov 29 16:03:37 2024 +1100)
 
-# 0.4.25 - Support for FORM urlencoded bodies
+## 0.4.25 - Support for FORM urlencoded bodies
 
 * 648ab1c9 - chore: Upgrade pact_matching to 1.2.8 (Ronald Holshausen, Thu Dec 19 16:14:10 2024 +1100)
 * d74af0ab - Merge pull request #462 from tienvx/support-integration-json-for-form-urlencoded (Ronald Holshausen, Thu Dec 19 15:15:09 2024 +1100)
@@ -208,7 +208,7 @@
 * fab32aa0 - chore: Upgrade pact_models to 1.2.6 (Ronald Holshausen, Wed Dec 11 15:28:01 2024 +1100)
 * 7792c635 - bump version to 0.4.25 (Ronald Holshausen, Fri Nov 29 16:03:37 2024 +1100)
 
-# 0.4.24 - Bugfix Release
+## 0.4.24 - Bugfix Release
 
 * 44d9dc1e - fix(plugins): Upgrade pact-plugin-driver to 0.7.2, fixes #473 (Ronald Holshausen, Fri Nov 29 15:48:40 2024 +1100)
 * b55407ef - fix(FFI): pactffi_with_pact_metadata overwrites existing namespace contents #466 (Ronald Holshausen, Mon Nov 18 12:22:42 2024 +1100)
@@ -226,7 +226,7 @@
 * 8a5150e0 - chore: Copy the in-mem logging functions to the FFI crate (Ronald Holshausen, Wed Sep 4 15:50:51 2024 +1000)
 * 8350e4d3 - bump version to 0.4.24 (Ronald Holshausen, Wed Sep 4 15:19:59 2024 +1000)
 
-# 0.4.23 - Bugfix Release
+## 0.4.23 - Bugfix Release
 
 * 3cb09550 - chore(pact_ffi): Update dependencies (Ronald Holshausen, Wed Sep 4 11:09:27 2024 +1000)
 * c1a00dd8 - chore: Upgrade pact-plugin-driver to 0.7.1 (Ronald Holshausen, Tue Sep 3 15:47:22 2024 +1000)
@@ -241,7 +241,7 @@
 * 033a50ab - feat: Update the matching rule expression parser to support values from provider states (Ronald Holshausen, Fri Aug 2 10:06:52 2024 +1000)
 * fd1ba0c3 - bump version to 0.4.23 (Ronald Holshausen, Thu Jul 18 15:51:48 2024 +1000)
 
-# 0.4.22 - Bugfix Release
+## 0.4.22 - Bugfix Release
 
 * 4257ed1e - chore: Upgrade pact_verifier to 1.2.3 (Ronald Holshausen, Wed Jul 17 15:19:58 2024 +1000)
 * 3c96c31b - chore: Upgrade pact_mock_server to 1.2.9 (Ronald Holshausen, Wed Jul 17 14:54:40 2024 +1000)
@@ -257,7 +257,7 @@
 * efc54d26 - fix(FFI): update_provider_info was not setting the transport scheme correctly (Ronald Holshausen, Mon Jun 24 11:35:57 2024 +1000)
 * 45914c08 - bump version to 0.4.22 (Ronald Holshausen, Wed Jun 19 14:54:30 2024 +1000)
 
-# 0.4.21 - Bugfix Release
+## 0.4.21 - Bugfix Release
 
 * 3acc9ae5 - Merge pull request #443 from pact-foundation/feat/generate-contents (Ronald Holshausen, Wed Jun 19 14:21:50 2024 +1000)
 * a18b7746 - feat: add `generate_contents` methods (JP-Ellis, Mon Jun 17 14:35:10 2024 +1000)
@@ -282,7 +282,7 @@
 * 968be075 - feat: update content_type_matching logic for binary payloads (Yousaf Nabi, Tue May 28 23:25:07 2024 +0100)
 * efc3dc49 - bump version to 0.4.21 (Ronald Holshausen, Thu May 9 14:03:59 2024 +1000)
 
-# 0.4.20 - Maintenance Release
+## 0.4.20 - Maintenance Release
 
 * 2c28d36b - chore(FFI): Upgrade dependencies (Ronald Holshausen, Wed May 8 16:32:55 2024 +1000)
 * edc1ad0c - chore: Upgrade pact_verifier to 1.2.1 (Ronald Holshausen, Wed May 8 15:32:36 2024 +1000)
@@ -302,7 +302,7 @@
 * a38e93c5 - fix(ci): fix macos extensions (JP-Ellis, Thu Apr 11 13:12:30 2024 +1000)
 * c2ec4610 - bump version to 0.4.20 (Ronald Holshausen, Thu Apr 11 12:05:29 2024 +1000)
 
-# 0.4.19 - Bugfix Release
+## 0.4.19 - Bugfix Release
 
 * d3c18d21 - chore(ffi): Remove unecessary mutable references #399 (Ronald Holshausen, Wed Mar 20 14:47:54 2024 +1100)
 * 21406631 - feat(ffi): Update intermediate JSON to support matching rule expressions #399 (Ronald Holshausen, Wed Mar 20 11:59:46 2024 +1100)
@@ -325,7 +325,7 @@
 * 634bc589 - chore(FFI): FFI Feature tests were writing to the same Pact file and can cause race conditions (Ronald Holshausen, Wed Feb 21 11:58:37 2024 +1100)
 * e902c532 - bump version to 0.4.18 (Ronald Holshausen, Wed Feb 21 11:29:01 2024 +1100)
 
-# 0.4.18 - Maintenance Release
+## 0.4.18 - Maintenance Release
 
 * 93f02c74 - feat(ffi): allow setting comments (JP-Ellis, Mon Feb 26 11:26:39 2024 +1100)
 * 8ac21bdb - feat(ffi): allow toggling pending state (JP-Ellis, Mon Feb 26 10:48:32 2024 +1100)
@@ -333,7 +333,7 @@
 * 634bc589 - chore(FFI): FFI Feature tests were writing to the same Pact file and can cause race conditions (Ronald Holshausen, Wed Feb 21 11:58:37 2024 +1100)
 * e902c532 - bump version to 0.4.18 (Ronald Holshausen, Wed Feb 21 11:29:01 2024 +1100)
 
-# 0.4.17 - Bugfix Release
+## 0.4.17 - Bugfix Release
 
 * 82804395 - Revert "chore: Upgrade pact_verifier to 1.1.1" (Ronald Holshausen, Mon Feb 19 11:43:12 2024 +1100)
 * d17dac05 - chore: Upgrade pact_verifier to 1.1.1 (Ronald Holshausen, Mon Feb 19 11:42:50 2024 +1100)
@@ -346,13 +346,13 @@
 * df22043e - feat: convert musl static .a to .so (Yousaf Nabi, Tue Feb 13 21:51:02 2024 +0000)
 * 41e9c469 - bump version to 0.4.17 (Ronald Holshausen, Mon Feb 12 17:06:33 2024 +1100)
 
-# 0.4.16 - Bugfix Release
+## 0.4.16 - Bugfix Release
 
 * 29b326e5 - fix(FFI): Metadata matching rules from plugins were being ignored (Ronald Holshausen, Thu Feb 8 18:31:05 2024 +1100)
 * 4b9aeb2d - chore: correct CHANGELOG.md (Ronald Holshausen, Wed Feb 7 14:21:29 2024 +1100)
 * 76debd2d - bump version to 0.4.16 (Ronald Holshausen, Wed Feb 7 14:15:28 2024 +1100)
 
-# 0.4.15 - Bugfix Release
+## 0.4.15 - Bugfix Release
 
 * b0f0151e - Merge pull request #383 from pact-foundation/feat/with-matching-rules-2 (Ronald Holshausen, Wed Feb 7 14:54:11 2024 +1100)
 * 3554a333 - feat(ffi): add with_matching_rules (JP-Ellis, Tue Feb 6 12:47:42 2024 +1100)
@@ -363,7 +363,7 @@
 * 7370d8f9 - chore: update artifact path for aarch64 musl pact_ffi (Yousaf Nabi, Thu Jan 25 12:01:20 2024 +0000)
 * 0cd5fe82 - bump version to 0.4.15 (Ronald Holshausen, Sat Jan 20 22:33:27 2024 +1100)
 
-# 0.4.14 - Bugfix Release
+## 0.4.14 - Bugfix Release
 
 * 6b82b19f - chore(FFI): Update all dependencies (Ronald Holshausen, Sat Jan 20 22:24:41 2024 +1100)
 * 8d3f146a - chore: Upgrade pact_verifier to 1.0.5 (Ronald Holshausen, Sat Jan 20 21:31:51 2024 +1100)
@@ -391,12 +391,12 @@
 * 37e498e9 - test(pact_matching): Test more cases for ContentType matcher (tien.xuan.vo, Sat Jan 20 17:39:07 2024 +0700)
 * a990c55d - bump version to 0.4.14 (Ronald Holshausen, Fri Jan 19 15:05:21 2024 +1100)
 
-# 0.4.13 - Bugfix Release
+## 0.4.13 - Bugfix Release
 
 * 944613df - fix: regression - upgrade pact_models to 1.1.16 #359 (Ronald Holshausen, Fri Jan 19 14:52:36 2024 +1100)
 * db970926 - bump version to 0.4.13 (Ronald Holshausen, Wed Jan 17 09:48:16 2024 +1100)
 
-# 0.4.12 - Bugfix Release
+## 0.4.12 - Bugfix Release
 
 * 403c0af1 - chore: Upgrade pact_models to 1.1.14 #355 (Ronald Holshausen, Tue Jan 16 10:31:12 2024 +1100)
 * 9d121e5e - fix(FFI): Headers configured with provider state generator have invalid paths in Pact file #355 (Ronald Holshausen, Tue Jan 16 07:48:20 2024 +1100)
@@ -405,7 +405,7 @@
 * 713e4098 - chore: Upgrade pact-plugin-driver to 0.4.6 (Ronald Holshausen, Thu Dec 14 17:04:59 2023 +1100)
 * ca698fce - bump version to 0.4.12 (Ronald Holshausen, Mon Nov 27 19:55:59 2023 +1100)
 
-# 0.4.11 - Bugfix Release
+## 0.4.11 - Bugfix Release
 
 * 82e51872 - Merge pull request #348 from tienvx/update-trace-logs (Ronald Holshausen, Tue Nov 28 09:36:04 2023 +1100)
 * 133bf14f - Merge pull request #347 from tienvx/update-comment-metadata-v2 (Ronald Holshausen, Tue Nov 28 09:35:22 2023 +1100)
@@ -424,7 +424,7 @@
 * 7405ccbe - Merge branch 'release/0.4.10' (Ronald Holshausen, Tue Nov 14 05:50:08 2023 +1100)
 * 08786976 - bump version to 0.4.11 (Ronald Holshausen, Tue Nov 14 04:08:57 2023 +1100)
 
-# 0.4.10 - Bugfix Release
+## 0.4.10 - Bugfix Release
 
 * 3f0ae7f1 - chore: Upgrade pact_matching to 1.1.7 (Ronald Holshausen, Tue Nov 14 03:10:25 2023 +1100)
 * 826758a6 - chore: Upgrade pact_models to 1.1.12 (Ronald Holshausen, Mon Nov 13 17:25:21 2023 +1100)
@@ -439,7 +439,7 @@
 * 335d52dc - fix: Only specification v3 or higher support binary body's content type matching rule (tien.xuan.vo, Mon Oct 16 22:11:54 2023 +0700)
 * c0201a77 - bump version to 0.4.10 (Ronald Holshausen, Fri Sep 22 11:25:07 2023 +1000)
 
-# 0.4.9 - Bugfix Release
+## 0.4.9 - Bugfix Release
 
 * 04bad264 - chore: Upgrade pact_matching to 1.1.6 (Ronald Holshausen, Fri Sep 22 11:03:38 2023 +1000)
 * 9f8dde99 - fix: Nested array contains matchers where not having their values propogated to the outer matcher #324 (Ronald Holshausen, Fri Sep 22 10:18:56 2023 +1000)
@@ -451,7 +451,7 @@
 * 63b7cf9d - fix: Allow matching string values using content type matching rule (tien.xuan.vo, Mon Sep 11 18:32:24 2023 +0700)
 * 89a18dab - bump version to 0.4.9 (Ronald Holshausen, Tue Aug 29 14:57:35 2023 +1000)
 
-# 0.4.8 - Bugfix Release
+## 0.4.8 - Bugfix Release
 
 * a3025b14 - chore(pact_ffi): Disable aarch64-unknown-linux-gnu target from release build (Ronald Holshausen, Tue Aug 29 14:53:10 2023 +1000)
 * c924b9ce - chore: Upgrade pact_verifier to 1.0.3 (Ronald Holshausen, Tue Aug 29 10:04:18 2023 +1000)
@@ -467,7 +467,7 @@
 * 24ed7835 - chore: Upgrade pact-models to 1.1.10 (Ronald Holshausen, Fri Aug 4 16:11:24 2023 +1000)
 * ef920ba7 - bump version to 0.4.8 (Ronald Holshausen, Thu Jul 27 15:28:46 2023 +1000)
 
-# 0.4.7 - Bugfix Release
+## 0.4.7 - Bugfix Release
 
 * 04af3923 - chore: Upgrade pact_verifier to 1.0.2 (Ronald Holshausen, Thu Jul 27 15:17:57 2023 +1000)
 * 0586fcf1 - chore: Upgrade pact_mock_server to 1.2.2 (Ronald Holshausen, Thu Jul 27 14:45:02 2023 +1000)
@@ -478,7 +478,7 @@
 * 0459d40c - fix(pact_matching): Number of keys were still be compared when an EachKeys matcher is defined #301 (Ronald Holshausen, Mon Jul 17 13:37:05 2023 +1000)
 * e69eef09 - bump version to 0.4.7 (Ronald Holshausen, Thu Jul 13 10:26:33 2023 +1000)
 
-# 0.4.6 - Bugfix Release
+## 0.4.6 - Bugfix Release
 
 * 7527fd32 - chore: Correct release script (Ronald Holshausen, Thu Jul 13 10:23:51 2023 +1000)
 * 4f448b1f - fix(pact_matching): EachValue matcher was not applying the associated matching rules correctly #299 (Ronald Holshausen, Wed Jul 12 16:28:16 2023 +1000)
@@ -499,7 +499,7 @@
 * 397c837f - chore: Upgrade pact_models to 1.1.3 (fixes MockServerURL generator) (Ronald Holshausen, Mon May 29 15:12:22 2023 +1000)
 * 4555d0c4 - bump version to 0.4.6 (Ronald Holshausen, Tue May 23 16:45:37 2023 +1000)
 
-# 0.4.5 - Bugfix Release
+## 0.4.5 - Bugfix Release
 
 * 6137bba1 - chore: fix deps (Ronald Holshausen, Tue May 23 16:41:20 2023 +1000)
 * e7e889f0 - Revert "update changelog for release 0.4.5" (Ronald Holshausen, Tue May 23 16:40:53 2023 +1000)
@@ -519,7 +519,7 @@
 * 99e7c08a - chore: drop nightly-2022-12-01 fixed https://github.com/rust-lang/rust/issues/105886 (Yousaf Nabi, Fri Apr 21 17:26:01 2023 +0100)
 * cece8369 - bump version to 0.4.5 (Ronald Holshausen, Tue Apr 18 16:53:28 2023 +1000)
 
-# 0.4.4 - Bugfix Release
+## 0.4.4 - Bugfix Release
 
 * 8cfc3d79 - chore: Upgrade pact_verifier to 0.15.3 (Ronald Holshausen, Tue Apr 18 15:22:26 2023 +1000)
 * 6a71b12d - chore: Upgrade pact_mock_server to 1.0.2 (Ronald Holshausen, Tue Apr 18 13:30:21 2023 +1000)
@@ -538,12 +538,12 @@
 * 779a59f0 - fix: Upgrade pact-plugin-driver to 0.4.1 (fixes an issue introduced in 0.4.0 with shared channels to plugins) (Ronald Holshausen, Wed Apr 5 17:01:18 2023 +1000)
 * 81fbfa7f - bump version to 0.4.4 (Ronald Holshausen, Wed Apr 5 14:31:56 2023 +1000)
 
-# 0.4.3 - Bugfix Release
+## 0.4.3 - Bugfix Release
 
 * 0af00359 - fix: use a shared global tokio runtime so shared plugin connections can be used (Ronald Holshausen, Wed Apr 5 14:05:11 2023 +1000)
 * 33ef054f - bump version to 0.4.3 (Ronald Holshausen, Wed Apr 5 11:17:18 2023 +1000)
 
-# 0.4.2 - Bugfix Release
+## 0.4.2 - Bugfix Release
 
 * d216b5d5 - chore: Update dependencies (Ronald Holshausen, Wed Apr 5 11:10:52 2023 +1000)
 * 799f886d - chore: remove use of deprecated methods (Ronald Holshausen, Wed Apr 5 11:07:22 2023 +1000)
@@ -560,7 +560,7 @@
 * c9333f94 - feat: add option to generate JUnit XML report format for consumption by CI servers #257 (Ronald Holshausen, Thu Mar 2 10:48:56 2023 +1100)
 * af786d20 - bump version to 0.4.2 (Ronald Holshausen, Thu Feb 16 14:59:56 2023 +1100)
 
-# 0.4.1 - Maintenance Release
+## 0.4.1 - Maintenance Release
 
 * c368c651 - fix: Pass any custom header values on to the plugin verification call (Ronald Holshausen, Thu Feb 16 13:52:03 2023 +1100)
 * 0676047e - chore: Upgrade pact-plugin-driver to 0.3.2 (Ronald Holshausen, Thu Feb 16 12:09:46 2023 +1100)
@@ -574,7 +574,7 @@
 * a56bc056 - fix(FFI): Message metadata was not being passed on to the mock server (Ronald Holshausen, Fri Feb 3 11:30:32 2023 +1100)
 * f391b4de - bump version to 0.4.1 (Ronald Holshausen, Wed Jan 11 16:57:57 2023 +1100)
 
-# 0.4.0 - Add FFI functions for plugin authors to parse Pact JSON and get matching rules and generators + bugfixes
+## 0.4.0 - Add FFI functions for plugin authors to parse Pact JSON and get matching rules and generators + bugfixes
 
 * fbc4dbe1 - chore: Upgrade pact_verifier to 0.13.20 (Ronald Holshausen, Wed Jan 11 16:06:21 2023 +1100)
 * c1b22f1c - chore: Upgrade pact_matching to 1.0.3 (Ronald Holshausen, Wed Jan 11 15:19:29 2023 +1100)
@@ -592,13 +592,13 @@
 * 34a67cb9 - fix: when loading pacts from a dir, filter by the provider name #233 (Ronald Holshausen, Wed Jan 4 18:12:28 2023 +1100)
 * 00c77e92 - bump version to 0.3.20 (Ronald Holshausen, Thu Dec 22 15:44:18 2022 +1100)
 
-# 0.3.19 - Fix for V3 Message ignores the interaction ID when loaded from a Pact Broker
+## 0.3.19 - Fix for V3 Message ignores the interaction ID when loaded from a Pact Broker
 
 * 1bdb1054 - chore: Upgrade pact_models to 1.0.3 #239 (Ronald Holshausen, Thu Dec 22 15:37:53 2022 +1100)
 * 09479b91 - Merge branch 'fix/release-0.3.18' (Ronald Holshausen, Mon Dec 19 18:52:51 2022 +1100)
 * 68b7a37d - bump version to 0.3.19 (Ronald Holshausen, Mon Dec 19 17:24:59 2022 +1100)
 
-# 0.3.18 - Bugfixes + Support generators in plugins
+## 0.3.18 - Bugfixes + Support generators in plugins
 
 * c55a7758 - chore: Upgrade pact_verifier to 0.13.19 (Ronald Holshausen, Mon Dec 19 16:20:24 2022 +1100)
 * 81e55220 - chore: Upgrade pact_mock_server to 0.9.7 (Ronald Holshausen, Mon Dec 19 16:04:55 2022 +1100)
@@ -615,7 +615,7 @@
 * dbe56950 - bump version to 0.3.18 (Ronald Holshausen, Thu Dec 15 13:26:05 2022 +1100)
 * c1ccb62f - feat: allow non deafult json content-type (Leonardo Santana, Mon Dec 12 15:26:22 2022 -0500)
 
-# 0.3.17 - Bugfix Release
+## 0.3.17 - Bugfix Release
 
 * ec2ed51d - fix(FFI): use a multi-threaded reactor for FFI setup_contents call to plugins (Ronald Holshausen, Thu Dec 15 12:22:24 2022 +1100)
 * 46254545 - chore: Upgrade pact_verifier to 0.13.18 (Ronald Holshausen, Wed Dec 14 17:15:22 2022 +1100)
@@ -623,7 +623,7 @@
 * 8be00f0c - chore: Upgrade pact-plugin-driver to 0.2.1 (Ronald Holshausen, Wed Dec 14 14:55:32 2022 +1100)
 * f0387856 - bump version to 0.3.17 (Ronald Holshausen, Mon Dec 12 14:18:18 2022 +1100)
 
-# 0.3.16 - Support for plugin authors
+## 0.3.16 - Support for plugin authors
 
 * 9be00044 - chore: Upgrade pact_mock_server to 0.9.6 (Ronald Holshausen, Mon Dec 12 10:06:25 2022 +1100)
 * 4f366ac5 - fix(FFI): broken build after upgrading pact_models (Ronald Holshausen, Fri Dec 9 17:31:40 2022 +1100)
@@ -633,7 +633,7 @@
 * 7756d305 - fix(FFI): Replaced the matching rule union type with 3 FFI functions which should support Go better (Ronald Holshausen, Wed Nov 30 16:10:15 2022 +1100)
 * fbdcaabc - bump version to 0.3.16 (Ronald Holshausen, Mon Nov 28 16:09:44 2022 +1100)
 
-# 0.3.15 - Bugfix + FFI functions to support plugin authors
+## 0.3.15 - Bugfix + FFI functions to support plugin authors
 
 * 2f0ada6b - chore: Upgrade pact_verifier to 0.13.16 (Ronald Holshausen, Mon Nov 28 15:08:47 2022 +1100)
 * 246c0730 - chore: Upgrade pact_mock_server to 0.9.5 (Ronald Holshausen, Mon Nov 28 14:52:37 2022 +1100)
@@ -653,7 +653,7 @@
 * 768a132b - feat: add FFI function to parse a matching definition expression (Ronald Holshausen, Thu Nov 10 18:18:39 2022 +1100)
 * 2c7788fb - bump version to 0.3.15 (Ronald Holshausen, Mon Nov 7 15:11:44 2022 +1100)
 
-# 0.3.14 - Bugfix Release
+## 0.3.14 - Bugfix Release
 
 * 0ed385bf - chore: correct version in manifest file after previous release was done wrong (Ronald Holshausen, Mon Nov 7 15:06:05 2022 +1100)
 * 5f75239e - Revert "update changelog for release 0.3.13" (Ronald Holshausen, Mon Nov 7 15:03:15 2022 +1100)
@@ -669,14 +669,14 @@
 * 9dad5d2a - fix: ffi.pactffi_logger_attach_sink causes seg fault if log directory doesn't exist #226 (Ronald Holshausen, Fri Nov 4 12:26:15 2022 +1100)
 * 3bc69045 - chore: correct FFI function doc comments (Ronald Holshausen, Wed Nov 2 10:36:46 2022 +1100)
 
-# 0.3.13 - Bugfix Release
+## 0.3.13 - Bugfix Release
 
 * eb505b7f - Merge pull request #221 from pact-foundation/feat/multiple-transports-in-ffi (Matt Fellows, Wed Oct 12 10:11:15 2022 +1100)
 * 965a1c41 - fix: Upgrade plugin driver to 0.1.13 (fixes issue loading plugin when there are multiple versions for the same plugin) (Ronald Holshausen, Wed Oct 5 17:29:37 2022 +1100)
 * dda213e3 - feat(ffi): support adding transports to provider via pactffi_verifier_add_provider_transport (Matt Fellows, Wed Oct 5 10:49:07 2022 +1100)
 * 2014c432 - bump version to 0.3.13 (Ronald Holshausen, Wed Sep 28 10:54:32 2022 +1000)
 
-# 0.3.12 - Bugfix Release
+## 0.3.12 - Bugfix Release
 
 * b7bb9cd1 - chore: Upgrade pact_verifier crate to 0.13.14 (Ronald Holshausen, Wed Sep 28 10:34:48 2022 +1000)
 * cf913949 - chore: update the list of matcher types (Ronald Holshausen, Wed Sep 28 10:20:18 2022 +1000)
@@ -692,12 +692,12 @@
 * b6ab1785 - chore: correct cargo manifest after release (Ronald Holshausen, Wed Sep 7 10:46:44 2022 +1000)
 * 333bb92a - bump version to 0.3.12 (Ronald Holshausen, Wed Sep 7 10:44:40 2022 +1000)
 
-# 0.3.11 - Bugfix Release
+## 0.3.11 - Bugfix Release
 
 * cdb555f8 - fix: Upgrade pact_verifier to 0.13.13 (Ronald Holshausen, Wed Sep 7 09:53:05 2022 +1000)
 * 1c5bde33 - bump version to 0.3.11 (Ronald Holshausen, Wed Aug 31 17:05:22 2022 +1000)
 
-# 0.3.10 - Add option to not fail verification if no Pacts are found
+## 0.3.10 - Add option to not fail verification if no Pacts are found
 
 * 5c1d4293 - chore: Upgrade pact_verifier crate to 0.13.12 (Ronald Holshausen, Wed Aug 31 16:09:16 2022 +1000)
 * c128d22b - feat(FFI): add pactffi_verifier_set_no_pacts_is_error function #213 (Ronald Holshausen, Wed Aug 31 15:37:04 2022 +1000)
@@ -711,7 +711,7 @@
 * 70d2c09a - chore: Build FFI lib with Debian stretch image #202 (Ronald Holshausen, Fri Aug 19 11:33:40 2022 +1000)
 * 546d84f6 - bump version to 0.3.8 (Ronald Holshausen, Thu Aug 18 16:38:32 2022 +1000)
 
-# 0.3.9 - Bugfix Release
+## 0.3.9 - Bugfix Release
 
 * 508005a3 - chore: clean up some compiler warnings (Ronald Holshausen, Fri Aug 26 13:48:58 2022 +1000)
 * f8db90d2 - fix: Upgrade pact_models to 0.4.5 - fixes FFI bug with generators for request paths (Ronald Holshausen, Fri Aug 26 11:44:08 2022 +1000)
@@ -720,12 +720,12 @@
 * 70d2c09a - chore: Build FFI lib with Debian stretch image #202 (Ronald Holshausen, Fri Aug 19 11:33:40 2022 +1000)
 * 546d84f6 - bump version to 0.3.8 (Ronald Holshausen, Thu Aug 18 16:38:32 2022 +1000)
 
-# 0.3.8 - Support FFI libs on Ubuntu 18.04
+## 0.3.8 - Support FFI libs on Ubuntu 18.04
 
 * 70d2c09a - chore: Build FFI lib with Debian stretch image #202 (Ronald Holshausen, Fri Aug 19 11:33:40 2022 +1000)
 * 546d84f6 - bump version to 0.3.8 (Ronald Holshausen, Thu Aug 18 16:38:32 2022 +1000)
 
-# 0.3.7 - Bugfix Release
+## 0.3.7 - Bugfix Release
 
 * 5e52d685 - chore: Upgrade pact_verifier to 0.13.11 (Ronald Holshausen, Thu Aug 18 16:33:19 2022 +1000)
 * 9d1e8e89 - chore: Upgrade pact_mock_server to 0.9.3 (Ronald Holshausen, Thu Aug 18 16:03:38 2022 +1000)
@@ -737,7 +737,7 @@
 * 3c5c45d4 - fix(FFI): pactffi_with_binary_file was incorrectly setting the response content type to application/octet-stream #171 (Ronald Holshausen, Wed Aug 17 14:46:03 2022 +1000)
 * 033b5ee9 - bump version to 0.3.7 (Ronald Holshausen, Mon Aug 15 17:55:05 2022 +1000)
 
-# 0.3.6 - Maintenance Release
+## 0.3.6 - Maintenance Release
 
 * a41fe69c - chore: Upgrade pact_mock_server to 0.9.2 (Ronald Holshausen, Mon Aug 15 17:40:09 2022 +1000)
 * 68ef5b4b - Revert "update changelog for release 0.3.6" (Ronald Holshausen, Mon Aug 15 17:31:28 2022 +1000)
@@ -757,7 +757,7 @@
 * 68c5444e - feat(FFI): add function to disable coloured output with the verifier (Ronald Holshausen, Mon Aug 1 14:07:28 2022 +1000)
 * 4a7a935c - bump version to 0.3.6 (Ronald Holshausen, Mon Aug 1 12:12:59 2022 +1000)
 
-# 0.3.5 - Support message interactions with FFI body functions
+## 0.3.5 - Support message interactions with FFI body functions
 
 * 4c957894 - feat(FFI): updated doc comments for pactffi_with_multipart_file (Ronald Holshausen, Mon Aug 1 11:48:37 2022 +1000)
 * 128ae7c3 - feat(FFI): update pactffi_with_binary_file function to support message interactions (Ronald Holshausen, Mon Aug 1 11:12:20 2022 +1000)
@@ -772,7 +772,7 @@
 * b80064d1 - chore: correct function docs (Ronald Holshausen, Mon Jul 25 10:46:04 2022 +1000)
 * eb8123aa - bump version to 0.3.5 (Ronald Holshausen, Mon Jul 25 10:21:25 2022 +1000)
 
-# 0.3.4 - Bugfix Release
+## 0.3.4 - Bugfix Release
 
 * e95d701d - fix(FFI): fix matching rule for paths #205 (Ronald Holshausen, Fri Jul 22 13:42:06 2022 +1000)
 * b0fdbb6e - fix(FFI): fix matching rule for paths #205 (Ronald Holshausen, Fri Jul 22 13:34:46 2022 +1000)
@@ -783,14 +783,14 @@
 * 40f7bdc4 - feat: add verification option to disable ANSI escape codes in output #203 (Ronald Holshausen, Wed Jul 20 12:18:12 2022 +1000)
 * d069b3f2 - bump version to 0.3.4 (Ronald Holshausen, Fri Jul 1 10:30:30 2022 +1000)
 
-# 0.3.3 - Bug fixes + Support publishing results from webhook calls
+## 0.3.3 - Bug fixes + Support publishing results from webhook calls
 
 * 9a6c846f - chore: Upgrade pact_matching to 0.12.9 (Ronald Holshausen, Fri Jun 10 15:46:07 2022 +1000)
 * b3f98a2c - chore: Upgrade pact_verifier to 0.13.8 (Ronald Holshausen, Tue Jun 7 11:07:24 2022 +1000)
 * 18118e82 - feat: add retries to the provider state change calls #197 (Ronald Holshausen, Tue Jun 7 09:10:23 2022 +1000)
 * 23c0c593 - bump version to 0.3.3 (Ronald Holshausen, Mon May 30 14:31:20 2022 +1000)
 
-# 0.3.2 - Bugfix Release
+## 0.3.2 - Bugfix Release
 
 * 42dcd525 - chore: Disable ANSI escape codes in logs as Pact .Net is unable to deal with them (Ronald Holshausen, Mon May 30 13:16:05 2022 +1000)
 * 61fc3771 - chore: Upgrade pact_verifier to 0.13.7 (Ronald Holshausen, Mon May 30 12:21:12 2022 +1000)
@@ -800,13 +800,13 @@
 * 873f0c93 - fix(ffi): resources were not freed correctly when the mock server is provided by a plugin (Ronald Holshausen, Mon May 30 11:05:20 2022 +1000)
 * e32caf8d - bump version to 0.3.2 (Ronald Holshausen, Tue May 24 15:55:23 2022 +1000)
 
-# 0.3.1 - Bugfix Release
+## 0.3.1 - Bugfix Release
 
 * 797d1cce - fix(ffi): plugin data was not merged into the Pact file correctly (Ronald Holshausen, Tue May 24 14:13:25 2022 +1000)
 * a78f2a1d - fix(ffi): pactffi_create_mock_server_for_transport was returning the wrong status for invalid address (Ronald Holshausen, Mon May 23 16:56:32 2022 +1000)
 * bf70164f - bump version to 0.3.1 (Ronald Holshausen, Mon May 23 15:33:59 2022 +1000)
 
-# 0.3.0 - Support mock servers from plugins
+## 0.3.0 - Support mock servers from plugins
 
 * 5cd2ae5a - feat: add pactffi_create_mock_server_for_transport function (Ronald Holshausen, Fri May 20 16:09:36 2022 +1000)
 * d9b9fe72 - chore: Upgrade pact-plugin-driver to 0.1.7 (Ronald Holshausen, Fri May 20 15:56:23 2022 +1000)
@@ -831,7 +831,7 @@
 * 020b5715 - chore: upgrade pact_models to 0.4.1 (Ronald Holshausen, Wed May 11 11:36:57 2022 +1000)
 * e8d62b79 - bump version to 0.2.7 (Ronald Holshausen, Wed Apr 27 16:46:23 2022 +1000)
 
-# 0.2.6 - Maintenance Release
+## 0.2.6 - Maintenance Release
 
 * 14a010a9 - chore: Upgrade pact_verifier to 0.13.5 (Ronald Holshausen, Wed Apr 27 15:21:15 2022 +1000)
 * 563ae9fc - chore: Upgrade pact_mock_server to 0.8.10 (Ronald Holshausen, Wed Apr 27 15:06:50 2022 +1000)
@@ -842,7 +842,7 @@
 * 2395143a - feat: forward verification to plugin for transports provided by the plugin (Ronald Holshausen, Fri Apr 22 12:02:05 2022 +1000)
 * 2eeaccf4 - bump version to 0.2.6 (Ronald Holshausen, Tue Apr 19 13:59:46 2022 +1000)
 
-# 0.2.5 - Maintenance Release
+## 0.2.5 - Maintenance Release
 
 * d41e2440 - fix(ffi): correct race condition in pactffi_using_plugin (Ronald Holshausen, Wed Apr 13 16:51:36 2022 +1000)
 * 136c8a82 - chore: Upgrade pact_verifier to 0.13.4 (Ronald Holshausen, Wed Apr 13 16:06:02 2022 +1000)
@@ -862,7 +862,7 @@
 * 345b0011 - feat: support mock servers provided from plugins (Ronald Holshausen, Mon Mar 21 15:59:46 2022 +1100)
 * 63b63358 - bump version to 0.2.5 (Matt Fellows, Mon Mar 21 11:29:45 2022 +1100)
 
-# 0.2.4 - Bugfix Release
+## 0.2.4 - Bugfix Release
 
 * 13f7c36f - fix: xml response matching rules (Matt Fellows, Wed Mar 9 17:07:56 2022 +1100)
 * c5b96ebb - chore: need musl-tools om release build (Ronald Holshausen, Fri Mar 4 17:15:43 2022 +1100)
@@ -877,7 +877,7 @@
 * 74bd4531 - feat: add support for custom headers with the verifier FFI calls #182 (Ronald Holshausen, Mon Feb 28 13:58:46 2022 +1100)
 * c6d553e0 - bump version to 0.2.3 (Ronald Holshausen, Mon Feb 14 13:45:19 2022 +1100)
 
-# 0.2.3 - Support Custom headers + Date-Time expression parser
+## 0.2.3 - Support Custom headers + Date-Time expression parser
 
 * 16fbe7cf - feat: add musl target to the release build #185 (Ronald Holshausen, Fri Mar 4 16:23:39 2022 +1100)
 * b6433500 - chore: upgrade pact_verifier to 0.13.2 (Ronald Holshausen, Fri Mar 4 14:49:18 2022 +1100)
@@ -888,13 +888,13 @@
 * 74bd4531 - feat: add support for custom headers with the verifier FFI calls #182 (Ronald Holshausen, Mon Feb 28 13:58:46 2022 +1100)
 * c6d553e0 - bump version to 0.2.3 (Ronald Holshausen, Mon Feb 14 13:45:19 2022 +1100)
 
-# 0.2.2 - Bugfix Release
+## 0.2.2 - Bugfix Release
 
 * 76889087 - fix(pact-ffi): intermediate JSON - add test for JSON with decimal matcher #179 (Ronald Holshausen, Mon Feb 14 13:04:16 2022 +1100)
 * b10453c3 - fix(pact-ffi): intermediate JSON - type matcher paths were being incorrectly allocated to children #179 (Ronald Holshausen, Mon Feb 14 12:45:43 2022 +1100)
 * 1555c682 - bump version to 0.2.2 (Ronald Holshausen, Thu Feb 3 14:12:46 2022 +1100)
 
-# 0.2.1 - add option to strip ANSI control codes from verifier output
+## 0.2.1 - add option to strip ANSI control codes from verifier output
 
 * 506add91 - chore: bump pact_verifier version (Ronald Holshausen, Thu Feb 3 13:54:45 2022 +1100)
 * cc872209 - chore: add non-windows init ansi support function (Ronald Holshausen, Thu Feb 3 13:22:51 2022 +1100)
@@ -903,7 +903,7 @@
 * fbfd072f - feat(FFI): add an explicit function to enable ANSI terminal support on Windows (Ronald Holshausen, Thu Feb 3 11:11:30 2022 +1100)
 * 07806b05 - bump version to 0.2.1 (Ronald Holshausen, Mon Jan 31 14:28:33 2022 +1100)
 
-# 0.2.0 - Bugfixes + FFI functions to return the verifier output and results
+## 0.2.0 - Bugfixes + FFI functions to return the verifier output and results
 
 * 1d95f3cf - chore: Bump minor version of Pact FFI lib (Ronald Holshausen, Mon Jan 31 13:58:42 2022 +1100)
 * 739cb7b8 - chore: fix missing import on Windows (Ronald Holshausen, Mon Jan 31 11:16:55 2022 +1100)
@@ -918,7 +918,7 @@
 * 8bee40b0 - feat(ffi)!: Separate verification and publishing options (Adam Rodger, Tue Jan 25 16:31:29 2022 +0000)
 * bef310b2 - bump version to 0.1.7 (Ronald Holshausen, Mon Jan 17 17:20:07 2022 +1100)
 
-# 0.1.6 - Maintenance Release
+## 0.1.6 - Maintenance Release
 
 * 0c200ea5 - chore: Upgrade pact verifier crate to 0.12.4 (Ronald Holshausen, Mon Jan 17 17:07:18 2022 +1100)
 * 10c9b842 - chore: Upgrade pact_mock_server to 0.8.6 (Ronald Holshausen, Mon Jan 17 16:57:31 2022 +1100)
@@ -929,7 +929,7 @@
 * c2089645 - fix: log crate version must be fixed across all crates (including plugin driver) (Ronald Holshausen, Fri Jan 14 16:10:50 2022 +1100)
 * 255d6eba - bump version to 0.1.6 (Ronald Holshausen, Tue Jan 4 10:59:38 2022 +1100)
 
-# 0.1.5 - Maintenance Release
+## 0.1.5 - Maintenance Release
 
 * 7dbdd456 - chore: update test log crate (Ronald Holshausen, Tue Jan 4 10:46:46 2022 +1100)
 * 1b16e30a - chore: test-env-log has been renamed to test-log (Ronald Holshausen, Tue Jan 4 10:43:51 2022 +1100)
@@ -945,14 +945,14 @@
 * 8911d5b0 - chore: update to latest plugin driver crate (metrics fixes) (Ronald Holshausen, Mon Dec 20 12:11:35 2021 +1100)
 * 9153cc5b - bump version to 0.1.5 (Ronald Holshausen, Wed Dec 15 16:44:22 2021 +1100)
 
-# 0.1.4 - Maintenance Release
+## 0.1.4 - Maintenance Release
 
 * a1d03b95 - chore: update dependent pact crates (Ronald Holshausen, Wed Dec 15 16:34:39 2021 +1100)
 * f8042d6b - feat: add metrics event for provider verification (Ronald Holshausen, Tue Dec 14 17:29:44 2021 +1100)
 * 4f1ba7d9 - chore: update to the latest plugin driver (Ronald Holshausen, Tue Dec 14 13:55:02 2021 +1100)
 * 2f97c25f - bump version to 0.1.4 (Ronald Holshausen, Thu Dec 2 13:21:24 2021 +1100)
 
-# 0.1.3 - Bugfix Release
+## 0.1.3 - Bugfix Release
 
 * 4184e562 - chore(pact_ffi): upgrade to latest models, matching and verifier crates (Ronald Holshausen, Thu Dec 2 13:13:37 2021 +1100)
 * d43b1847 - Merge pull request #164 from tienvx/feat-filter-info (Ronald Holshausen, Fri Nov 19 11:38:41 2021 +1100)
@@ -962,7 +962,7 @@
 * 86ea5779 - chore: fix FFI release build (Ronald Holshausen, Wed Nov 17 15:52:14 2021 +1100)
 * 5480733f - bump version to 0.1.3 (Ronald Holshausen, Wed Nov 17 15:20:29 2021 +1100)
 
-# 0.1.2 - Bugfix Release
+## 0.1.2 - Bugfix Release
 
 * 631167fa - chore: update to latest mock server crate (Ronald Holshausen, Wed Nov 17 15:13:32 2021 +1100)
 * 87e7f11e - chore: remove note from pactffi_write_pact_file (Ronald Holshausen, Wed Nov 17 14:55:22 2021 +1100)
@@ -975,7 +975,7 @@
 * e4a445ba - fix: race condition when shutting down plugin via FFI (Ronald Holshausen, Tue Nov 16 16:01:18 2021 +1100)
 * f3c5e7c1 - bump version to 0.1.2 (Ronald Holshausen, Tue Nov 16 14:04:54 2021 +1100)
 
-# 0.1.1 - Support V4 synchronous messages + protobuf plugin
+## 0.1.1 - Support V4 synchronous messages + protobuf plugin
 
 * 5d974c4a - chore: update to latest models and plugin driver crates (Ronald Holshausen, Tue Nov 16 11:56:53 2021 +1100)
 * 19beb0ea - feat(plugins): add support for synch messages via FFI (Ronald Holshausen, Tue Nov 16 10:06:07 2021 +1100)
@@ -987,7 +987,7 @@
 * 2027537d - refactor: update FFI to use V4 models internally (Ronald Holshausen, Mon Nov 8 16:44:39 2021 +1100)
 * e1ff90c7 - bump version to 0.1.1 (Ronald Holshausen, Thu Nov 4 17:23:32 2021 +1100)
 
-# 0.1.0 - Pact V4 release
+## 0.1.0 - Pact V4 release
 
 * 59e21413 - feat: Pact V4 release (Ronald Holshausen, Thu Nov 4 16:54:56 2021 +1100)
 * 400a1231 - chore: drop beta from pact_verifier version (Ronald Holshausen, Thu Nov 4 15:56:22 2021 +1100)
@@ -1033,7 +1033,7 @@
 * bdfc6f02 - feat(plugins): Load required plugins when verifying a V4 pact (Ronald Holshausen, Wed Aug 11 14:23:54 2021 +1000)
 * dfe3cd42 - chore: bump minor version of Pact verifier libs (Ronald Holshausen, Mon Aug 9 15:10:47 2021 +1000)
 
-# 0.0.3 - support native TLS certs + updated verifier FFI functions
+## 0.0.3 - support native TLS certs + updated verifier FFI functions
 
 * 42be9eb8 - feat: add FFI functions to extract logs from a verifcation run (Ronald Holshausen, Tue Sep 28 12:48:40 2021 +1000)
 * 40cf1ab9 - chore: mark pactffi_logger_attach_sink as unsafe #148 (Ronald Holshausen, Fri Sep 24 11:36:38 2021 +1000)
@@ -1070,14 +1070,14 @@
 * eaefe4d2 - chore: correct the conan recipes (Ronald Holshausen, Sun Aug 22 16:18:50 2021 +1000)
 * 72125560 - bump version to 0.0.3 (Ronald Holshausen, Sun Aug 22 15:51:25 2021 +1000)
 
-# 0.0.2 - Bugfix Release
+## 0.0.2 - Bugfix Release
 
 * 9370327c - feat(FFI): Added initial verifier FFI prototype (Ronald Holshausen, Sun Aug 22 15:01:17 2021 +1000)
 * c274ca1a - fix: use the pacts for verification endpoint if the conusmer selectors are specified #133 (Ronald Holshausen, Sun Aug 22 11:51:22 2021 +1000)
 * 3215821e - chore: correct the OSX release (Ronald Holshausen, Tue Aug 17 12:47:20 2021 +1000)
 * 64cf38e9 - bump version to 0.0.2 (Ronald Holshausen, Tue Aug 17 11:00:54 2021 +1000)
 
-# 0.0.1 - M1 architecture support + Bugfixes
+## 0.0.1 - M1 architecture support + Bugfixes
 
 * a9940325 - chore: release m1 arm package for new Mac hardware (Matt Fellows, Wed Aug 11 22:57:46 2021 +1000)
 * b5a7b779 - feat: support new selectors (Matt Fellows, Mon Aug 9 13:27:33 2021 +1000)
@@ -1098,4 +1098,4 @@
 * 6d1ff318 - fix: conan packages for pact_ffi (Ronald Holshausen, Mon Jul 12 09:23:48 2021 +1000)
 * d7079e43 - bump version to 0.0.1 (Ronald Holshausen, Sun Jul 11 17:47:18 2021 +1000)
 
-# 0.0.0 - Initial Release
+## 0.0.0 - Initial Release
