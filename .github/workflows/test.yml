@@ -369,8 +369,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-        with:
-          fetch-depth: 0
 
       - name: Install Rust
         uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f  # v2.0.0
@@ -378,14 +376,18 @@ jobs:
           build-warnings: warn
           cache: false
 
+      # Packaging resolves the crate's siblings on crates.io, without the
+      # workspace's path and patch overrides, so a requirement on an
+      # unreleased sibling version fails here, in seconds, before any build.
       - name: Check workspace dependencies are released
+        working-directory: rust
         env:
           HEAD_REF: ${{ github.head_ref }}
-        run: .github/scripts/release-deps.sh "${HEAD_REF#release/}"
+        run: cargo package -p "${HEAD_REF#release/}" --locked --no-verify
 
-      # Builds the crate as crates.io will: against the released versions of
-      # its siblings, without the workspace's path and patch overrides. A
-      # crate using a sibling's unreleased code fails here, not after its tag.
+      # Builds the crate as crates.io will, against those released versions.
+      # A crate using a sibling's unreleased code fails here, not after its
+      # tag.
       - name: Package against released dependencies
         if: ${{ !github.event.pull_request.draft }}
         working-directory: rust
