@@ -32,7 +32,7 @@ gh run download <run id> -p 'artifacts-*' -D gate
 mkdir -p gate-flat
 find gate -type f \( -name '*.tar.xz' -o -name '*.zip' -o -name 'pact*.h' \) -exec cp {} gate-flat/ \;
 LEGACY_ARCHIVES=gate-flat .github/scripts/legacy-artifacts.sh <crate>-v<version> out
-diff .github/scripts/tests/legacy-expected-ffi.txt <(ls out | sort)  # or legacy-expected-cli.txt
+diff .github/scripts/legacy-expected-ffi.txt <(ls out | sort)  # or legacy-expected-cli.txt
 ```
 
 The script fails if a Linux library links the wrong C library, or needs a glibc newer than 2.28. The `diff` prints nothing when the legacy asset names match.
