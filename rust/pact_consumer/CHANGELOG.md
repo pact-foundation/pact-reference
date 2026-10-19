@@ -1,6 +1,6 @@
 # Changelog
 
-# 1.4.10 - Support matching rules and generators from plugins
+## 1.4.10 - Support matching rules and generators from plugins
 
 * a5e557e5 - chore: Update pact_mock_server to 2.2.5 (Ronald Holshausen, Fri Aug 7 09:52:09 2026 +1000)
 * 64fcc4ba - Revert "update changelog for release 1.4.10 [skip ci]" (Ronald Holshausen, Fri Aug 7 09:22:45 2026 +1000)
@@ -14,17 +14,17 @@
 * 1d8bfcbf - chore(pact-consumer): Remove default rustls features (Ronald Holshausen, Wed Aug 5 09:18:18 2026 +1000)
 * d4f4bccf - bump version to 1.4.10 [skip ci] (Ronald Holshausen, Tue Aug 4 15:51:35 2026 +1000)
 
-# 1.4.9 - Bugfix Release
+## 1.4.9 - Bugfix Release
 
 * f4e1fab7 - fix(pact-consumer): do not panic if the DSL builder can not set the default crypto provider (Ronald Holshausen, Tue Aug 4 15:18:39 2026 +1000)
 * 1bb2ec54 - bump version to 1.4.9 [skip ci] (Ronald Holshausen, Tue Aug 4 15:11:06 2026 +1000)
 
-# 1.4.8 - Maintenance Release
+## 1.4.8 - Maintenance Release
 
 * 43b53503 - chore(pact-consumer): Set the crypto provider in the DSL Builder if it has not already been set (Ronald Holshausen, Tue Aug 4 15:08:15 2026 +1000)
 * 6ab82882 - bump version to 1.4.8 [skip ci] (Ronald Holshausen, Tue Aug 4 11:29:45 2026 +1000)
 
-# 1.4.7 - Maintenance Release
+## 1.4.7 - Maintenance Release
 
 * 1ea32b09 - chore(pact-consumer): Update all dependencies and set rustls-no-provider feature (Ronald Holshausen, Tue Aug 4 11:01:03 2026 +1000)
 * 2fdb4e8f - chore: Update pact_mock_server to 2.2.4 (Ronald Holshausen, Tue Aug 4 10:47:47 2026 +1000)
@@ -33,7 +33,7 @@
 * 0904b3d3 - chore: Update pact_models to 1.3.13 (Ronald Holshausen, Mon Aug 3 17:16:00 2026 +1000)
 * 8db5b93f - bump version to 1.4.7 [skip ci] (Ronald Holshausen, Fri Jul 31 09:23:49 2026 +1000)
 
-# 1.4.6 - Maintenance Release
+## 1.4.6 - Maintenance Release
 
 * dae8ec0e - chore: Update pact_mock_server to 2.0.8 (Ronald Holshausen, Thu Jul 30 17:26:10 2026 +1000)
 * 03c48b5f - Revert "update changelog for release 1.4.6 [skip ci]" (Ronald Holshausen, Thu Jul 30 17:08:10 2026 +1000)
@@ -45,7 +45,7 @@
 * 51d9f5fb - chore: Update pact-plugin-driver to 1.0.0-beta.6 (Ronald Holshausen, Thu Jul 2 17:08:12 2026 +1000)
 * 1049fd81 - bump version to 1.4.6 [skip ci] (Ronald Holshausen, Wed Jun 24 15:06:25 2026 +1000)
 
-# 1.4.5 - V2 plugin logging improvements
+## 1.4.5 - V2 plugin logging improvements
 
 * 0e529d39 - chore(pact-consumer): Update release script [skip ci] (Ronald Holshausen, Wed Jun 24 15:04:10 2026 +1000)
 * fb8a0a95 - chore: Update pact_matching to 2.0.7 (Ronald Holshausen, Wed Jun 24 15:01:51 2026 +1000)
@@ -54,7 +54,7 @@
 * 46a285ae - chore: Update pact_models to 1.3.11 (Ronald Holshausen, Thu Jun 18 16:00:45 2026 +1000)
 * fda61fb6 - bump version to 1.4.5 (Ronald Holshausen, Tue Jun 9 15:30:20 2026 +1000)
 
-# 1.4.4 - Support V2 plugins
+## 1.4.4 - Support V2 plugins
 
 * 50fb5a6f - chore: Update pact_matching to 2.0.5 and pact_mock_server to 2.2.2 (Ronald Holshausen, Tue Jun 9 15:20:14 2026 +1000)
 * 8ec724bb - chore: Update pact-plugin-driver to 1.0.0-beta.2 to support V2 plugins (Ronald Holshausen, Tue Jun 9 14:49:40 2026 +1000)
@@ -63,7 +63,7 @@
 * 27c4aa20 - chore: Update pact_models to 1.3.10 (Ronald Holshausen, Wed Apr 29 17:20:36 2026 +1000)
 * 42883d68 - bump version to 1.4.4 (Ronald Holshausen, Wed Apr 29 17:09:59 2026 +1000)
 
-# 1.4.3 - Maintenance Release
+## 1.4.3 - Maintenance Release
 
 * 9cf0855e - chore(pact_consumer): Correct doc comment (Ronald Holshausen, Tue Apr 28 16:08:01 2026 +1000)
 * e427d2b6 - chore(pact_consumer): Correct the signature of the new reference functions (Ronald Holshausen, Tue Apr 28 16:06:49 2026 +1000)
@@ -80,7 +80,7 @@
 * eaaee9de - chore: Upgrade pact_models to 1.3.7 (Ronald Holshausen, Tue Sep 16 13:57:37 2025 +1000)
 * 868379d8 - bump version to 1.4.3 (Ronald Holshausen, Fri Aug 1 09:36:59 2025 +1000)
 
-# 1.4.2 - Maintenance Release
+## 1.4.2 - Maintenance Release
 
 * a77b53c8 - chore: Update pact_matching to 2.0.1 (Ronald Holshausen, Fri Aug 1 09:16:28 2025 +1000)
 * 52f5e243 - Chore: Update pact_mock_server to 2.1.3 (Ronald Holshausen, Thu Jul 31 15:43:54 2025 +1000)
@@ -92,7 +92,7 @@
 * 5371ee6f - chore(pact_verifier): Update pact_consumer to 1.4.1 (Ronald Holshausen, Wed Jun 11 16:29:07 2025 +1000)
 * 6c009917 - bump version to 1.4.2 (Ronald Holshausen, Wed Jun 11 16:25:26 2025 +1000)
 
-# 1.4.1 - Maintenance Release
+## 1.4.1 - Maintenance Release
 
 * 76530c4a - chore(pact_consumer): Update dependencies (Ronald Holshausen, Wed Jun 11 16:22:05 2025 +1000)
 * 8dd1502a - chore(pact_consumer): Update pact_mock_server to 2.1.1 (Ronald Holshausen, Wed Jun 11 16:16:06 2025 +1000)
@@ -103,7 +103,7 @@
 * 372ee77c - chore: correct release script (Ronald Holshausen, Wed May 21 14:55:20 2025 +1000)
 * 720bd04a - bump version to 1.4.1 (Ronald Holshausen, Wed May 21 14:54:53 2025 +1000)
 
-# 1.4.0 - Update to Rust 2024 and pact_matching 2.0.0-beta
+## 1.4.0 - Update to Rust 2024 and pact_matching 2.0.0-beta
 
 * 60afbe95 - chore(pact_consumer): Update crate to Rust 2024 edition (Ronald Holshausen, Wed May 21 14:49:18 2025 +1000)
 * 71b1b7ed - chore(pact_consumer): Update pact_mock_server to 2.1.0 (Ronald Holshausen, Wed May 21 14:44:21 2025 +1000)
@@ -127,14 +127,14 @@
 * 11cd9dc0 - Merge branch 'master' into feat/matching-engine-v2 (Ronald Holshausen, Fri Oct 25 10:01:15 2024 +1100)
 * 02e2ae13 - chore: Bump pact_matching to 2.0.0-beta.0 (Ronald Holshausen, Tue Jul 30 11:40:20 2024 +1000)
 
-# 1.3.3 - Maintenance Release
+## 1.3.3 - Maintenance Release
 
 * 6189c0cd - fix(pact_consumer): Pass the transport config to the plugin in the test context under the transport_config key (Ronald Holshausen, Fri Dec 13 12:00:05 2024 +1100)
 * 5fdfd023 - chore: Upgrade all the tracing crates to the latest (Ronald Holshausen, Fri Dec 13 10:54:51 2024 +1100)
 * fab32aa0 - chore: Upgrade pact_models to 1.2.6 (Ronald Holshausen, Wed Dec 11 15:28:01 2024 +1100)
 * 93ce0e95 - bump version to 1.3.3 (Ronald Holshausen, Fri Nov 29 16:46:10 2024 +1100)
 
-# 1.3.2 - Bugfix Release
+## 1.3.2 - Bugfix Release
 
 * 44d9dc1e - fix(plugins): Upgrade pact-plugin-driver to 0.7.2, fixes #473 (Ronald Holshausen, Fri Nov 29 15:48:40 2024 +1100)
 * f3918b61 - Merge pull request #464 from tienvx/fix-cant-compare-each-key-each-value-matching-rules (Ronald Holshausen, Wed Nov 13 11:07:10 2024 +1100)
@@ -145,7 +145,7 @@
 * c1a00dd8 - chore: Upgrade pact-plugin-driver to 0.7.1 (Ronald Holshausen, Tue Sep 3 15:47:22 2024 +1000)
 * 73a19100 - bump version to 1.3.2 (Ronald Holshausen, Tue Aug 27 15:40:56 2024 +1000)
 
-# 1.3.1 - Bugfix Release
+## 1.3.1 - Bugfix Release
 
 * 941e4455 - fix(pact_consumer): Plugin config needs to be stored for both the request and response part of HTTP interactions (Ronald Holshausen, Tue Aug 27 15:35:16 2024 +1000)
 * dae427a7 - chore: Upgrade pact_mock_server to 2.0.1 (Ronald Holshausen, Tue Aug 27 15:23:18 2024 +1000)
@@ -156,13 +156,13 @@
 * 00efcb56 - chore: Update readme (Ronald Holshausen, Mon Jul 29 11:01:32 2024 +1000)
 * c91bb0ca - bump version to 1.3.1 (Ronald Holshausen, Mon Jul 29 10:27:31 2024 +1000)
 
-# 1.3.0 - Update to 2.0 Pact mock server
+## 1.3.0 - Update to 2.0 Pact mock server
 
 * d46af23e - feat(pact-consumer): Give each mock server 2 worker threads (Ronald Holshausen, Mon Jul 29 10:03:38 2024 +1000)
 * 111a18cd - Feat(pact_consumer): Upgrade pact_mock_server to the new 2.0.0 version (Ronald Holshausen, Thu Jul 18 17:12:55 2024 +1000)
 * 3665a921 - bump version to 1.2.4 (Ronald Holshausen, Wed Jul 17 15:25:27 2024 +1000)
 
-# 1.2.3 - Maintenance Release
+## 1.2.3 - Maintenance Release
 
 * 9659c982 - chore(pact_consumer): Update dependencies (Ronald Holshausen, Wed Jul 17 15:20:24 2024 +1000)
 * 3c96c31b - chore: Upgrade pact_mock_server to 1.2.9 (Ronald Holshausen, Wed Jul 17 14:54:40 2024 +1000)
@@ -175,7 +175,7 @@
 * c70c1072 - chore(pact_consumer): Update dependencies (Ronald Holshausen, Fri Jun 14 10:35:55 2024 +1000)
 * 55f584bf - bump version to 1.2.3 (Ronald Holshausen, Fri Jun 14 10:30:00 2024 +1000)
 
-# 1.2.2 - Maintenance Release
+## 1.2.2 - Maintenance Release
 
 * 29c3b5f0 - chore: Upgrade pact_matching to 1.2.4 (Ronald Holshausen, Fri Jun 14 10:18:26 2024 +1000)
 * 30998a95 - chore: Upgrade pact_models to 1.2.1 (Ronald Holshausen, Wed Jun 12 15:26:49 2024 +1000)
@@ -186,7 +186,7 @@
 * 87e82e1b - fix(rust_consumer): correct term! documentation (Martijn Pieters, Mon May 20 15:35:51 2024 +0100)
 * d7d69964 - bump version to 1.2.2 (Ronald Holshausen, Wed May 8 11:42:08 2024 +1000)
 
-# 1.2.1 - Maintenance Release
+## 1.2.1 - Maintenance Release
 
 * f5ad729f - chore: Moved mock server crates to pact-foundation/pact-core-mock-server (Ronald Holshausen, Tue May 7 17:36:26 2024 +1000)
 * fa2b1d09 - chore: Upgrade pact_matching to 1.2.2 (Ronald Holshausen, Tue May 7 10:50:08 2024 +1000)
@@ -196,7 +196,7 @@
 * 758f4c03 - chore: Update pact_matching to 1.2.1 (Ronald Holshausen, Tue Apr 16 16:29:38 2024 +1000)
 * 831995b9 - bump version to 1.2.1 (Ronald Holshausen, Tue Apr 16 15:18:59 2024 +1000)
 
-# 1.2.0 - Maintenance Release
+## 1.2.0 - Maintenance Release
 
 * bfd6eae0 - chore: Upgrade pact_mock_server to 1.2.6 (Ronald Holshausen, Tue Apr 16 15:14:00 2024 +1000)
 * b9c54975 - Revert "update changelog for release 1.2.0" (Ronald Holshausen, Tue Apr 16 14:39:01 2024 +1000)
@@ -208,7 +208,7 @@
 * ffffa61d - chore: Upgrade pact_mock_server to 1.2.5 (Ronald Holshausen, Fri Mar 15 15:13:04 2024 +1100)
 * fa2af940 - bump version to 1.1.3 (Ronald Holshausen, Mon Feb 12 14:49:15 2024 +1100)
 
-# 1.1.2 - Bugfix Release
+## 1.1.2 - Bugfix Release
 
 * e31589d7 - chore: add test for checking matching rules on message metadata (Ronald Holshausen, Sat Feb 10 10:13:01 2024 +1100)
 * 6bb57df0 - fix: metadata matching rules for sync message (Stan, Fri Feb 9 00:16:51 2024 -0800)
@@ -218,7 +218,7 @@
 * 95cbe5a9 - fix: Upgrade pact-plugin-driver to 0.5.1 (Ronald Holshausen, Wed Jan 31 19:56:04 2024 +1100)
 * 5f5ad750 - bump version to 1.1.2 (Ronald Holshausen, Sat Jan 20 22:00:01 2024 +1100)
 
-# 1.1.1 - Maintenace Release
+## 1.1.1 - Maintenace Release
 
 * c68e00a5 - chore: Upgrade dependencies (Ronald Holshausen, Sat Jan 20 21:53:03 2024 +1100)
 * def5685c - chore: Upgrade pact_mock_server to 1.2.4 (Ronald Holshausen, Sat Jan 20 18:56:26 2024 +1100)
@@ -231,7 +231,7 @@
 * dfd13760 - chore: Upgrade pact_models to 1.1.13 #355 (Ronald Holshausen, Tue Jan 16 07:42:33 2024 +1100)
 * 41618d94 - bump version to 1.1.1 (Ronald Holshausen, Wed Dec 20 14:32:05 2023 +1100)
 
-# 1.1.0 - Maintenance Release
+## 1.1.0 - Maintenance Release
 
 * 302a5e88 - chore(pact_consumer): Cleanup TODO (Ronald Holshausen, Fri Dec 15 16:26:44 2023 +1100)
 * 52dfe7d5 - chore(pact_consumer): Cleanup TODO (Ronald Holshausen, Fri Dec 15 16:10:45 2023 +1100)
@@ -239,7 +239,7 @@
 * 713e4098 - chore: Upgrade pact-plugin-driver to 0.4.6 (Ronald Holshausen, Thu Dec 14 17:04:59 2023 +1100)
 * e12536a3 - bump version to 1.0.6 (Ronald Holshausen, Tue Nov 14 03:23:24 2023 +1100)
 
-# 1.0.5 - Maintenance Release
+## 1.0.5 - Maintenance Release
 
 * f8110971 - chore: cleanup compiler warning (Ronald Holshausen, Tue Nov 14 03:18:42 2023 +1100)
 * 3f0ae7f1 - chore: Upgrade pact_matching to 1.1.7 (Ronald Holshausen, Tue Nov 14 03:10:25 2023 +1100)
@@ -248,7 +248,7 @@
 * 04bad264 - chore: Upgrade pact_matching to 1.1.6 (Ronald Holshausen, Fri Sep 22 11:03:38 2023 +1000)
 * 88dd9d61 - bump version to 1.0.5 (Ronald Holshausen, Tue Aug 29 14:35:03 2023 +1000)
 
-# 1.0.4 - Bugfix Release
+## 1.0.4 - Bugfix Release
 
 * d592cd8b - chore: Upgrade pact_mock_server to 1.2.3 (Ronald Holshausen, Tue Aug 29 09:25:14 2023 +1000)
 * 3ec99c41 - chore: Upgrade pact_matching to 1.1.5 (Ronald Holshausen, Fri Aug 18 15:40:02 2023 +1000)
@@ -266,13 +266,13 @@
 * 71fba00c - feat(pact_comsumer): Added support for using EachKey and EachValue matchers (Ronald Holshausen, Mon Jul 17 11:33:08 2023 +1000)
 * a239f786 - bump version to 1.0.4 (Ronald Holshausen, Thu Jul 13 09:28:32 2023 +1000)
 
-# 1.0.3 - Bugfix Release
+## 1.0.3 - Bugfix Release
 
 * e08119ab - fix(pact-consumer): Some code for the datetime feature was not being excluded when the feature was turned off #290 (Ronald Holshausen, Thu Jul 13 09:22:24 2023 +1000)
 * 4f448b1f - fix(pact_matching): EachValue matcher was not applying the associated matching rules correctly #299 (Ronald Holshausen, Wed Jul 12 16:28:16 2023 +1000)
 * 7444b6af - bump version to 1.0.3 (Ronald Holshausen, Wed Jul 12 10:04:09 2023 +1000)
 
-# 1.0.2 - Bugfixes + added crate features to disable functionality
+## 1.0.2 - Bugfixes + added crate features to disable functionality
 
 * 6661077a - feat: Add support for disabling plugins with consumer DSL (Ronald Holshausen, Tue Jul 11 16:53:12 2023 +1000)
 * b3c65285 - chore: Add support for datetime, xml, multipart. plugins and tls crate features (Ronald Holshausen, Tue Jul 11 15:39:05 2023 +1000)
@@ -293,14 +293,14 @@
 * cd536170 - feat: Add builder interface for plugins to provide DSL to construct interactions (Ronald Holshausen, Wed Jun 7 15:12:15 2023 +1000)
 * 8287f375 - bump version to 1.0.2 (Ronald Holshausen, Wed Jun 7 11:51:33 2023 +1000)
 
-# 1.0.1 - Bugfix Release
+## 1.0.1 - Bugfix Release
 
 * 4fbd45cc - fix: Mock server errors were not being printed if the test was panicking due to a failed assertion #282 (Ronald Holshausen, Wed Jun 7 11:27:15 2023 +1000)
 * bc68ed7f - chore: Upgrade pact_models to 1.1.4 (Ronald Holshausen, Thu Jun 1 10:22:38 2023 +1000)
 * 397c837f - chore: Upgrade pact_models to 1.1.3 (fixes MockServerURL generator) (Ronald Holshausen, Mon May 29 15:12:22 2023 +1000)
 * cbcb530e - bump version to 1.0.1 (Ronald Holshausen, Tue May 23 16:13:29 2023 +1000)
 
-# 1.0.0 - Bugfixes + Update Pact models to 1.1 (breaking change)
+## 1.0.0 - Bugfixes + Update Pact models to 1.1 (breaking change)
 
 * e9bb4c69 - chore: fix deps (Ronald Holshausen, Tue May 23 16:10:46 2023 +1000)
 * 90cd909d - Revert "update changelog for release 1.0.0" (Ronald Holshausen, Tue May 23 16:10:02 2023 +1000)
@@ -315,7 +315,7 @@
 * 261ecf47 - fix: Add RefUnwindSafe trait bound to all Pact and Interaction uses (Ronald Holshausen, Mon May 15 13:59:31 2023 +1000)
 * 470b1a25 - bump version to 0.10.9 (Ronald Holshausen, Tue Apr 18 16:39:36 2023 +1000)
 
-# 0.10.8 - Bugfix Release
+## 0.10.8 - Bugfix Release
 
 * 6a71b12d - chore: Upgrade pact_mock_server to 1.0.2 (Ronald Holshausen, Tue Apr 18 13:30:21 2023 +1000)
 * 0bcba082 - chore: Upgrade pact_matching to 1.0.8 (Ronald Holshausen, Tue Apr 18 13:14:38 2023 +1000)
@@ -327,12 +327,12 @@
 * 669f7812 - chore: Upgrade pact_models to 1.0.10 (Ronald Holshausen, Thu Apr 13 15:32:34 2023 +1000)
 * 9da17e24 - bump version to 0.10.8 (Ronald Holshausen, Wed Apr 5 17:03:39 2023 +1000)
 
-# 0.10.7 - Bugfix Release
+## 0.10.7 - Bugfix Release
 
 * 779a59f0 - fix: Upgrade pact-plugin-driver to 0.4.1 (fixes an issue introduced in 0.4.0 with shared channels to plugins) (Ronald Holshausen, Wed Apr 5 17:01:18 2023 +1000)
 * ddcb3ded - bump version to 0.10.7 (Ronald Holshausen, Wed Apr 5 14:49:04 2023 +1000)
 
-# 0.10.6 - Bugfix Release
+## 0.10.6 - Bugfix Release
 
 * 7bd44a0d - fix: PactBuilder drop handler was cauing plugins to be shutdown twice (Ronald Holshausen, Wed Apr 5 14:44:26 2023 +1000)
 * 6aa389c9 - fix: Make using_plugin consume self so that the builder will have the same lifetime as the returned async one (Ronald Holshausen, Wed Apr 5 14:43:43 2023 +1000)
@@ -344,7 +344,7 @@
 * f8aea4fc - fix: request and response builders were incorrectly setting empty bodies from plugin contents (Ronald Holshausen, Mon Apr 3 14:52:29 2023 +1000)
 * a31bfa41 - bump version to 0.10.6 (Ronald Holshausen, Tue Mar 21 10:23:17 2023 +1100)
 
-# 0.10.5 - Maintenance Release
+## 0.10.5 - Maintenance Release
 
 * 11c701b4 - fix: Upgrade pact_matching to 1.0.6 (fixes some issues with matching HTTP headers) (Ronald Holshausen, Wed Mar 15 14:54:54 2023 +1100)
 * e96bc54e - fix: Upgrade pact_models to 1.0.9 (fixes issues with headers) (Ronald Holshausen, Wed Mar 15 14:31:00 2023 +1100)
@@ -354,7 +354,7 @@
 * 7589b9b0 - chore: Bump pact_mock_server version to 1.0.0 (Ronald Holshausen, Fri Feb 10 14:43:53 2023 +1100)
 * c5c66721 - bump version to 0.10.5 (Ronald Holshausen, Wed Feb 8 14:16:36 2023 +1100)
 
-# 0.10.4 - Bugfix Release
+## 0.10.4 - Bugfix Release
 
 * 019bd2fe - chore: Upgrade pact_matching to 1.0.5 (Ronald Holshausen, Wed Feb 8 13:53:15 2023 +1100)
 * f6d0c35e - fix(consumer): request and response builders were using the first interaction from plugins, not the correct one (Ronald Holshausen, Wed Feb 8 13:29:02 2023 +1100)
@@ -367,7 +367,7 @@
 * 3aecb702 - chore: require tracing-subscriber for tests for crates that use pact_models #239 (Ronald Holshausen, Thu Dec 22 14:37:01 2022 +1100)
 * 94cfe951 - bump version to 0.10.4 (Ronald Holshausen, Mon Dec 19 17:01:07 2022 +1100)
 
-# 0.10.3 - Support generators in plugins
+## 0.10.3 - Support generators in plugins
 
 * 81e55220 - chore: Upgrade pact_mock_server to 0.9.7 (Ronald Holshausen, Mon Dec 19 16:04:55 2022 +1100)
 * e827f591 - chore: Upgrade pact_matching to 1.0.2 (Ronald Holshausen, Mon Dec 19 15:30:14 2022 +1100)
@@ -378,12 +378,12 @@
 * 8be00f0c - chore: Upgrade pact-plugin-driver to 0.2.1 (Ronald Holshausen, Wed Dec 14 14:55:32 2022 +1100)
 * 7b473b2c - bump version to 0.10.3 (Ronald Holshausen, Mon Dec 12 14:27:43 2022 +1100)
 
-# 0.10.2 - Bugfix Release
+## 0.10.2 - Bugfix Release
 
 * e91ad622 - fix: Interaction builder was not copying plugin config data to the Pact metadata (Ronald Holshausen, Mon Dec 12 13:59:36 2022 +1100)
 * 1fdb4176 - bump version to 0.10.2 (Ronald Holshausen, Mon Dec 12 11:42:05 2022 +1100)
 
-# 0.10.1 - Support plugins generating interaction content
+## 0.10.1 - Support plugins generating interaction content
 
 * 9be00044 - chore: Upgrade pact_mock_server to 0.9.6 (Ronald Holshausen, Mon Dec 12 10:06:25 2022 +1100)
 * e7a1b9f2 - chore: Upgrade pact_matching to 1.0 and plugin driver to 0.2 (Ronald Holshausen, Fri Dec 9 17:29:33 2022 +1100)
@@ -395,7 +395,7 @@
 * c6aebcb5 - chore: add a test with two near identical interactions (Ronald Holshausen, Mon Nov 14 12:37:05 2022 +1100)
 * 57de6527 - bump version to 0.10.1 (Ronald Holshausen, Mon Nov 7 13:49:06 2022 +1100)
 
-# 0.10.0 - Bugfix Release
+## 0.10.0 - Bugfix Release
 
 * 8ec8fe9b - chore: Upgrade pact_consumer to 0.10.0 (Ronald Holshausen, Mon Nov 7 13:15:23 2022 +1100)
 * 248d9502 - chore: fix code blocks in readme (Ronald Holshausen, Mon Nov 7 12:58:08 2022 +1100)
@@ -411,7 +411,7 @@
 * 60b2b642 - chore: Upgrade pact-plugin-driver to 0.1.12 (Ronald Holshausen, Mon Sep 12 17:44:13 2022 +1000)
 * f3af0e5e - bump version to 0.9.8 (Ronald Holshausen, Thu Sep 8 12:16:31 2022 +1000)
 
-# 0.9.7 - Bugfix Release
+## 0.9.7 - Bugfix Release
 
 * 57a8ad7d - fix: Consumer DSL needs to increment plugin access to avoid plugin shutting down when mock server starts (Ronald Holshausen, Thu Sep 8 11:54:33 2022 +1000)
 * fcab3016 - chore: Upgrade pact-plugin-driver to 0.1.11 (Ronald Holshausen, Thu Sep 8 11:28:52 2022 +1000)
@@ -419,7 +419,7 @@
 * f8db90d2 - fix: Upgrade pact_models to 0.4.5 - fixes FFI bug with generators for request paths (Ronald Holshausen, Fri Aug 26 11:44:08 2022 +1000)
 * c4f1c973 - bump version to 0.9.7 (Ronald Holshausen, Thu Aug 18 16:12:40 2022 +1000)
 
-# 0.9.6 - Maintenance Release
+## 0.9.6 - Maintenance Release
 
 * 296e43ae - chore: cleanup some compiler warnings (Ronald Holshausen, Thu Aug 18 16:09:02 2022 +1000)
 * 9d1e8e89 - chore: Upgrade pact_mock_server to 0.9.3 (Ronald Holshausen, Thu Aug 18 16:03:38 2022 +1000)
@@ -435,20 +435,20 @@
 * 9a6c846f - chore: Upgrade pact_matching to 0.12.9 (Ronald Holshausen, Fri Jun 10 15:46:07 2022 +1000)
 * e099715a - bump version to 0.9.6 (Ronald Holshausen, Mon May 30 12:27:28 2022 +1000)
 
-# 0.9.5 - Maintenance Release
+## 0.9.5 - Maintenance Release
 
 * f42026d5 - chore: Upgrade pact_mock_server to 0.9.1 (Ronald Holshausen, Mon May 30 12:09:06 2022 +1000)
 * bcddbcfb - chore: Upgrade pact_matching to 0.12.8 (Ronald Holshausen, Mon May 30 11:52:26 2022 +1000)
 * 80256458 - chore: Upgrade pact-plugin-driver to 0.1.8 (Ronald Holshausen, Mon May 30 11:36:54 2022 +1000)
 * 08e6aa12 - bump version to 0.9.5 (Ronald Holshausen, Mon May 23 14:37:14 2022 +1000)
 
-# 0.9.4 - Maintenance Release
+## 0.9.4 - Maintenance Release
 
 * d9b9fe72 - chore: Upgrade pact-plugin-driver to 0.1.7 (Ronald Holshausen, Fri May 20 15:56:23 2022 +1000)
 * 6463c5ea - bump version to 0.9.4 (Ronald Holshausen, Wed May 11 17:59:26 2022 +1000)
 * ff607074 - chore: update readme (Ronald Holshausen, Wed May 11 17:56:49 2022 +1000)
 
-# 0.9.3 - Maintenance Release
+## 0.9.3 - Maintenance Release
 
 * 91d72007 - chore: switch from logging crate to tracing crate (Ronald Holshausen, Wed May 11 17:50:30 2022 +1000)
 * 5c0f28fa - chore: Upgrade crate dependencies (Ronald Holshausen, Wed May 11 17:46:26 2022 +1000)
@@ -458,7 +458,7 @@
 * 020b5715 - chore: upgrade pact_models to 0.4.1 (Ronald Holshausen, Wed May 11 11:36:57 2022 +1000)
 * eebe3bc2 - bump version to 0.9.3 (Ronald Holshausen, Wed Apr 27 15:52:57 2022 +1000)
 
-# 0.9.2 - Maintenance Release
+## 0.9.2 - Maintenance Release
 
 * 563ae9fc - chore: Upgrade pact_mock_server to 0.8.10 (Ronald Holshausen, Wed Apr 27 15:06:50 2022 +1000)
 * bcae77b4 - chore: upgrade pact_matching to 0.12.6 (Ronald Holshausen, Wed Apr 27 14:29:26 2022 +1000)
@@ -468,7 +468,7 @@
 * 2395143a - feat: forward verification to plugin for transports provided by the plugin (Ronald Holshausen, Fri Apr 22 12:02:05 2022 +1000)
 * 6704f230 - bump version to 0.9.2 (Ronald Holshausen, Wed Apr 13 16:19:13 2022 +1000)
 
-# 0.9.1 - Bugfix Release
+## 0.9.1 - Bugfix Release
 
 * 1e8ae855 - chore: Upgrade pact_mock_server to 0.8.9 (Ronald Holshausen, Wed Apr 13 15:49:03 2022 +1000)
 * 0df06dd2 - chore: Upgrade pact_matching to 0.12.5 (Ronald Holshausen, Wed Apr 13 15:38:49 2022 +1000)
@@ -478,7 +478,7 @@
 * ffeca2e2 - chore: update to the latest plugin driver (Ronald Holshausen, Wed Apr 13 13:08:25 2022 +1000)
 * 23a0f91f - bump version to 0.9.1 (Ronald Holshausen, Thu Mar 24 15:15:31 2022 +1100)
 
-# 0.9.0 - Supports mock servers from plugins
+## 0.9.0 - Supports mock servers from plugins
 
 * 89027c87 - chore: update pact_matching (0.12.4) and pact_mock_server (0.8.8) (Ronald Holshausen, Thu Mar 24 14:09:45 2022 +1100)
 * 9baf03a9 - chore: use the published version of the plugin driver (Ronald Holshausen, Thu Mar 24 13:36:01 2022 +1100)
@@ -489,7 +489,7 @@
 * e10841d7 - chore: bump consumer crate to 0.9.0 (Ronald Holshausen, Tue Mar 15 14:16:47 2022 +1100)
 * ae87a65d - bump version to 0.8.7 (Ronald Holshausen, Fri Mar 4 14:58:50 2022 +1100)
 
-# 0.8.6 - Maintenance Release
+## 0.8.6 - Maintenance Release
 
 * 5a4a8a1c - chore: update pact_mock_server to 0.8.7 (Ronald Holshausen, Fri Mar 4 14:24:23 2022 +1100)
 * 8894fdfd - chore: update pact_matching to 0.12.3 (Ronald Holshausen, Fri Mar 4 14:09:17 2022 +1100)
@@ -497,7 +497,7 @@
 * 50c73c68 - chore: remove accidental debug statement (Ronald Holshausen, Mon Feb 14 09:04:22 2022 +1100)
 * 418e81f8 - bump version to 0.8.6 (Ronald Holshausen, Mon Jan 17 17:12:24 2022 +1100)
 
-# 0.8.5 - Bugfix Release
+## 0.8.5 - Bugfix Release
 
 * 10c9b842 - chore: Upgrade pact_mock_server to 0.8.6 (Ronald Holshausen, Mon Jan 17 16:57:31 2022 +1100)
 * 5e4c68ef - chore: update pact matching to 0.12.2 (Ronald Holshausen, Mon Jan 17 16:29:21 2022 +1100)
@@ -506,7 +506,7 @@
 * c2089645 - fix: log crate version must be fixed across all crates (including plugin driver) (Ronald Holshausen, Fri Jan 14 16:10:50 2022 +1100)
 * 30aa8573 - bump version to 0.8.5 (Ronald Holshausen, Tue Jan 4 12:51:34 2022 +1100)
 
-# 0.8.4 - Maintenance Release
+## 0.8.4 - Maintenance Release
 
 * 62e89d78 - chore: update pact_mock_server to 0.8.5 (Ronald Holshausen, Tue Jan 4 12:45:42 2022 +1100)
 * 8259c12a - chore: update pact_models 0.2.6, pact_matching 0.12.1, pact-plugin-driver 0.0.16 (Ronald Holshausen, Tue Jan 4 12:38:26 2022 +1100)
@@ -515,7 +515,7 @@
 * 0a6e7d9d - refactor: Convert MatchingContext to a trait and use DocPath instead of string slices (Ronald Holshausen, Wed Dec 29 14:24:39 2021 +1100)
 * 4e59a652 - bump version to 0.8.4 (Ronald Holshausen, Thu Dec 23 13:32:50 2021 +1100)
 
-# 0.8.3 - Maintenance Release
+## 0.8.3 - Maintenance Release
 
 * 4d088317 - chore: Update pact_mock_server crate to 0.8.4 (Ronald Holshausen, Thu Dec 23 13:24:15 2021 +1100)
 * 52bc1735 - chore: update pact_matching crate to 0.11.5 (Ronald Holshausen, Thu Dec 23 13:12:08 2021 +1100)
@@ -524,7 +524,7 @@
 * 8911d5b0 - chore: update to latest plugin driver crate (metrics fixes) (Ronald Holshausen, Mon Dec 20 12:11:35 2021 +1100)
 * 47c51f74 - bump version to 0.8.3 (Ronald Holshausen, Wed Dec 15 14:35:59 2021 +1100)
 
-# 0.8.2 - Maintenance Release
+## 0.8.2 - Maintenance Release
 
 * 8d8c7706 - chore: update models and mock server crates (Ronald Holshausen, Wed Dec 15 14:03:30 2021 +1100)
 * cba3f08e - feat: add metrics events for Pact-Rust consumer tests (Ronald Holshausen, Tue Dec 14 16:20:40 2021 +1100)
@@ -532,14 +532,14 @@
 * fc5be202 - fix: update to latest driver crate (Ronald Holshausen, Tue Nov 16 16:19:02 2021 +1100)
 * 24fc4e90 - bump version to 0.8.2 (Ronald Holshausen, Tue Nov 16 13:01:59 2021 +1100)
 
-# 0.8.1 - Add plugin support to FFI functions
+## 0.8.1 - Add plugin support to FFI functions
 
 * 5d974c4a - chore: update to latest models and plugin driver crates (Ronald Holshausen, Tue Nov 16 11:56:53 2021 +1100)
 * 20643590 - feat(plugins): add plugin support to FFI functions (Ronald Holshausen, Tue Nov 9 16:06:01 2021 +1100)
 * 188caf6a - chore: update release script (Ronald Holshausen, Thu Nov 4 16:19:38 2021 +1100)
 * c7dbfdb9 - bump version to 0.8.1 (Ronald Holshausen, Thu Nov 4 16:17:23 2021 +1100)
 
-# 0.8.0 - Pact V4 release
+## 0.8.0 - Pact V4 release
 
 * 6dfec56a - chore: drop beta from pact_consumer version (Ronald Holshausen, Thu Nov 4 16:08:47 2021 +1100)
 * fc4580b8 - chore: drop beta from pact_mock_server version (Ronald Holshausen, Thu Nov 4 15:28:51 2021 +1100)
@@ -554,13 +554,13 @@
 * 1427aa33 - feat: update tests and docs with message examples (Ronald Holshausen, Wed Oct 20 16:49:29 2021 +1100)
 * 45511b6e - bump version to 0.8.0-beta.4 (Ronald Holshausen, Tue Oct 19 17:51:58 2021 +1100)
 
-# 0.8.0-beta.3 - Bugfix Release
+## 0.8.0-beta.3 - Bugfix Release
 
 * df67b723 - fix: async message builder was not setting the pact plugin config correctly (Ronald Holshausen, Tue Oct 19 17:44:35 2021 +1100)
 * 918e5beb - fix: update to latest models and plugin driver crates (Ronald Holshausen, Tue Oct 19 17:09:48 2021 +1100)
 * 1fc6eb17 - bump version to 0.8.0-beta.3 (Ronald Holshausen, Tue Oct 19 11:56:35 2021 +1100)
 
-# 0.8.0-beta.2 - Support matching synchronous request/response messages
+## 0.8.0-beta.2 - Support matching synchronous request/response messages
 
 * 3819522d - chore: update to the latest matching and mock server crates (Ronald Holshausen, Tue Oct 19 11:34:18 2021 +1100)
 * aa434ba3 - chore: update to latest driver crate (Ronald Holshausen, Tue Oct 19 11:09:46 2021 +1100)
@@ -568,7 +568,7 @@
 * 2b4b7cc3 - feat(plugins): Support matching synchronous request/response messages (Ronald Holshausen, Fri Oct 15 16:01:50 2021 +1100)
 * c72f8b04 - bump version to 0.8.0-beta.2 (Ronald Holshausen, Tue Oct 12 16:43:50 2021 +1100)
 
-# 0.8.0-beta.1 - Support consumer tests with synchronous messages (Protobuf)
+## 0.8.0-beta.1 - Support consumer tests with synchronous messages (Protobuf)
 
 * 1dc6f543 - chore: bump pact_mock_server version (Ronald Holshausen, Tue Oct 12 16:36:51 2021 +1100)
 * 9bbbb52e - chore: bump pact matching crate version (Ronald Holshausen, Tue Oct 12 16:24:01 2021 +1100)
@@ -576,7 +576,7 @@
 * 35ff0993 - feat: record the version of the lib that created the pact in the metadata (Ronald Holshausen, Tue Oct 12 14:52:43 2021 +1100)
 * acbe66f1 - bump version to 0.8.0-beta.1 (Ronald Holshausen, Wed Oct 6 13:04:36 2021 +1100)
 
-# 0.8.0-beta.0 - Plugin support with consumer tests
+## 0.8.0-beta.0 - Plugin support with consumer tests
 
 * a81659e9 - chore: update release script (Ronald Holshausen, Wed Oct 6 12:51:24 2021 +1100)
 * ddc64246 - chore: use the published version of the models crate (Ronald Holshausen, Wed Oct 6 12:40:52 2021 +1100)
@@ -635,7 +635,7 @@
 * 68f8f84e - chore: skip failing tests in alpine to get the build going (Ronald Holshausen, Tue Jun 1 13:47:20 2021 +1000)
 * c5059104 - bump version to 0.7.7 (Ronald Holshausen, Sun May 30 18:58:43 2021 +1000)
 
-# 0.7.8 - Bugfixes + support native TLS certs
+## 0.7.8 - Bugfixes + support native TLS certs
 
 * df715cd5 - feat: support native TLS. Fixes #144 (Matt Fellows, Mon Sep 20 13:00:33 2021 +1000)
 * 971b980e - chore: fix clippy warnings (Ronald Holshausen, Fri Sep 10 17:31:16 2021 +1000)
@@ -645,7 +645,7 @@
 * 533c9e1f - chore: bump minor version of the Pact models crate (Ronald Holshausen, Fri Jul 23 13:15:32 2021 +1000)
 * 0671221f - bump version to 0.7.8 (Ronald Holshausen, Fri Jul 23 11:00:25 2021 +1000)
 
-# 0.7.7 - Bugfix Release
+## 0.7.7 - Bugfix Release
 
 * ad7d3d54 - chore: pin the dependant versions for now (Ronald Holshausen, Fri Jul 23 10:42:52 2021 +1000)
 * 084ab46b - feat: Copied pact_mockserver_ffi to pact_ffi (Ronald Holshausen, Sat Jul 10 16:24:29 2021 +1000)
@@ -660,7 +660,7 @@
 * 68f8f84e - chore: skip failing tests in alpine to get the build going (Ronald Holshausen, Tue Jun 1 13:47:20 2021 +1000)
 * c5059104 - bump version to 0.7.7 (Ronald Holshausen, Sun May 30 18:58:43 2021 +1000)
 
-# 0.7.6 - V4 features + DSL enhancements
+## 0.7.6 - V4 features + DSL enhancements
 
 * 7022625 - refactor: move provider state models to the pact models crate (Ronald Holshausen, Sat May 29 17:18:48 2021 +1000)
 * 73a53b8 - feat(V4): add an HTTP status code matcher (Ronald Holshausen, Fri May 28 18:40:11 2021 +1000)
@@ -675,18 +675,18 @@
 * 80812d0 - refactor: move Consumer and Provider structs to models crate (Ronald Holshausen, Thu Apr 22 13:11:03 2021 +1000)
 * 5ed389b - bump version to 0.7.6 (Ronald Holshausen, Sun Mar 14 15:39:21 2021 +1100)
 
-# 0.7.5 - mock server metrics
+## 0.7.5 - mock server metrics
 
 * 5a529fd - feat: add ability of mock server to expose metrics #94 (Ronald Holshausen, Sun Mar 14 11:41:16 2021 +1100)
 * eec03d2 - bump version to 0.7.5 (Ronald Holshausen, Mon Feb 8 16:23:43 2021 +1100)
 
-# 0.7.4 - Use a file system lock when merging pact files
+## 0.7.4 - Use a file system lock when merging pact files
 
 * 9976e80 - feat: added read locks and a mutex guard to reading and writing pacts (Ronald Holshausen, Mon Feb 8 11:58:52 2021 +1100)
 * e43fdb8 - chore: upgrade maplit, itertools (Audun Halland, Mon Jan 11 05:30:10 2021 +0100)
 * 8792c29 - bump version to 0.7.4 (Ronald Holshausen, Mon Jan 11 15:11:22 2021 +1100)
 
-# 0.7.3 - Updated dependencies
+## 0.7.3 - Updated dependencies
 
 * 4a70bef - chore: upgrade expectest to 0.12 (Audun Halland, Sat Jan 9 11:29:29 2021 +0100)
 * 3a28a6c - chore: upgrade regex, chrono-tz (Audun Halland, Sat Jan 9 11:12:49 2021 +0100)
@@ -696,20 +696,20 @@
 * 3a6945e - chore: Upgrade reqwest to 0.11 and hence tokio to 1.0 (Ronald Holshausen, Wed Jan 6 15:34:47 2021 +1100)
 * c9a7e44 - bump version to 0.7.3 (Ronald Holshausen, Tue Jan 5 13:39:06 2021 +1100)
 
-# 0.7.2 - Upgrade Tokio to 1.0
+## 0.7.2 - Upgrade Tokio to 1.0
 
 * ef76f38 - chore: cleanup compiler warnings (Ronald Holshausen, Tue Jan 5 10:10:39 2021 +1100)
 * 4636982 - chore: update other crates to use Tokio 1.0 (Ronald Holshausen, Mon Jan 4 17:26:59 2021 +1100)
 * 648a8a3 - bump version to 0.7.2 (Ronald Holshausen, Thu Dec 31 14:47:10 2020 +1100)
 
-# 0.7.1 - support generators associated with array contains matcher variants
+## 0.7.1 - support generators associated with array contains matcher variants
 
 * beb1c03 - fix: cleanup compiler warning (Ronald Holshausen, Thu Dec 31 14:41:09 2020 +1100)
 * 335e921 - chore: update pact_matching and pact_mock_server crates to latest (Ronald Holshausen, Thu Dec 31 14:39:50 2020 +1100)
 * 5e56ecb - refactor: support generators associated with array contains matcher variants (Ronald Holshausen, Tue Dec 29 11:46:56 2020 +1100)
 * 6182b56 - bump version to 0.7.1 (Ronald Holshausen, Fri Oct 16 13:25:59 2020 +1100)
 
-# 0.7.0 - Update to latest matching and mock server crates
+## 0.7.0 - Update to latest matching and mock server crates
 
 * 5e0e470 - chore: bump minor version of pact_consumer crate (Ronald Holshausen, Fri Oct 16 13:22:12 2020 +1100)
 * 13976f5 - fix: failing pact_consumer build (Ronald Holshausen, Thu Oct 15 12:00:09 2020 +1100)
@@ -724,14 +724,14 @@
 * 359a944 - chore: update versions in readmes (Ronald Holshausen, Sat Jun 27 13:21:24 2020 +1000)
 * fc86c16 - bump version to 0.6.3 (Ronald Holshausen, Wed Jun 24 11:09:16 2020 +1000)
 
-# 0.6.2 - Updated XML Matching
+## 0.6.2 - Updated XML Matching
 
 * 97d8521 - chore: update to latest matching crate (Ronald Holshausen, Wed Jun 24 11:03:24 2020 +1000)
 * a15edea - chore: try set the content type on the body if known (Ronald Holshausen, Tue Jun 23 16:53:32 2020 +1000)
 * 570f405 - chore: correct version in readme (Ronald Holshausen, Wed May 27 16:38:58 2020 +1000)
 * a54dfd0 - bump version to 0.6.2 (Ronald Holshausen, Wed May 27 14:43:24 2020 +1000)
 
-# 0.6.1 - Bugfix Release
+## 0.6.1 - Bugfix Release
 
 * bea787c - chore: bump matching crate version to 0.6.0 (Ronald Holshausen, Sat May 23 17:56:04 2020 +1000)
 * 754a483 - chore: updated itertools to latest (Ronald Holshausen, Wed May 6 15:49:27 2020 +1000)
@@ -742,7 +742,7 @@
 * 6ff9c33 - fix: ignore flakey test (Matt Fellows, Tue Mar 3 12:14:08 2020 +1100)
 * 3c590fb - bump version to 0.6.1 (Ronald Holshausen, Sun Jan 19 11:46:21 2020 +1100)
 
-# 0.6.0 - Convert to async/await
+## 0.6.0 - Convert to async/await
 
 * 9d3ad57 - chore: bump minor version of pact consumer crate (Ronald Holshausen, Sun Jan 19 11:40:27 2020 +1100)
 * d457221 - chore: update dependant crates to use mock server lib 0.7.0 (Ronald Holshausen, Sun Jan 19 11:31:21 2020 +1100)
@@ -763,7 +763,7 @@
 * 6a43f82 - Cut down tokio features to the bone (Audun Halland, Wed Dec 11 22:15:03 2019 +0100)
 * d4bdcb6 - Update ValidatingMockServer interfaces for use with tokio::test (Audun Halland, Wed Dec 11 22:01:06 2019 +0100)
 
-# 0.5.3 - Bugfix Release
+## 0.5.3 - Bugfix Release
 
 * ec1a368 - chore: update lib versions (Ronald Holshausen, Sat Dec 14 18:09:26 2019 +1100)
 * 19e8ced - fix: cleanup env var and set tests to not run in parallel on CI #54 (Ronald Holshausen, Sat Dec 14 16:08:56 2019 +1100)
@@ -780,7 +780,7 @@
 * 924452f - 2018 edition autofix "cargo fix --edition" (Audun Halland, Sat Nov 16 22:27:42 2019 +0100)
 * d736b8a - bump version to 0.5.3 (Ronald Holshausen, Mon Sep 30 11:02:42 2019 +1000)
 
-# 0.5.2 - Fix dependency versions
+## 0.5.2 - Fix dependency versions
 
 * b5ab246 - chore: update the pact_matching and pact_mock_server to latest versions (Ronald Holshausen, Mon Sep 30 10:41:02 2019 +1000)
 * eef3d97 - feat: added some tests for publishing verification results to the pact broker #44 (Ronald Holshausen, Sun Sep 22 16:44:52 2019 +1000)
@@ -791,13 +791,13 @@
 * f79b033 - chore: update terminal support in release scripts (Ronald Holshausen, Sat Aug 24 12:25:28 2019 +1000)
 * bcc75da - bump version to 0.5.2 (Ronald Holshausen, Sat Aug 24 12:20:56 2019 +1000)
 
-# 0.5.1 - support headers with multiple values
+## 0.5.1 - support headers with multiple values
 
 * da1956a - chore: bump the version of the matching lib (Ronald Holshausen, Sat Aug 24 12:06:51 2019 +1000)
 * f0c0d07 - feat: support headers with multiple values (Ronald Holshausen, Sat Aug 10 17:01:10 2019 +1000)
 * b595eff - bump version to 0.5.1 (Ronald Holshausen, Sat Jul 27 17:22:11 2019 +1000)
 
-# 0.5.0 - Upgrade to non-blocking Hyper 0.12
+## 0.5.0 - Upgrade to non-blocking Hyper 0.12
 
 * d842100 - chore: bump component versions to 0.5.0 (Ronald Holshausen, Sat Jul 27 15:44:51 2019 +1000)
 * ee8a898 - Rewrite server matches sync from mpsc queue to Arc<Mutex<Vec>>. Avoids awkward synchronization (Audun Halland, Tue Jul 23 02:10:55 2019 +0200)
@@ -812,7 +812,7 @@
 * a5588dc - feat: Allow the directory pacts are written to to be overriden in consumer tests #21 (Ronald Holshausen, Sun Apr 8 15:20:38 2018 +1000)
 * b83a0f6 - bump version to 0.4.1 (Ronald Holshausen, Sat Apr 7 14:45:05 2018 +1000)
 
-# 0.4.0 - First V3 specification release
+## 0.4.0 - First V3 specification release
 
 * 398edaf - Upgrade UUID library to latest (Ronald Holshausen, Sat Apr 7 12:29:58 2018 +1000)
 * 6597141 - WIP - start of implementation of applying generators to the bodies (Ronald Holshausen, Sun Mar 4 17:01:11 2018 +1100)
@@ -830,12 +830,12 @@
 * 639ac22 - fixes after merge in from master (Ronald Holshausen, Sun Oct 23 10:45:54 2016 +1100)
 * 49e45f7 - Merge branch 'master' into v3-spec (Ronald Holshausen, Sun Oct 23 10:10:40 2016 +1100)
 
-# 0.3.1 - Converted OptionalBody::Present to take a Vec<u8>
+## 0.3.1 - Converted OptionalBody::Present to take a Vec<u8>
 
 * 24e3f73 - Converted OptionalBody::Present to take a Vec<u8> #19 (Ronald Holshausen, Sun Oct 22 18:04:46 2017 +1100)
 * 1c70982 - bump version to 0.3.1 (Ronald Holshausen, Fri Oct 20 11:46:27 2017 +1100)
 
-# 0.3.0 - Improved Consumer DSL
+## 0.3.0 - Improved Consumer DSL
 
 * 89bebb3 - Correct the paths in the release scripts for pact_consumer (Ronald Holshausen, Fri Oct 20 11:36:05 2017 +1100)
 * ac94388 - Tests are now all passing #20 (Ronald Holshausen, Thu Oct 19 15:14:25 2017 +1100)
@@ -875,7 +875,7 @@
 * a59fb98 - Migrate remaining pact modules over to serde (Anthony Damtsis, Mon May 15 16:59:04 2017 +1000)
 * c988180 - bump version to 0.2.1 (Ronald Holshausen, Sun Oct 9 16:55:35 2016 +1100)
 
-# 0.2.0 - V2 implementation
+## 0.2.0 - V2 implementation
 
 * 2eb38fc - update the consumer library versions for the V2 branch (Ronald Holshausen, Sun Oct 9 16:50:03 2016 +1100)
 * e3eebbd -  update projects to use the published pact mock server library (Ronald Holshausen, Sun Oct 9 16:36:25 2016 +1100)
@@ -883,7 +883,7 @@
 * 574e072 - upadte versions for V2 branch and fix an issue with loading JSON bodies encoded as a string (Ronald Holshausen, Sun Oct 9 15:31:57 2016 +1100)
 * 6d581d5 - bump version to 0.1.1 (Ronald Holshausen, Sat Oct 8 17:59:33 2016 +1100)
 
-# 0.1.0 - V1.1 specification implementation
+## 0.1.0 - V1.1 specification implementation
 
 * dae5d42 - correct the doc link (Ronald Holshausen, Sat Oct 8 17:55:15 2016 +1100)
 * 16b99b5 - V1.1 spec changes (Ronald Holshausen, Sat Oct 8 17:53:53 2016 +1100)
@@ -892,4 +892,4 @@
 * 548c5aa - bump version to 0.0.1 (Ronald Holshausen, Mon Sep 26 23:16:50 2016 +1000)
 * d80e899 - release script needs to be executable (Ronald Holshausen, Mon Sep 26 23:14:15 2016 +1000)
 
-# 0.0.0 - First Release
+## 0.0.0 - First Release

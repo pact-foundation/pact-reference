@@ -1,50 +1,50 @@
 # Changelog
 
-# 1.3.16 - Body generator fix
+## 1.3.16 - Body generator fix
 
 * fab0da69 - feat(models): apply body generators shallowest-path-first (#558) (Tien Vo Xuan, Fri Oct 9 05:23:29 2026 +0700)
 * 1ad011ba - fix(models): make plugin data merge idempotent and let the newer pact win (Ronald Holshausen, Fri Sep 25 10:39:57 2026 +1000)
 * f648e622 - chore(pact_models): bump version to 1.3.16 [skip ci] (Ronald Holshausen, Thu Sep 10 16:23:42 2026 +1000)
 
-# 1.3.15 - Bugfix Release
+## 1.3.15 - Bugfix Release
 
 * 7452d828 - fix: sort interactions before merge_join_by to prevent duplicates on pact merge #550 (Ronald Holshausen, Thu Sep 10 15:52:38 2026 +1000)
 * ca3f8ba9 - chore(pact_models): bump version to 1.3.15 [skip ci] (Ronald Holshausen, Thu Aug 6 11:20:45 2026 +1000)
 
-# 1.3.14 - Bugfix + Support for matching rules and generators provided by plugins
+## 1.3.14 - Bugfix + Support for matching rules and generators provided by plugins
 
 * 57daad23 - feat(pact-models): Support for matching rules and generators provided by plugins (Ronald Holshausen, Thu Aug 6 10:11:20 2026 +1000)
 * 3208dd76 - fix(pact_models): V4 body with no content attribute is not a missing body (Endika Iglesias, Mon Aug 3 15:25:57 2026 +0200)
 * 9a3c59d0 - chore(pact_models): bump version to 1.3.14 [skip ci] (Ronald Holshausen, Mon Aug 3 17:06:08 2026 +1000)
 
-# 1.3.13 - Maintenance Release
+## 1.3.13 - Maintenance Release
 
 * 4f35334b - chore(pact_models): Update reqwest to 0.13.4 and set rustls-no-provider (Ronald Holshausen, Mon Aug 3 16:41:50 2026 +1000)
 * ee4abc34 - chore(pact_models): Update dependencies (Ronald Holshausen, Mon Aug 3 16:33:49 2026 +1000)
 * b74a0e4b - chore(pact_models): bump version to 1.3.13 [skip ci] (Ronald Holshausen, Thu Jul 30 16:27:44 2026 +1000)
 
-# 1.3.12 - Maintenance Release
+## 1.3.12 - Maintenance Release
 
 * adabf328 - chore(pact_models): use neutral values in arrayContains expression tests (Stan Vodetskyi, Mon Jul 27 17:16:52 2026 -0700)
 * 46a285ae - chore: Update pact_models to 1.3.11 (Ronald Holshausen, Thu Jun 18 16:00:45 2026 +1000)
 * 2ac36a10 - chore(pact_models): bump version to 1.3.12 [skip-ci] (Ronald Holshausen, Thu Jun 18 15:55:42 2026 +1000)
 
-# 1.3.11 - Maintenance Release
+## 1.3.11 - Maintenance Release
 
 * b0554f31 - chore: add crate name and version to all http clients (JP-Ellis, Thu Jun 18 09:26:08 2026 +1000)
 * 2aa42a36 - bump version to 1.3.11 (Ronald Holshausen, Wed Apr 29 16:57:05 2026 +1000)
 
-# 1.3.10 - Bugfix Release
+## 1.3.10 - Bugfix Release
 
 * bf2fc778 - fix: ArrayContains variants must serialise as objects in values() (Stan Vodetskyi, Tue Apr 28 14:25:11 2026 -0700)
 * 03d7ae43 - bump version to 1.3.10 (Ronald Holshausen, Tue Apr 28 09:38:11 2026 +1000)
 
-# 1.3.9 - add arrayContains expression to matching rule definition parser
+## 1.3.9 - add arrayContains expression to matching rule definition parser
 
 * c90ffaea - feat: add arrayContains expression to matching rule definition parser (Stan Vodetskyi, Fri Apr 17 12:41:47 2026 -0700)
 * 47533664 - bump version to 1.3.9 (Ronald Holshausen, Wed Feb 18 12:13:20 2026 +1100)
 
-# 1.3.8 - Bugfix Release
+## 1.3.8 - Bugfix Release
 
 * a65303bd - chore(pact_models): Upgrade rand and rand_regex (Ronald Holshausen, Wed Feb 18 12:03:42 2026 +1100)
 * 9d4b31fe - chore(pact_models): Update dependencies (Ronald Holshausen, Wed Feb 18 11:41:57 2026 +1100)
@@ -52,23 +52,23 @@
 * 2e7fe4a5 - fix: only split known multi-value HTTP headers on commas (Matt Fellows, Sat Feb 14 21:55:07 2026 +1100)
 * 52a7af7f - bump version to 1.3.8 (Ronald Holshausen, Tue Sep 16 13:35:40 2025 +1000)
 
-# 1.3.7 - Support wasm32-wasip2 target
+## 1.3.7 - Support wasm32-wasip2 target
 
 * 183a8c74 - fix(pact-models): Support compiling with wasm32-wasip2 target (Ronald Holshausen, Tue Sep 16 13:06:38 2025 +1000)
 * dfa63271 - bump version to 1.3.7 (Ronald Holshausen, Wed Jul 30 09:45:24 2025 +1000)
 
-# 1.3.6 - Maintenance Release
+## 1.3.6 - Maintenance Release
 
 * 7d4f5819 - chore(v2-matching-engine): Support root matching rules for bodies (Ronald Holshausen, Tue Jul 29 16:09:29 2025 +1000)
 * 2767ac68 - bump version to 1.3.6 (Ronald Holshausen, Mon Jul 28 10:17:13 2025 +1000)
 
-# 1.3.5 - Maintenance Release
+## 1.3.5 - Maintenance Release
 
 * e3d23beb - chore(v2-matching-engine): Support XML namespaces with attributes (Ronald Holshausen, Fri Jul 25 15:38:20 2025 +1000)
 * f95f7e35 - chore(v2-matching-engine): Fixes ported over from Pact-JVM (Ronald Holshausen, Wed Jul 23 16:31:50 2025 +1000)
 * d9b2d33a - bump version to 1.3.5 (Ronald Holshausen, Thu Jun 26 09:45:42 2025 +1000)
 
-# 1.3.4 - Bugfix Release
+## 1.3.4 - Bugfix Release
 
 * 72da979e - feat: Allow atLeast and atMost first in expression (tien.xuan.vo, Wed Jun 25 01:22:58 2025 +0700)
 * de9ec164 - Merge pull request #496 from tienvx/add-test-case-for-atLeast-atMost-at-beginning (Ronald Holshausen, Thu Jun 19 09:50:28 2025 +1000)
@@ -76,17 +76,17 @@
 * 262fbe8e - feat: Support fromProviderState generator in regex matching expression (tien.xuan.vo, Wed Jun 18 23:49:26 2025 +0700)
 * 61667972 - bump version to 1.3.4 (Ronald Holshausen, Wed Jun 11 13:12:52 2025 +1000)
 
-# 1.3.3 - Fix for Alpine
+## 1.3.3 - Fix for Alpine
 
 * 1d18d3f5 - fix: Onig crate needs default-features = false so it compiles on Alpine (Ronald Holshausen, Wed Jun 11 12:35:06 2025 +1000)
 * 03ffd616 - bump version to 1.3.3 (Ronald Holshausen, Wed Jun 11 10:12:59 2025 +1000)
 
-# 1.3.2 - Maintenance Release
+## 1.3.2 - Maintenance Release
 
 * 82d078d9 - fix: Upgrade onig to 6.5.1 as the Match Whole String for is_match has been released (Ronald Holshausen, Wed Jun 11 10:00:52 2025 +1000)
 * 6a613889 - bump version to 1.3.2 (Ronald Holshausen, Tue May 20 14:48:26 2025 +1000)
 
-# 1.3.1 - Supports generators with XML
+## 1.3.1 - Supports generators with XML
 
 * 84085856 - chore(pact-models): Update dependencies (Ronald Holshausen, Tue May 20 11:40:04 2025 +1000)
 * 035bfd72 - test: Test apply XML generator to elements located too deep (tien.xuan.vo, Tue Mar 18 00:53:17 2025 +0700)
@@ -103,7 +103,7 @@
 * a545c105 - chore(pact-models): Correct changelog (Ronald Holshausen, Tue Mar 25 16:14:59 2025 +1100)
 * 45ac2c65 - bump version to 1.3.1 (Ronald Holshausen, Tue Mar 25 16:10:29 2025 +1100)
 
-# 1.3.0 - Support V2 matching engine
+## 1.3.0 - Support V2 matching engine
 
 * fd3aed0f - chore(pact-models): Upgrade pact models crate to Rust 2024 edition (Ronald Holshausen, Tue Mar 25 16:06:21 2025 +1100)
 * 0ed75202 - chore(pact-models): Upgrade pact models crate to Rust 2024 edition (Ronald Holshausen, Tue Mar 25 16:02:47 2025 +1100)
@@ -121,7 +121,7 @@
 * 63c97865 - chore: Correct failing tests after dependency update (Ronald Holshausen, Fri Mar 14 11:10:58 2025 +1100)
 * 242e7b8d - bump version to 1.2.8 (Ronald Holshausen, Fri Mar 14 10:46:51 2025 +1100)
 
-# 1.2.7 - Maintenance Release
+## 1.2.7 - Maintenance Release
 
 * c6346594 - fix: join_field should only replace * and not [*] parts (Ronald Holshausen, Fri Mar 14 10:38:08 2025 +1100)
 * 92394a40 - feat: enhancements backported from the V2 matching engine branch (Ronald Holshausen, Fri Mar 14 10:21:40 2025 +1100)
@@ -132,7 +132,7 @@
 * 74df5d1d - fix: Remove duplicated timezone entries from timezone_db (Ronald Holshausen, Wed Dec 11 15:45:10 2024 +1100)
 * c266f8ea - bump version to 1.2.7 (Ronald Holshausen, Wed Dec 11 15:22:25 2024 +1100)
 
-# 1.2.6 - Maintenance Release
+## 1.2.6 - Maintenance Release
 
 * 707752ad - feat: Support generators for form urlencoded (tien.xuan.vo, Mon Dec 2 10:10:43 2024 +0700)
 * f3918b61 - Merge pull request #464 from tienvx/fix-cant-compare-each-key-each-value-matching-rules (Ronald Holshausen, Wed Nov 13 11:07:10 2024 +1100)
@@ -140,7 +140,7 @@
 * c2793764 - test: Add test for eachKey and eachValue matching rules comparation (tien.xuan.vo, Fri Sep 6 11:40:19 2024 +0700)
 * 691ddae5 - fix: Fix can't compare 2 eachKey matching rules, 2 eachValue matching rules (tien.xuan.vo, Fri Sep 6 11:15:59 2024 +0700)
 
-# 1.2.5 - Maintenance Release
+## 1.2.5 - Maintenance Release
 
 * e485190f - chore(pact-models): Updated dependencies (Ronald Holshausen, Wed Nov 13 10:29:10 2024 +1100)
 * 234cbaf0 - chore(pact-models): Upgraded rand_regex to 0.17.0 (Ronald Holshausen, Wed Nov 13 10:25:55 2024 +1100)
@@ -150,13 +150,13 @@
 * 9cc38a2f - chore: do not write empty matching rules to the Pact file (Ronald Holshausen, Tue Aug 27 11:23:43 2024 +1000)
 * 60ce3bc6 - bump version to 1.2.5 (Ronald Holshausen, Tue Aug 13 11:45:30 2024 +1000)
 
-# 1.2.4 - Bugfix Release
+## 1.2.4 - Bugfix Release
 
 * 50fc022c - fix(pact_models): Provider state values may be passed in under a "providerState" key (Ronald Holshausen, Thu Aug 8 11:53:23 2024 +1000)
 * 8387b9e1 - fix(pact_models): ProviderStateGenerator name was not correct (Ronald Holshausen, Tue Aug 6 11:49:19 2024 +1000)
 * 42911cfd - bump version to 1.2.4 (Ronald Holshausen, Tue Aug 6 10:54:23 2024 +1000)
 
-# 1.2.3 - Support for provider state injected values in plugins
+## 1.2.3 - Support for provider state injected values in plugins
 
 * 033a50ab - feat: Update the matching rule expression parser to support values from provider states (Ronald Holshausen, Fri Aug 2 10:06:52 2024 +1000)
 * 2ca9a9ae - chore(pact_models): Improve the matching rule expression parser error messages (Ronald Holshausen, Thu Aug 1 16:07:31 2024 +1000)
@@ -164,13 +164,13 @@
 * 3c96c31b - chore: Upgrade pact_mock_server to 1.2.9 (Ronald Holshausen, Wed Jul 17 14:54:40 2024 +1000)
 * 57f05775 - bump version to 1.2.3 (Ronald Holshausen, Wed Jul 17 11:10:27 2024 +1000)
 
-# 1.2.2 - Maintenance Release
+## 1.2.2 - Maintenance Release
 
 * 2e2580f6 - feat(pact_consumer): Improve the mock server error output (Ronald Holshausen, Wed Jul 10 15:23:48 2024 +1000)
 * efa1295a - feat(pact_verifier): Allow provider state generator to fall back to the provider state parameters #441 (Ronald Holshausen, Tue Jul 9 17:27:09 2024 +1000)
 * 86704a82 - bump version to 1.2.2 (Ronald Holshausen, Wed Jun 12 15:17:57 2024 +1000)
 
-# 1.2.1 - Bugfix Release
+## 1.2.1 - Bugfix Release
 
 * ab80cd2b - fix: merge pact duplicates with diff desc/same prov state fix: merge message / sync pacts with no provider state (Yousaf Nabi, Sat Jun 8 23:48:30 2024 +0100)
 * 19957df5 - chore: Lock tracing crates to the same version via cargo patch block (Ronald Holshausen, Tue Jun 11 16:00:04 2024 +1000)
@@ -178,7 +178,7 @@
 * b0fd7e2f - chore: refactor to preserve existing error messages (Yousaf Nabi, Wed May 29 03:31:11 2024 +0100)
 * 7ca9e223 - bump version to 1.2.1 (Ronald Holshausen, Tue Apr 23 10:23:09 2024 +1000)
 
-# 1.2.0 - Support query parameters with no values
+## 1.2.0 - Support query parameters with no values
 
 * f20bb77d - chore(pact_models): Bump minor version (Ronald Holshausen, Tue Apr 23 10:04:56 2024 +1000)
 * e12cb9f0 - Merge pull request #410 from kageru/fix-user-agent-headers (Ronald Holshausen, Tue Apr 23 09:43:11 2024 +1000)
@@ -190,24 +190,24 @@
 * 712bc797 - chore: update examples in matchers to JSON test (Ronald Holshausen, Sun Feb 18 03:54:56 2024 +1100)
 * 88581695 - bump version to 1.1.19 (Ronald Holshausen, Wed Feb 7 10:49:24 2024 +1100)
 
-# 1.1.18 - Maintenance Release
+## 1.1.18 - Maintenance Release
 
 * c7a086d6 - feat(models): add merge method (JP-Ellis, Tue Feb 6 12:45:59 2024 +1100)
 * 7222cd27 - fix: Min and Max type matchers were not able to parse their integration form (Ronald Holshausen, Wed Feb 7 09:45:45 2024 +1100)
 * 1d463aae - bump version to 1.1.18 (Ronald Holshausen, Sat Jan 20 13:45:58 2024 +1100)
 
-# 1.1.17 - Bugfix Release
+## 1.1.17 - Bugfix Release
 
 * 57e8d092 - fix: Implemented missing atLeast and atMost options with matching rule definitions (Ronald Holshausen, Sat Jan 20 13:29:30 2024 +1100)
 * e9f7c06f - fix:  Regex generator panics if the regex has any anchors #311 (Ronald Holshausen, Fri Jan 19 19:33:50 2024 +1100)
 * 69c1cbb6 - bump version to 1.1.17 (Ronald Holshausen, Fri Jan 19 14:46:18 2024 +1100)
 
-# 1.1.16 - Bugfix Release
+## 1.1.16 - Bugfix Release
 
 * 0f5f563f - fix: regression - prevous matching rules change broke specification tests #359 (Ronald Holshausen, Fri Jan 19 14:41:37 2024 +1100)
 * a77c9eb0 - bump version to 1.1.16 (Ronald Holshausen, Fri Jan 19 14:13:25 2024 +1100)
 
-# 1.1.15 - Bugfix Release
+## 1.1.15 - Bugfix Release
 
 * 1d9034aa - fix: regression - generators must support query parameters in q[]= form #359 (Ronald Holshausen, Fri Jan 19 14:03:23 2024 +1100)
 * 01903998 - fix: regression - matching rules must support query parameters in q[]= form #359 (Ronald Holshausen, Fri Jan 19 13:03:21 2024 +1100)
@@ -216,35 +216,35 @@
 * ab1d496f - fix: Add set-cookie header to the list of single value headers #353 (Ronald Holshausen, Wed Jan 17 13:46:49 2024 +1100)
 * 54022150 - bump version to 1.1.15 (Ronald Holshausen, Tue Jan 16 10:24:00 2024 +1100)
 
-# 1.1.14 - Bugfix Release
+## 1.1.14 - Bugfix Release
 
 * d94c7827 - fix: Support V2 matching rule header/query paths in encoded format #355 (Ronald Holshausen, Tue Jan 16 09:19:21 2024 +1100)
 * e7e0c278 - bump version to 1.1.14 (Ronald Holshausen, Tue Jan 16 04:25:00 2024 +1100)
 
-# 1.1.13 - Bugfix Release
+## 1.1.13 - Bugfix Release
 
 * 6e5504cd - fix: matching rules and generators for headers could be written to JSON form incorrectly #355 (Ronald Holshausen, Tue Jan 16 03:44:20 2024 +1100)
 * d8688c17 - bump version to 1.1.13 (Ronald Holshausen, Mon Nov 13 17:14:24 2023 +1100)
 
-# 1.1.12 - Bugfix Release
+## 1.1.12 - Bugfix Release
 
 * 07a1e7c2 - fix: Fallback to always generate a value to fix 'Could not generate a random TYPE from null' (tien.xuan.vo, Wed Nov 8 08:12:29 2023 +0700)
 * 3af7357f - feat: Force generators works regardless of value's type (tien.xuan.vo, Fri Nov 3 09:58:17 2023 +0700)
 * 10174b28 - chore: fix clippy errors (Ronald Holshausen, Fri Oct 6 09:54:49 2023 +1100)
 * c5c49849 - bump version to 1.1.12 (Ronald Holshausen, Mon Aug 7 12:04:15 2023 +1000)
 
-# 1.1.11 - Maintenance Release
+## 1.1.11 - Maintenance Release
 
 * 86da370f - feat(pact_models): Add functions for dealing with different header key case with V4 req/res models (Ronald Holshausen, Mon Aug 7 11:49:22 2023 +1000)
 * 2b97c737 - bump version to 1.1.11 (Ronald Holshausen, Fri Aug 4 15:43:39 2023 +1000)
 
-# 1.1.10 - Bugfix Release
+## 1.1.10 - Bugfix Release
 
 * a03fc5f0 - fix: V3 message binary content was not being base64 decoded correctly when loaded from a Pact file (Ronald Holshausen, Fri Aug 4 15:41:38 2023 +1000)
 * 7e108383 - fix(pact_models): Implement add_header for V3 Message (Ronald Holshausen, Wed Aug 2 16:42:35 2023 +1000)
 * 28a9df9e - bump version to 1.1.10 (Ronald Holshausen, Thu Jul 27 10:05:20 2023 +1000)
 
-# 1.1.9 - Bugfix Release
+## 1.1.9 - Bugfix Release
 
 * 2e45e223 - fix: Update matching error messages to be in line with the compatibility-suite (Ronald Holshausen, Tue Jul 25 17:42:03 2023 +1000)
 * e729e348 - chore: MockServerURL generator should look for both url and href keys (Ronald Holshausen, Tue Jul 25 14:39:19 2023 +1000)
@@ -252,20 +252,20 @@
 * 1deca59a - chore: Upgrade pact_models to 1.1.8 (Ronald Holshausen, Mon Jul 10 16:15:43 2023 +1000)
 * c78ea504 - bump version to 1.1.9 (Ronald Holshausen, Mon Jul 10 15:59:15 2023 +1000)
 
-# 1.1.8 - Bugfix Release
+## 1.1.8 - Bugfix Release
 
 * 4b4e7105 - fix(pact_models): MatchingRule::from_json shoud support integration format (Ronald Holshausen, Mon Jul 10 13:56:13 2023 +1000)
 * a6049684 - refactor: Update MIME multipart parser to a supported lib + make implementation inline with Pact-JVM (Ronald Holshausen, Fri Jul 7 15:42:02 2023 +1000)
 * fa93d6c7 - bump version to 1.1.8 (Ronald Holshausen, Thu Jul 6 10:20:20 2023 +1000)
 
-# 1.1.7 - Bugfix Release
+## 1.1.7 - Bugfix Release
 
 * 7dd89384 - feat: Add application/x-www-form-urlencoded to the known content types (Ronald Holshausen, Wed Jul 5 16:58:21 2023 +1000)
 * f6ba3b2a - fix: When writing V4 format, correct the content type set on the body (Ronald Holshausen, Wed Jul 5 16:57:40 2023 +1000)
 * 52d6bfab - feat: Add method to DocPath to return a lower-case copy of the path (Ronald Holshausen, Wed Jun 28 15:20:39 2023 +1000)
 * 59cbaad0 - bump version to 1.1.7 (Ronald Holshausen, Thu Jun 22 15:34:04 2023 +1000)
 
-# 1.1.6 - Bugfix Release
+## 1.1.6 - Bugfix Release
 
 * 727ea824 - fix: Support string escape sequences in matching definitions #283 (Ronald Holshausen, Wed Jun 21 14:55:42 2023 +1000)
 * 3cd0cbbb - chore: Upgrade Logos to 0.13.0 (Ronald Holshausen, Tue Jun 20 16:54:05 2023 +1000)
@@ -273,72 +273,72 @@
 * 27bc02c9 - fix(pact_models): DocPath.parent was creating incorrect paths when the parent is a * (Ronald Holshausen, Tue Jun 20 10:41:18 2023 +1000)
 * b33f884d - bump version to 1.1.6 (Ronald Holshausen, Fri Jun 16 16:15:11 2023 +1000)
 
-# 1.1.5 - Add crate features for date/time and XML support
+## 1.1.5 - Add crate features for date/time and XML support
 
 * 161f1b82 - chore: cleanup deprecation warnings (Ronald Holshausen, Fri Jun 16 16:11:18 2023 +1000)
 * c5887670 - feat(pact-models): Add crate features for date/time and XML support #290 (Ronald Holshausen, Fri Jun 16 16:00:04 2023 +1000)
 * 2477729f - chore: reduce log entry to debug level as it makes no sense as a warning (Ronald Holshausen, Mon Jun 5 15:01:45 2023 +1000)
 * b7d949ed - bump version to 1.1.5 (Ronald Holshausen, Thu Jun 1 10:17:41 2023 +1000)
 
-# 1.1.4 - Bugfix Release
+## 1.1.4 - Bugfix Release
 
 * 9d3205a0 - fix: Support fraction of seconds with more then 3 digits #279 (Ronald Holshausen, Wed May 31 14:40:41 2023 +1000)
 * f001eba2 - bump version to 1.1.4 (Ronald Holshausen, Mon May 29 15:03:44 2023 +1000)
 
-# 1.1.3 - Bugfix Release
+## 1.1.3 - Bugfix Release
 
 * 743b1823 - fix: MockServerURL generator was fetching the incorrect field from the test context (Ronald Holshausen, Mon May 29 14:58:19 2023 +1000)
 * 2eeecc4a - bump version to 1.1.3 (Ronald Holshausen, Mon May 15 13:25:58 2023 +1000)
 
-# 1.1.2 - Removed auto-generated keys and updates all trait methods so they can be used in an FFI context
+## 1.1.2 - Removed auto-generated keys and updates all trait methods so they can be used in an FFI context
 
 * f8f0e773 - fix: Add RefUnwindSafe trait bound to all Pact and Interaction trait methods so they can be used in an FFI context (Ronald Holshausen, Mon May 15 12:37:16 2023 +1000)
 * cf55b3c5 - fix: do not auto-generate the interaction key if not set #264 (Ronald Holshausen, Mon May 8 11:10:20 2023 +1000)
 * 5eed834a - feat: Update date validation to check for leap years (Ronald Holshausen, Tue May 2 14:22:10 2023 +1000)
 * 1a33368f - bump version to 1.0.14 (Ronald Holshausen, Tue Apr 18 12:51:22 2023 +1000)
 
-# 1.0.13 - Maintenance Release
+## 1.0.13 - Maintenance Release
 
 * 473d3167 - chore: remove dbg statements (Ronald Holshausen, Mon Apr 17 11:52:12 2023 +1000)
 * 2eed4e60 - bump version to 1.0.13 (Ronald Holshausen, Mon Apr 17 10:16:45 2023 +1000)
 
-# 1.0.12 - Fixes hash function for generators
+## 1.0.12 - Fixes hash function for generators
 
 * a81b2df3 - chore: fix for diabled generators hash test (Ronald Holshausen, Mon Apr 17 09:25:49 2023 +1000)
 * 04ddccac - chore: disable hash_test_for_generators as it is failing on CI (Ronald Holshausen, Fri Apr 14 17:37:25 2023 +1000)
 * afbd35d1 - chore: switch generator tests to FxHasher as they are failing on CI (Ronald Holshausen, Fri Apr 14 17:22:22 2023 +1000)
 * 848b1943 - bump version to 1.0.12 (Ronald Holshausen, Fri Apr 14 17:06:03 2023 +1000)
 
-# 1.0.11 - Bugfix Release
+## 1.0.11 - Bugfix Release
 
 * d3cd2357 - fix(V4): corrected all the hash functions for all V4 models (Ronald Holshausen, Fri Apr 14 16:51:01 2023 +1000)
 * 867936d6 - fix: V4 models were not including the key in the implementation of equals (Ronald Holshausen, Fri Apr 14 11:16:34 2023 +1000)
 * 67123cb0 - bump version to 1.0.11 (Ronald Holshausen, Thu Apr 13 15:27:32 2023 +1000)
 
-# 1.0.10 - Bugfix Release
+## 1.0.10 - Bugfix Release
 
 * 10239f7c - fix(V4): when generating the interaction key, treat header keys in a case-insensitive manner (Ronald Holshausen, Thu Apr 13 15:02:29 2023 +1000)
 * 6f70f30a - fix: exclude headers from the pact conflict check (Ronald Holshausen, Wed Mar 15 15:23:19 2023 +1100)
 * 2b5c53f6 - bump version to 1.0.10 (Ronald Holshausen, Wed Mar 15 14:23:05 2023 +1100)
 
-# 1.0.9 - Bugfix Release
+## 1.0.9 - Bugfix Release
 
 * 97684ade - fix: Correctly deal with headers when the value is a string (Ronald Holshausen, Wed Mar 15 14:12:24 2023 +1100)
 * 55748ea0 - bump version to 1.0.9 (Ronald Holshausen, Wed Mar 15 12:15:43 2023 +1100)
 
-# 1.0.8 - Bugfix Release
+## 1.0.8 - Bugfix Release
 
 * 315e6aee - fix(V4): Bodies where the content attribute is NULL should be NULL bodies (Ronald Holshausen, Wed Mar 15 12:01:28 2023 +1100)
 * 86d4ee08 - bump version to 1.0.8 (Ronald Holshausen, Wed Mar 15 11:32:50 2023 +1100)
 
-# 1.0.7 - Bugfix Release
+## 1.0.7 - Bugfix Release
 
 * eeb256db - fix(V4): Bodies specified as a single empty JSON string should be mapped to an empty body (Ronald Holshausen, Wed Mar 15 11:22:08 2023 +1100)
 * 20d9efd1 - bump version to 1.0.7 (Ronald Holshausen, Tue Mar 14 17:10:26 2023 +1100)
 * 1e51e8a9 - Revert "bump version to 1.0.7" (Ronald Holshausen, Tue Mar 14 17:09:08 2023 +1100)
 * dbb750b1 - bump version to 1.0.7 (Ronald Holshausen, Tue Mar 14 16:46:19 2023 +1100)
 
-# 1.0.6 - Maintenance Release
+## 1.0.6 - Maintenance Release
 
 * fbe6ebe2 - chore: set pact_models version to 1.0.6 as 1.0.5 was yanked (Ronald Holshausen, Tue Mar 14 16:41:56 2023 +1100)
 * f04a3273 - feat: add a simple header parser to pact_models #259 (Ronald Holshausen, Tue Mar 14 16:38:54 2023 +1100)
@@ -365,62 +365,62 @@
 * ba24b0a8 - fix: correct parsing of JSON encoded bodies as per V4 spec (Ronald Holshausen, Mon Jan 30 15:19:38 2023 +1100)
 * 68aad6e9 - bump version to 1.0.5 (Ronald Holshausen, Wed Jan 11 14:26:02 2023 +1100)
 
-# 1.0.4 - Bugfix Release
+## 1.0.4 - Bugfix Release
 
 * 155dae40 - fix: Support RequestResponsePact loading from V4 formatted JSON #246 (Ronald Holshausen, Wed Jan 11 12:32:01 2023 +1100)
 * 4c04cb65 - fix: sort the header and query parameter keys when writing the pact #246 (Ronald Holshausen, Wed Jan 11 10:39:36 2023 +1100)
 * 1cbd7fc6 - bump version to 1.0.4 (Ronald Holshausen, Thu Dec 22 15:00:32 2022 +1100)
 
-# 1.0.3 - Bugfix Release
+## 1.0.3 - Bugfix Release
 
 * 64d500b0 - fix: Message pact was not loading the IDs from the Pact Broker #239 (Ronald Holshausen, Thu Dec 22 14:24:26 2022 +1100)
 * a359c22f - chore: enable generator doc test (Ronald Holshausen, Mon Dec 12 11:08:30 2022 +1100)
 * 9038c04f - bump version to 1.0.3 (Ronald Holshausen, Fri Dec 9 12:28:39 2022 +1100)
 
-# 1.0.2 - Bugfix Release
+## 1.0.2 - Bugfix Release
 
 * f84adc7a - fix: Metadata was missing from the generator categories (Ronald Holshausen, Fri Dec 9 11:00:34 2022 +1100)
 * f9dd7a4e - Fix: date and time matchers were not being persisted as per the spec (Ronald Holshausen, Thu Dec 1 12:25:12 2022 +1100)
 * 7e5add7e - bump version to 1.0.2 (Ronald Holshausen, Mon Nov 28 13:27:43 2022 +1100)
 
-# 1.0.1 - Maintenance Release
+## 1.0.1 - Maintenance Release
 
 * 43a8cae1 - chore: clean up deprecation warnings (Ronald Holshausen, Mon Nov 28 13:19:31 2022 +1100)
 * 19cc4ca3 - chore: Update dependencies (Ronald Holshausen, Mon Nov 28 12:12:18 2022 +1100)
 * e21d3454 - feat: add FFI function to parse JSON to a Pact model (Ronald Holshausen, Fri Nov 11 17:00:36 2022 +1100)
 * 66e84e9d - bump version to 1.0.1 (Ronald Holshausen, Mon Nov 7 10:27:49 2022 +1100)
 
-# 1.0.0 - Maintenance Release
+## 1.0.0 - Maintenance Release
 
 * f91dc00d - fix: try loosen dependencies to fix dependency cycle issue (Ronald Holshausen, Mon Nov 7 10:15:19 2022 +1100)
 * 87430af9 - chore: set onig to the crate version (Ronald Holshausen, Fri Nov 4 16:41:32 2022 +1100)
 * 0bd3f51b - bump version to 0.4.7 (Ronald Holshausen, Fri Nov 4 15:50:52 2022 +1100)
 
-# 0.4.6 - Maintenance Release
+## 0.4.6 - Maintenance Release
 
 * 6ad00a5d - fix: Update onig to latest master to fix  Regex Matcher Fails On Valid Inputs #214 (Ronald Holshausen, Fri Nov 4 15:23:50 2022 +1100)
 * ac4fe73f - chore: fix to release scripts (Ronald Holshausen, Wed Sep 7 10:51:01 2022 +1000)
 * bcdc6443 - bump version to 0.4.6 (Ronald Holshausen, Fri Aug 26 11:39:48 2022 +1000)
 
-# 0.4.5 - Bugfix Release
+## 0.4.5 - Bugfix Release
 
 * b6bba540 - fix(FFI): FFI passes matching rules and generators for paths etc. with a path of $ (Ronald Holshausen, Fri Aug 26 11:22:19 2022 +1000)
 * a37d621e - chore: update the doc comments on matchingrules! macro (Ronald Holshausen, Wed Aug 24 17:25:04 2022 +1000)
 * 46b7c1a2 - bump version to 0.4.5 (Ronald Holshausen, Thu Aug 18 13:35:04 2022 +1000)
 
-# 0.4.4 - Updated dependencies
+## 0.4.4 - Updated dependencies
 
 * bd53ad0d - chore: Upgrade dependencies (uuid, tracing) (Ronald Holshausen, Thu Aug 18 13:32:28 2022 +1000)
 * 3e5acc2c - bump version to 0.4.4 (Ronald Holshausen, Thu Aug 18 13:05:45 2022 +1000)
 
-# 0.4.3 - Bugfix Release
+## 0.4.3 - Bugfix Release
 
 * 74a36a1b - fix: Matching rule parser was not handling decimal values correctly (Ronald Holshausen, Wed Aug 17 13:19:58 2022 +1000)
 * cf4b52eb - chore: fix failing time expression tests after a dependency update (Ronald Holshausen, Mon Aug 15 17:09:04 2022 +1000)
 * 9e0dbc26 - chore: clean up some deprecation warnings in Pact models (Ronald Holshausen, Wed Aug 10 11:38:45 2022 +1000)
 * 91cb99a9 - bump version to 0.4.3 (Ronald Holshausen, Mon Aug 8 12:59:10 2022 +1000)
 
-# 0.4.2 - Maintenance Release
+## 0.4.2 - Maintenance Release
 
 * 13dc3b52 - Merge branch 'master' into feat/verifier-multiple-transports (Ronald Holshausen, Wed Aug 3 11:55:05 2022 +1000)
 * 3d73e3c2 - Removed dependency on time v0.1 (Daan Oosterveld, Wed Jul 6 15:56:29 2022 +0200)
@@ -429,19 +429,19 @@
 * 4da79d75 - chore: lock the tracing crate version (Ronald Holshausen, Mon May 9 17:04:29 2022 +1000)
 * 137e3503 - bump version to 0.4.2 (Ronald Holshausen, Mon May 9 14:18:35 2022 +1000)
 
-# 0.4.1 - switch pact_models to use tracing crate
+## 0.4.1 - switch pact_models to use tracing crate
 
 * 9d30a441 - chore: switch pact_models to use tracing crate (Ronald Holshausen, Mon May 9 13:24:37 2022 +1000)
 * 0dd9a176 - bump version to 0.4.1 (Ronald Holshausen, Fri Apr 22 12:07:23 2022 +1000)
 
-# 0.4.0 - Updated V4 model interfaces
+## 0.4.0 - Updated V4 model interfaces
 
 * 6de6c229 - feat: Add functions to calc unique key to V4 interaction trait (Ronald Holshausen, Fri Apr 22 12:00:57 2022 +1000)
 * 7e3e2e18 - feat: add method to V4Pact to find an interaction by ID (Ronald Holshausen, Thu Apr 21 12:25:09 2022 +1000)
 * 49640c5f - chore: minor update to release scripts (Ronald Holshausen, Wed Apr 13 15:32:46 2022 +1000)
 * 97b49229 - bump version to 0.3.4 (Ronald Holshausen, Wed Apr 13 13:47:10 2022 +1000)
 
-# 0.3.3 - Bugfix Release
+## 0.3.3 - Bugfix Release
 
 * 73ae0ef0 - fix: Upgrade reqwest to 0.11.10 to resolve #156 (Ronald Holshausen, Wed Apr 13 13:31:55 2022 +1000)
 * 42b1a461 - Merge branch 'master' into feat/plugin-mock-server (Ronald Holshausen, Mon Mar 21 16:01:33 2022 +1100)
@@ -455,17 +455,17 @@
 * 7fd87eb9 - feat: store the transport with V4 interactions to support mockservers from plugins (Ronald Holshausen, Fri Mar 18 14:30:20 2022 +1100)
 * 27e41386 - bump version to 0.3.1 (Ronald Holshausen, Fri Mar 4 11:32:56 2022 +1100)
 
-# 0.3.2 - Maintenance Release
+## 0.3.2 - Maintenance Release
 
 * 01ac989b - fix: was missing setter to set the transport with V4 interactions (Ronald Holshausen, Fri Mar 18 16:04:00 2022 +1100)
 * a075f679 - bump version to 0.3.2 (Ronald Holshausen, Fri Mar 18 14:39:20 2022 +1100)
 
-# 0.3.1 - Plugin Support
+## 0.3.1 - Plugin Support
 
 * 7fd87eb9 - feat: store the transport with V4 interactions to support mockservers from plugins (Ronald Holshausen, Fri Mar 18 14:30:20 2022 +1100)
 * 27e41386 - bump version to 0.3.1 (Ronald Holshausen, Fri Mar 4 11:32:56 2022 +1100)
 
-# 0.3.0 - Ported the date-time expressions from Pact-JVM
+## 0.3.0 - Ported the date-time expressions from Pact-JVM
 
 * 0aa55cfe - feat: wired the date-time expression parsers into the generators (Ronald Holshausen, Thu Mar 3 18:01:46 2022 +1100)
 * 98b887f0 - feat: Implemented date-time expression parser (from Pact-JVM) (Ronald Holshausen, Thu Mar 3 16:34:42 2022 +1100)
@@ -476,14 +476,14 @@
 * 12a7b78c - chore: bump minor version (Ronald Holshausen, Wed Feb 16 15:06:35 2022 +1100)
 * c7d39ca6 - bump version to 0.2.8 (Ronald Holshausen, Mon Jan 17 10:47:48 2022 +1100)
 
-# 0.2.7 - Bugfix Release
+## 0.2.7 - Bugfix Release
 
 * c2089645 - fix: log crate version must be fixed across all crates (including plugin driver) (Ronald Holshausen, Fri Jan 14 16:10:50 2022 +1100)
 * ff49f33a - chore: update docs on matching rule definitions (Ronald Holshausen, Wed Jan 5 15:07:26 2022 +1100)
 * 7b23378f - feat: some matching rules should not cascade (Ronald Holshausen, Thu Dec 30 13:32:04 2021 +1100)
 * 83c36db7 - bump version to 0.2.7 (Ronald Holshausen, Wed Dec 29 13:33:06 2021 +1100)
 
-# 0.2.6 - Bugfix Release
+## 0.2.6 - Bugfix Release
 
 * 7b2e8538 - fix: DocPath join needs to detect numeric values (Ronald Holshausen, Wed Dec 29 13:23:47 2021 +1100)
 * e5fd165d - refactor: Move is_values_matcher logic to MatchingRule (Ronald Holshausen, Wed Dec 29 10:05:03 2021 +1100)
@@ -492,25 +492,25 @@
 * 39338c46 - fix: Some matching rules do not have associated configuration (Ronald Holshausen, Thu Dec 23 14:02:50 2021 +1100)
 * deb30e92 - bump version to 0.2.6 (Ronald Holshausen, Thu Dec 23 11:57:34 2021 +1100)
 
-# 0.2.5 - Bugfix Release
+## 0.2.5 - Bugfix Release
 
 * e1e0b43e - fix: matching definition parser was incorrectly merging multiple definitions (Ronald Holshausen, Thu Dec 23 11:48:09 2021 +1100)
 * 85bffe40 - bump version to 0.2.5 (Ronald Holshausen, Thu Dec 23 09:23:57 2021 +1100)
 
-# 0.2.4 - Maintenance Release
+## 0.2.4 - Maintenance Release
 
 * b5fd82e5 - feat: add method to DocPath to return the parent path (Ronald Holshausen, Wed Dec 22 18:06:43 2021 +1100)
 * a3f74711 - fix: Docpath join was escaping * (Ronald Holshausen, Wed Dec 22 17:23:12 2021 +1100)
 * cc0775e2 - bump version to 0.2.4 (Ronald Holshausen, Tue Dec 21 13:16:32 2021 +1100)
 
-# 0.2.3 - Maintenance Release
+## 0.2.3 - Maintenance Release
 
 * 481762f0 - feat: add function to detect if a string is a matching definition (Ronald Holshausen, Tue Dec 21 13:06:31 2021 +1100)
 * 98e364b2 - chore: add docpath method to return a vector of strings (Ronald Holshausen, Thu Dec 16 17:16:36 2021 +1100)
 * c707a8c0 - feat: add a method to join a value onto a doc path (Ronald Holshausen, Thu Dec 16 16:03:27 2021 +1100)
 * 77892ab1 - bump version to 0.2.3 (Ronald Holshausen, Mon Nov 29 11:57:36 2021 +1100)
 
-# 0.2.2 - Fixes to the matching rule parser
+## 0.2.2 - Fixes to the matching rule parser
 
 * 58039496 - chore: fix imports on expression parser (Ronald Holshausen, Mon Nov 29 11:49:49 2021 +1100)
 * cb0f7df8 - Revert "update changelog for release 0.2.2" (Ronald Holshausen, Mon Nov 29 11:42:37 2021 +1100)
@@ -523,7 +523,7 @@
 * a859d0e1 - fix: make sure metadata entries are correctly encoded when downgrading a pact (Ronald Holshausen, Wed Nov 17 16:54:15 2021 +1100)
 * d32ae2b1 - bump version to 0.2.2 (Ronald Holshausen, Tue Nov 16 10:38:04 2021 +1100)
 
-# 0.2.1 - Update V4 models to support FFI + plugins
+## 0.2.1 - Update V4 models to support FFI + plugins
 
 * 15b8f08f - feat: add functions to return mutable references to the V4 model trait (Ronald Holshausen, Tue Nov 16 10:03:03 2021 +1100)
 * 7c150c8b - feat(plugins): Support message tests via FFI that use plugins (Ronald Holshausen, Wed Nov 10 17:03:49 2021 +1100)
@@ -533,22 +533,22 @@
 * 296b4370 - chore: update project to Rust 2021 edition (Ronald Holshausen, Fri Oct 22 10:44:48 2021 +1100)
 * dac05481 - bump version to 0.2.1 (Ronald Holshausen, Thu Oct 21 17:52:39 2021 +1100)
 
-# 0.2.0 - Pact V4 + Plugins release
+## 0.2.0 - Pact V4 + Plugins release
 
 * e72d602a - chore: bump pact models to non-beta version (Ronald Holshausen, Thu Oct 21 17:47:17 2021 +1100)
 * 3fb9258a - bump version to 0.2.0-beta.7 (Ronald Holshausen, Tue Oct 19 16:41:08 2021 +1100)
 
-# 0.2.0-beta.6 - Bugfix Release
+## 0.2.0-beta.6 - Bugfix Release
 
 * 48a6be5f - fix: EachValue was outputting the wrong JSON (Ronald Holshausen, Tue Oct 19 16:35:17 2021 +1100)
 * 021a65e6 - bump version to 0.2.0-beta.6 (Ronald Holshausen, Mon Oct 18 13:00:22 2021 +1100)
 
-# 0.2.0-beta.5 - matching synchronous request/response messages
+## 0.2.0-beta.5 - matching synchronous request/response messages
 
 * 2b4b7cc3 - feat(plugins): Support matching synchronous request/response messages (Ronald Holshausen, Fri Oct 15 16:01:50 2021 +1100)
 * de3e8296 - bump version to 0.2.0-beta.5 (Ronald Holshausen, Tue Oct 12 15:09:59 2021 +1100)
 
-# 0.2.0-beta.4 - Enhancements for plugins
+## 0.2.0-beta.4 - Enhancements for plugins
 
 * a52db737 - feat: record the version of the lib that created the pact in the metadata (Ronald Holshausen, Tue Oct 12 14:55:42 2021 +1100)
 * 35ff0993 - feat: record the version of the lib that created the pact in the metadata (Ronald Holshausen, Tue Oct 12 14:52:43 2021 +1100)
@@ -558,7 +558,7 @@
 * 48d662a8 - chore: add docs about the matching rule definition language (Ronald Holshausen, Thu Oct 7 13:29:16 2021 +1100)
 * 780a0c97 - bump version to 0.2.0-beta.4 (Ronald Holshausen, Tue Oct 5 15:12:12 2021 +1100)
 
-# 0.2.0-beta.3 - Fixes from master + Updated matching rule definitions
+## 0.2.0-beta.3 - Fixes from master + Updated matching rule definitions
 
 * d608a028 - chore: re-enable matching definition tests (Ronald Holshausen, Tue Oct 5 15:06:11 2021 +1100)
 * 57ba661a - chore: fix tests after removing Deserialize, Serialize from Message (Ronald Holshausen, Tue Oct 5 14:55:58 2021 +1100)
@@ -578,7 +578,7 @@
 * 7cfe2883 - chore: fix clippy violation (Ronald Holshausen, Fri Sep 10 15:34:03 2021 +1000)
 * 24d4b39a - bump version to 0.2.0-beta.3 (Ronald Holshausen, Fri Sep 10 14:16:03 2021 +1000)
 
-# 0.1.4 - WASM support + native TLS certs
+## 0.1.4 - WASM support + native TLS certs
 
 * df715cd5 - feat: support native TLS. Fixes #144 (Matt Fellows, Mon Sep 20 13:00:33 2021 +1000)
 * 62db0e44 - chore: fix clippy warnings (Ronald Holshausen, Fri Sep 10 17:41:43 2021 +1000)
@@ -587,7 +587,7 @@
 * 7c12b03b - bump version to 0.1.4 (Ronald Holshausen, Sat Sep 4 15:30:35 2021 +1000)
 * 8fe00acd - chore: correct release script (Ronald Holshausen, Sat Sep 4 15:26:17 2021 +1000)
 
-# 0.2.0-beta.2 - Support for getting interaction markup from plugins
+## 0.2.0-beta.2 - Support for getting interaction markup from plugins
 
 * 997c063f - chore: update release script (Ronald Holshausen, Fri Sep 10 14:08:52 2021 +1000)
 * dc41e498 - chore: correct links in rust docs (Ronald Holshausen, Fri Sep 10 14:07:01 2021 +1000)
@@ -604,12 +604,12 @@
 * 689a35f4 - chore: fix release script (Ronald Holshausen, Fri Sep 3 17:16:45 2021 +1000)
 * 46135a16 - chore: add verifier FFI functions for directory, URL and Pact broker sources (Ronald Holshausen, Tue Aug 24 10:14:46 2021 +1000)
 
-# 0.1.3 - Bugfix Release
+## 0.1.3 - Bugfix Release
 
 * 46135a16 - chore: add verifier FFI functions for directory, URL and Pact broker sources (Ronald Holshausen, Tue Aug 24 10:14:46 2021 +1000)
 * c2a9c5cc - bump version to 0.1.3 (Ronald Holshausen, Sun Aug 22 15:15:16 2021 +1000)
 
-# 0.2.0-beta.1 - Support for plugins
+## 0.2.0-beta.1 - Support for plugins
 
 * b77498c8 - chore: fix tests after updating plugin API (Ronald Holshausen, Fri Sep 3 16:48:18 2021 +1000)
 * c0bdd359 - fix: PluginData configuration is optional (Ronald Holshausen, Thu Sep 2 15:37:01 2021 +1000)
@@ -621,7 +621,7 @@
 * b40dab60 - feat(plugins): moved the matching rule definition parser into the models crate (Ronald Holshausen, Wed Aug 25 17:27:02 2021 +1000)
 * c53dbd79 - bump version to 0.2.0-beta.1 (Ronald Holshausen, Mon Aug 23 13:04:02 2021 +1000)
 
-# 0.2.0-beta.0 - Beta version supporting Pact plugins
+## 0.2.0-beta.0 - Beta version supporting Pact plugins
 
 * 72b9baaa - chore: update release script for beta versions (Ronald Holshausen, Mon Aug 23 12:57:49 2021 +1000)
 * 0c5cede2 - chore: bump models crate to 0.2 (Ronald Holshausen, Mon Aug 23 12:56:14 2021 +1000)
@@ -634,12 +634,12 @@
 * 2662241e - feat(plugins): Call out to plugins when comparing content owned by the plugin during verification (Ronald Holshausen, Fri Aug 13 14:29:30 2021 +1000)
 * bdfc6f02 - feat(plugins): Load required plugins when verifying a V4 pact (Ronald Holshausen, Wed Aug 11 14:23:54 2021 +1000)
 
-# 0.1.2 - upgrade nom to 7.0
+## 0.1.2 - upgrade nom to 7.0
 
 * 21be6bce - chore: upgrade nom to 7.0 #128 (Ronald Holshausen, Sun Aug 22 11:56:33 2021 +1000)
 * c274ca1a - fix: use the pacts for verification endpoint if the conusmer selectors are specified #133 (Ronald Holshausen, Sun Aug 22 11:51:22 2021 +1000)
 
-# 0.1.1 - Bugfix Release
+## 0.1.1 - Bugfix Release
 
 * 8bcd1c7e - fix: min/max type matchers must not apply the limits when cascading (Ronald Holshausen, Sun Aug 8 15:50:40 2021 +1000)
 * cb1beb99 - feat(plugins): make NoopVariantMatcher public (Ronald Holshausen, Sat Aug 7 14:18:29 2021 +1000)
@@ -648,7 +648,7 @@
 * 41e66b30 - feat(plugins): updated matching rules + generators to support working with plugins (Ronald Holshausen, Thu Aug 5 11:58:56 2021 +1000)
 * 6124ed0b - refactor: Introduce DocPath struct for path expressions (Caleb Stepanian, Thu Jul 29 12:27:32 2021 -0400)
 
-# 0.1.0 - Final Version
+## 0.1.0 - Final Version
 
 * 533c9e1f - chore: bump minor version of the Pact models crate (Ronald Holshausen, Fri Jul 23 13:15:32 2021 +1000)
 * b37a4d02 - chore: add a prelude module to the models crate (Ronald Holshausen, Fri Jul 23 13:10:48 2021 +1000)
@@ -658,7 +658,7 @@
 * e8046d84 - refactor: moved interaction structs to the models crate (Ronald Holshausen, Sun Jul 18 14:36:03 2021 +1000)
 * 31873ee3 - feat: added validation of provider state JSON (Ronald Holshausen, Wed Jul 14 15:44:20 2021 +1000)
 
-# 0.0.5 - Moved structs to models crate + bugfixes and enhancements
+## 0.0.5 - Moved structs to models crate + bugfixes and enhancements
 
 * e2151800 - feat: support generating UUIDs with different formats #121 (Ronald Holshausen, Sun Jul 11 12:36:23 2021 +1000)
 * e2e10241 - refactor: moved Request and Response structs to the models crate (Ronald Holshausen, Wed Jul 7 18:09:36 2021 +1000)
@@ -678,7 +678,7 @@
 * 193da2b9 - chore: fix compiler warnings (Ronald Holshausen, Tue Jun 22 16:06:16 2021 +1000)
 * 4db98181 - refactor: move file_utils to the models crate (Ronald Holshausen, Tue Jun 22 16:06:02 2021 +1000)
 
-# 0.0.4 - Refactor + Bugfixes
+## 0.0.4 - Refactor + Bugfixes
 
 * 225fd3d8 - chore: upgrade nom to 6.2.0 to resolve lexical-core compiler error (Ronald Holshausen, Tue Jun 22 15:10:31 2021 +1000)
 * c392caae - Revert "update changelog for release 0.0.4" (Ronald Holshausen, Tue Jun 22 15:08:36 2021 +1000)
@@ -695,7 +695,7 @@
 * 4e328d93 - feat: implement verification for RequestResponsePact, Consumer, Provider (Ronald Holshausen, Thu Jun 3 16:59:23 2021 +1000)
 * 2f678213 - feat: initial prototype of a pact file verifier (Ronald Holshausen, Thu Jun 3 14:56:16 2021 +1000)
 
-# 0.0.3 - Moved provider state models
+## 0.0.3 - Moved provider state models
 
 * a7b81af - chore: fix clippy violation (Ronald Holshausen, Sat May 29 17:29:06 2021 +1000)
 * 7022625 - refactor: move provider state models to the pact models crate (Ronald Holshausen, Sat May 29 17:18:48 2021 +1000)
@@ -704,12 +704,12 @@
 * 73a53b8 - feat(V4): add an HTTP status code matcher (Ronald Holshausen, Fri May 28 18:40:11 2021 +1000)
 * 8e8075b - refactor: move some more structs to the models crate (Ronald Holshausen, Thu May 27 14:34:03 2021 +1000)
 
-# 0.0.2 - FFI support
+## 0.0.2 - FFI support
 
 * 82711d6 - chore: use a feature to enable FFI representation in the core crates (Ronald Holshausen, Mon May 3 12:14:02 2021 +1000)
 * 6af4d3f - feat: allow ffi bindings to set spec version (Matt Fellows, Sun May 2 22:41:41 2021 +1000)
 
-# 0.0.1 - Refactor: moved content type and body code from pact_matching
+## 0.0.1 - Refactor: moved content type and body code from pact_matching
 
 * 5ea36db - refactor: move content handling functions to pact_models crate (Ronald Holshausen, Sun Apr 25 13:12:22 2021 +1000)
 * d010630 - chore: cleanup deprecation and compiler warnings (Ronald Holshausen, Sun Apr 25 12:23:30 2021 +1000)
@@ -722,4 +722,4 @@
 * 9962e0e - chore: add required metadata fields to Cargo manifest (Ronald Holshausen, Thu Apr 22 10:45:14 2021 +1000)
 * 34e7dcd - chore: add a pact models crate (Ronald Holshausen, Thu Apr 22 10:04:40 2021 +1000)
 
-# 0.0.0 - First Release
+## 0.0.0 - First Release
