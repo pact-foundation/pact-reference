@@ -5,15 +5,19 @@
 #   executable must be fully static.
 # - gnu: no symbol may need a glibc version newer than <max-glibc>.
 #
-# Usage: check-linkage.sh <file> musl
-#        check-linkage.sh <file> gnu <max-glibc>
+# Usage: legacy-check-linkage.sh <file> musl
+#        legacy-check-linkage.sh <file> gnu <max-glibc>
+#
+# Only the legacy asset names (pact_ffi and pact_verifier_cli) need this.
+# Delete it with the other legacy-* files once neither crate publishes
+# them; see .github/workflows/legacy-artifacts.yml.
 set -euo pipefail
 
 file=$1
 flavour=$2
 readelf=$(command -v readelf || command -v llvm-readelf \
     || { ls /usr/lib/llvm-*/bin/llvm-readelf /opt/homebrew/opt/llvm/bin/llvm-readelf 2>/dev/null || true; } | sort -V | tail -1)
-[[ -n $readelf ]] || { echo "check-linkage.sh needs readelf" >&2; exit 1; }
+[[ -n $readelf ]] || { echo "legacy-check-linkage.sh needs readelf" >&2; exit 1; }
 
 needed=$("$readelf" -d "$file" 2>/dev/null | sed -n 's/.*(NEEDED).*\[\(.*\)\].*/\1/p')
 

@@ -6,7 +6,11 @@
 # Exports outside the executable section are data, and are marked DATA so
 # the library gives them no call thunk, as rustc's does.
 #
-# Usage: import-lib.sh <dll> <x86_64|aarch64> <out.lib>
+# Usage: legacy-import-lib.sh <dll> <x86_64|aarch64> <out.lib>
+#
+# Only the legacy asset names (pact_ffi and pact_verifier_cli) need this.
+# Delete it with the other legacy-* files once neither crate publishes
+# them; see .github/workflows/legacy-artifacts.yml.
 set -euo pipefail
 
 dll=$1
@@ -20,7 +24,7 @@ llvm() {
 }
 readobj=$(llvm llvm-readobj)
 dlltool=$(llvm llvm-dlltool)
-[[ -n $readobj && -n $dlltool ]] || { echo "import-lib.sh needs llvm-readobj and llvm-dlltool" >&2; exit 1; }
+[[ -n $readobj && -n $dlltool ]] || { echo "legacy-import-lib.sh needs llvm-readobj and llvm-dlltool" >&2; exit 1; }
 
 case "$arch" in
     x86_64) machine=i386:x86-64 ;;
