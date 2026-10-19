@@ -4,12 +4,11 @@
 # published" and fall through to steps that fail safely.
 #
 # Usage: crate-published.sh <crate> <version>
-# CRATES_INDEX_URL overrides the index root (default https://index.crates.io).
 set -euo pipefail
 
 name=$1
 version=$2
-index=${CRATES_INDEX_URL:-https://index.crates.io}
+index=https://index.crates.io
 
 lower=$(tr '[:upper:]' '[:lower:]' <<<"$name")
 case ${#lower} in
