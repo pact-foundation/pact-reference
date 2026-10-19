@@ -143,22 +143,27 @@ jobs:
           This release PR has commits from people, so the release bot no longer regenerates it from \`master\`. Close it to get a fresh one."
           fi
 
-      - name: Install Rust
+      - name: Decide whether to regenerate
+        id: gate
         if: steps.manual.outputs.edited == 'false' && steps.lag.outputs.pending == 'false'
+        run: echo "proceed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Install Rust
+        if: steps.gate.outputs.proceed == 'true'
         uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f  # v2.0.0
         with:
           build-warnings: warn
           cache: false
 
       - name: Install tools
-        if: steps.manual.outputs.edited == 'false' && steps.lag.outputs.pending == 'false'
+        if: steps.gate.outputs.proceed == 'true'
         uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8  # v5.1.2
         timeout-minutes: 3
         with:
           cache_save: false
 
       - name: Update version and changelog
-        if: steps.manual.outputs.edited == 'false' && steps.lag.outputs.pending == 'false'
+        if: steps.gate.outputs.proceed == 'true'
         run: >-
           release-plz update
           -p "$CRATE"
@@ -167,7 +172,7 @@ jobs:
 
       - name: Describe the release
         id: release
-        if: steps.manual.outputs.edited == 'false' && steps.lag.outputs.pending == 'false'
+        if: steps.gate.outputs.proceed == 'true'
         run: |
           version=$(cargo metadata --format-version 1 --no-deps --manifest-path rust/Cargo.toml \
             | jq -r --arg c "$CRATE" '.packages[] | select(.name == $c) | .version')
