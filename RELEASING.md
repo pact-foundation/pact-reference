@@ -9,7 +9,7 @@ On every push to `master`, the Release PR workflow keeps one draft pull request 
 To release a crate:
 
 1. Review the draft `release/<crate>` pull request. Edit the version or changelog on its branch if needed. Once anyone pushes to it, the bot stops regenerating it; close it to get a fresh one.
-2. Mark it ready for review. The full test suite runs. For `pact_ffi` and `pact_verifier_cli`, the release build for all eight targets runs too.
+2. Mark it ready for review. The full test suite runs. For `pact_ffi` and `pact_verifier_cli`, the release build for all eight targets runs too, and checks the C library each Linux artifact links against.
 3. Merge it.
 
 A release pull request cannot merge while it requires a workspace crate version that is not yet released; release that crate first.
@@ -22,19 +22,6 @@ A release pull request cannot merge while it requires a workspace crate version 
    2. The crate is published to crates.io through trusted publishing.
    3. A GitHub release is created with the changelog section and any artifacts.
 3. After a `pact_verifier_cli` release, the `pactfoundation/pact-verifier` image is pushed to Docker Hub and GHCR.
-
-## Checking a release gate build
-
-Before merging a `pact_ffi` or `pact_verifier_cli` release pull request, check the artifacts its release gate built. This needs `gh`, LLVM (`llvm-dlltool`, `llvm-readobj`) and `readelf`.
-
-```sh
-gh run download <run id> -p 'artifacts-*' -D gate
-mkdir -p gate-flat
-find gate -type f \( -name '*.tar.xz' -o -name '*.zip' -o -name 'pact*.h' \) -exec cp {} gate-flat/ \;
-LEGACY_ARCHIVES=gate-flat .github/scripts/legacy-artifacts.sh <crate>-v<version> out
-```
-
-The script fails if a Linux library links the wrong C library, or needs a glibc newer than 2.28.
 
 ## Legacy asset names
 
@@ -126,7 +113,7 @@ If the release workflow's legacy job failed, re-run it. When the fix is a change
 gh workflow run legacy-artifacts.yml -f tag=<crate>-v<version>
 ```
 
-To build and upload them locally instead, you need write access to releases, LLVM and `readelf`:
+To build and upload them locally instead, you need write access to releases and LLVM:
 
 ```sh
 GITHUB_REPOSITORY=pact-foundation/pact-reference .github/scripts/legacy-artifacts.sh <crate>-v<version> out

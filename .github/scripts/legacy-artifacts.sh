@@ -7,11 +7,7 @@
 # Reads the release's assets with gh (needs GH_TOKEN and
 # GITHUB_REPOSITORY), or, with LEGACY_ARCHIVES set, from that directory:
 # for example a release gate run's artifacts, to check them before a tag.
-# Needs LLVM for the Windows import libraries (see legacy-import-lib.sh), and
-# readelf.
-#
-# Linux binaries must link the C library downstream installers expect (see
-# legacy-check-linkage.sh); a mismatch fails the job before anything is uploaded.
+# Needs LLVM for the Windows import libraries (see legacy-import-lib.sh).
 set -euo pipefail
 
 # MARK: Cut-off
@@ -24,8 +20,6 @@ set -euo pipefail
 #   `dist generate` and re-apply the `hand edit` changes to release.yml;
 # - every .github/scripts/legacy-* file;
 # - RELEASING.md's legacy sections.
-# legacy-check-linkage.sh is the only check of the glibc floor and musl
-# linkage; move it into the release gate first to keep those checks.
 CUTOFF=2027-06-30
 
 if [[ ! "$(date -u +%Y-%m-%d)" < "$CUTOFF" ]]; then
@@ -36,9 +30,6 @@ fi
 # MARK: Build
 
 scripts=$(cd "$(dirname "$0")" && pwd)
-# The oldest glibc among supported major distributions: RHEL 8 and its
-# rebuilds. dist-workspace.toml builds linux-gnu in manylinux_2_28 to match.
-GLIBC_FLOOR=2.28
 
 tag=$1
 out=$(mkdir -p "$2" && cd "$2" && pwd)
@@ -94,7 +85,6 @@ case "$package" in
         do
             IFS=: read -r target file name <<<"$entry"
             path=$(extract "$target" "$file")
-            [[ $target != *linux-musl ]] || "$scripts/legacy-check-linkage.sh" "$path" musl
             gzip_and_sum "$path" "$name"
         done
         ;;
@@ -106,12 +96,7 @@ case "$package" in
             aarch64-unknown-linux-musl:linux-aarch64-musl
         do
             IFS=: read -r target suffix <<<"$entry"
-            so=$(extract "$target" libpact_ffi.so)
-            case "$target" in
-                *-musl) "$scripts/legacy-check-linkage.sh" "$so" musl ;;
-                *) "$scripts/legacy-check-linkage.sh" "$so" gnu "$GLIBC_FLOOR" ;;
-            esac
-            gzip_and_sum "$so" "libpact_ffi-$suffix.so.gz"
+            gzip_and_sum "$(extract "$target" libpact_ffi.so)" "libpact_ffi-$suffix.so.gz"
             gzip_and_sum "$(extract "$target" libpact_ffi.a)" "libpact_ffi-$suffix.a.gz"
         done
         for entry in x86_64-apple-darwin:macos-x86_64 aarch64-apple-darwin:macos-aarch64; do
