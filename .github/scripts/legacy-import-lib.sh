@@ -8,9 +8,8 @@
 #
 # Usage: legacy-import-lib.sh <dll> <x86_64|aarch64> <out.lib>
 #
-# Only the legacy asset names (pact_ffi and pact_verifier_cli) need this.
-# Delete it with the other legacy-* files once neither crate publishes
-# them; see .github/workflows/legacy-artifacts.yml.
+# Only legacy-artifacts.sh uses this. Delete it after the legacy cut-off
+# date set in legacy-artifacts.sh.
 set -euo pipefail
 
 dll=$1

@@ -38,9 +38,9 @@ The script fails if a Linux library links the wrong C library, or needs a glibc 
 
 ## Legacy asset names
 
-Until 2027-06-30, each `pact_ffi` release is mirrored to a `libpact_ffi-v<version>` release that carries the pre-dist asset names. Each `pact_verifier_cli` release also carries `pact-verifier-<os>-<arch>.gz`.
+Each `pact_ffi` release is mirrored to a `libpact_ffi-v<version>` release that carries the pre-dist asset names. Each `pact_verifier_cli` release also carries `pact-verifier-<os>-<arch>.gz`.
 
-To backfill these for an existing release, run the Legacy artifacts workflow manually with the release tag.
+These names are published until the legacy cut-off date set in `.github/scripts/legacy-artifacts.sh`. After that date, delete the legacy sections of this file, along with the other files that script lists.
 
 ## Recovering a release
 
@@ -113,7 +113,7 @@ The `pact_ffi` and `pact_verifier_cli` releases carry the archives built by the 
 
 ### Publish legacy asset names
 
-Run the Legacy artifacts workflow with the release tag:
+If the release workflow's legacy job failed, re-run it. When the fix is a change to the legacy scripts, run the Legacy artifacts workflow with the release tag instead. It runs the scripts from `master`, while a re-run uses the tagged commit's.
 
 ```sh
 gh workflow run legacy-artifacts.yml -f tag=<crate>-v<version>

@@ -8,9 +8,8 @@
 # Usage: legacy-check-linkage.sh <file> musl
 #        legacy-check-linkage.sh <file> gnu <max-glibc>
 #
-# Only the legacy asset names (pact_ffi and pact_verifier_cli) need this.
-# Delete it with the other legacy-* files once neither crate publishes
-# them; see .github/workflows/legacy-artifacts.yml.
+# Only legacy-artifacts.sh uses this. Delete it after the legacy cut-off
+# date set in legacy-artifacts.sh.
 set -euo pipefail
 
 file=$1
