@@ -13,7 +13,7 @@ use bytes::Bytes;
 use itertools::Itertools;
 #[cfg(feature = "xml")] use kiss_xml::dom::Element;
 use maplit::hashmap;
-use serde_json::Value;
+use serde_json::{json, Value};
 use serde_json::Value::Object;
 use tracing::debug;
 use pact_models::bodies::OptionalBody;
@@ -1962,6 +1962,49 @@ fn setup_query_plan(
   Ok(plan_node)
 }
 
+/// Routes a custom header with more than one field line on either side through
+/// `header:match-repeated`. Other headers keep `match_node`.
+fn build_custom_header_node(
+  key: &str,
+  expected: &[String],
+  path: &DocPath,
+  match_node: ExecutionPlanNode,
+  context: &PlanMatchingContext
+) -> ExecutionPlanNode {
+  if header_kind(key) != HeaderKind::Custom {
+    return match_node;
+  }
+
+  let rules = context.matching_rules
+    .filter(|(rule_path, _)| rule_path.first_field().is_some_and(|field| field.eq_ignore_ascii_case(key)));
+  // Keyed by the full path, as `MatchingRuleCategory::to_v3_json` drops indexes from header paths.
+  let rules_json = Value::Object(rules.rules.iter()
+    .map(|(rule_path, rule_list)| (rule_path.to_lower_case().to_string(), json!({
+      "combine": if rule_list.rule_logic == RuleLogic::Or { "OR" } else { "AND" },
+      "matchers": rule_list.rules.iter().map(|rule| rule.to_json()).collect_vec()
+    })))
+    .sorted_by(|(a, _), (b, _)| a.cmp(b))
+    .collect());
+  let mut match_repeated = ExecutionPlanNode::action("header:match-repeated");
+  match_repeated
+    .add(ExecutionPlanNode::value_node(key))
+    .add(ExecutionPlanNode::value_node(NodeValue::SLIST(expected.to_vec())))
+    .add(ExecutionPlanNode::resolve_value(path.clone()))
+    .add(ExecutionPlanNode::value_node(NodeValue::JSON(rules_json)));
+
+  if expected.len() > 1 {
+    match_repeated
+  } else {
+    let mut repeated_check = ExecutionPlanNode::action("if");
+    repeated_check
+      .add(ExecutionPlanNode::action("header:repeated")
+        .add(ExecutionPlanNode::resolve_value(path.clone())))
+      .add(match_repeated)
+      .add(match_node);
+    repeated_check
+  }
+}
+
 fn setup_header_plan<T: HttpPart>(
   expected: &T,
   context: &PlanMatchingContext
@@ -1990,19 +2033,14 @@ fn setup_header_plan<T: HttpPart>(
 
         let item_path = DocPath::root().join(key);
         let path = doc_path.join(key);
-        let actual_value = if value.len() > 1 && header_kind(key) == HeaderKind::Custom {
-          let mut split_values = ExecutionPlanNode::action("header:split-values");
-          split_values.add(ExecutionPlanNode::resolve_value(path.clone()));
-          split_values
-        } else {
-          ExecutionPlanNode::resolve_value(path.clone())
-        };
+        let actual_value = ExecutionPlanNode::resolve_value(path.clone());
         if context.matcher_is_defined(&item_path) {
           let matchers = context.select_best_matcher(&item_path);
           item_node.add(ExecutionPlanNode::annotation(format!("{} {}", key, matchers.generate_description(true))));
-          presence_check.add(build_matching_rule_node(&ExecutionPlanNode::value_node(item_value),
+          let match_node = build_matching_rule_node(&ExecutionPlanNode::value_node(item_value),
             &actual_value, &matchers, true,
-            context.config.show_types_in_errors));
+            context.config.show_types_in_errors);
+          presence_check.add(build_custom_header_node(key, value, &path, match_node, context));
         } else if PARAMETERISED_HEADERS.contains(&key.to_lowercase().as_str()) {
           item_node.add(ExecutionPlanNode::annotation(format!("{}={}", key, item_value.to_string())));
           if value.len() == 1 {
@@ -2043,7 +2081,7 @@ fn setup_header_plan<T: HttpPart>(
               .add(ExecutionPlanNode::value_node(NodeValue::NULL))
               .add(ExecutionPlanNode::value_node(context.config.show_types_in_errors));
           }
-          presence_check.add(item_check);
+          presence_check.add(build_custom_header_node(key, value, &path, item_check, context));
         }
 
         presence_check.add(

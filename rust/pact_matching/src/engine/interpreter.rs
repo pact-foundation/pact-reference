@@ -8,10 +8,10 @@ use anyhow::anyhow;
 use itertools::Itertools;
 use maplit::hashset;
 use serde_json::{json, Value};
-use tracing::{debug, error, instrument, Level, trace};
+use tracing::{debug, error, instrument, Level, trace, warn};
 
 use itertools::Either;
-use pact_models::matchingrules::MatchingRule;
+use pact_models::matchingrules::{MatchingRule, MatchingRuleCategory};
 use pact_models::path_exp::{DocPath, PathToken};
 #[cfg(feature = "xml")] use pact_models::xml_utils::resolve_matching_node;
 
@@ -20,9 +20,11 @@ use crate::engine::context::PlanMatchingContext;
 use crate::engine::value_resolvers::ValueResolver;
 use crate::field_rules::scope_from_plan_path;
 #[cfg(feature = "xml")] use crate::engine::xml::XmlValue;
-use crate::headers::{parse_charset_parameters, split_header_field_lines, strip_whitespace};
+use crate::{CoreMatchingContext, DiffConfig};
+use crate::headers::{parse_charset_parameters, strip_whitespace};
 use crate::json::type_of;
 use crate::matchingrules::DoMatch;
+use crate::repeated_headers::match_repeated_header;
 #[cfg(feature = "xml")] use crate::xml::resolve_attr_namespaces;
 
 /// Main interpreter for the matching plan AST
@@ -321,7 +323,8 @@ impl ExecutionPlanInterpreter {
         "error" => self.execute_error(action, value_resolver, node, &action_path),
         "header:parse" => self.execute_header_parse(action, value_resolver, node, &action_path),
         "header:normalize-commas" => self.execute_normalize_comma_whitespace(action, value_resolver, node, &action_path),
-        "header:split-values" => self.execute_split_header_values(value_resolver, node, &action_path),
+        "header:repeated" => self.execute_header_repeated(action, value_resolver, node, &action_path),
+        "header:match-repeated" => self.execute_header_match_repeated(action, value_resolver, node, &action_path),
         "for-each" => self.execute_for_each(value_resolver, node, &action_path),
         #[cfg(feature = "multipart")]
         "multipart:parse" => self.execute_multipart_parse(action, value_resolver, node, &action_path),
@@ -2548,29 +2551,61 @@ impl ExecutionPlanInterpreter {
     }
   }
 
-  fn execute_split_header_values(
+  fn execute_header_repeated(
     &mut self,
+    action: &str,
     value_resolver: &dyn ValueResolver,
     node: ExecutionPlanNode,
     action_path: &Vec<String>
   ) -> ExecutionPlanNode {
     let ExecutionPlanNode { node_type, children, .. } = node;
-    let (result_children, values) = match self.evaluate_children(value_resolver, &node_type, children, action_path, true) {
-      Ok(value) => value,
-      Err(value) => return value
-    };
-    let values = values.iter()
-      .flat_map(|value| match value.as_value().unwrap_or_default() {
-        NodeValue::STRING(value) => split_header_field_lines(&[value]),
-        NodeValue::SLIST(values) => split_header_field_lines(&values),
-        _ => vec![]
-      })
-      .collect();
+    match self.validate_one_arg(children, action, value_resolver, action_path) {
+      Ok(value) => {
+        let repeated = value.value()
+          .unwrap_or_default()
+          .as_slist()
+          .is_some_and(|values| values.len() > 1);
+        ExecutionPlanNode {
+          node_type,
+          result: Some(NodeResult::VALUE(NodeValue::BOOL(repeated))),
+          children: vec![value]
+        }
+      }
+      Err(err) => {
+        ExecutionPlanNode {
+          node_type,
+          result: Some(NodeResult::ERROR(err.to_string())),
+          children: vec![]
+        }
+      }
+    }
+  }
 
-    ExecutionPlanNode {
-      node_type,
-      result: Some(NodeResult::VALUE(NodeValue::SLIST(values))),
-      children: result_children
+  fn execute_header_match_repeated(
+    &mut self,
+    action: &str,
+    value_resolver: &dyn ValueResolver,
+    node: ExecutionPlanNode,
+    action_path: &Vec<String>
+  ) -> ExecutionPlanNode {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    match self.validate_args(4, 0, children, action, value_resolver, action_path) {
+      Ok((args, _)) => {
+        let result = match_repeated_header_args(&args)
+          .unwrap_or_else(|err| NodeResult::ERROR(err.to_string()));
+        ExecutionPlanNode {
+          node_type,
+          result: Some(result),
+          children: args
+        }
+      }
+      Err(err) => {
+        ExecutionPlanNode {
+          node_type,
+          result: Some(NodeResult::ERROR(err.to_string())),
+          children: vec![]
+        }
+      }
     }
   }
 
@@ -2876,5 +2911,40 @@ fn json_check_type(expected_type: String, json_value: &Value) -> anyhow::Result<
       .ok_or_else(|| anyhow!("Was expecting a JSON Object but got a {}", type_of(&json_value)))
       .map(|_| ()),
     _ => Err(anyhow!("'{}' is not a valid JSON type", expected_type))
+  }
+}
+
+fn header_values(value: NodeValue) -> Vec<String> {
+  match value {
+    NodeValue::STRING(value) => vec![value],
+    NodeValue::SLIST(values) => values,
+    _ => vec![]
+  }
+}
+
+fn match_repeated_header_args(args: &[ExecutionPlanNode]) -> anyhow::Result<NodeResult> {
+  let mut values = args.iter()
+    .map(|arg| arg.value().unwrap_or_default().value_or_error())
+    .collect::<anyhow::Result<Vec<_>>>()?
+    .into_iter();
+  let key = values.next().and_then(|value| value.as_string()).unwrap_or_default();
+  let expected = header_values(values.next().unwrap_or_default());
+  let actual = header_values(values.next().unwrap_or_default());
+  let mut rules = MatchingRuleCategory::empty("header");
+  rules.add_rules_from_json(&values.next().and_then(|value| value.as_json()).unwrap_or_default())?;
+
+  #[cfg(feature = "plugins")] #[cfg(not(target_family = "wasm"))]
+  let context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys, &rules, &std::collections::HashMap::new());
+  #[cfg(any(not(feature = "plugins"), target_family = "wasm"))]
+  let context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys, &rules);
+
+  let result = match_repeated_header(&key, &expected, &actual, &context);
+  if result.mismatches.is_empty() {
+    if let Some(warning) = &result.warning {
+      warn!("{}", warning);
+    }
+    Ok(NodeResult::VALUE(NodeValue::BOOL(true)))
+  } else {
+    Ok(NodeResult::ERROR(result.mismatches.iter().map(|mismatch| mismatch.description.as_str()).join(", ")))
   }
 }
