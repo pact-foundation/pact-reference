@@ -633,8 +633,6 @@ mod tests {
     let result = match_headers(expected.clone(), actual.clone(), &CoreMatchingContext::default());
     assert_eq!(result.values().all(Vec::is_empty), should_match,
       "expected={expected:?}, actual={actual:?}, result={result:?}");
-    assert_eq!(expected.as_ref().unwrap()["X-Request"].len(), expected_values.len());
-    assert_eq!(actual.as_ref().unwrap()["x-request"].len(), actual_values.len());
   }
 
   #[test]
@@ -922,6 +920,24 @@ mod tests {
       }.rules_for_category("header").unwrap_or_default(), &hashmap!{}
     ));
     let expected = hashmap! { "X-Id".to_string() => vec!["1".to_string(), "3".to_string()] };
+    let actual = hashmap! { "X-Id".to_string() => vec!["1".to_string(), "2".to_string(), "3".to_string(), "4".to_string()]};
+    let result = match_headers(Some(expected), Some(actual), &context);
+    expect!(result.values().flatten()).to(be_empty());
+  }
+
+  #[test]
+  fn match_headers_with_array_contains_matcher_with_combined_field_lines() {
+    let context = HeaderMatchingContext::new(&CoreMatchingContext::new(
+      DiffConfig::AllowUnexpectedKeys,
+      &matchingrules! {
+        "header" => {
+          "X-Id" => [
+            MatchingRule::ArrayContains(vec![])
+          ]
+        }
+      }.rules_for_category("header").unwrap_or_default(), &hashmap!{}
+    ));
+    let expected = hashmap! { "X-Id".to_string() => vec!["1".to_string(), "3".to_string()] };
     let actual = hashmap! { "X-Id".to_string() => vec!["1, 2".to_string(), "3, 4".to_string()]};
     let result = match_headers(Some(expected), Some(actual), &context);
     expect!(result.values().flatten()).to(be_empty());
@@ -955,6 +971,25 @@ mod tests {
 
   #[test]
   fn match_headers_with_each_value_matcher() {
+    let context = HeaderMatchingContext::new(&CoreMatchingContext::new(
+      DiffConfig::AllowUnexpectedKeys,
+      &matchingrules! {
+        "header" => {
+          "X-Id" => [
+            MatchingRule::EachValue(MatchingRuleDefinition::new("100".to_string(), ValueType::String,
+              MatchingRule::Regex("\\d+".to_string()), None, "".to_string()))
+          ]
+        }
+      }.rules_for_category("header").unwrap_or_default(), &hashmap!{}
+    ));
+    let expected = hashmap! { "X-Id".to_string() => vec!["1".to_string(), "2".to_string()] };
+    let actual = hashmap! { "X-Id".to_string() => vec!["3".to_string(), "4".to_string(), "567".to_string()]};
+    let result = match_headers(Some(expected), Some(actual), &context);
+    expect!(result.values().flatten()).to(be_empty());
+  }
+
+  #[test]
+  fn match_headers_with_each_value_matcher_with_combined_field_lines() {
     let context = HeaderMatchingContext::new(&CoreMatchingContext::new(
       DiffConfig::AllowUnexpectedKeys,
       &matchingrules! {
