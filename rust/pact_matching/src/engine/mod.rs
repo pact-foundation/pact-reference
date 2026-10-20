@@ -1971,7 +1971,7 @@ fn build_custom_header_node(
   match_node: ExecutionPlanNode,
   context: &PlanMatchingContext
 ) -> ExecutionPlanNode {
-  if header_kind(key) != HeaderKind::Custom {
+  if header_kind(key) != HeaderKind::Custom || expected.is_empty() {
     return match_node;
   }
 
