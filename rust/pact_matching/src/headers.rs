@@ -140,34 +140,6 @@ fn find_entry<T>(map: &HashMap<String, T>, key: &str) -> Option<(String, T)> whe
   }
 }
 
-pub(crate) fn split_header_field_lines(values: &[String]) -> Vec<String> {
-  values.iter().flat_map(|value| {
-    let mut quoted = false;
-    let mut escaped = false;
-    let mut nested = 0usize;
-    let mut start = 0;
-    let mut members = vec![];
-    for (index, character) in value.char_indices() {
-      if escaped {
-        escaped = false;
-      } else if quoted && character == '\\' {
-        escaped = true;
-      } else if character == '"' {
-        quoted = !quoted;
-      } else if !quoted && (character == '{' || character == '[') {
-        nested += 1;
-      } else if !quoted && (character == '}' || character == ']') {
-        nested = nested.saturating_sub(1);
-      } else if character == ',' && !quoted && nested == 0 {
-        members.push(value[start..index].trim().to_string());
-        start = index + 1;
-      }
-    }
-    members.push(value[start..].trim().to_string());
-    members
-  }).collect()
-}
-
 /// Compares the field lines one at a time: by index, or through the header's list matcher.
 pub(crate) fn match_header_lines(
   key: &str,
