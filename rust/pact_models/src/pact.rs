@@ -18,7 +18,7 @@ use serde_json::{json, Value};
 use tracing::{debug, error, trace, warn};
 
 use crate::{Consumer, PactSpecification, Provider};
-#[cfg(not(target_family = "wasm"))] use crate::file_utils::{with_read_lock_for_open_file, with_write_lock};
+#[cfg(not(target_family = "wasm"))] use crate::file_utils::{with_blocking_write_lock, with_read_lock_for_open_file};
 #[cfg(not(target_family = "wasm"))] use crate::http_utils;
 #[cfg(not(target_family = "wasm"))] use crate::http_utils::HttpAuth;
 use crate::interaction::Interaction;
@@ -234,7 +234,7 @@ pub fn write_pact(
   let _lock = WRITE_LOCK.lock().unwrap();
   // Truncating on open would expose an empty file to a writer that holds the lock.
   let mut f = fs::OpenOptions::new().read(true).write(true).create(true).truncate(false).open(path)?;
-  with_write_lock(path, &mut f, 3, &mut |f| {
+  with_blocking_write_lock(path, &mut f, &mut |f| {
     let mut existing = String::new();
     if !overwrite {
       f.read_to_string(&mut existing)?;
@@ -2051,10 +2051,15 @@ mod tests {
 
   #[test]
   fn write_pact_merges_writes_from_concurrent_processes() {
+    use fs2::FileExt;
+
     const WRITERS: usize = 8;
     let mut dir = env::temp_dir();
     dir.push(format!("pact_test_{}", rand::random::<u16>()));
     dir.push("concurrent_consumer-concurrent_provider.json");
+    fs::create_dir_all(dir.parent().unwrap()).unwrap();
+    let holder = File::create(&dir).unwrap();
+    holder.lock_exclusive().unwrap();
 
     let exe = env::current_exe().unwrap();
     let children: Vec<_> = (0..WRITERS).map(|id| {
@@ -2062,15 +2067,18 @@ mod tests {
         .args(["--exact", "pact::tests::write_pact_concurrent_writer", "--ignored", "--test-threads=1"])
         .env(CONCURRENT_WRITER_PATH, &dir)
         .env(CONCURRENT_WRITER_ID, id.to_string())
-        .stdout(Stdio::null())
+        .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
         .unwrap()
     }).collect();
+    // Held past a bounded retry budget of 200 + 400 + 800 ms, so every writer has to wait.
+    std::thread::sleep(std::time::Duration::from_secs(2));
+    holder.unlock().unwrap();
     let failures: Vec<_> = children.into_iter()
       .map(|child| child.wait_with_output().unwrap())
       .filter(|output| !output.status.success())
-      .map(|output| String::from_utf8_lossy(&output.stderr).into_owned())
+      .map(|output| format!("{}{}", String::from_utf8_lossy(&output.stdout), String::from_utf8_lossy(&output.stderr)))
       .collect();
 
     let pact_file = read_pact_file(dir.as_path().to_str().unwrap()).unwrap_or_default();

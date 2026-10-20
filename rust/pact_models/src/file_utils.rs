@@ -5,7 +5,7 @@ use std::path::Path;
 use std::thread::sleep;
 use std::time::Duration;
 
-use anyhow::bail;
+use anyhow::{bail, Context};
 use fs2::FileExt;
 use tracing::{error, trace, warn};
 
@@ -89,4 +89,23 @@ pub fn with_write_lock<T>(
                     path.to_string_lossy(), attempts);
   error!("{}", msg);
   bail!(msg)
+}
+
+/// Waits for a write lock on the file before proceeding with the provided closure. Blocks until
+/// the lock is acquired, so writers queued behind a long-held lock do not give up.
+pub fn with_blocking_write_lock<T>(
+  path: &Path,
+  file: &mut File,
+  cl: &mut dyn FnMut(&mut File) -> anyhow::Result<T>
+) -> anyhow::Result<T> {
+  trace!("Waiting for an exclusive lock on '{:?}'", path);
+  file.lock_exclusive()
+    .with_context(|| format!("Could not acquire an exclusive lock on '{}'", path.to_string_lossy()))?;
+  trace!("Got exclusive file lock");
+  let result = cl(file);
+  trace!("Releasing exclusive file lock");
+  if let Err(err) = file.unlock() {
+    warn!("Failed to release exclusive lock on '{}' - {}", path.to_string_lossy(), err);
+  }
+  result
 }
