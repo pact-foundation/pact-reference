@@ -265,6 +265,9 @@ jobs:
     # The image's own toolchain is unused; rustup installs the pinned one
     # from rust-toolchain.toml on first use.
     container: rust:alpine
+    # mold links faster than GNU ld, the default.
+    env:
+      CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_RUSTFLAGS: -C link-arg=-fuse-ld=mold
     steps:
       - name: Install build dependencies
         run: >-
@@ -290,14 +293,18 @@ jobs:
           install_args: aqua:nextest-rs/nextest/cargo-nextest
           cache_save: ${{ github.ref == 'refs/heads/master' }}
 
-      # Doctests run in the cross-platform jobs. mold links the many test
-      # binaries faster than GNU ld.
       - name: Run tests
         working-directory: rust
         env:
           TZ: UTC
-          CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_RUSTFLAGS: -C link-arg=-fuse-ld=mold
         run: cargo nextest run --workspace
+
+      - name: Run doctests
+        if: ${{ !cancelled() }}
+        working-directory: rust
+        env:
+          TZ: UTC
+        run: cargo test --workspace --doc --no-fail-fast
 
   features:
     name: Feature combinations
