@@ -214,7 +214,29 @@ are compared in the order they appear in the query string.
 For matching header values:
 
 1. If there is a matcher defined for `header.<HEADER_KEY>`, default to that matcher
-2. Otherwise strip all whitespace after commas and compare the resulting strings.
+2. Otherwise compare the values according to the kind of header:
+    * Single-value headers (`Set-Cookie`, `Date`, `User-Agent`, …): each value is compared on its own.
+    * `Accept` and `Content-Type`: the media type must be equal and the parameters are compared
+      by name, ignoring the case of their values.
+    * Known multi-value headers: each value is compared on its own, in order.
+    * Custom headers: see below.
+
+Plain comparison of two single values trims whitespace around each comma and then compares the
+strings for equality, so `a,b` matches `a, b`.
+
+Custom headers: repeated field lines are one comma-joined list (RFC 9110 section 5.3).
+
+* **No matcher.** The field lines on each side are joined with commas, ignoring whitespace and
+  empty elements outside quoted strings, and the joined values are compared.
+* **Scalar matchers** (`Equality`, `Regex`, `Type`, `Include` and so on) see the joined value.
+* **List matchers** (`MinType`, `MaxType`, `MinMaxType`, `EachValue`, `ArrayContains`,
+  index-specific rules and `[*]` wildcard rules) see the list elements. The joined value is split
+  on commas outside quoted strings. `Link` also keeps commas inside `<...>` together, and `Via`
+  keeps commas inside nested `(...)` comments together.
+
+When the joined comparison fails but comparing the field lines one by one succeeds, the header
+passes with a deprecation warning. A future release will compare only the joined value, or the
+list elements for list matchers.
 
 #### Matching Request Headers
 
