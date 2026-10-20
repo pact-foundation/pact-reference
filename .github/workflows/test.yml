@@ -262,17 +262,18 @@ jobs:
     name: Test (musl)
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
-    # The image's own toolchain is unused; rustup installs the pinned one
-    # from rust-toolchain.toml on first use.
-    container: rust:alpine
-    # mold links faster than GNU ld, the default.
+    # Cross-compiles with the glibc-hosted rustc: the musl-hosted rustc that
+    # rustup installs on Alpine compiles markedly slower.
     env:
+      CC_x86_64_unknown_linux_musl: musl-gcc
+      # mold links faster than GNU ld, the default.
       CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_RUSTFLAGS: -C link-arg=-fuse-ld=mold
     steps:
       - name: Install build dependencies
         run: >-
-          apk add --no-cache bash git mold musl-dev openssl-dev shared-mime-info
-          protobuf protobuf-dev tar tzdata zlib-dev
+          sudo apt-get update -q && sudo apt-get install -y -q
+          --no-install-recommends libprotobuf-dev mold musl-tools
+          protobuf-compiler
 
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -282,29 +283,28 @@ jobs:
         with:
           build-warnings: warn
           components: rustfmt
+          target: x86_64-unknown-linux-musl
           cache-workspaces: rust -> target
           cache-save-if: ${{ github.ref == 'refs/heads/master' }}
 
-      # Only nextest: a musl runner cannot share the glibc jobs' tool cache.
-      - name: Install nextest
+      - name: Install tools
         uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8  # v5.1.2
         timeout-minutes: 3
         with:
-          install_args: aqua:nextest-rs/nextest/cargo-nextest
           cache_save: ${{ github.ref == 'refs/heads/master' }}
 
       - name: Run tests
         working-directory: rust
         env:
           TZ: UTC
-        run: cargo nextest run --workspace
+        run: cargo nextest run --workspace --target x86_64-unknown-linux-musl
 
       - name: Run doctests
         if: ${{ !cancelled() }}
         working-directory: rust
         env:
           TZ: UTC
-        run: cargo test --workspace --doc --no-fail-fast
+        run: cargo test --workspace --doc --no-fail-fast --target x86_64-unknown-linux-musl
 
   features:
     name: Feature combinations
