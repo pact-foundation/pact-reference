@@ -149,15 +149,20 @@ pub fn read_pact_from_file(file: &mut File, path: &Path) -> anyhow::Result<Box<d
     f.read_to_string(&mut buf)?;
     Ok(buf)
   })?;
-  let pact_json = serde_json::from_str(&buf)
+  parse_pact_file(&buf, path)
+}
+
+/// Parses the contents of the pact file at `path` into a `Pact` struct
+#[cfg(not(target_family = "wasm"))]
+fn parse_pact_file(contents: &str, path: &Path) -> anyhow::Result<Box<dyn Pact + Send + Sync + RefUnwindSafe>> {
+  let pact_json = serde_json::from_str(contents)
     .context("Failed to parse Pact JSON")
     .map_err(|err| {
-      error!("read_pact_from_file: {}", err);
-      debug!("read_pact_from_file: file contents = '{}'", buf);
+      error!("parse_pact_file: {}", err);
+      debug!("parse_pact_file: file contents = '{}'", contents);
       err
     })?;
-  load_pact_from_json(&*path.to_string_lossy(), &pact_json)
-    .map_err(|e| anyhow!(e))
+  load_pact_from_json(&path.to_string_lossy(), &pact_json)
 }
 
 /// Reads the pact file from a URL and parses the resulting JSON into a `Pact` struct
@@ -176,7 +181,7 @@ pub fn load_pact_from_json(source: &str, json: &Value) -> anyhow::Result<Box<dyn
       let spec_version = determine_spec_version(source, &metadata);
       trace!("load_pact_from_json: found spec version {} in metadata", spec_version);
       match spec_version {
-        PactSpecification::V4 => v4::pact::from_json(&source, json),
+        PactSpecification::V4 => v4::pact::from_json(source, json),
         _ => if map.contains_key("messages") {
           trace!("load_pact_from_json: JSON has a messages attribute, will load as a message pact");
           let pact = MessagePact::from_json(source, json)?;
@@ -215,6 +220,9 @@ lazy_static!{
 /// Writes the pact out to the provided path. If there is an existing pact at the path, the two
 /// pacts will be merged together unless overwrite is true. Returns an error if the file can not
 /// be written or the pacts can not be merged.
+///
+/// The file is held under an exclusive lock from the read of any existing pact until the merged
+/// pact is written, so concurrent writers in other processes do not lose each other's interactions.
 #[cfg(not(target_family = "wasm"))]
 pub fn write_pact(
   pact: Box<dyn Pact>,
@@ -224,34 +232,35 @@ pub fn write_pact(
 ) -> anyhow::Result<()> {
   fs::create_dir_all(path.parent().unwrap())?;
   let _lock = WRITE_LOCK.lock().unwrap();
-  if !overwrite && path.exists() {
-    debug!("Merging pact with file {:?}", path);
-    let mut f = fs::OpenOptions::new().read(true).write(true).open(&path)?;
-    let existing_pact = read_pact_from_file(&mut f, path)?;
-
-    if existing_pact.specification_version() < pact.specification_version() {
-      warn!("Note: Existing pact is an older specification version ({:?}), and will be upgraded",
-            existing_pact.specification_version());
+  // Truncating on open would expose an empty file to a writer that holds the lock.
+  let mut f = fs::OpenOptions::new().read(true).write(true).create(true).truncate(false).open(path)?;
+  with_write_lock(path, &mut f, 3, &mut |f| {
+    let mut existing = String::new();
+    if !overwrite {
+      f.read_to_string(&mut existing)?;
     }
 
-    let merged_pact = pact.merge(existing_pact.deref())?;
-    let pact_json = serde_json::to_string_pretty(&merged_pact.to_json(pact_spec)?)?;
+    let pact_json = if existing.is_empty() {
+      debug!("Writing new pact file to {:?}", path);
+      serde_json::to_string_pretty(&pact.to_json(pact_spec)?)?
+    } else {
+      debug!("Merging pact with file {:?}", path);
+      let existing_pact = parse_pact_file(&existing, path)?;
 
-    with_write_lock(path, &mut f, 3, &mut |f| {
-      f.set_len(0)?;
-      f.seek(SeekFrom::Start(0))?;
-      f.write_all(pact_json.as_bytes())?;
-      Ok(())
-    })
-  } else {
-    debug!("Writing new pact file to {:?}", path);
-    let result = serde_json::to_string_pretty(&pact.to_json(pact_spec)?)?;
-    let mut file = File::create(path)?;
-    with_write_lock(path, &mut file, 3, &mut |f| {
-      f.write_all(result.as_bytes())?;
-      Ok(())
-    })
-  }
+      if existing_pact.specification_version() < pact.specification_version() {
+        warn!("Note: Existing pact is an older specification version ({:?}), and will be upgraded",
+              existing_pact.specification_version());
+      }
+
+      let merged_pact = pact.merge(existing_pact.deref())?;
+      serde_json::to_string_pretty(&merged_pact.to_json(pact_spec)?)?
+    };
+
+    f.set_len(0)?;
+    f.seek(SeekFrom::Start(0))?;
+    f.write_all(pact_json.as_bytes())?;
+    Ok(())
+  })
 }
 
 
@@ -433,6 +442,8 @@ mod tests {
   use std::{env, fs, io};
   use std::fs::File;
   use std::io::Read;
+  use std::path::Path;
+  use std::process::{Command, Stdio};
 
   use expectest::prelude::*;
   use maplit::{btreemap, hashmap};
@@ -1987,5 +1998,92 @@ mod tests {
       .. RequestResponsePact::default() };
     let merged_pact = pact.merge(&updated_pact);
     expect(merged_pact.unwrap().as_request_response_pact().unwrap()).to(be_equal_to(updated_pact));
+  }
+
+  #[test]
+  fn write_pact_treats_an_empty_file_as_a_new_pact() {
+    let pact = RequestResponsePact { consumer: Consumer { name: "empty_file_consumer".to_string() },
+      provider: Provider { name: "empty_file_provider".to_string() },
+      interactions: vec![
+        RequestResponseInteraction {
+          description: "Test Interaction".to_string(),
+          .. RequestResponseInteraction::default()
+        }
+      ],
+      .. RequestResponsePact::default() };
+    let mut dir = env::temp_dir();
+    dir.push(format!("pact_test_{}", rand::random::<u16>()));
+    fs::create_dir_all(&dir).unwrap();
+    dir.push(pact.default_file_name());
+    File::create(&dir).unwrap();
+
+    let result = write_pact(pact.boxed(), dir.as_path(), PactSpecification::V3, false);
+
+    let pact_file = read_pact_file(dir.as_path().to_str().unwrap()).unwrap_or_default();
+    fs::remove_dir_all(dir.parent().unwrap()).unwrap_or(());
+
+    expect!(result).to(be_ok());
+    let json: Value = serde_json::from_str(&pact_file).unwrap();
+    expect!(json["interactions"].as_array().unwrap().len()).to(be_equal_to(1));
+  }
+
+  const CONCURRENT_WRITER_PATH: &str = "PACT_TEST_CONCURRENT_WRITER_PATH";
+  const CONCURRENT_WRITER_ID: &str = "PACT_TEST_CONCURRENT_WRITER_ID";
+
+  /// Run in a child process by `write_pact_merges_writes_from_concurrent_processes`.
+  #[test]
+  #[ignore = "child process of write_pact_merges_writes_from_concurrent_processes"]
+  fn write_pact_concurrent_writer() {
+    let (Ok(path), Ok(id)) = (env::var(CONCURRENT_WRITER_PATH), env::var(CONCURRENT_WRITER_ID)) else {
+      return;
+    };
+    let pact = RequestResponsePact { consumer: Consumer { name: "concurrent_consumer".to_string() },
+      provider: Provider { name: "concurrent_provider".to_string() },
+      interactions: vec![
+        RequestResponseInteraction {
+          description: format!("Interaction {}", id),
+          .. RequestResponseInteraction::default()
+        }
+      ],
+      .. RequestResponsePact::default() };
+    write_pact(pact.boxed(), Path::new(&path), PactSpecification::V3, false).unwrap();
+  }
+
+  #[test]
+  fn write_pact_merges_writes_from_concurrent_processes() {
+    const WRITERS: usize = 8;
+    let mut dir = env::temp_dir();
+    dir.push(format!("pact_test_{}", rand::random::<u16>()));
+    dir.push("concurrent_consumer-concurrent_provider.json");
+
+    let exe = env::current_exe().unwrap();
+    let children: Vec<_> = (0..WRITERS).map(|id| {
+      Command::new(&exe)
+        .args(["--exact", "pact::tests::write_pact_concurrent_writer", "--ignored", "--test-threads=1"])
+        .env(CONCURRENT_WRITER_PATH, &dir)
+        .env(CONCURRENT_WRITER_ID, id.to_string())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .spawn()
+        .unwrap()
+    }).collect();
+    let failures: Vec<_> = children.into_iter()
+      .map(|child| child.wait_with_output().unwrap())
+      .filter(|output| !output.status.success())
+      .map(|output| String::from_utf8_lossy(&output.stderr).into_owned())
+      .collect();
+
+    let pact_file = read_pact_file(dir.as_path().to_str().unwrap()).unwrap_or_default();
+    fs::remove_dir_all(dir.parent().unwrap()).unwrap_or(());
+
+    assert!(failures.is_empty(), "writer processes failed:\n{}", failures.join("\n"));
+    let json: Value = serde_json::from_str(&pact_file).unwrap();
+    let mut descriptions: Vec<_> = json["interactions"].as_array().unwrap().iter()
+      .map(|i| i["description"].as_str().unwrap().to_string())
+      .collect();
+    descriptions.sort();
+    let mut expected: Vec<_> = (0..WRITERS).map(|id| format!("Interaction {}", id)).collect();
+    expected.sort();
+    assert_eq!(descriptions, expected);
   }
 }
