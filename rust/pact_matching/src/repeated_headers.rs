@@ -4,10 +4,10 @@ use itertools::Itertools;
 use pact_models::headers::{MULTI_VALUE_HEADERS, PARAMETERISED_HEADERS, SINGLE_VALUE_HEADERS};
 use pact_models::matchingrules::MatchingRule;
 use pact_models::matchingrules::expressions::{MatchingRuleDefinition, ValueType};
-use pact_models::path_exp::DocPath;
+use pact_models::path_exp::{DocPath, PathToken};
 
 use crate::{CommonMismatch, MatchingContext};
-use crate::headers::{match_header_lines, split_header_field_lines};
+use crate::headers::match_header_lines;
 
 // MARK: Classification
 
@@ -53,9 +53,9 @@ pub(crate) fn join_field_lines(values: &[String]) -> String {
   values.join(", ")
 }
 
-/// Normalises a list value for comparison: whitespace around commas outside quoted strings
-/// is dropped, as are empty elements (RFC 9110 §5.6.1.2).
-pub(crate) fn normalise_list(value: &str) -> String {
+/// Splits a list value on commas outside quoted strings (RFC 9110 §5.6.4), trimming each
+/// element and dropping empty ones (RFC 9110 §5.6.1.2).
+fn list_elements(value: &str) -> Vec<&str> {
   let mut elements = vec![];
   let mut quoted = false;
   let mut escaped = false;
@@ -73,7 +73,22 @@ pub(crate) fn normalise_list(value: &str) -> String {
     }
   }
   elements.push(value[start..].trim());
-  elements.iter().filter(|element| !element.is_empty()).join(",")
+  elements.retain(|element| !element.is_empty());
+  elements
+}
+
+/// Normalises a list value for comparison: whitespace around commas outside quoted strings
+/// is dropped, as are empty elements.
+pub(crate) fn normalise_list(value: &str) -> String {
+  list_elements(value).join(",")
+}
+
+/// Splits a header's field lines into its list elements.
+pub(crate) fn split_list_elements(_name: &str, values: &[String]) -> Vec<String> {
+  values.iter()
+    .flat_map(|value| list_elements(value))
+    .map(str::to_string)
+    .collect()
 }
 
 /// The outcome of matching a repeated header, with any warning to log.
@@ -103,21 +118,39 @@ fn per_line_warning(key: &str, joined_actual: &str) -> String {
     and a future release will compare only the joined value '{}'.", key, joined_actual)
 }
 
-/// The rules at the header's own path, and whether any rule sits at an indexed path below it.
-fn header_rules(key: &str, context: &dyn MatchingContext) -> (Vec<MatchingRule>, bool) {
+fn list_warning(key: &str, count: usize) -> String {
+  format!("Header '{}' only matched when its field lines were treated as whole values. \
+    Matching repeated field lines as whole values is deprecated: RFC 9110 §5.3 treats them as one comma-joined list, \
+    and a future release will split it into list elements (RFC 9110 §5.6.1), which gives {} elements here. \
+    Quote values that contain commas, as RFC 9110 §5.5 advises, \
+    e.g. Example-Dates: \"Sat, 04 May 1996\", \"Wed, 14 Sep 2005\".", key, count)
+}
+
+fn is_header_path(path: &DocPath, key: &str) -> bool {
+  path.first_field().is_some_and(|field| field.to_lowercase() == key)
+}
+
+/// The rules at the header's own path.
+fn bare_rules(key: &str, context: &dyn MatchingContext) -> Vec<MatchingRule> {
   let key = key.to_lowercase();
-  let mut bare = vec![];
-  let mut indexed = false;
-  for (path, list) in &context.matchers().rules {
-    if path.first_field().is_some_and(|field| field.to_lowercase() == key) {
-      if path.len() > 2 {
-        indexed = true;
-      } else {
-        bare.extend(list.rules.iter().cloned());
-      }
-    }
-  }
-  (bare, indexed)
+  context.matchers().rules.iter()
+    .filter(|(path, _)| path.len() == 2 && is_header_path(path, &key))
+    .flat_map(|(_, list)| list.rules.iter().cloned())
+    .collect()
+}
+
+/// True when a rule sits at `$.<key>.<n>` or `$.<key>[<n>]` for some `n < len`, or at
+/// `$.<key>[*]` or `$.<key>.*`, which address every element.
+fn has_indexed_rule(key: &str, len: usize, context: &dyn MatchingContext) -> bool {
+  let key = key.to_lowercase();
+  context.matchers().rules.keys()
+    .filter(|path| path.len() == 3 && is_header_path(path, &key))
+    .any(|path| match path.tokens().last() {
+      Some(PathToken::Index(index)) => *index < len,
+      Some(PathToken::Field(field)) => field.parse::<usize>().is_ok_and(|index| index < len),
+      Some(PathToken::Star | PathToken::StarIndex) => len > 0,
+      _ => false
+    })
 }
 
 /// Matches a custom header where either side has more than one field line.
@@ -128,32 +161,37 @@ pub(crate) fn match_repeated_header(
   context: &dyn MatchingContext
 ) -> RepeatedHeaderResult {
   if rules_defined(key, context) {
-    let (bare, indexed) = header_rules(key, context);
-    if !bare.is_empty() && !indexed && !bare.iter().any(is_list_aware) {
-      let joined_actual = join_field_lines(actual);
-      let primary = match_header_lines(key, &[join_field_lines(expected)], std::slice::from_ref(&joined_actual), context);
+    let bare = bare_rules(key, context);
+    let elements = split_list_elements(key, actual);
+    if bare.iter().any(is_list_aware) || has_indexed_rule(key, expected.len().max(elements.len()), context) {
+      let primary = match_header_lines(key, expected, &elements, context);
       if primary.is_empty() {
         return RepeatedHeaderResult::default();
       }
       if match_header_lines(key, expected, actual, context).is_empty() {
-        let each_value = bare.iter()
-          .map(|rule| MatchingRule::EachValue(MatchingRuleDefinition::new(
-            expected.first().cloned().unwrap_or_default(), ValueType::String, rule.clone(), None, String::new())).to_json().to_string())
-          .join(", ");
-        return RepeatedHeaderResult {
-          mismatches: vec![],
-          warning: Some(format!("{} To match each value separately, use {} instead.",
-            per_line_warning(key, &joined_actual), each_value))
-        };
+        return RepeatedHeaderResult { mismatches: vec![], warning: Some(list_warning(key, elements.len())) };
       }
       return RepeatedHeaderResult { mismatches: primary, warning: None };
     }
 
-    let actual = if expected.len() > 1 { split_header_field_lines(actual) } else { actual.to_vec() };
-    return RepeatedHeaderResult {
-      mismatches: match_header_lines(key, expected, &actual, context),
-      warning: None
-    };
+    let joined_actual = join_field_lines(actual);
+    let primary = match_header_lines(key, &[join_field_lines(expected)], std::slice::from_ref(&joined_actual), context);
+    if primary.is_empty() {
+      return RepeatedHeaderResult::default();
+    }
+    if match_header_lines(key, expected, actual, context).is_empty() {
+      let warning = if bare.is_empty() {
+        per_line_warning(key, &joined_actual)
+      } else {
+        let each_value = bare.iter()
+          .map(|rule| MatchingRule::EachValue(MatchingRuleDefinition::new(
+            expected.first().cloned().unwrap_or_default(), ValueType::String, rule.clone(), None, String::new())).to_json().to_string())
+          .join(", ");
+        format!("{} To match each value separately, use {} instead.", per_line_warning(key, &joined_actual), each_value)
+      };
+      return RepeatedHeaderResult { mismatches: vec![], warning: Some(warning) };
+    }
+    return RepeatedHeaderResult { mismatches: primary, warning: None };
   }
 
   let joined_expected = join_field_lines(expected);
@@ -242,6 +280,61 @@ mod tests {
   }
 
   #[rstest]
+  #[case(&["a, b", "c"], &["a", "b", "c"])]
+  #[case(&["a, , b,"], &["a", "b"])]
+  #[case(&[r#""one,two", three"#], &[r#""one,two""#, "three"])]
+  #[case(&[r#""one\",two", three"#], &[r#""one\",two""#, "three"])]
+  #[case(&[r#"{"a":1,"b":2}, x"#], &[r#"{"a":1"#, r#""b":2}"#, "x"])]
+  fn split_list_elements_splits_on_commas_outside_quotes(#[case] lines: &[&str], #[case] elements: &[&str]) {
+    let lines = lines.iter().map(|line| line.to_string()).collect_vec();
+    assert_eq!(split_list_elements("X-Request", &lines), elements);
+  }
+
+  #[test]
+  fn split_list_elements_keeps_an_unbalanced_quote_as_one_element() {
+    let lines = vec!["\"abc, def".to_string()];
+    assert_eq!(split_list_elements("X-Request", &lines), vec!["\"abc, def"]);
+  }
+
+  #[test]
+  fn split_list_elements_keeps_multibyte_characters_next_to_commas() {
+    let lines = vec!["é,ü".to_string(), "ß".to_string()];
+    assert_eq!(split_list_elements("X-Request", &lines), vec!["é", "ü", "ß"]);
+  }
+
+  #[test]
+  fn list_fallback_warns_of_deprecation() {
+    let mut category = MatchingRuleCategory::empty("header");
+    category.add_rule(DocPath::new_unwrap("$.x-request"), MatchingRule::MaxType(2), RuleLogic::And);
+    let context = CoreMatchingContext { matchers: category, ..CoreMatchingContext::default() };
+    let expected = vec!["a".to_string(), "b".to_string()];
+    let actual = vec!["x, y".to_string(), "z".to_string()];
+    let result = match_repeated_header("X-Request", &expected, &actual, &context);
+    assert!(result.mismatches.is_empty(), "{:?}", result.mismatches);
+    assert_eq!(result.warning.as_deref(), Some("Header 'X-Request' only matched when its field lines were \
+      treated as whole values. Matching repeated field lines as whole values is deprecated: RFC 9110 §5.3 \
+      treats them as one comma-joined list, and a future release will split it into list elements \
+      (RFC 9110 §5.6.1), which gives 3 elements here. Quote values that contain commas, as RFC 9110 §5.5 \
+      advises, e.g. Example-Dates: \"Sat, 04 May 1996\", \"Wed, 14 Sep 2005\"."));
+  }
+
+  #[rstest]
+  #[case("$.x-request", false)]
+  #[case("$.x-request.1", true)]
+  #[case("$.x-request[1]", true)]
+  #[case("$.x-request[2]", false)]
+  #[case("$.x-request[*]", true)]
+  #[case("$.x-request.*", true)]
+  #[case("$.x-request.foo", false)]
+  #[case("$.x-other[0]", false)]
+  fn indexed_rules_need_an_index_within_the_list(#[case] path: &'static str, #[case] indexed: bool) {
+    let mut category = MatchingRuleCategory::empty("header");
+    category.add_rule(DocPath::new_unwrap(path), MatchingRule::Regex("^a$".to_string()), RuleLogic::And);
+    let context = CoreMatchingContext { matchers: category, ..CoreMatchingContext::default() };
+    assert_eq!(has_indexed_rule("X-Request", 2, &context), indexed);
+  }
+
+  #[rstest]
   #[case("a, b", "a,b")]
   #[case(" a ,\t b ", "a,b")]
   #[case("a, , b,", "a,b")]
@@ -256,6 +349,7 @@ mod tests {
 #[cfg(test)]
 pub(crate) mod cases {
   use pact_models::matchingrules::{MatchingRule, MatchingRuleCategory, RuleLogic};
+  use pact_models::matchingrules::expressions::{MatchingRuleDefinition, ValueType};
   use pact_models::path_exp::DocPath;
 
   /// One repeated-header scenario, run against both engines.
@@ -294,6 +388,28 @@ pub(crate) mod cases {
   fn regex_first() -> MatchingRuleCategory { rule("$.x-request", MatchingRule::Regex(r"^first-\d+$".to_string())) }
   fn regex_request() -> MatchingRuleCategory { rule("$.x-request", MatchingRule::Regex(r"^request\d$".to_string())) }
   fn type_rule() -> MatchingRuleCategory { rule("$.x-request", MatchingRule::Type) }
+  fn each_value(path: &'static str, regex: &str) -> MatchingRuleCategory {
+    rule(path, MatchingRule::EachValue(MatchingRuleDefinition::new("1".into(), ValueType::String,
+      MatchingRule::Regex(regex.to_string()), None, String::new())))
+  }
+  fn each_value_digits() -> MatchingRuleCategory { each_value("$.x-request", r"^\d+$") }
+  fn each_value_dates() -> MatchingRuleCategory {
+    each_value("$.x-sunset", r"^\w{3}, \d{2} \w{3} \d{4} \d{2}:\d{2}:\d{2} GMT$")
+  }
+  fn each_value_link() -> MatchingRuleCategory { each_value("$.link", r#"^<[^>]+>; rel="\w+"$"#) }
+  fn min_type() -> MatchingRuleCategory { rule("$.x-request", MatchingRule::MinType(2)) }
+  fn max_type() -> MatchingRuleCategory { rule("$.x-request", MatchingRule::MaxType(2)) }
+  fn indexed() -> MatchingRuleCategory {
+    let mut category = rule("$.x-request.0", MatchingRule::Regex("^first-[0-9]+$".to_string()));
+    category.add_rule(DocPath::new_unwrap("$.x-request.1"), MatchingRule::Regex("^second-[0-9]+$".to_string()), RuleLogic::And);
+    category
+  }
+
+  fn wildcard_regex() -> MatchingRuleCategory { rule("$.x-request[*]", MatchingRule::Regex(r"^\d+$".to_string())) }
+
+  const SUNSET: &[&str] = &["Sat, 01 Mar 2025 00:00:00 GMT", "Sun, 01 Jun 2025 00:00:00 GMT"];
+  const LINKS: &[&str] = &[r#"<https://api.example.com/items?page=2&fields=id,name>; rel="next""#,
+    r#"<https://api.example.com/items?page=9&fields=id,name>; rel="last""#];
 
   pub(crate) fn all() -> Vec<Case> {
     vec![
@@ -303,6 +419,15 @@ pub(crate) mod cases {
       Case { name: "regex combined fails", header: "X-Request", expected: &["first-1", "first-2"], actual: &["first-42, first-99"], rules: regex_first, matches: false, warns: false },
       Case { name: "regex one expected", header: "X-Request", expected: &["first-1"], actual: &["first-42", "first-99"], rules: regex_first, matches: true, warns: true },
       Case { name: "type", header: "X-Request", expected: &["a", "b"], actual: &["x, y, z"], rules: type_rule, matches: true, warns: false },
+      Case { name: "each-value mixed", header: "X-Request", expected: &["1", "2"], actual: &["3, 4", "567"], rules: each_value_digits, matches: true, warns: false },
+      Case { name: "each-value lines", header: "X-Request", expected: &["1", "2"], actual: &["3", "4", "567"], rules: each_value_digits, matches: true, warns: false },
+      Case { name: "min-type combined", header: "X-Request", expected: &["a", "b"], actual: &["x, y"], rules: min_type, matches: true, warns: false },
+      Case { name: "max-type fallback", header: "X-Request", expected: &["a", "b"], actual: &["x, y", "z"], rules: max_type, matches: true, warns: true },
+      Case { name: "each-value dates fallback", header: "X-Sunset", expected: SUNSET, actual: SUNSET, rules: each_value_dates, matches: true, warns: true },
+      Case { name: "each-value link fallback", header: "Link", expected: LINKS, actual: LINKS, rules: each_value_link, matches: true, warns: true },
+      Case { name: "indexed combined", header: "X-Request", expected: &["first-1", "second-2"], actual: &["first-42, second-99"], rules: indexed, matches: true, warns: false },
+      Case { name: "indexed wrong", header: "X-Request", expected: &["first-1", "second-2"], actual: &["first-42, first-99"], rules: indexed, matches: false, warns: false },
+      Case { name: "wildcard regex combined", header: "X-Request", expected: &["1", "2"], actual: &["3, 4", "567"], rules: wildcard_regex, matches: true, warns: false },
       Case { name: "case mix", header: "X-Request", expected: &["request1", "request2"], actual: &["request1", "request2"], rules: regex_request, matches: true, warns: true },
       plain("combined line", "X-Request", &["request1", "request2"], &["request1, request2"], true, false),
       plain("separate lines", "X-Request", &["request1", "request2"], &["request1", "request2"], true, false),
