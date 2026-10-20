@@ -53,21 +53,58 @@ pub(crate) fn join_field_lines(values: &[String]) -> String {
   values.join(", ")
 }
 
-/// Splits a list value on commas outside quoted strings (RFC 9110 §5.6.4), trimming each
-/// element and dropping empty ones (RFC 9110 §5.6.1.2).
-fn list_elements(value: &str) -> Vec<&str> {
+/// Delimiters inside which a comma does not separate list elements.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Grammar {
+  /// Only quoted strings protect a comma.
+  Plain,
+  /// `<…>` link targets protect a comma (RFC 8288 §3).
+  Link,
+  /// Nested `(…)` comments protect a comma (RFC 9110 §5.6.5). Quotes are ordinary text inside
+  /// a comment, and `\` escapes the next character.
+  Via
+}
+
+impl Grammar {
+  fn for_header(name: &str) -> Grammar {
+    if name.eq_ignore_ascii_case("link") {
+      Grammar::Link
+    } else if name.eq_ignore_ascii_case("via") {
+      Grammar::Via
+    } else {
+      Grammar::Plain
+    }
+  }
+}
+
+/// Splits a list value on commas outside quoted strings (RFC 9110 §5.6.4) and outside the
+/// grammar's delimiters, trimming each element and dropping empty ones (RFC 9110 §5.6.1.2).
+/// An unbalanced quote or delimiter extends to the end of the value.
+fn list_elements(value: &str, grammar: Grammar) -> Vec<&str> {
   let mut elements = vec![];
   let mut quoted = false;
   let mut escaped = false;
+  let mut depth = 0usize;
   let mut start = 0;
   for (index, character) in value.char_indices() {
+    let in_comment = grammar == Grammar::Via && depth > 0;
     if escaped {
       escaped = false;
-    } else if quoted && character == '\\' {
+    } else if (quoted || in_comment) && character == '\\' {
       escaped = true;
-    } else if character == '"' {
+    } else if character == '"' && !in_comment {
       quoted = !quoted;
-    } else if character == ',' && !quoted {
+    } else if quoted {
+      continue;
+    } else if grammar == Grammar::Link && character == '<' {
+      depth = 1;
+    } else if grammar == Grammar::Link && character == '>' {
+      depth = 0;
+    } else if grammar == Grammar::Via && character == '(' {
+      depth += 1;
+    } else if grammar == Grammar::Via && character == ')' {
+      depth = depth.saturating_sub(1);
+    } else if character == ',' && depth == 0 {
       elements.push(value[start..index].trim());
       start = index + 1;
     }
@@ -80,13 +117,14 @@ fn list_elements(value: &str) -> Vec<&str> {
 /// Normalises a list value for comparison: whitespace around commas outside quoted strings
 /// is dropped, as are empty elements.
 pub(crate) fn normalise_list(value: &str) -> String {
-  list_elements(value).join(",")
+  list_elements(value, Grammar::Plain).join(",")
 }
 
 /// Splits a header's field lines into its list elements.
-pub(crate) fn split_list_elements(_name: &str, values: &[String]) -> Vec<String> {
+pub(crate) fn split_list_elements(name: &str, values: &[String]) -> Vec<String> {
+  let grammar = Grammar::for_header(name);
   values.iter()
-    .flat_map(|value| list_elements(value))
+    .flat_map(|value| list_elements(value, grammar))
     .map(str::to_string)
     .collect()
 }
@@ -297,6 +335,66 @@ mod tests {
   }
 
   #[test]
+  fn split_list_elements_keeps_link_targets_whole() {
+    let lines = vec![r#"<https://a.example/?f=id,name>; rel="next", <https://a.example/?p=9>; rel="last""#.to_string()];
+    assert_eq!(split_list_elements("Link", &lines), vec![
+      r#"<https://a.example/?f=id,name>; rel="next""#,
+      r#"<https://a.example/?p=9>; rel="last""#
+    ]);
+    assert_eq!(split_list_elements("LINK", &lines).len(), 2);
+  }
+
+  #[test]
+  fn split_list_elements_keeps_via_comments_whole() {
+    let lines = vec!["1.1 proxy (Squid, v5), 1.0 fred".to_string()];
+    assert_eq!(split_list_elements("Via", &lines), vec!["1.1 proxy (Squid, v5)", "1.0 fred"]);
+    assert_eq!(split_list_elements("via", &lines).len(), 2);
+  }
+
+  #[test]
+  fn split_list_elements_nests_via_comments() {
+    let lines = vec!["1.1 a (x (y, z), w), 1.0 b".to_string()];
+    assert_eq!(split_list_elements("Via", &lines), vec!["1.1 a (x (y, z), w)", "1.0 b"]);
+  }
+
+  #[test]
+  fn split_list_elements_reads_brackets_literally_for_other_headers() {
+    let lines = vec!["(a, b)".to_string()];
+    assert_eq!(split_list_elements("X-Request", &lines), vec!["(a", "b)"]);
+    let lines = vec!["<a, b>".to_string()];
+    assert_eq!(split_list_elements("X-Request", &lines), vec!["<a", "b>"]);
+    assert_eq!(split_list_elements("Via", &["<a, b>".to_string()]), vec!["<a", "b>"]);
+    assert_eq!(split_list_elements("Link", &["(a, b)".to_string()]), vec!["(a", "b)"]);
+  }
+
+  #[test]
+  fn split_list_elements_ignores_delimiters_inside_quotes() {
+    let lines = vec![r#"<a>; title="x<y", <b>"#.to_string()];
+    assert_eq!(split_list_elements("Link", &lines), vec![r#"<a>; title="x<y""#, "<b>"]);
+    let lines = vec![r#"1.1 a "x(", 1.0 b"#.to_string()];
+    assert_eq!(split_list_elements("Via", &lines), vec![r#"1.1 a "x(""#, "1.0 b"]);
+  }
+
+  #[test]
+  fn split_list_elements_treats_quotes_in_via_comments_as_text() {
+    let lines = vec![r#"1.1 a (the "best, proxy), 1.0 b"#.to_string()];
+    assert_eq!(split_list_elements("Via", &lines), vec![r#"1.1 a (the "best, proxy)"#, "1.0 b"]);
+  }
+
+  #[test]
+  fn split_list_elements_honours_quoted_pairs_in_via_comments() {
+    let lines = vec![r#"1.1 a (x \) y, z), 1.0 b"#.to_string()];
+    assert_eq!(split_list_elements("Via", &lines), vec![r#"1.1 a (x \) y, z)"#, "1.0 b"]);
+  }
+
+  #[test]
+  fn split_list_elements_keeps_an_unbalanced_delimiter_as_one_element() {
+    assert_eq!(split_list_elements("Link", &["<a, b".to_string()]), vec!["<a, b"]);
+    assert_eq!(split_list_elements("Via", &["1.1 a (b, c".to_string()]), vec!["1.1 a (b, c"]);
+    assert_eq!(split_list_elements("Via", &["1.1 a), 1.0 b".to_string()]), vec!["1.1 a)", "1.0 b"]);
+  }
+
+  #[test]
   fn split_list_elements_keeps_multibyte_characters_next_to_commas() {
     let lines = vec!["é,ü".to_string(), "ß".to_string()];
     assert_eq!(split_list_elements("X-Request", &lines), vec!["é", "ü", "ß"]);
@@ -397,6 +495,7 @@ pub(crate) mod cases {
     each_value("$.x-sunset", r"^\w{3}, \d{2} \w{3} \d{4} \d{2}:\d{2}:\d{2} GMT$")
   }
   fn each_value_link() -> MatchingRuleCategory { each_value("$.link", r#"^<[^>]+>; rel="\w+"$"#) }
+  fn via_max_type() -> MatchingRuleCategory { rule("$.via", MatchingRule::MaxType(2)) }
   fn min_type() -> MatchingRuleCategory { rule("$.x-request", MatchingRule::MinType(2)) }
   fn max_type() -> MatchingRuleCategory { rule("$.x-request", MatchingRule::MaxType(2)) }
   fn indexed() -> MatchingRuleCategory {
@@ -424,7 +523,11 @@ pub(crate) mod cases {
       Case { name: "min-type combined", header: "X-Request", expected: &["a", "b"], actual: &["x, y"], rules: min_type, matches: true, warns: false },
       Case { name: "max-type fallback", header: "X-Request", expected: &["a", "b"], actual: &["x, y", "z"], rules: max_type, matches: true, warns: true },
       Case { name: "each-value dates fallback", header: "X-Sunset", expected: SUNSET, actual: SUNSET, rules: each_value_dates, matches: true, warns: true },
-      Case { name: "each-value link fallback", header: "Link", expected: LINKS, actual: LINKS, rules: each_value_link, matches: true, warns: true },
+      Case { name: "each-value link", header: "Link", expected: LINKS, actual: LINKS, rules: each_value_link, matches: true, warns: false },
+      Case { name: "each-value link combined", header: "Link", expected: LINKS,
+        actual: &[r#"<https://api.example.com/items?page=2&fields=id,name>; rel="next", <https://api.example.com/items?page=9&fields=id,name>; rel="last""#],
+        rules: each_value_link, matches: true, warns: false },
+      Case { name: "via max-type", header: "Via", expected: &["1.1 a", "1.1 b"], actual: &["1.1 proxy (Squid, v5), 1.0 fred"], rules: via_max_type, matches: true, warns: false },
       Case { name: "indexed combined", header: "X-Request", expected: &["first-1", "second-2"], actual: &["first-42, second-99"], rules: indexed, matches: true, warns: false },
       Case { name: "indexed wrong", header: "X-Request", expected: &["first-1", "second-2"], actual: &["first-42, first-99"], rules: indexed, matches: false, warns: false },
       Case { name: "wildcard regex combined", header: "X-Request", expected: &["1", "2"], actual: &["3, 4", "567"], rules: wildcard_regex, matches: true, warns: false },
