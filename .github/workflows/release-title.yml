@@ -1,0 +1,30 @@
+---
+# Retitles the GitHub release dist creates. dist titles it with the
+# changelog heading, which carries the compare link and Markdown.
+name: Release title
+
+on:
+  workflow_call:
+    inputs:
+      plan:
+        type: string
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release-title:
+    name: Set the release title
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Set the title
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PLAN: ${{ inputs.plan }}
+        run: |
+          tag=$(jq -r '.announcement_tag' <<<"$PLAN")
+          gh release edit "$tag" --title "$(.github/scripts/release-title.sh "$tag")"

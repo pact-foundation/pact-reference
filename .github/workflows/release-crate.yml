@@ -41,4 +41,4 @@ jobs:
           version=${TAG##*-v}
           .github/scripts/changelog-section.sh "rust/$crate/CHANGELOG.md" "$version" > "$RUNNER_TEMP/notes.md"
           gh release view "$TAG" >/dev/null 2>&1 || \
-            gh release create "$TAG" --title "$crate $version" --notes-file "$RUNNER_TEMP/notes.md" --verify-tag
+            gh release create "$TAG" --title "$(.github/scripts/release-title.sh "$TAG")" --notes-file "$RUNNER_TEMP/notes.md" --verify-tag
