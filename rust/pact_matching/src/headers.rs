@@ -5,13 +5,14 @@ use std::iter::FromIterator;
 
 use itertools::Itertools;
 use maplit::hashmap;
-use pact_models::headers::{PARAMETERISED_HEADERS, SINGLE_VALUE_HEADERS};
+use pact_models::headers::PARAMETERISED_HEADERS;
 use pact_models::matchingrules::MatchingRule;
 use pact_models::path_exp::DocPath;
 use tracing::{instrument, debug};
 use crate::{CommonMismatch, MatchingContext, Mismatch};
 use crate::field_rules::FieldMatchScope;
 use crate::matchingrules::{compare_lists_with_matchingrules, DoMatch, match_values};
+use crate::repeated_headers::{header_kind, HeaderKind};
 
 pub(crate) fn strip_whitespace<'a, T: FromIterator<&'a str>>(val: &'a str, split_by: &'a str) -> T {
   val.split(split_by).map(|v| v.trim()).filter(|v| !v.is_empty()).collect()
@@ -182,8 +183,7 @@ fn match_header_maps(
           mismatch: format!("Expected an empty header '{}' but actual value was '{}'", key, actual_values.join(", ")) }]);
       } else {
         let mut mismatches = vec![];
-        let actual_values = if value.len() > 1
-          && !SINGLE_VALUE_HEADERS.contains(&key.to_lowercase().as_str()) {
+        let actual_values = if value.len() > 1 && header_kind(key) == HeaderKind::Custom {
           split_header_field_lines(&actual_values)
         } else {
           actual_values
@@ -671,6 +671,30 @@ mod tests {
       let result = match_headers(expected, actual, &context);
       assert_eq!(result.values().all(Vec::is_empty), should_match, "{result:?}");
     }
+  }
+
+  #[test]
+  fn match_headers_does_not_split_parameterised_headers() {
+    let expected = Some(hashmap! {
+      "Content-Type".to_string() => vec!["text/plain".to_string(), "text/html".to_string()]
+    });
+    let actual = Some(hashmap! {
+      "Content-Type".to_string() => vec!["text/plain, text/html".to_string()]
+    });
+    let result = match_headers(expected, actual, &CoreMatchingContext::default());
+    assert!(!result.values().all(Vec::is_empty), "{result:?}");
+  }
+
+  #[test]
+  fn match_headers_does_not_split_multi_value_headers() {
+    let expected = Some(hashmap! {
+      "Cache-Control".to_string() => vec!["no-cache".to_string(), "no-store".to_string()]
+    });
+    let actual = Some(hashmap! {
+      "Cache-Control".to_string() => vec!["no-cache, no-store".to_string()]
+    });
+    let result = match_headers(expected, actual, &CoreMatchingContext::default());
+    assert!(!result.values().all(Vec::is_empty), "{result:?}");
   }
 
   #[test]
