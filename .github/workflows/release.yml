@@ -402,3 +402,14 @@ jobs:
     permissions:
       "contents": "read"
       "packages": "write"
+
+  custom-release-title:
+    needs:
+      - plan
+      - announce
+    uses: ./.github/workflows/release-title.yml
+    with:
+      plan: ${{ needs.plan.outputs.val }}
+    secrets: inherit
+    permissions:
+      "contents": "write"

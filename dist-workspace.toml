@@ -31,7 +31,7 @@ pr-run-mode = "upload"
 github-release = "announce"
 global-artifacts-jobs = ["./check-artifacts"]
 publish-jobs = ["./publish-crate"]
-post-announce-jobs = ["./legacy-artifacts", "./publish-containers"]
+post-announce-jobs = ["./legacy-artifacts", "./publish-containers", "./release-title"]
 github-build-setup = "../build-setup.yml"
 
 [dist.github-custom-job-permissions]
@@ -39,6 +39,7 @@ check-artifacts = { contents = "read" }
 publish-crate = { contents = "read", id-token = "write" }
 legacy-artifacts = { contents = "write" }
 publish-containers = { contents = "read", packages = "write" }
+release-title = { contents = "write" }
 
 [dist.github-custom-runners]
 x86_64-apple-darwin = "macos-15-intel"
