@@ -18,7 +18,7 @@ use serde_json::Value::Object;
 use tracing::debug;
 use pact_models::bodies::OptionalBody;
 use pact_models::content_types::TEXT;
-use pact_models::headers::{MULTI_VALUE_HEADERS, PARAMETERISED_HEADERS, SINGLE_VALUE_HEADERS};
+use pact_models::headers::{MULTI_VALUE_HEADERS, PARAMETERISED_HEADERS};
 use pact_models::json_utils::json_to_string;
 use pact_models::http_parts::HttpPart;
 use pact_models::matchingrules::{MatchingRule, RuleList, RuleLogic};
@@ -35,6 +35,7 @@ use crate::headers::{parse_charset_parameters, strip_whitespace};
 use crate::{BodyMatchResult, Mismatch};
 use crate::matchingrules::{DoMatch, value_for_mismatch};
 use crate::Mismatch::{BodyMismatch, HeaderMismatch, MetadataMismatch, QueryMismatch};
+use crate::repeated_headers::{header_kind, HeaderKind};
 
 mod bodies;
 mod value_resolvers;
@@ -1989,10 +1990,7 @@ fn setup_header_plan<T: HttpPart>(
 
         let item_path = DocPath::root().join(key);
         let path = doc_path.join(key);
-        let actual_value = if value.len() > 1
-          && !SINGLE_VALUE_HEADERS.contains(&key.to_lowercase().as_str())
-          && !PARAMETERISED_HEADERS.contains(&key.to_lowercase().as_str())
-          && !MULTI_VALUE_HEADERS.contains(&key.to_lowercase().as_str()) {
+        let actual_value = if value.len() > 1 && header_kind(key) == HeaderKind::Custom {
           let mut split_values = ExecutionPlanNode::action("header:split-values");
           split_values.add(ExecutionPlanNode::resolve_value(path.clone()));
           split_values
