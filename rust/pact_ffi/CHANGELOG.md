@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.12](https://github.com/pact-foundation/pact-reference/compare/pact_ffi-v0.5.11...pact_ffi-v0.5.12) - _2026-10-19_
+
+### 🐛 Bug Fixes
+
+-   _(ffi)_ Wait for a running log callback before deregistering
+
+### 🏗️ Build and CI
+
+-   Build releases with dist. The `pact_ffi-v0.5.12` release has one archive per target. The `libpact_ffi-v0.5.12` release carries the previous asset names until 2027-06-30.
+
+-   The Linux gnu libraries need glibc 2.28 or later.
+
 ## 0.5.11 - Feature Release
 
 * fa7d0c76 - fix(ffi): make plugin log callbacks callable from C (w3lld1, Sat Oct 10 07:50:16 2026 +0200)
