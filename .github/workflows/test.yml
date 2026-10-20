@@ -268,7 +268,7 @@ jobs:
     steps:
       - name: Install build dependencies
         run: >-
-          apk add --no-cache bash git musl-dev openssl-dev shared-mime-info
+          apk add --no-cache bash git mold musl-dev openssl-dev shared-mime-info
           protobuf protobuf-dev tar tzdata zlib-dev
 
       - name: Checkout
@@ -282,13 +282,22 @@ jobs:
           cache-workspaces: rust -> target
           cache-save-if: ${{ github.ref == 'refs/heads/master' }}
 
-      - name: Build and test
+      # Only nextest: a musl runner cannot share the glibc jobs' tool cache.
+      - name: Install nextest
+        uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8  # v5.1.2
+        timeout-minutes: 3
+        with:
+          install_args: aqua:nextest-rs/nextest/cargo-nextest
+          cache_save: ${{ github.ref == 'refs/heads/master' }}
+
+      # Doctests run in the cross-platform jobs. mold links the many test
+      # binaries faster than GNU ld.
+      - name: Run tests
         working-directory: rust
         env:
           TZ: UTC
-        run: |
-          cargo build
-          cargo test --no-fail-fast
+          CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_RUSTFLAGS: -C link-arg=-fuse-ld=mold
+        run: cargo nextest run --workspace
 
   features:
     name: Feature combinations
