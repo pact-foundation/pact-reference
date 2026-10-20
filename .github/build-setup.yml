@@ -17,3 +17,17 @@
     chmod +x "$bin/cargo-zigbuild"
     echo "$bin" >> "$GITHUB_PATH"
     echo "CARGO=$script" >> "$GITHUB_ENV"
+
+# Windows builds run cargo through dist-cargo.sh, which adds pact_ffi's
+# import library to the archive. dist runs `CARGO` as a Windows program,
+# so a .cmd shim starts the script under Git for Windows' bash launcher;
+# the launcher puts the MSYS tools on PATH.
+- name: Route Windows builds through dist-cargo.sh
+  if: contains(join(matrix.targets, ','), 'windows')
+  shell: bash
+  run: |
+    git_root=$(cygpath -w /)
+    script=$(cygpath -m "$GITHUB_WORKSPACE/.github/scripts/dist-cargo.sh")
+    shim=$(cygpath -w "$RUNNER_TEMP/dist-cargo.cmd")
+    printf '@"%s\\bin\\bash.exe" "%s" %%*\r\n' "${git_root%\\}" "$script" > "$shim"
+    echo "CARGO=$shim" >> "$GITHUB_ENV"

@@ -33,3 +33,29 @@ jobs:
 
       - name: Check linkage
         run: .github/scripts/check-linkage.sh "$RUNNER_TEMP/artifacts"
+
+  import-library:
+    name: Check Windows import libraries
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download archives
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+        with:
+          pattern: artifacts-*
+          path: ${{ runner.temp }}/artifacts
+          merge-multiple: true
+
+      # dist-cargo.sh adds pact_ffi.dll.lib, which dist itself drops.
+      - name: Check pact_ffi archives
+        run: |
+          shopt -s nullglob
+          status=0
+          for archive in "$RUNNER_TEMP"/artifacts/pact_ffi-*-windows-msvc.zip; do
+            if unzip -Z1 "$archive" | grep -qx 'pact_ffi.dll.lib'; then
+              echo "checked $(basename "$archive")"
+            else
+              echo "::error::$(basename "$archive") has no pact_ffi.dll.lib"
+              status=1
+            fi
+          done
+          exit "$status"

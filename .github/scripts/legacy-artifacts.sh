@@ -29,8 +29,6 @@ fi
 
 # MARK: Build
 
-scripts=$(cd "$(dirname "$0")" && pwd)
-
 tag=$1
 out=$(mkdir -p "$2" && cd "$2" && pwd)
 package=${tag%-v*}
@@ -104,14 +102,10 @@ case "$package" in
             gzip_and_sum "$(extract "$target" libpact_ffi.dylib)" "libpact_ffi-$suffix.dylib.gz"
             gzip_and_sum "$(extract "$target" libpact_ffi.a)" "libpact_ffi-$suffix.a.gz"
         done
-        # dist ships the DLL and the static library, but not the DLL's
-        # import library; it is rebuilt from the DLL's export table.
         for arch in x86_64 aarch64; do
             target=$arch-pc-windows-msvc
-            dll=$(extract "$target" pact_ffi.dll)
-            "$scripts/legacy-import-lib.sh" "$dll" "$arch" "$target/pact_ffi.dll.lib"
-            gzip_and_sum "$dll" "pact_ffi-windows-$arch.dll.gz"
-            gzip_and_sum "$target/pact_ffi.dll.lib" "pact_ffi-windows-$arch.dll.lib.gz"
+            gzip_and_sum "$(extract "$target" pact_ffi.dll)" "pact_ffi-windows-$arch.dll.gz"
+            gzip_and_sum "$(extract "$target" pact_ffi.dll.lib)" "pact_ffi-windows-$arch.dll.lib.gz"
             gzip_and_sum "$(extract "$target" pact_ffi.lib)" "pact_ffi-windows-$arch.lib.gz"
         done
         download pact.h "$out"
