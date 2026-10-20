@@ -2,6 +2,8 @@
 
 use itertools::Itertools;
 use pact_models::headers::{MULTI_VALUE_HEADERS, PARAMETERISED_HEADERS, SINGLE_VALUE_HEADERS};
+use pact_models::matchingrules::MatchingRule;
+use pact_models::matchingrules::expressions::{MatchingRuleDefinition, ValueType};
 use pact_models::path_exp::DocPath;
 
 use crate::{CommonMismatch, MatchingContext};
@@ -88,6 +90,36 @@ fn rules_defined(key: &str, context: &dyn MatchingContext) -> bool {
       .any(|path| path.first_field().is_some_and(|field| field.to_lowercase() == key))
 }
 
+/// True for rules that apply to a header's list of values rather than to one value.
+pub(crate) fn is_list_aware(rule: &MatchingRule) -> bool {
+  matches!(rule,
+    MatchingRule::MinType(_) | MatchingRule::MaxType(_) | MatchingRule::MinMaxType(_, _) |
+    MatchingRule::EachValue(_) | MatchingRule::ArrayContains(_))
+}
+
+fn per_line_warning(key: &str, joined_actual: &str) -> String {
+  format!("Header '{}' only matched when its field lines were compared one at a time. \
+    Per-line matching of repeated headers is deprecated: RFC 9110 §5.3 treats repeated field lines as one line with the values joined by commas, \
+    and a future release will compare only the joined value '{}'.", key, joined_actual)
+}
+
+/// The rules at the header's own path, and whether any rule sits at an indexed path below it.
+fn header_rules(key: &str, context: &dyn MatchingContext) -> (Vec<MatchingRule>, bool) {
+  let key = key.to_lowercase();
+  let mut bare = vec![];
+  let mut indexed = false;
+  for (path, list) in &context.matchers().rules {
+    if path.first_field().is_some_and(|field| field.to_lowercase() == key) {
+      if path.len() > 2 {
+        indexed = true;
+      } else {
+        bare.extend(list.rules.iter().cloned());
+      }
+    }
+  }
+  (bare, indexed)
+}
+
 /// Matches a custom header where either side has more than one field line.
 pub(crate) fn match_repeated_header(
   key: &str,
@@ -96,6 +128,27 @@ pub(crate) fn match_repeated_header(
   context: &dyn MatchingContext
 ) -> RepeatedHeaderResult {
   if rules_defined(key, context) {
+    let (bare, indexed) = header_rules(key, context);
+    if !bare.is_empty() && !indexed && !bare.iter().any(is_list_aware) {
+      let joined_actual = join_field_lines(actual);
+      let primary = match_header_lines(key, &[join_field_lines(expected)], std::slice::from_ref(&joined_actual), context);
+      if primary.is_empty() {
+        return RepeatedHeaderResult::default();
+      }
+      if match_header_lines(key, expected, actual, context).is_empty() {
+        let each_value = bare.iter()
+          .map(|rule| MatchingRule::EachValue(MatchingRuleDefinition::new(
+            expected.first().cloned().unwrap_or_default(), ValueType::String, rule.clone(), None, String::new())).to_json().to_string())
+          .join(", ");
+        return RepeatedHeaderResult {
+          mismatches: vec![],
+          warning: Some(format!("{} To match each value separately, use {} instead.",
+            per_line_warning(key, &joined_actual), each_value))
+        };
+      }
+      return RepeatedHeaderResult { mismatches: primary, warning: None };
+    }
+
     let actual = if expected.len() > 1 { split_header_field_lines(actual) } else { actual.to_vec() };
     return RepeatedHeaderResult {
       mismatches: match_header_lines(key, expected, &actual, context),
@@ -110,9 +163,7 @@ pub(crate) fn match_repeated_header(
   } else if match_header_lines(key, expected, actual, context).is_empty() {
     RepeatedHeaderResult {
       mismatches: vec![],
-      warning: Some(format!("Header '{}' only matched when its field lines were compared one at a time. \
-        Per-line matching of repeated headers is deprecated: RFC 9110 §5.3 treats repeated field lines as one line with the values joined by commas, \
-        and a future release will compare only the joined value '{}'.", key, joined_actual))
+      warning: Some(per_line_warning(key, &joined_actual))
     }
   } else {
     RepeatedHeaderResult {
@@ -131,6 +182,9 @@ pub(crate) fn match_repeated_header(
 #[cfg(test)]
 mod tests {
   use rstest::rstest;
+
+  use pact_models::matchingrules::{MatchingRuleCategory, RuleLogic};
+  use pact_models::path_exp::DocPath;
 
   use crate::CoreMatchingContext;
 
@@ -161,6 +215,32 @@ mod tests {
     assert!(result.warning.unwrap().contains("deprecated"));
   }
 
+  #[test]
+  fn scalar_fallback_warning_suggests_each_value() {
+    let mut category = MatchingRuleCategory::empty("header");
+    category.add_rule(DocPath::new_unwrap("$.x-request"), MatchingRule::Regex(r"^first-\d+$".to_string()), RuleLogic::And);
+    let context = CoreMatchingContext { matchers: category, ..CoreMatchingContext::default() };
+    let expected = vec!["first-1".to_string(), "first-2".to_string()];
+    let actual = vec!["first-42".to_string(), "first-99".to_string()];
+    let result = match_repeated_header("X-Request", &expected, &actual, &context);
+    assert!(result.mismatches.is_empty(), "{:?}", result.mismatches);
+    let warning = result.warning.unwrap();
+    assert!(warning.contains("RFC 9110 §5.3"), "{warning}");
+    assert!(warning.contains("eachValue"), "{warning}");
+    assert!(warning.contains("first-"), "{warning}");
+  }
+
+  #[test]
+  fn scalar_rules_with_no_expected_lines_do_not_panic() {
+    let mut category = MatchingRuleCategory::empty("header");
+    category.add_rule(DocPath::new_unwrap("$.x-request"), MatchingRule::Regex(r"^first-\d+$".to_string()), RuleLogic::And);
+    let context = CoreMatchingContext { matchers: category, ..CoreMatchingContext::default() };
+    let actual = vec!["first-42".to_string(), "first-99".to_string()];
+    let result = match_repeated_header("X-Request", &[], &actual, &context);
+    assert!(result.mismatches.is_empty(), "{:?}", result.mismatches);
+    assert!(result.warning.is_some());
+  }
+
   #[rstest]
   #[case("a, b", "a,b")]
   #[case(" a ,\t b ", "a,b")]
@@ -175,7 +255,8 @@ mod tests {
 
 #[cfg(test)]
 pub(crate) mod cases {
-  use pact_models::matchingrules::MatchingRuleCategory;
+  use pact_models::matchingrules::{MatchingRule, MatchingRuleCategory, RuleLogic};
+  use pact_models::path_exp::DocPath;
 
   /// One repeated-header scenario, run against both engines.
   pub(crate) struct Case {
@@ -203,8 +284,26 @@ pub(crate) mod cases {
     Case { name, header, expected, actual, rules: no_rules, matches, warns }
   }
 
+  fn rule(path: &'static str, matcher: MatchingRule) -> MatchingRuleCategory {
+    let mut category = MatchingRuleCategory::empty("header");
+    category.add_rule(DocPath::new_unwrap(path), matcher, RuleLogic::And);
+    category
+  }
+
+  fn regex_joined() -> MatchingRuleCategory { rule("$.x-request", MatchingRule::Regex("^a, b$".to_string())) }
+  fn regex_first() -> MatchingRuleCategory { rule("$.x-request", MatchingRule::Regex(r"^first-\d+$".to_string())) }
+  fn regex_request() -> MatchingRuleCategory { rule("$.x-request", MatchingRule::Regex(r"^request\d$".to_string())) }
+  fn type_rule() -> MatchingRuleCategory { rule("$.x-request", MatchingRule::Type) }
+
   pub(crate) fn all() -> Vec<Case> {
     vec![
+      Case { name: "regex joined, combined", header: "X-Request", expected: &["a", "b"], actual: &["a, b"], rules: regex_joined, matches: true, warns: false },
+      Case { name: "regex joined, lines", header: "X-Request", expected: &["a", "b"], actual: &["a", "b"], rules: regex_joined, matches: true, warns: false },
+      Case { name: "regex per-line fallback", header: "X-Request", expected: &["first-1", "first-2"], actual: &["first-42", "first-99"], rules: regex_first, matches: true, warns: true },
+      Case { name: "regex combined fails", header: "X-Request", expected: &["first-1", "first-2"], actual: &["first-42, first-99"], rules: regex_first, matches: false, warns: false },
+      Case { name: "regex one expected", header: "X-Request", expected: &["first-1"], actual: &["first-42", "first-99"], rules: regex_first, matches: true, warns: true },
+      Case { name: "type", header: "X-Request", expected: &["a", "b"], actual: &["x, y, z"], rules: type_rule, matches: true, warns: false },
+      Case { name: "case mix", header: "X-Request", expected: &["request1", "request2"], actual: &["request1", "request2"], rules: regex_request, matches: true, warns: true },
       plain("combined line", "X-Request", &["request1", "request2"], &["request1, request2"], true, false),
       plain("separate lines", "X-Request", &["request1", "request2"], &["request1", "request2"], true, false),
       plain("mixed grouping", "X-Request", &["request1", "request2", "request3"], &["request1, request2", "request3"], true, false),

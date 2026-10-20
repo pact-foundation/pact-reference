@@ -919,15 +919,9 @@ mod tests {
     expect!(mismatches.clone()).to(be_equal_to(vec![
       Mismatch::HeaderMismatch {
         key: "X-IMPROVED".to_string(),
-        expected: "like".to_string(),
-        actual: "regex".to_string(),
-        mismatch: "Mismatch with header 'X-IMPROVED': Expected 'regex' to be equal to 'like' for value at index 0".to_string(),
-      },
-      Mismatch::HeaderMismatch {
-        key: "X-IMPROVED".to_string(),
-        expected: "regex".to_string(),
-        actual: "like".to_string(),
-        mismatch: "Mismatch with header 'X-IMPROVED': Expected 'like' to be equal to 'regex' for value at index 1".to_string(),
+        expected: "like, regex, values, arrayContaining".to_string(),
+        actual: "regex, like, values, arrayContaining".to_string(),
+        mismatch: "Mismatch with header 'X-IMPROVED': Expected 'regex, like, values, arrayContaining' to be equal to 'like, regex, values, arrayContaining'".to_string(),
       }
     ]));
 
