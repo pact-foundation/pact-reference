@@ -43,7 +43,7 @@ md5 = "0.8.1"
 mime = "0.3.17"
 multer = { version = "3.1.0", features = ["all"], optional = true }
 nom = "7.1.3"
-pact_models = { version = "~1.3.16", default-features = false }
+pact_models = { version = "1.3.16", default-features = false }
 rand = "0.9.5"
 regex = "1.13.1"
 semver = "1.0.28"
@@ -58,7 +58,7 @@ uuid = { version = "1.24.0", features = ["v4"] }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 onig = { version = "6.5.1", default-features = false }
-pact-plugin-driver = { version = "~1.2.3", optional = true, default-features = false }
+pact-plugin-driver = { version = "1.2.3", optional = true, default-features = false }
 reqwest = { version = "0.13.4", default-features = false, features = ["rustls-no-provider", "json"] }
 rustls = { version = "0.23.43", default-features = false }
 tokio = { version = "1.49.0", features = ["full"] }
