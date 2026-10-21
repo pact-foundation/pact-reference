@@ -1435,7 +1435,12 @@ fn each_value_context(
 
   let each_value_rules = nested.entry(path.join("*"))
     .or_insert_with(|| RuleList::empty(RuleLogic::And));
-  each_value_rules.rules.splice(0..0, rules);
+  let existing_rules = std::mem::replace(&mut each_value_rules.rules, rules);
+  for rule in existing_rules {
+    if !each_value_rules.rules.contains(&rule) {
+      each_value_rules.rules.push(rule);
+    }
+  }
   each_value_rules.cascaded = false;
 
   context.clone_with(&MatchingRuleCategory {

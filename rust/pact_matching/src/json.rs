@@ -1364,6 +1364,7 @@ mod tests {
         MatchingRule::EachValue(MatchingRuleDefinition::new("{\"main\":{\"amount\":1000}}".to_string(),
           ValueType::Unknown, MatchingRule::Type, None, "".to_string()))
       ],
+      "$.chips.*" => [ MatchingRule::Type ],
       "$.chips.*.amount" => [ MatchingRule::Integer ]
     };
     let context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys,
