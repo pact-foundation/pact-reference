@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.3.17](https://github.com/pact-foundation/pact-reference/compare/pact_models-v1.3.16...pact_models-v1.3.17) - _2026-10-21_
+
+### 🐛 Bug Fixes
+
+-   Install rustls provider for URL pact fetches
+
+-   Hold pact file lock across read merge and write
+
+-   Block on the pact file lock while writing
+
+### 📚 Documentation
+
+-   Promote pre-release-plz changelog headings to level two
+
+### 🏗️ Build and CI
+
+-   Configure release-plz for per-crate releases
+
+### 🛠️ Miscellaneous Tasks
+
+-   _(pact_models)_ Bump version to 1.3.17 [skip ci]
+
+-   Reset crate versions to their last releases
+
+-   Remove manual release tooling
+
 ## 1.3.16 - Body generator fix
 
 * fab0da69 - feat(models): apply body generators shallowest-path-first (#558) (Tien Vo Xuan, Fri Oct 9 05:23:29 2026 +0700)
