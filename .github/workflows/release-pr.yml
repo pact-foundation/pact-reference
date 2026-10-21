@@ -162,13 +162,16 @@ jobs:
         with:
           cache_save: false
 
+      # stdout carries the version summary and any breaking-change report.
       - name: Update version and changelog
         if: steps.gate.outputs.proceed == 'true'
-        run: >-
-          release-plz update
-          -p "$CRATE"
-          --manifest-path rust/Cargo.toml
-          --config rust/release-plz.toml
+        run: |
+          release-plz update \
+            -p "$CRATE" \
+            --manifest-path rust/Cargo.toml \
+            --config rust/release-plz.toml \
+            | .github/scripts/release-summary.sh \
+            | tee "$RUNNER_TEMP/summary.md"
 
       - name: Describe the release
         id: release
@@ -181,7 +184,11 @@ jobs:
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
-            .github/scripts/changelog-section.sh "rust/$CRATE/CHANGELOG.md" "$version" > "$RUNNER_TEMP/body.md"
+            {
+              cat "$RUNNER_TEMP/summary.md"
+              echo
+              .github/scripts/changelog-section.sh "rust/$CRATE/CHANGELOG.md" "$version"
+            } > "$RUNNER_TEMP/body.md"
           fi
 
       - name: Open or update the release PR
