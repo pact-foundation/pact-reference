@@ -53,8 +53,11 @@ for archive in "$dir"/*-unknown-linux-gnu.tar.xz "$dir"/*-unknown-linux-musl.tar
     tar xJf "$archive" -C "$work/$name"
     # Shared objects and executables; static archives link nothing.
     while IFS= read -r -d '' file; do
-        check "$file" "${name##*-}" || status=1
-        echo "checked ${file#"$work/"}"
+        if check "$file" "${name##*-}"; then
+            echo "checked ${file#"$work/"}"
+        else
+            status=1
+        fi
         checked=$((checked + 1))
     done < <(find "$work/$name" -type f \( -name '*.so' -o -perm -u+x \) -print0)
 done
