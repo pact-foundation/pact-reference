@@ -1416,6 +1416,34 @@ pub fn match_strings(
   })
 }
 
+/// Builds the context to match the values of a collection with an `EachValue` rule. The rule's
+/// own rules apply to each value (at `path.*`), together with any rules defined below `path`, such
+/// as the ones written for matchers nested in the values.
+fn each_value_context(
+  path: &DocPath,
+  rules: Vec<MatchingRule>,
+  context: &(dyn MatchingContext + Send + Sync)
+) -> Box<dyn MatchingContext + Send + Sync> {
+  let path_fragments = path.to_vec();
+  let path_slice = path_fragments.iter().map(|p| p.as_str()).collect_vec();
+  let mut nested: HashMap<DocPath, RuleList> = context.matchers().rules.iter()
+    .filter(|(rule_path, _)| rule_path.len() > path.len() &&
+      DocPath::from_tokens(rule_path.tokens()[..path.len()].to_vec())
+        .matches_path_exactly(path_slice.as_slice()))
+    .map(|(rule_path, rule_list)| (rule_path.clone(), rule_list.clone()))
+    .collect();
+
+  let each_value_rules = nested.entry(path.join("*"))
+    .or_insert_with(|| RuleList::empty(RuleLogic::And));
+  each_value_rules.rules.splice(0..0, rules);
+  each_value_rules.cascaded = false;
+
+  context.clone_with(&MatchingRuleCategory {
+    name: Category::BODY,
+    rules: nested
+  })
+}
+
 /// Delegate to the matching rule defined at the given path to compare the key/value maps.
 #[tracing::instrument(ret, skip_all, fields(path, rule, cascaded), level = "trace")]
 pub fn compare_maps_with_matchingrule<T: Display + Debug + Clone + PartialEq>(
@@ -1446,17 +1474,7 @@ pub fn compare_maps_with_matchingrule<T: Display + Debug + Clone + PartialEq>(
           }
         }
       }).collect();
-      let rules = MatchingRuleCategory {
-        name: Category::BODY,
-        rules: hashmap! {
-            path.join("*") => RuleList {
-              rules: associated_rules,
-              rule_logic: RuleLogic::And,
-              cascaded: false
-            }
-          }
-      };
-      context.clone_with(&rules)
+      each_value_context(path, associated_rules, context)
     } else {
       context.clone_with(context.matchers())
     };
@@ -1564,17 +1582,7 @@ pub fn compare_lists_with_matchingrule<T: Display + Debug + PartialEq + Clone + 
             }
           }
         }).collect();
-        let rules = MatchingRuleCategory {
-          name: Category::BODY,
-          rules: hashmap! {
-            path.join("*") => RuleList {
-              rules: associated_rules,
-              rule_logic: RuleLogic::And,
-              cascaded: false
-            }
-          }
-        };
-        let context = context.clone_with(&rules);
+        let context = each_value_context(path, associated_rules, context);
         result.extend(match_list_contents(path, expected, actual, context.as_ref(), callback));
       }
       _ => {
