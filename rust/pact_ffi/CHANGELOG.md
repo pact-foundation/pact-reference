@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.13](https://github.com/pact-foundation/pact-reference/compare/pact_ffi-v0.5.12...pact_ffi-v0.5.13) - _2026-10-22_
+
+### 🏗️ Build and CI
+
+-   Use caret requirements between pact crates
+
+-   Require pact_mock_server 2.2.6
+
 ## [0.5.12](https://github.com/pact-foundation/pact-reference/compare/pact_ffi-v0.5.11...pact_ffi-v0.5.12) - _2026-10-19_
 
 ### 🐛 Bug Fixes
