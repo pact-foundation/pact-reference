@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.4.11](https://github.com/pact-foundation/pact-reference/compare/pact_consumer-v1.4.10...pact_consumer-v1.4.11) - _2026-10-21_
+
+### 🛠️ Miscellaneous Tasks
+
+-   Update pact_matching to 2.1.0
+
+-   Update pact_models to 1.3.16
+
+-   Update pact-plugin-driver to 1.2.3
+
 ## 1.4.10 - Support matching rules and generators from plugins
 
 * a5e557e5 - chore: Update pact_mock_server to 2.2.5 (Ronald Holshausen, Fri Aug 7 09:52:09 2026 +1000)
