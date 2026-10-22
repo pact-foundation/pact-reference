@@ -147,6 +147,10 @@ fn process_matcher(
         generators.add_generator_with_subcategory(category, path.clone(), generator);
       }
 
+      if rules.iter().any(|rule| matches!(rule, MatchingRule::EachValue(_))) {
+        add_each_value_rule_matchers(obj, matching_rules, path);
+      }
+
       (rules, json_value)
     })
   };
@@ -170,6 +174,38 @@ fn process_matcher(
     Err(err) => {
       error!("Failed to parse matching rule from JSON - {}", err);
       Value::Null
+    }
+  }
+}
+
+// The rules given to an each-value matcher apply to every value in the collection, but only the
+// rule itself is stored in its definition, so any matchers nested in a rule's example would be
+// lost. Add them as rules for the values (at `path.*`), the same way the matchers nested in the
+// each-value example are added. Generators nested in the rules are not supported.
+fn add_each_value_rule_matchers(
+  obj: &Map<String, Value>,
+  matching_rules: &mut MatchingRuleCategory,
+  path: &DocPath
+) {
+  if let Some(Value::Array(rules)) = obj.get("rules") {
+    let values_path = path.join("*");
+    let mut generators = Generators::default();
+    for rule in rules.iter().filter_map(|rule| rule.as_object()) {
+      let rule_type = rule.get("pact:matcher:type").and_then(|t| t.as_str());
+      let is_each_value = matches!(rule_type, Some("eachValue" | "each-value"));
+      match rule.get("value") {
+        Some(Value::Object(map)) => {
+          let is_values_matcher = is_each_value || rule_type == Some("values");
+          process_object(map, matching_rules, &mut generators, values_path.clone(), is_values_matcher);
+        }
+        Some(Value::Array(array)) => {
+          process_array(array, matching_rules, &mut generators, values_path.clone(), true, false);
+        }
+        _ => {}
+      }
+      if is_each_value {
+        add_each_value_rule_matchers(rule, matching_rules, &values_path);
+      }
     }
   }
 }
@@ -664,6 +700,78 @@ use pretty_assertions::assert_eq;
         ValueType::Unknown, MatchingRule::Decimal, None, "".to_string())) ]
     }));
     expect!(generators).to(be_equal_to(Generators::default()));
+  }
+
+  #[test_log::test]
+  fn process_object_with_each_value_matcher_with_nested_matchers_in_its_rules() {
+    let json = json!({
+      "chips": {
+        "pact:matcher:type": "each-value",
+        "value": {
+          "main": { "amount": 1000 }
+        },
+        "rules": [
+          {
+            "pact:matcher:type": "type",
+            "value": {
+              "amount": { "pact:matcher:type": "integer", "value": 1000 }
+            }
+          }
+        ]
+      }
+    });
+    let mut matching_rules = MatchingRuleCategory::empty("body");
+    let mut generators = Generators::default();
+    let result = process_object(json.as_object().unwrap(), &mut matching_rules,
+      &mut generators, DocPath::root(), false);
+
+    expect!(result).to(be_equal_to(json!({
+      "chips": { "main": { "amount": 1000 } }
+    })));
+    expect!(matching_rules).to(be_equal_to(matchingrules_list!{
+      "body";
+      "$.chips" => [ MatchingRule::EachValue(MatchingRuleDefinition::new("{\"main\":{\"amount\":1000}}".to_string(),
+        ValueType::Unknown, MatchingRule::Type, None, "".to_string())) ],
+      "$.chips.*.amount" => [ MatchingRule::Integer ]
+    }));
+    expect!(generators).to(be_equal_to(Generators::default()));
+  }
+
+  #[test_log::test]
+  fn process_object_with_each_value_matcher_with_a_nested_each_value_rule() {
+    let json = json!({
+      "chips": {
+        "pact:matcher:type": "each-value",
+        "value": {
+          "A": { "main": { "status": "Pending" } }
+        },
+        "rules": [
+          {
+            "pact:matcher:type": "each-value",
+            "value": {
+              "main": { "status": "Pending" }
+            },
+            "rules": [
+              {
+                "pact:matcher:type": "type",
+                "value": {
+                  "status": { "pact:matcher:type": "regex", "regex": "^(Pending|Confirmed)$", "value": "Pending" }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    });
+    let mut matching_rules = MatchingRuleCategory::empty("body");
+    let mut generators = Generators::default();
+    process_object(json.as_object().unwrap(), &mut matching_rules, &mut generators, DocPath::root(), false);
+
+    let mut paths: Vec<String> = matching_rules.rules.keys().map(|path| path.to_string()).collect();
+    paths.sort();
+    expect!(paths).to(be_equal_to(vec!["$.chips".to_string(), "$.chips.*.*.status".to_string()]));
+    expect!(matching_rules.rules.get(&DocPath::new_unwrap("$.chips.*.*.status")).unwrap().rules.clone())
+      .to(be_equal_to(vec![MatchingRule::Regex("^(Pending|Confirmed)$".to_string())]));
   }
 
   // Issue #299

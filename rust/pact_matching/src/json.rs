@@ -1351,6 +1351,63 @@ mod tests {
     let result = compare_maps(&DocPath::root(), expected, invalid, &context);
     expect!(result).to(be_err());
   }
+
+  #[test_log::test]
+  fn compare_maps_with_each_value_matcher_applies_the_rules_below_the_values() {
+    let expected = request!(r#"{ "chips": { "main": { "amount": 1000 } } }"#);
+    let valid = request!(r#"{ "chips": { "main": { "amount": 500 }, "pair": { "amount": 100 } } }"#);
+    let invalid = request!(r#"{ "chips": { "main": { "amount": 1.5 } } }"#);
+
+    let matchingrules = matchingrules_list! {
+      "body";
+      "$.chips" => [
+        MatchingRule::EachValue(MatchingRuleDefinition::new("{\"main\":{\"amount\":1000}}".to_string(),
+          ValueType::Unknown, MatchingRule::Type, None, "".to_string()))
+      ],
+      "$.chips.*" => [ MatchingRule::Type ],
+      "$.chips.*.amount" => [ MatchingRule::Integer ]
+    };
+    let context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys,
+      &matchingrules, &hashmap!{});
+
+    expect!(match_json(&expected, &valid, &context)).to(be_ok());
+    expect!(match_json(&expected, &invalid, &context)).to(be_err().value(vec![
+      BodyMismatch {
+        path: "$.chips.main.amount".to_string(),
+        expected: Some("1000".into()),
+        actual: Some("1.5".into()),
+        mismatch: "Expected 1.5 (Decimal) to be an integer".to_string()
+      }
+    ]));
+  }
+
+  #[test_log::test]
+  fn compare_lists_with_each_value_matcher_applies_the_rules_below_the_values() {
+    let expected = request!(r#"{ "items": [ { "amount": 1000 } ] }"#);
+    let valid = request!(r#"{ "items": [ { "amount": 500 }, { "amount": 100 } ] }"#);
+    let invalid = request!(r#"{ "items": [ { "amount": 500 }, { "amount": 1.5 } ] }"#);
+
+    let matchingrules = matchingrules_list! {
+      "body";
+      "$.items" => [
+        MatchingRule::EachValue(MatchingRuleDefinition::new("[{\"amount\":1000}]".to_string(),
+          ValueType::Unknown, MatchingRule::Type, None, "".to_string()))
+      ],
+      "$.items[*].amount" => [ MatchingRule::Integer ]
+    };
+    let context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys,
+      &matchingrules, &hashmap!{});
+
+    expect!(match_json(&expected, &valid, &context)).to(be_ok());
+    expect!(match_json(&expected, &invalid, &context)).to(be_err().value(vec![
+      BodyMismatch {
+        path: "$.items[1].amount".to_string(),
+        expected: Some("1000".into()),
+        actual: Some("1.5".into()),
+        mismatch: "Expected 1.5 (Decimal) to be an integer".to_string()
+      }
+    ]));
+  }
 }
 
 #[cfg(test)]
