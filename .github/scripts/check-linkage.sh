@@ -28,7 +28,9 @@ check() {
     needed=$("$readelf" -d "$file" 2>/dev/null | sed -n 's/.*(NEEDED).*\[\(.*\)\].*/\1/p')
     case "$flavour" in
         musl)
-            if [[ "$("$readelf" -h "$file")" == *"EXEC (Executable file)"* || -z "$needed" ]]; then
+            # By name: readelf reports a position-independent executable as
+            # DYN, the same type as a shared object.
+            if [[ $file != *.so || -z "$needed" ]]; then
                 [[ -z "$needed" ]] || { echo "::error::$file is not fully static: needs $needed"; return 1; }
             elif grep -qx 'libc.so.6' <<<"$needed" || ! grep -qxE 'libc\.so|libc\.musl-[a-z0-9_]+\.so\.1' <<<"$needed"; then
                 echo "::error::$file does not link musl's libc.so: needs $(tr '\n' ' ' <<<"$needed")"
