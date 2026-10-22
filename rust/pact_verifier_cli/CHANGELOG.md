@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.4.0](https://github.com/pact-foundation/pact-reference/compare/pact_verifier_cli-v1.3.5...pact_verifier_cli-v1.4.0) - _2026-10-21_
+
+### 🚀 Features
+
+-   Include consumer, provider, provider states, pending status and mismatches in each `interactionResults` entry of the JSON report
+
+### 🏗️ Build and CI
+
+-   Build the release binaries with dist. The `pact-verifier-<os>-<arch>.gz` assets are still published.
+
+-   Publish the `pactfoundation/pact-verifier` image to Docker Hub and GHCR after each release, as one amd64 and arm64 manifest. It replaces the `-amd64` and `-arm64v8` tags.
+
+### 🛠️ Miscellaneous Tasks
+
+-   Update pact_verifier to 1.5.0
+
+-   Update pact_matching to 2.1.0
+
+-   Update pact_models to 1.3.16
+
 ## 1.3.5 - Support matching rules and generators from plugins
 
 * 58814d2e - chore: Update pact_verifier to 1.4.7 (Ronald Holshausen, Fri Aug 7 10:41:49 2026 +1000)
