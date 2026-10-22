@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.5.0](https://github.com/pact-foundation/pact-reference/compare/pact_verifier-v1.4.7...pact_verifier-v1.5.0) - _2026-10-21_
+
+### 🚀 Features
+
+-   Include pact and mismatch details in interaction results
+
+    `VerificationInteractionResult` gains the `consumer`, `provider` and `provider_states` fields. Code that builds it with a struct literal must set them.
+
+### 🐛 Bug Fixes
+
+-   Install the crypto provider in `HALClient::default`
+
+### 🛠️ Miscellaneous Tasks
+
+-   Update pact_matching to 2.1.0
+
+-   Update pact_models to 1.3.16
+
+-   Update pact-plugin-driver to 1.2.3
+
 ## 1.4.7 - Support matching rules and generators from plugins
 
 * 7486b0d0 - chore: Update pact_consumer to 1.4.10 (Ronald Holshausen, Fri Aug 7 10:20:39 2026 +1000)
