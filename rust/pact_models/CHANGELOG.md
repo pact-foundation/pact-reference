@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.3.18](https://github.com/pact-foundation/pact-reference/compare/pact_models-v1.3.17...pact_models-v1.3.18) - _2026-10-22_
+
+### 📚 Documentation
+
+-   _(pact_models)_ Curate the release changelog
+
 ## [1.3.17](https://github.com/pact-foundation/pact-reference/compare/pact_models-v1.3.16...pact_models-v1.3.17) - _2026-10-21_
 
 ### 🐛 Bug Fixes
