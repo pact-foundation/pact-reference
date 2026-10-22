@@ -5,7 +5,7 @@ use std::iter::FromIterator;
 
 use itertools::Itertools;
 use maplit::hashmap;
-use pact_models::headers::PARAMETERISED_HEADERS;
+use pact_models::headers::{PARAMETERISED_HEADERS, SINGLE_VALUE_HEADERS};
 use pact_models::matchingrules::MatchingRule;
 use pact_models::path_exp::DocPath;
 use tracing::{instrument, debug};
@@ -139,6 +139,34 @@ fn find_entry<T>(map: &HashMap<String, T>, key: &str) -> Option<(String, T)> whe
   }
 }
 
+pub(crate) fn split_header_field_lines(values: &[String]) -> Vec<String> {
+  values.iter().flat_map(|value| {
+    let mut quoted = false;
+    let mut escaped = false;
+    let mut nested = 0usize;
+    let mut start = 0;
+    let mut members = vec![];
+    for (index, character) in value.char_indices() {
+      if escaped {
+        escaped = false;
+      } else if quoted && character == '\\' {
+        escaped = true;
+      } else if character == '"' {
+        quoted = !quoted;
+      } else if !quoted && (character == '{' || character == '[') {
+        nested += 1;
+      } else if !quoted && (character == '}' || character == ']') {
+        nested = nested.saturating_sub(1);
+      } else if character == ',' && !quoted && nested == 0 {
+        members.push(value[start..index].trim().to_string());
+        start = index + 1;
+      }
+    }
+    members.push(value[start..].trim().to_string());
+    members
+  }).collect()
+}
+
 fn match_header_maps(
   expected: HashMap<String, Vec<String>>,
   actual: HashMap<String, Vec<String>>,
@@ -154,6 +182,12 @@ fn match_header_maps(
           mismatch: format!("Expected an empty header '{}' but actual value was '{}'", key, actual_values.join(", ")) }]);
       } else {
         let mut mismatches = vec![];
+        let actual_values = if value.len() > 1
+          && !SINGLE_VALUE_HEADERS.contains(&key.to_lowercase().as_str()) {
+          split_header_field_lines(&actual_values)
+        } else {
+          actual_values
+        };
 
         // Special case when the headers only have 1 value to improve messaging
         if value.len() == 1 && actual_values.len() == 1 {
@@ -235,6 +269,7 @@ mod tests {
   use pact_models::matchingrules::MatchingRule;
   use pact_models::matchingrules::expressions::{MatchingRuleDefinition, ValueType};
   use pretty_assertions::assert_eq;
+  use rstest::rstest;
 
   use crate::{CoreMatchingContext, DiffConfig, HeaderMatchingContext, Mismatch, CommonMismatch};
   use crate::headers::{match_header_value, match_headers, parse_charset_parameters};
@@ -566,6 +601,93 @@ mod tests {
   }
 
   #[test]
+  fn match_headers_repeated_custom_header_matches_combined_field_line() {
+    let expected = Some(hashmap! {
+      "X-Request".to_string() => vec!["request1".to_string(), "request2".to_string()]
+    });
+    let actual = Some(hashmap! {
+      "x-request".to_string() => vec!["request1, request2".to_string()]
+    });
+
+    let result = match_headers(expected, actual, &CoreMatchingContext::default());
+
+    assert!(result.values().all(Vec::is_empty), "{result:?}");
+  }
+
+  #[rstest(
+    case(&["request1", "request2"], &["request1,request2"], true),
+    case(&["request1", "request2"], &["request1 ,\t request2"], true),
+    case(&["request1", "request2"], &["request1", "request2"], true),
+    case(&["request1", "request2", "request3"], &["request1, request2", "request3"], true),
+    case(&["request1", "request2"], &["request1, wrong", "request2"], false),
+    case(&["request1", "request2"], &["request1", "wrong, request2"], false),
+    case(&["\"one,two\"", "three"], &["\"one,two\", three"], true),
+    case(&[r#""one\",two""#, "three"], &[r#""one\",two", three"#], true),
+    case(&[r#"{"foo":"bar,baz","arr":[1,2,3]}"#], &[r#"{"foo":"bar,baz","arr":[1,2,3]}"#], true),
+    case(&[r#"{"foo":"bar,baz","arr":[1,2,3]}"#, "tail"], &[r#"{"foo":"bar,baz","arr":[1,2,3]}, tail"#], true),
+    case(&["request1", "request2"], &["request1"], false),
+    case(&["request1", "request2"], &["request1, wrong"], false),
+    case(&["request1", "request2"], &["request2, request1"], false),
+    case(&["request1", "request2"], &["request1, request2, extra"], false),
+    case(&["request1", "request2"], &["\"request1, request2\""], false)
+  )]
+  fn match_headers_combined_custom_header_compatibility(
+    #[case] expected_values: &[&str],
+    #[case] actual_values: &[&str],
+    #[case] should_match: bool
+  ) {
+    let expected = Some(hashmap! {
+      "X-Request".to_string() => expected_values.iter().map(|value| value.to_string()).collect()
+    });
+    let actual = Some(hashmap! {
+      "x-request".to_string() => actual_values.iter().map(|value| value.to_string()).collect()
+    });
+    let result = match_headers(expected.clone(), actual.clone(), &CoreMatchingContext::default());
+    assert_eq!(result.values().all(Vec::is_empty), should_match,
+      "expected={expected:?}, actual={actual:?}, result={result:?}");
+    assert_eq!(expected.as_ref().unwrap()["X-Request"].len(), expected_values.len());
+    assert_eq!(actual.as_ref().unwrap()["x-request"].len(), actual_values.len());
+  }
+
+  #[test]
+  fn match_headers_combined_custom_header_preserves_indexed_matchers() {
+    let rules = matchingrules! {
+      "header" => {
+        "$.x-request.0" => [ MatchingRule::Regex("^first-[0-9]+$".to_string()) ],
+        "$.x-request.1" => [ MatchingRule::Regex("^second-[0-9]+$".to_string()) ]
+      }
+    };
+    let context = CoreMatchingContext {
+      matchers: rules.rules_for_category("header").unwrap(),
+      ..CoreMatchingContext::default()
+    };
+    for (actual_value, should_match) in [("first-42, second-99", true), ("first-42, first-99", false)] {
+      let expected = Some(hashmap! {
+        "X-Request".to_string() => vec!["first-1".to_string(), "second-2".to_string()]
+      });
+      let actual = Some(hashmap! {
+        "x-request".to_string() => vec![actual_value.to_string()]
+      });
+      let result = match_headers(expected, actual, &context);
+      assert_eq!(result.values().all(Vec::is_empty), should_match, "{result:?}");
+    }
+  }
+
+  #[test]
+  fn match_headers_does_not_split_single_value_headers() {
+    for header in ["Set-Cookie", "Date", "User-Agent"] {
+      let expected = Some(hashmap! {
+        header.to_string() => vec!["one".to_string(), "two".to_string()]
+      });
+      let actual = Some(hashmap! {
+        header.to_string() => vec!["one, two".to_string()]
+      });
+      let result = match_headers(expected, actual, &CoreMatchingContext::default());
+      assert!(!result.values().all(Vec::is_empty), "{header}: {result:?}");
+    }
+  }
+
+  #[test]
   fn match_headers_returns_a_mismatch_if_the_header_values_have_different_lengths() {
     let expected = Some(hashmap!{
       "a".to_string() => vec!["b".to_string()],
@@ -772,7 +894,7 @@ mod tests {
       }.rules_for_category("header").unwrap_or_default(), &hashmap!{}
     ));
     let expected = hashmap! { "X-Id".to_string() => vec!["1".to_string(), "3".to_string()] };
-    let actual = hashmap! { "X-Id".to_string() => vec!["1".to_string(), "2".to_string(), "3".to_string(), "4".to_string()]};
+    let actual = hashmap! { "X-Id".to_string() => vec!["1, 2".to_string(), "3, 4".to_string()]};
     let result = match_headers(Some(expected), Some(actual), &context);
     expect!(result.values().flatten()).to(be_empty());
   }
@@ -811,13 +933,13 @@ mod tests {
         "header" => {
           "X-Id" => [
             MatchingRule::EachValue(MatchingRuleDefinition::new("100".to_string(), ValueType::String,
-              MatchingRule::Regex("\\d+".to_string()), None, "".to_string()))
+              MatchingRule::Regex("^\\d+$".to_string()), None, "".to_string()))
           ]
         }
       }.rules_for_category("header").unwrap_or_default(), &hashmap!{}
     ));
     let expected = hashmap! { "X-Id".to_string() => vec!["1".to_string(), "2".to_string()] };
-    let actual = hashmap! { "X-Id".to_string() => vec!["3".to_string(), "4".to_string(), "567".to_string()]};
+    let actual = hashmap! { "X-Id".to_string() => vec!["3, 4".to_string(), "567".to_string()]};
     let result = match_headers(Some(expected), Some(actual), &context);
     expect!(result.values().flatten()).to(be_empty());
   }
