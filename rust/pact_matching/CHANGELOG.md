@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.1.0](https://github.com/pact-foundation/pact-reference/compare/pact_matching-v2.0.11...pact_matching-v2.1.0) - _2026-10-21_
+
+### 🚀 Features
+
+-   Advertise interaction/request-response as a core catalogue entry
+
+### 🐛 Bug Fixes
+
+-   Panic when there is no configured TLS provider ([#546](https://github.com/pact-foundation/pact-reference/issues/546))
+
+### 🛠️ Miscellaneous Tasks
+
+-   Update pact_models to 1.3.16
+
+-   Update pact-plugin-driver to 1.2.3
+
 ## 2.0.11 - Support plugins calling core framework matching rules
 
 * 387a477e - chore: Update pact-plugin-driver to 1.2.2 (Ronald Holshausen, Mon Aug 10 16:39:48 2026 +1000)
