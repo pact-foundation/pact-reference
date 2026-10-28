@@ -24,7 +24,7 @@ use crate::{CoreMatchingContext, DiffConfig};
 use crate::headers::{parse_charset_parameters, strip_whitespace};
 use crate::json::type_of;
 use crate::matchingrules::DoMatch;
-use crate::repeated_headers::match_repeated_header;
+use crate::repeated_headers::{match_repeated_header, normalise_list};
 #[cfg(feature = "xml")] use crate::xml::resolve_attr_namespaces;
 
 /// Main interpreter for the matching plan AST
@@ -2523,9 +2523,8 @@ impl ExecutionPlanInterpreter {
       Err(value) => return value
     };
 
-    let normalize = |s: &str| -> String {
-      s.split(',').map(|v| v.trim()).collect::<Vec<_>>().join(",")
-    };
+    // Only MULTI_VALUE_HEADERS reach this action, and they all use the plain list grammar.
+    let normalize = |s: &str| normalise_list("", s);
 
     let results = values.iter()
       .map(|v| {
