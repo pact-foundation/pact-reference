@@ -35,7 +35,7 @@ use crate::headers::{parse_charset_parameters, strip_whitespace};
 use crate::{BodyMatchResult, Mismatch};
 use crate::matchingrules::{DoMatch, value_for_mismatch};
 use crate::Mismatch::{BodyMismatch, HeaderMismatch, MetadataMismatch, QueryMismatch};
-use crate::repeated_headers::{header_kind, HeaderKind};
+use crate::repeated_headers::{header_kind, normalise_list, HeaderKind};
 
 mod bodies;
 mod value_resolvers;
@@ -2064,7 +2064,7 @@ fn setup_header_plan<T: HttpPart>(
             // for known multi-value headers. Custom headers (e.g. JSON payloads) must not
             // be normalised as commas are semantically significant there.
             let normalized_value = if let NodeValue::STRING(s) = &item_value {
-              NodeValue::STRING(s.split(',').map(|v| v.trim()).collect::<Vec<_>>().join(","))
+              NodeValue::STRING(normalise_list(key, s))
             } else {
               item_value.clone()
             };

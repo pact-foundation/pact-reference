@@ -280,14 +280,15 @@ mod tests {
 
   #[test]
   fn per_line_fallback_warns_of_deprecation() {
-    let expected = vec!["\"x , y\"".to_string(), "z".to_string()];
-    let actual = vec!["\"x, y\"".to_string(), "z".to_string()];
+    // An unbalanced quote runs to the end of the joined value, but not past the end of its own line.
+    let expected = vec!["\"a".to_string(), "b".to_string()];
+    let actual = vec!["\"a ".to_string(), "b".to_string()];
     let result = match_repeated_header("X-Request", &expected, &actual, &CoreMatchingContext::default());
     assert!(result.mismatches.is_empty(), "{:?}", result.mismatches);
     assert_eq!(result.warning.as_deref(), Some("Header 'X-Request' only matched when its field lines were \
       compared one at a time. Per-line matching of repeated headers is deprecated: RFC 9110 §5.3 treats \
       repeated field lines as one line with the values joined by commas, and a future release will compare \
-      only the joined value '\"x, y\", z'."));
+      only the joined value '\"a , b'."));
     assert!(result.warning.unwrap().contains("deprecated"));
   }
 
@@ -555,14 +556,21 @@ pub(crate) mod cases {
       plain("extra member", "X-Request", &["request1", "request2"], &["request1, request2, extra"], false, false),
       plain("missing member", "X-Request", &["request1", "request2"], &["request1"], false, false),
       plain("quoted whole", "X-Request", &["request1", "request2"], &["\"request1, request2\""], false, false),
-      plain("quoted OWS fallback", "X-Request", &["\"x , y\"", "z"], &["\"x, y\"", "z"], true, true),
+      plain("quoted OWS", "X-Request", &["\"x , y\"", "z"], &["\"x, y\"", "z"], false, false),
+      plain("unbalanced quote fallback", "X-Request", &["\"a", "b"], &["\"a ", "b"], true, true),
       plain("singleton untouched", "Set-Cookie", &["one", "two"], &["one, two"], false, false),
       plain("singleton separate lines", "Set-Cookie", &["a=1; Path=/", "b=2; Expires=Sat, 01 Mar 2025 00:00:00 GMT"],
         &["a=1; Path=/", "b=2; Expires=Sat, 01 Mar 2025 00:00:00 GMT"], true, false),
       plain("link whitespace inside target", "Link",
         &[r#"<https://a.example/x,y>; rel="a""#, r#"<https://b.example/>; rel="b""#],
         &[r#"<https://a.example/x, y>; rel="a", <https://b.example/>; rel="b""#], false, false),
-      plain("via comment whitespace", "Via", &["1.0 fred (a,b)", "1.1 p"], &["1.0 fred (a, b), 1.1 p"], false, false)
+      plain("via comment whitespace", "Via", &["1.0 fred (a,b)", "1.1 p"], &["1.0 fred (a, b), 1.1 p"], false, false),
+      plain("single multi-value OWS", "Cache-Control", &["no-cache,no-store"], &["no-cache, no-store"], true, false),
+      plain("single multi-value quoted whitespace", "Cache-Control", &["private=\"x,y\""], &["private=\"x, y\""], false, false),
+      plain("single link whitespace inside target", "Link",
+        &[r#"<https://a.example/?x=1,2>; rel="a""#], &[r#"<https://a.example/?x=1, 2>; rel="a""#], false, false),
+      plain("single quoted whitespace", "X-Request", &["\"x,y\""], &["\"x, y\""], false, false),
+      plain("single via comment whitespace", "Via", &["1.0 fred (a,b)"], &["1.0 fred (a, b)"], false, false)
     ]
   }
 }
