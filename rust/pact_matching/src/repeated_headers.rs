@@ -115,9 +115,9 @@ fn list_elements(value: &str, grammar: Grammar) -> Vec<&str> {
 }
 
 /// Normalises a list value for comparison: whitespace around commas outside quoted strings
-/// is dropped, as are empty elements.
-pub(crate) fn normalise_list(value: &str) -> String {
-  list_elements(value, Grammar::Plain).join(",")
+/// and the header's delimiters is dropped, as are empty elements.
+pub(crate) fn normalise_list(name: &str, value: &str) -> String {
+  list_elements(value, Grammar::for_header(name)).join(",")
 }
 
 /// Splits a header's field lines into its list elements.
@@ -234,7 +234,7 @@ pub(crate) fn match_repeated_header(
 
   let joined_expected = join_field_lines(expected);
   let joined_actual = join_field_lines(actual);
-  if normalise_list(&joined_expected) == normalise_list(&joined_actual) {
+  if normalise_list(key, &joined_expected) == normalise_list(key, &joined_actual) {
     RepeatedHeaderResult::default()
   } else if match_header_lines(key, expected, actual, context).is_empty() {
     RepeatedHeaderResult {
@@ -440,7 +440,7 @@ mod tests {
   #[case(r#""x\", y", z"#, r#""x\", y",z"#)]
   #[case("", "")]
   fn normalise_list_ignores_whitespace_and_empty_elements_outside_quotes(#[case] value: &str, #[case] normalised: &str) {
-    assert_eq!(normalise_list(value), normalised);
+    assert_eq!(normalise_list("X-Request", value), normalised);
   }
 }
 
@@ -556,7 +556,13 @@ pub(crate) mod cases {
       plain("missing member", "X-Request", &["request1", "request2"], &["request1"], false, false),
       plain("quoted whole", "X-Request", &["request1", "request2"], &["\"request1, request2\""], false, false),
       plain("quoted OWS fallback", "X-Request", &["\"x , y\"", "z"], &["\"x, y\"", "z"], true, true),
-      plain("singleton untouched", "Set-Cookie", &["one", "two"], &["one, two"], false, false)
+      plain("singleton untouched", "Set-Cookie", &["one", "two"], &["one, two"], false, false),
+      plain("singleton separate lines", "Set-Cookie", &["a=1; Path=/", "b=2; Expires=Sat, 01 Mar 2025 00:00:00 GMT"],
+        &["a=1; Path=/", "b=2; Expires=Sat, 01 Mar 2025 00:00:00 GMT"], true, false),
+      plain("link whitespace inside target", "Link",
+        &[r#"<https://a.example/x,y>; rel="a""#, r#"<https://b.example/>; rel="b""#],
+        &[r#"<https://a.example/x, y>; rel="a", <https://b.example/>; rel="b""#], false, false),
+      plain("via comment whitespace", "Via", &["1.0 fred (a,b)", "1.1 p"], &["1.0 fred (a, b), 1.1 p"], false, false)
     ]
   }
 }
