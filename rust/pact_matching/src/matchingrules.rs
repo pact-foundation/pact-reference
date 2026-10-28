@@ -29,7 +29,7 @@ use pact_models::matchingrules::{
   RuleList,
   RuleLogic
 };
-use pact_models::path_exp::DocPath;
+use pact_models::path_exp::{DocPath, PathToken};
 #[cfg(feature = "datetime")] use pact_models::time_utils::validate_datetime;
 
 use crate::{CommonMismatch, Either, MatchingContext, merge_result};
@@ -1419,6 +1419,11 @@ pub fn match_strings(
 /// Builds the context to match the values of a collection with an `EachValue` rule. The rule's
 /// own rules apply to each value (at `path.*`), together with any rules defined below `path`, such
 /// as the ones written for matchers nested in the values.
+///
+/// If there are already rules for the values (at `path.*` or `path[*]`), the rule's rules are merged
+/// into them. Adding a separate group would not work, as only one of the groups would be selected.
+/// A group with OR logic is replaced with the rule's rules instead, as merging them would make the
+/// rule's rules optional.
 fn each_value_context(
   path: &DocPath,
   rules: Vec<MatchingRule>,
@@ -1433,15 +1438,26 @@ fn each_value_context(
     .map(|(rule_path, rule_list)| (rule_path.clone(), rule_list.clone()))
     .collect();
 
-  let each_value_rules = nested.entry(path.join("*"))
-    .or_insert_with(|| RuleList::empty(RuleLogic::And));
-  let existing_rules = std::mem::replace(&mut each_value_rules.rules, rules);
-  for rule in existing_rules {
-    if !each_value_rules.rules.contains(&rule) {
-      each_value_rules.rules.push(rule);
-    }
+  let mut value_paths = nested.keys()
+    .filter(|rule_path| rule_path.len() == path.len() + 1 &&
+      matches!(rule_path.tokens().last(), Some(PathToken::Star | PathToken::StarIndex)))
+    .cloned()
+    .collect_vec();
+  if value_paths.is_empty() {
+    value_paths.push(path.join("*"));
   }
-  each_value_rules.cascaded = false;
+
+  for value_path in value_paths {
+    let mut each_value_rules = RuleList { rules: rules.clone(), rule_logic: RuleLogic::And, cascaded: false };
+    if let Some(existing) = nested.get(&value_path).filter(|existing| existing.rule_logic == RuleLogic::And) {
+      for rule in &existing.rules {
+        if !each_value_rules.rules.contains(rule) {
+          each_value_rules.rules.push(rule.clone());
+        }
+      }
+    }
+    nested.insert(value_path, each_value_rules);
+  }
 
   context.clone_with(&MatchingRuleCategory {
     name: Category::BODY,

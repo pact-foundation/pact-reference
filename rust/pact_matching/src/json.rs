@@ -573,7 +573,7 @@ mod tests {
   use maplit::hashmap;
   use pact_models::{matchingrules, matchingrules_list};
   use pact_models::bodies::OptionalBody;
-  use pact_models::matchingrules::{MatchingRule, MatchingRuleCategory};
+  use pact_models::matchingrules::{MatchingRule, MatchingRuleCategory, RuleLogic};
   use pact_models::matchingrules::expressions::{MatchingRuleDefinition, ValueType};
   use pact_models::request::Request;
 
@@ -1407,6 +1407,84 @@ mod tests {
         mismatch: "Expected 1.5 (Decimal) to be an integer".to_string()
       }
     ]));
+  }
+
+  #[test_log::test]
+  fn compare_lists_with_each_value_matcher_merges_the_rules_with_rules_for_the_list_items() {
+    let expected = request!(r#"{ "items": [ "abc" ] }"#);
+    let valid = request!(r#"{ "items": [ "abc", "def" ] }"#);
+    let invalid = request!(r#"{ "items": [ "abc", "x1" ] }"#);
+
+    let matchingrules = matchingrules_list! {
+      "body";
+      "$.items" => [
+        MatchingRule::EachValue(MatchingRuleDefinition::new("[\"abc\"]".to_string(),
+          ValueType::Unknown, MatchingRule::Regex("[a-z]+".to_string()), None, "".to_string()))
+      ],
+      "$.items[*]" => [ MatchingRule::Type ]
+    };
+    let context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys,
+      &matchingrules, &hashmap!{});
+
+    // The rules are in a HashMap, so repeat to cover the different iteration orders
+    for _ in 0..20 {
+      expect!(match_json(&expected, &valid, &context)).to(be_ok());
+      expect!(match_json(&expected, &invalid, &context)).to(be_err().value(vec![
+        BodyMismatch {
+          path: "$.items[1]".to_string(),
+          expected: Some("\"abc\"".into()),
+          actual: Some("\"x1\"".into()),
+          mismatch: "Expected 'x1' to match '[a-z]+'".to_string()
+        }
+      ]));
+    }
+  }
+
+  #[test_log::test]
+  fn compare_maps_with_each_value_matcher_does_not_combine_the_rules_with_rules_that_use_or_logic() {
+    let expected = request!(r#"{ "names": { "a": "alice" } }"#);
+    let valid = request!(r#"{ "names": { "x": "bob", "y": "carol" } }"#);
+    let invalid = request!(r#"{ "names": { "x": "bob1" } }"#);
+
+    let mut matchingrules = MatchingRuleCategory::empty("body");
+    matchingrules.add_rule(DocPath::new_unwrap("$.names"), MatchingRule::EachValue(
+      MatchingRuleDefinition::new("{\"a\":\"alice\"}".to_string(), ValueType::Unknown,
+        MatchingRule::Regex("^[a-z]+$".to_string()), None, "".to_string())), RuleLogic::And);
+    matchingrules.add_rule(DocPath::new_unwrap("$.names.*"), MatchingRule::Regex("^a.*".to_string()),
+      RuleLogic::Or);
+    matchingrules.add_rule(DocPath::new_unwrap("$.names.*"), MatchingRule::Regex("^b.*".to_string()),
+      RuleLogic::Or);
+    let context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys,
+      &matchingrules, &hashmap!{});
+
+    expect!(match_json(&expected, &valid, &context)).to(be_ok());
+    expect!(match_json(&expected, &invalid, &context)).to(be_err().value(vec![
+      BodyMismatch {
+        path: "$.names.x".to_string(),
+        expected: Some("\"alice\"".into()),
+        actual: Some("\"bob1\"".into()),
+        mismatch: "Expected 'bob1' to match '^[a-z]+$'".to_string()
+      }
+    ]));
+  }
+
+  #[test_log::test]
+  fn compare_maps_with_each_value_matcher_does_not_apply_rules_for_other_paths_to_the_values() {
+    let expected = request!(r#"{ "chips": { "main": { "amount": 1000 } }, "other": { "amount": 1 } }"#);
+    let actual = request!(r#"{ "chips": { "main": { "amount": 1.5 } }, "other": { "amount": 1 } }"#);
+
+    let matchingrules = matchingrules_list! {
+      "body";
+      "$.chips" => [
+        MatchingRule::EachValue(MatchingRuleDefinition::new("{\"main\":{\"amount\":1000}}".to_string(),
+          ValueType::Unknown, MatchingRule::Type, None, "".to_string()))
+      ],
+      "$.other.amount" => [ MatchingRule::Integer ]
+    };
+    let context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys,
+      &matchingrules, &hashmap!{});
+
+    expect!(match_json(&expected, &actual, &context)).to(be_ok());
   }
 }
 
