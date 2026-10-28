@@ -1358,7 +1358,7 @@ fn match_headers_with_number_type_matching_rule() {
               ['1234'] => ['1234'],
               $.headers['REF-ID'] => ['1111', 'two'],
               json:{"ref-id":{"combine":"AND","matchers":[{"match":"integer"}]}} => json:{"ref-id":{"combine":"AND","matchers":[{"match":"integer"}]}}
-            ) => ERROR(Mismatch with header 'REF-ID': Expected '1111, two' to match an integer number),
+            ) => ERROR(Mismatch with header 'REF-ID': Expected '1111, two' to match an integer number, Mismatch with header 'REF-ID': Expected 'two' to match an integer number for value at index 1),
             %match:integer (
               '1234',
               $.headers['REF-ID'],

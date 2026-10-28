@@ -217,7 +217,8 @@ pub(crate) fn match_repeated_header(
     if primary.is_empty() {
       return RepeatedHeaderResult::default();
     }
-    if match_header_lines(key, expected, actual, context).is_empty() {
+    let per_line = match_header_lines(key, expected, actual, context);
+    if per_line.is_empty() {
       let warning = if bare.is_empty() {
         per_line_warning(key, &joined_actual)
       } else {
@@ -229,7 +230,8 @@ pub(crate) fn match_repeated_header(
       };
       return RepeatedHeaderResult { mismatches: vec![], warning: Some(warning) };
     }
-    return RepeatedHeaderResult { mismatches: primary, warning: None };
+    // The joined mismatch alone doesn't say which value failed, so report the per-line ones as well.
+    return RepeatedHeaderResult { mismatches: primary.into_iter().chain(per_line).collect(), warning: None };
   }
 
   let joined_expected = join_field_lines(expected);
@@ -305,6 +307,20 @@ mod tests {
     assert!(warning.contains("RFC 9110 §5.3"), "{warning}");
     assert!(warning.contains("eachValue"), "{warning}");
     assert!(warning.contains("first-"), "{warning}");
+  }
+
+  #[test]
+  fn scalar_rule_mismatch_names_the_failing_value() {
+    // compatibility-suite V2 http_consumer "Supports matchers for repeated request headers (negative case)"
+    let mut category = MatchingRuleCategory::empty("header");
+    category.add_rule(DocPath::new_unwrap("$.x-test"), MatchingRule::Regex(r"\d{1,4}".to_string()), RuleLogic::And);
+    let context = CoreMatchingContext { matchers: category, ..CoreMatchingContext::default() };
+    let expected = vec!["1000".to_string()];
+    let actual = vec!["1000".to_string(), "1234".to_string(), "9999ABC".to_string()];
+    let result = match_repeated_header("X-Test", &expected, &actual, &context);
+    assert!(result.warning.is_none());
+    assert!(result.mismatches.iter().any(|m| m.description.contains(r"Expected '9999ABC' to match '\d{1,4}'")),
+      "{:?}", result.mismatches);
   }
 
   #[test]
