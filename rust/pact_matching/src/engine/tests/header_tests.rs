@@ -3,11 +3,37 @@ use maplit::hashmap;
 use pact_models::matchingrules;
 use pact_models::matchingrules::MatchingRule;
 use pact_models::prelude::v4::SynchronousHttp;
-use pact_models::v4::http_parts::HttpRequest;
+use pact_models::v4::http_parts::{HttpRequest, HttpResponse};
 use pact_models::v4::interaction::V4Interaction;
 
-use crate::engine::{execute_request_plan, ExecutionPlan, setup_header_plan};
+use crate::engine::{
+  build_request_plan, build_response_plan, execute_request_plan, execute_response_plan,
+  ExecutionPlan, NodeResult, NodeValue, setup_header_plan
+};
 use crate::engine::context::PlanMatchingContext;
+
+#[test]
+fn match_repeated_custom_headers_in_request_and_response_plans() {
+  let expected_headers = Some(hashmap! {
+    "X-Request".to_string() => vec!["request1".to_string(), "request2".to_string()]
+  });
+  let actual_headers = Some(hashmap! {
+    "X-Request".to_string() => vec!["request1, request2".to_string()]
+  });
+  let context = PlanMatchingContext::default();
+
+  let expected_request = HttpRequest { headers: expected_headers.clone(), ..HttpRequest::default() };
+  let actual_request = HttpRequest { headers: actual_headers.clone(), ..HttpRequest::default() };
+  let request_plan = build_request_plan(&expected_request, &context).unwrap();
+  let request_result = execute_request_plan(&request_plan, &actual_request, &context).unwrap();
+  assert_eq!(request_result.plan_root.result, Some(NodeResult::VALUE(NodeValue::BOOL(true))));
+
+  let expected_response = HttpResponse { headers: expected_headers, ..HttpResponse::default() };
+  let actual_response = HttpResponse { headers: actual_headers, ..HttpResponse::default() };
+  let response_plan = build_response_plan(&expected_response, &context).unwrap();
+  let response_result = execute_response_plan(&response_plan, &actual_response, &context).unwrap();
+  assert_eq!(response_result.plan_root.result, Some(NodeResult::VALUE(NodeValue::BOOL(true))));
+}
 
 #[test]
 fn match_headers_where_there_are_none() {
@@ -570,7 +596,9 @@ fn match_headers_with_values_having_different_lengths() {
           ),
           %match:equality (
             ['test', 'test2'],
-            $.headers['REF-CODE'],
+            %header:split-values (
+              $.headers['REF-CODE']
+            ),
             NULL,
             BOOL(false)
           ),
@@ -635,7 +663,9 @@ fn match_headers_with_values_having_different_lengths() {
           ) => BOOL(true),
           %match:equality (
             ['test', 'test2'] => ['test', 'test2'],
-            $.headers['REF-CODE'] => ['test', 'test2'],
+            %header:split-values (
+              $.headers['REF-CODE'] => ['test', 'test2']
+            ) => ['test', 'test2'],
             NULL => NULL,
             BOOL(false) => BOOL(false)
           ) => BOOL(true),
@@ -700,10 +730,12 @@ fn match_headers_with_values_having_different_lengths() {
           ) => BOOL(true),
           %match:equality (
             ['test', 'test2'] => ['test', 'test2'],
-            $.headers['REF-CODE'] => 'test',
+            %header:split-values (
+              $.headers['REF-CODE'] => 'test'
+            ) => ['test'],
             NULL => NULL,
             BOOL(false) => BOOL(false)
-          ) => ERROR(Expected 'test' to be equal to ['test', 'test2']),
+          ) => ERROR(Expected ['test'] to be equal to ['test', 'test2']),
           %error (
             'Expected header \'REF-CODE\' but was missing'
           )
@@ -1143,7 +1175,9 @@ fn match_headers_with_min_type_matching_rules() {
           ),
           %match:min-type (
             ['1234', '4567'],
-            $.headers['REF-ID'],
+            %header:split-values (
+              $.headers['REF-ID']
+            ),
             json:{"min":2},
             BOOL(false)
           ),
@@ -1208,7 +1242,9 @@ fn match_headers_with_min_type_matching_rules() {
           ) => BOOL(true),
           %match:min-type (
             ['1234', '4567'] => ['1234', '4567'],
-            $.headers['REF-ID'] => ['1', '1', '1'],
+            %header:split-values (
+              $.headers['REF-ID'] => ['1', '1', '1']
+            ) => ['1', '1', '1'],
             json:{"min":2} => json:{"min":2},
             BOOL(false) => BOOL(false)
           ) => BOOL(true),
@@ -1273,7 +1309,9 @@ fn match_headers_with_min_type_matching_rules() {
           ) => BOOL(true),
           %match:min-type (
             ['1234', '4567'] => ['1234', '4567'],
-            $.headers['REF-ID'] => '1',
+            %header:split-values (
+              $.headers['REF-ID'] => '1'
+            ) => ['1'],
             json:{"min":2} => json:{"min":2},
             BOOL(false) => BOOL(false)
           ) => ERROR(Expected [1] \(size 1\) to have minimum size of 2),

@@ -20,7 +20,7 @@ use crate::engine::context::PlanMatchingContext;
 use crate::engine::value_resolvers::ValueResolver;
 use crate::field_rules::scope_from_plan_path;
 #[cfg(feature = "xml")] use crate::engine::xml::XmlValue;
-use crate::headers::{parse_charset_parameters, strip_whitespace};
+use crate::headers::{parse_charset_parameters, split_header_field_lines, strip_whitespace};
 use crate::json::type_of;
 use crate::matchingrules::DoMatch;
 #[cfg(feature = "xml")] use crate::xml::resolve_attr_namespaces;
@@ -321,6 +321,7 @@ impl ExecutionPlanInterpreter {
         "error" => self.execute_error(action, value_resolver, node, &action_path),
         "header:parse" => self.execute_header_parse(action, value_resolver, node, &action_path),
         "header:normalize-commas" => self.execute_normalize_comma_whitespace(action, value_resolver, node, &action_path),
+        "header:split-values" => self.execute_split_header_values(value_resolver, node, &action_path),
         "for-each" => self.execute_for_each(value_resolver, node, &action_path),
         #[cfg(feature = "multipart")]
         "multipart:parse" => self.execute_multipart_parse(action, value_resolver, node, &action_path),
@@ -2543,6 +2544,32 @@ impl ExecutionPlanInterpreter {
     ExecutionPlanNode {
       node_type,
       result: Some(NodeResult::VALUE(result)),
+      children: result_children
+    }
+  }
+
+  fn execute_split_header_values(
+    &mut self,
+    value_resolver: &dyn ValueResolver,
+    node: ExecutionPlanNode,
+    action_path: &Vec<String>
+  ) -> ExecutionPlanNode {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    let (result_children, values) = match self.evaluate_children(value_resolver, &node_type, children, action_path, true) {
+      Ok(value) => value,
+      Err(value) => return value
+    };
+    let values = values.iter()
+      .flat_map(|value| match value.as_value().unwrap_or_default() {
+        NodeValue::STRING(value) => split_header_field_lines(&[value]),
+        NodeValue::SLIST(values) => split_header_field_lines(&values),
+        _ => vec![]
+      })
+      .collect();
+
+    ExecutionPlanNode {
+      node_type,
+      result: Some(NodeResult::VALUE(NodeValue::SLIST(values))),
       children: result_children
     }
   }
