@@ -6,6 +6,7 @@
 #![warn(missing_copy_implementations)]
 
 use std::ffi::CStr;
+use std::io::Write;
 use std::panic::RefUnwindSafe;
 use std::str::FromStr;
 use std::sync::OnceLock;
@@ -94,10 +95,11 @@ pub unsafe extern "C" fn pactffi_init(log_env_var: *const c_char) {
       .with_env_filter(log_env_var)
       .with_thread_names(true)
       .with_ansi(false) // Pact .Net can't deal with ANSI escape codes
+      .log_internal_errors(false) // reporting a failed write uses eprintln!, which panics if stderr is full (EAGAIN)
       .finish()
       .with(CallbackLayer);
     if let Err(err) = tracing::subscriber::set_global_default(subscriber) {
-      eprintln!("Failed to initialise global tracing subscriber - {err}");
+      let _ = writeln!(std::io::stderr(), "Failed to initialise global tracing subscriber - {err}");
     };
 
     init_plugin_log_sink();
@@ -125,10 +127,11 @@ pub unsafe extern "C" fn pactffi_init_with_log_level(level: *const c_char) {
     .with_writer(sink_to_make_writer("stderr", &log_level.as_log()))
     .with_thread_names(true)
     .with_ansi(false) // Pact .Net can't deal with ANSI escape codes
+    .log_internal_errors(false) // reporting a failed write uses eprintln!, which panics if stderr is full (EAGAIN)
     .finish()
     .with(CallbackLayer);
   if let Err(err) = tracing::subscriber::set_global_default(subscriber) {
-    eprintln!("Failed to initialise global tracing subscriber - {err}");
+    let _ = writeln!(std::io::stderr(), "Failed to initialise global tracing subscriber - {err}");
   };
 
   init_plugin_log_sink();

@@ -53,6 +53,7 @@ pub(crate) fn apply_logger() -> anyhow::Result<()> {
         .with_max_level(subscriber_max_level(sink_level.as_trace()))
         .with_thread_names(true)
         .with_ansi(false) // Pact .Net can't deal with ANSI escape codes
+        .log_internal_errors(false) // reporting a failed write uses eprintln!, which panics if stderr is full (EAGAIN)
       ;
 
       let subscriber = if let Some((sink, level)) = logger_inner.first() {
