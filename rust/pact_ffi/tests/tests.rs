@@ -53,6 +53,7 @@ use pact_ffi::mock_server::handles::{
   pactffi_new_message_interaction,
   pactffi_new_message_pact,
   pactffi_new_pact,
+  pactffi_new_sync_message_interaction,
   pactffi_pact_handle_write_file,
   pactffi_response_status,
   pactffi_set_comment,
@@ -74,6 +75,7 @@ use pact_ffi::mock_server::handles::{
 };
 use pact_ffi::mock_server::handles::pactffi_with_matching_rules;
 use pact_ffi::mock_server::pactffi_mock_server_matched;
+use pact_ffi::plugins::{pactffi_cleanup_plugins, pactffi_interaction_contents, pactffi_using_plugin};
 use pact_ffi::verifier::{
   pactffi_verifier_add_directory_source,
   pactffi_verifier_add_file_source,
@@ -2643,4 +2645,48 @@ fn https_mock_server_starts_and_responds_over_tls() {
   };
   expect!(matched).to(be_true());
   expect!(mismatches).to(be_equal_to("[]"));
+}
+
+// Issue #458
+#[test_log::test]
+#[ignore = "needs the matt plugin installed (pact-plugin-cli install matt)"]
+fn pact_handle_write_file_keeps_the_plugin_transport() {
+  let consumer_name = CString::new("matt-tcp-consumer").unwrap();
+  let provider_name = CString::new("matt-tcp-provider").unwrap();
+  let pact_handle = pactffi_new_pact(consumer_name.as_ptr(), provider_name.as_ptr());
+  pactffi_with_specification(pact_handle, PactSpecification::V4);
+  let plugin_name = CString::new("matt").unwrap();
+  pactffi_using_plugin(pact_handle, plugin_name.as_ptr(), null());
+
+  let description = CString::new("a matt message over TCP").unwrap();
+  let interaction = pactffi_new_sync_message_interaction(pact_handle, description.as_ptr());
+  let content_type = CString::new("application/matt").unwrap();
+  let contents = CString::new(json!({
+    "request": { "body": "hellotcp" },
+    "response": { "body": "tcpworld" }
+  }).to_string()).unwrap();
+  pactffi_interaction_contents(interaction, InteractionPart::Request, content_type.as_ptr(), contents.as_ptr());
+
+  let address = CString::new("127.0.0.1").unwrap();
+  let transport = CString::new("matt").unwrap();
+  let port = pactffi_create_mock_server_for_transport(pact_handle, address.as_ptr(), 0, transport.as_ptr(), null());
+  expect!(port).to(be_greater_than(0));
+
+  let mock_server_dir = TempDir::new().unwrap();
+  let mock_server_path = CString::new(mock_server_dir.path().to_string_lossy().to_string()).unwrap();
+  expect!(pactffi_write_pact_file(port, mock_server_path.as_ptr(), true)).to(be_equal_to(0));
+  let handle_dir = TempDir::new().unwrap();
+  let handle_path = CString::new(handle_dir.path().to_string_lossy().to_string()).unwrap();
+  expect!(pactffi_pact_handle_write_file(pact_handle, handle_path.as_ptr(), true)).to(be_equal_to(0));
+
+  pactffi_cleanup_mock_server(port);
+  pactffi_cleanup_plugins(pact_handle);
+
+  let read_transport = |dir: &TempDir| {
+    let file = File::open(dir.path().join("matt-tcp-consumer-matt-tcp-provider.json")).unwrap();
+    let json: Value = serde_json::from_reader(file).unwrap();
+    json["interactions"][0]["transport"].clone()
+  };
+  expect!(read_transport(&mock_server_dir)).to(be_equal_to(json!("matt")));
+  expect!(read_transport(&handle_dir)).to(be_equal_to(json!("matt")));
 }
