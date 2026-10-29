@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.5.13](https://github.com/pact-foundation/pact-reference/compare/pact_ffi-v0.5.12...pact_ffi-v0.5.13) - _2026-10-29_
+
+### 🚀 Features
+
+-   Allow the provider state change retries to be set with PACT_PROVIDER_STATE_CHANGE_RETRIES
+
+### 🐛 Bug Fixes
+
+-   Apply the matchers nested under an eachValue matcher
+
+-   _(ffi)_ Keep the plugin transport when writing via pactffi_pact_handle_write_file
+
+-   _(ffi)_ Don't abort the host process when stderr is full
+
+### 🏗️ Build and CI
+
+-   Use caret requirements between pact crates
+
+-   Require pact_mock_server 2.2.6
+
 ## [0.5.12](https://github.com/pact-foundation/pact-reference/compare/pact_ffi-v0.5.11...pact_ffi-v0.5.12) - _2026-10-19_
 
 ### 🐛 Bug Fixes
