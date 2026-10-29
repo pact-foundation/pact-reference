@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.0](https://github.com/pact-foundation/pact-reference/compare/pact_verifier_cli-v1.4.0...pact_verifier_cli-v1.5.0) - _2026-10-29_
+
+### 🚀 Features
+
+-   Allow the provider state change retries to be set with PACT_PROVIDER_STATE_CHANGE_RETRIES
+
 ## [1.4.0](https://github.com/pact-foundation/pact-reference/compare/pact_verifier_cli-v1.3.5...pact_verifier_cli-v1.4.0) - _2026-10-21_
 
 ### 🚀 Features
