@@ -198,7 +198,18 @@ ffi_fn! {
             },
           };
 
-          match attach_to_manager(builder) {
+          let started = attach_to_manager(builder);
+          if started.is_ok() && transport != "http" && transport != "https" {
+            // The mock server sets the transport on its own copy of the Pact, so do the same here
+            // for pactffi_pact_handle_write_file
+            for interaction in inner.pact.interactions.iter_mut() {
+              if interaction.transport().is_none() {
+                interaction.set_transport(Some(transport.clone()));
+              }
+            }
+          }
+
+          match started {
             Ok(Either::Left(mock_server)) => {
               inner.mock_server_started = true;
               mock_server.port() as i32
