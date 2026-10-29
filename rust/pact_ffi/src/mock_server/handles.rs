@@ -221,7 +221,7 @@ impl PactHandle {
     pact.add_md_version("ffi", option_env!("CARGO_PKG_VERSION").unwrap_or("unknown"));
 
     let id = {
-      let mut handles = PACT_HANDLES.lock().unwrap();
+      let mut handles = PACT_HANDLES.lock().unwrap_or_else(|e| e.into_inner());
 
       let keys: HashSet<&u16> = handles.keys().collect();
       let mut id: u16 = rand::random();
@@ -249,7 +249,7 @@ impl PactHandle {
   /// This function acquires a lock on the PACT_HANDLES mutex. If the closure panics, this mutex
   /// will be poisoned. So panics must be avoided.
   pub(crate) fn with_pact<R>(&self, f: &dyn Fn(u16, &mut PactHandleInner) -> R) -> Option<R> {
-    let mut handles = PACT_HANDLES.lock().unwrap();
+    let mut handles = PACT_HANDLES.lock().unwrap_or_else(|e| e.into_inner());
     trace!("with_pact - ref = {}, keys = {:?}", self.pact_ref, handles.keys());
     handles.get_mut(&self.pact_ref).map(|inner| {
       trace!("with_pact before - ref = {}, inner = {:?}", self.pact_ref, inner);
@@ -277,7 +277,7 @@ impl InteractionHandle {
   /// This function acquires a lock on the PACT_HANDLES mutex. If the closure panics, this mutex
   /// will be poisoned. So panics must be avoided.
   pub fn with_pact<R>(&self, f: &dyn Fn(u16, &mut PactHandleInner) -> R) -> Option<R> {
-    let mut handles = PACT_HANDLES.lock().unwrap();
+    let mut handles = PACT_HANDLES.lock().unwrap_or_else(|e| e.into_inner());
     let index = (self.interaction_ref >> 16) as u16;
     handles.get_mut(&index).map(|inner| f(index, &mut inner.borrow_mut()))
   }
@@ -288,7 +288,7 @@ impl InteractionHandle {
   /// This function acquires a lock on the PACT_HANDLES mutex. If the closure panics, this mutex
   /// will be poisoned. So panics must be avoided.
   pub fn with_interaction<R>(&self, f: &dyn Fn(u16, bool, &mut dyn V4Interaction) -> R) -> Option<R> {
-    let mut handles = PACT_HANDLES.lock().unwrap();
+    let mut handles = PACT_HANDLES.lock().unwrap_or_else(|e| e.into_inner());
     let index = (self.interaction_ref >> 16) as u16;
     let interaction = (self.interaction_ref & 0x0000FFFF) as u16;
 
@@ -348,7 +348,7 @@ impl MessagePactHandle {
     pact.add_md_version("ffi", option_env!("CARGO_PKG_VERSION").unwrap_or("unknown"));
 
     let id = {
-      let mut handles = PACT_HANDLES.lock().unwrap();
+      let mut handles = PACT_HANDLES.lock().unwrap_or_else(|e| e.into_inner());
 
       let keys: HashSet<&u16> = handles.keys().collect();
       let mut id: u16 = rand::random();
@@ -371,7 +371,7 @@ impl MessagePactHandle {
 
   /// Invokes the closure with the inner model
   pub fn with_pact<R>(&self, f: &dyn Fn(u16, &mut V4Pact, PactSpecification) -> R) -> Option<R> {
-    let mut handles = PACT_HANDLES.lock().unwrap();
+    let mut handles = PACT_HANDLES.lock().unwrap_or_else(|e| e.into_inner());
     handles.get_mut(&self.pact_ref).map(|inner| {
       let mut ref_mut = inner.borrow_mut();
       let specification = ref_mut.specification_version;
@@ -403,7 +403,7 @@ impl MessageHandle {
 
   /// Invokes the closure with the inner model
   pub fn with_pact<R>(&self, f: &dyn Fn(u16, &mut V4Pact, PactSpecification) -> R) -> Option<R> {
-    let mut handles = PACT_HANDLES.lock().unwrap();
+    let mut handles = PACT_HANDLES.lock().unwrap_or_else(|e| e.into_inner());
     let index = (self.interaction_ref >> 16) as u16;
     handles.get_mut(&index).map(|inner| {
       let mut ref_mut = inner.borrow_mut();
@@ -414,7 +414,7 @@ impl MessageHandle {
 
   /// Invokes the closure with the inner Interaction model
   pub fn with_message<R>(&self, f: &dyn Fn(u16, &mut dyn V4Interaction, PactSpecification) -> R) -> Option<R> {
-    let mut handles = PACT_HANDLES.lock().unwrap();
+    let mut handles = PACT_HANDLES.lock().unwrap_or_else(|e| e.into_inner());
     let index = (self.interaction_ref >> 16) as u16;
     let interaction = self.interaction_ref as u16;
     let interaction_index = match interaction.checked_sub(1) {
@@ -3402,7 +3402,7 @@ pub extern "C" fn pactffi_new_async_message(pact: PactHandle, description: *cons
 ///
 #[no_mangle]
 pub extern "C" fn pactffi_free_pact_handle(pact: PactHandle) -> c_uint {
-  let mut handles = PACT_HANDLES.lock().unwrap();
+  let mut handles = PACT_HANDLES.lock().unwrap_or_else(|e| e.into_inner());
   trace!("pactffi_free_pact_handle - removing pact with index {}", pact.pact_ref);
   handles.remove(&pact.pact_ref).map(|_| 0).unwrap_or(1)
 }
@@ -3417,7 +3417,7 @@ pub extern "C" fn pactffi_free_pact_handle(pact: PactHandle) -> c_uint {
 ///
 #[no_mangle]
 pub extern "C" fn pactffi_free_message_pact_handle(pact: MessagePactHandle) -> c_uint {
-  let mut handles = PACT_HANDLES.lock().unwrap();
+  let mut handles = PACT_HANDLES.lock().unwrap_or_else(|e| e.into_inner());
   handles.remove(&pact.pact_ref).map(|_| 0).unwrap_or(1)
 }
 
