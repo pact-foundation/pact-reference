@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.1.1](https://github.com/pact-foundation/pact-reference/compare/pact_matching-v2.1.0...pact_matching-v2.1.1) - _2026-10-29_
+
+### 🐛 Bug Fixes
+
+-   Apply the matchers nested under an eachValue matcher
+
+-   Apply an eachValue rule once when the values already have it
+
+-   _(pact_matching)_ Merge the eachValue rules into any existing rules for the values
+
+-   _(v2 engine)_ Apply the rules defined below an eachValue matcher to its values
+
 ## [2.1.0](https://github.com/pact-foundation/pact-reference/compare/pact_matching-v2.0.11...pact_matching-v2.1.0) - _2026-10-21_
 
 ### 🚀 Features
