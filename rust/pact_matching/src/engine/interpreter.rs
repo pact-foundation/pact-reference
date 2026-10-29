@@ -2579,14 +2579,21 @@ impl ExecutionPlanInterpreter {
             let mut child_results = vec![marker_result.clone(), loop_items.clone()];
 
             if let Some(template) = optional.first() {
-              let loop_items_list = loop_items
+              let loop_value = loop_items
                 .value()
                 .unwrap_or_default()
                 .as_value()
-                .unwrap_or_default()
-                .to_list();
-              for (index, _) in loop_items_list.iter().enumerate() {
-                let updated_child = inject_index(template, marker.as_str(), index);
+                .unwrap_or_default();
+              // A JSON object is looped over by its keys (for the values of a map), anything else
+              // by index
+              let loop_tokens = match loop_value.as_json() {
+                Some(Value::Object(entries)) => entries.keys()
+                  .map(|key| PathToken::Field(key.clone()))
+                  .collect_vec(),
+                _ => (0..loop_value.to_list().len()).map(PathToken::Index).collect_vec()
+              };
+              for token in loop_tokens {
+                let updated_child = inject_token(template, marker.as_str(), &token);
                 match self.walk_tree(&action_path, updated_child.clone(), value_resolver) {
                   Ok(value) => {
                     result = result.and(&value.result.clone().unwrap_or_default());
@@ -2752,60 +2759,62 @@ impl ExecutionPlanInterpreter {
   }
 }
 
-fn inject_index(node: &ExecutionPlanNode, marker: &str, index: usize) -> ExecutionPlanNode {
+fn inject_token(node: &ExecutionPlanNode, marker: &str, token: &PathToken) -> ExecutionPlanNode {
   match &node.node_type {
     PlanNodeType::CONTAINER(label) => {
       if let Ok(path) = DocPath::new(label) {
         ExecutionPlanNode {
-          node_type: PlanNodeType::CONTAINER(inject_index_in_path(&path, marker, index).to_string()),
+          node_type: PlanNodeType::CONTAINER(inject_token_in_path(&path, marker, token).to_string()),
           result: node.result.clone(),
           children: node.children.iter()
-            .map(|child| inject_index(child, marker, index))
+            .map(|child| inject_token(child, marker, token))
             .collect()
         }
       } else {
         node.clone_with_children(node.children.iter()
-          .map(|child| inject_index(child, marker, index)))
+          .map(|child| inject_token(child, marker, token)))
       }
     }
     PlanNodeType::ACTION(_) => node.clone_with_children(node.children.iter()
-      .map(|child| inject_index(child, marker, index))),
+      .map(|child| inject_token(child, marker, token))),
     PlanNodeType::PIPELINE => node.clone_with_children(node.children.iter()
-      .map(|child| inject_index(child, marker, index))),
+      .map(|child| inject_token(child, marker, token))),
     PlanNodeType::RESOLVE_CURRENT(exp) => {
       ExecutionPlanNode {
-        node_type: PlanNodeType::RESOLVE_CURRENT(inject_index_in_path(exp, marker, index)),
+        node_type: PlanNodeType::RESOLVE_CURRENT(inject_token_in_path(exp, marker, token)),
         result: node.result.clone(),
         children: vec![]
       }
     }
     PlanNodeType::SPLAT => node.clone_with_children(node.children.iter()
-      .map(|child| inject_index(child, marker, index))),
+      .map(|child| inject_token(child, marker, token))),
     _ => node.clone()
   }
 }
 
-fn inject_index_in_path(path: &DocPath, marker: &str, index: usize) -> DocPath {
+/// Replaces the for-each marker in the path with the token for the current item (an index for a
+/// list item, or a field for the value of a map entry)
+fn inject_token_in_path(path: &DocPath, marker: &str, token: &PathToken) -> DocPath {
   if path.starts_with("$['$*']") {
     // Special case where for-each is applied at the root
-    let tokens = [PathToken::Root, PathToken::Index(index)].iter()
+    let tokens = [PathToken::Root, token.clone()].iter()
       .chain(path.tokens().iter().dropping(2))
-      .flat_map(|token| {
-        if let PathToken::Field(name) = token && name == marker {
-          vec![PathToken::Field(name.trim_end_matches('*').to_string()), PathToken::Index(index)]
+      .flat_map(|current| {
+        if let PathToken::Field(name) = current && name == marker {
+          vec![PathToken::Field(name.trim_end_matches('*').to_string()), token.clone()]
         } else {
-          vec![token.clone()]
+          vec![current.clone()]
         }
       })
       .collect_vec();
     DocPath::from_tokens(tokens)
   } else {
     let tokens = path.tokens().iter()
-      .flat_map(|token| {
-        if let PathToken::Field(name) = token && name == marker {
-          vec![PathToken::Field(name.trim_end_matches('*').to_string()), PathToken::Index(index)]
+      .flat_map(|current| {
+        if let PathToken::Field(name) = current && name == marker {
+          vec![PathToken::Field(name.trim_end_matches('*').to_string()), token.clone()]
         } else {
-          vec![token.clone()]
+          vec![current.clone()]
         }
       })
       .collect_vec();

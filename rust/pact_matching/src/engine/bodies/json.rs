@@ -1,11 +1,13 @@
 //! Builder for JSON bodies
 
 use bytes::Bytes;
+use itertools::Itertools;
 use serde_json::{Map, Value};
 use tracing::trace;
 
 use pact_models::content_types::ContentType;
-use pact_models::path_exp::DocPath;
+use pact_models::matchingrules::{MatchingRule, MatchingRuleCategory, RuleList, RuleLogic};
+use pact_models::path_exp::{DocPath, PathToken};
 
 use crate::engine::bodies::{PlanBodyBuilder, remove_marker, should_apply_to_map_entries};
 use crate::engine::context::PlanMatchingContext;
@@ -39,9 +41,7 @@ impl JsonPlanBuilder {
         Self::process_object(context, json, path, root_node, &rewritten_path, entries);
       }
       _ => {
-        let matchers = context.select_best_matcher(&path)
-          .and_rules(&context.select_best_matcher(&rewritten_path))
-          .remove_duplicates();
+        let matchers = Self::select_matchers(context, path, &rewritten_path);
         if !matchers.is_empty() {
           root_node.add(ExecutionPlanNode::annotation(format!("{} {}", path.last_field().unwrap_or_default(), matchers.generate_description(false))));
           root_node.add(build_matching_rule_node(&ExecutionPlanNode::value_node(json),
@@ -60,6 +60,25 @@ impl JsonPlanBuilder {
     }
   }
 
+  /// Selects the rules for the path and the path with the markers removed. An `EachValue` rule
+  /// from a parent path applies to the values of that collection, not to the values below them, so
+  /// they are ignored if they have cascaded down from a parent path.
+  fn select_matchers(
+    context: &PlanMatchingContext,
+    path: &DocPath,
+    rewritten_path: &DocPath
+  ) -> RuleList {
+    let without_cascaded_each_value = |mut rules: RuleList| {
+      if rules.cascaded {
+        rules.rules.retain(|rule| !matches!(rule, MatchingRule::EachValue(_)));
+      }
+      rules
+    };
+    without_cascaded_each_value(context.select_best_matcher(path))
+      .and_rules(&without_cascaded_each_value(context.select_best_matcher(rewritten_path)))
+      .remove_duplicates()
+  }
+
   fn process_object(
     context: &PlanMatchingContext,
     json: &Value,
@@ -68,14 +87,18 @@ impl JsonPlanBuilder {
     rewritten_path: &DocPath,
     entries: &Map<String, Value>
   ) {
-    let rules = context.select_best_matcher(&path)
-      .and_rules(&context.select_best_matcher(&rewritten_path))
-      .remove_duplicates();
+    let rules = Self::select_matchers(context, path, rewritten_path);
     if !rules.is_empty() && should_apply_to_map_entries(&rules) {
       root_node.add(ExecutionPlanNode::annotation(rules.generate_description(true)));
       root_node.add(build_matching_rule_node(&ExecutionPlanNode::value_node(json.clone()),
         &ExecutionPlanNode::resolve_current_value(path), &rules, true,
         context.config.show_types_in_errors));
+      if let Some(template) = entries.values().next() &&
+        rules.rules.iter().any(|rule| matches!(rule, MatchingRule::EachValue(_))) &&
+        (template.is_object() || template.is_array()) {
+        let each_value_context = Self::each_value_context(context, path, &rules, false);
+        root_node.add(Self::build_for_each_value_node(&each_value_context, path, template));
+      }
     } else if entries.is_empty() {
       root_node.add(
         ExecutionPlanNode::action("json:expect:empty")
@@ -114,6 +137,100 @@ impl JsonPlanBuilder {
     }
   }
 
+  /// Returns the context to use for the values of a collection with an `EachValue` rule. The rule's
+  /// rules are added for the values (at `path.*`), so that they apply to the values below them that
+  /// have no rules of their own.
+  ///
+  /// If there are already rules for the values (at `path.*` or `path[*]`), the rule's rules are
+  /// merged into them. Adding a separate group would not work, as only one of the groups would be
+  /// selected. A group with OR logic is replaced with the rule's rules instead, as merging them
+  /// would make the rule's rules optional.
+  ///
+  /// If there are no rules for the values yet, they are added at `path[*]` for a list and `path.*`
+  /// for a map. A rule at `path.*` would also be selected for the paths with a marker (like `$*`),
+  /// which a rule at `path[*]` is not.
+  fn each_value_context(
+    context: &PlanMatchingContext,
+    path: &DocPath,
+    rules: &RuleList,
+    is_list: bool
+  ) -> PlanMatchingContext {
+    let each_value_rules = rules.rules.iter()
+      .filter_map(|rule| match rule {
+        MatchingRule::EachValue(definition) => Some(definition),
+        _ => None
+      })
+      .flat_map(|definition| definition.rules.iter())
+      .filter_map(|rule| rule.as_ref().left().cloned())
+      .collect_vec();
+
+    let collection_path = remove_marker(path);
+    let collection_fragments = collection_path.to_vec();
+    let collection_slice = collection_fragments.iter().map(|p| p.as_str()).collect_vec();
+    let mut matching_rules = context.matching_rules.rules.clone();
+    let mut value_paths = matching_rules.keys()
+      .filter(|rule_path| rule_path.len() == collection_path.len() + 1 &&
+        matches!(rule_path.tokens().last(), Some(PathToken::Star | PathToken::StarIndex)) &&
+        DocPath::from_tokens(rule_path.tokens()[..collection_path.len()].to_vec())
+          .matches_path_exactly(collection_slice.as_slice()))
+      .cloned()
+      .collect_vec();
+    if value_paths.is_empty() {
+      value_paths.push(collection_path.join(if is_list { "[*]" } else { "*" }));
+    }
+
+    for value_path in value_paths {
+      let mut value_rules = RuleList {
+        rules: each_value_rules.clone(),
+        rule_logic: RuleLogic::And,
+        cascaded: false
+      };
+      if let Some(existing) = matching_rules.get(&value_path)
+        .filter(|existing| existing.rule_logic == RuleLogic::And) {
+        for rule in &existing.rules {
+          if !value_rules.rules.contains(rule) {
+            value_rules.rules.push(rule.clone());
+          }
+        }
+      }
+      matching_rules.insert(value_path, value_rules);
+    }
+
+    PlanMatchingContext {
+      matching_rules: MatchingRuleCategory {
+        name: context.matching_rules.name.clone(),
+        rules: matching_rules
+      },
+      .. context.clone()
+    }
+  }
+
+  /// Builds the node to match each value of a map with an `EachValue` rule against the first
+  /// expected value, so that the rules defined below the values (like `$.chips.*.amount`) are
+  /// applied.
+  fn build_for_each_value_node(
+    context: &PlanMatchingContext,
+    path: &DocPath,
+    template: &Value
+  ) -> ExecutionPlanNode {
+    let mut for_each_node = ExecutionPlanNode::action("for-each");
+    let marker = if path.is_root() {
+      "$*".to_string()
+    } else {
+      format!("{}*", path.last_field().unwrap_or_default())
+    };
+    for_each_node.add(ExecutionPlanNode::value_node(marker.as_str()));
+    for_each_node.add(ExecutionPlanNode::resolve_current_value(path));
+
+    let item_path = path.parent()
+      .unwrap_or_else(|| path.clone())
+      .join_field(marker);
+    let mut item_node = ExecutionPlanNode::container(&item_path);
+    Self::process_body_node(context, template, &item_path, &mut item_node);
+    for_each_node.add(item_node);
+    for_each_node
+  }
+
   fn process_array(
     context: &PlanMatchingContext,
     json: &Value,
@@ -146,9 +263,15 @@ impl JsonPlanBuilder {
           .join_field(marker);
         for_each_node.add(ExecutionPlanNode::resolve_current_value(path));
         let mut item_node = ExecutionPlanNode::container(&item_path);
+        let item_context = if !matchers.cascaded &&
+          matchers.rules.iter().any(|rule| matches!(rule, MatchingRule::EachValue(_))) {
+          Self::each_value_context(context, path, &matchers, true)
+        } else {
+          context.clone()
+        };
         match template {
-          Value::Array(_) => Self::process_body_node(context, template, &item_path, &mut item_node),
-          Value::Object(_) => Self::process_body_node(context, template, &item_path, &mut item_node),
+          Value::Array(_) => Self::process_body_node(&item_context, template, &item_path, &mut item_node),
+          Value::Object(_) => Self::process_body_node(&item_context, template, &item_path, &mut item_node),
           _ => {
             let mut presence_check = ExecutionPlanNode::action("if");
             presence_check

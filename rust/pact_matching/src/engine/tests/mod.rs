@@ -27,6 +27,7 @@ use crate::engine::{
 };
 use crate::Mismatch::{self, BodyMismatch, MethodMismatch};
 
+mod each_value_tests;
 mod walk_tree_tests;
 mod query_tests;
 mod header_tests;

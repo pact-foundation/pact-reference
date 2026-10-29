@@ -116,12 +116,17 @@ fn drop_indices(path: &DocPath) -> DocPath {
     }))
 }
 
+/// Removes marker fields (`name*`), replacing them with basic fields (`name`) and a zero index. The
+/// root marker (`$*`) is replaced with just a zero index.
 fn remove_marker(path: &DocPath) -> DocPath {
   DocPath::from_tokens(path.tokens()
     .iter()
     .flat_map(|token| {
       if let PathToken::Field(name) = token {
-        if name.ends_with('*') {
+        if name == "$*" {
+          // The root marker is replaced with just a zero index
+          vec![PathToken::Index(0)]
+        } else if name.ends_with('*') {
           vec![PathToken::Field(name.trim_end_matches('*').to_string()), PathToken::Index(0)]
         } else {
           vec![token.clone()]
