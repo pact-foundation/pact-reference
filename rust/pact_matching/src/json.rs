@@ -13,7 +13,7 @@ use serde_json::{json, Value};
 
 use pact_models::http_parts::HttpPart;
 use pact_models::json_utils::json_to_string;
-use pact_models::matchingrules::MatchingRule;
+use pact_models::matchingrules::{MatchingRule, RuleLogic};
 use pact_models::path_exp::DocPath;
 #[cfg(feature = "datetime")] use pact_models::time_utils::validate_datetime;
 use tracing::debug;
@@ -409,6 +409,13 @@ pub fn compare_json(
   context: &(dyn MatchingContext + Send + Sync)
 ) -> Result<(), Vec<CommonMismatch>> {
   debug!("compare: Comparing path {}", path);
+  let is_type_mismatch = (expected.is_object() && !actual.is_object()) ||
+    (expected.is_array() && !actual.is_array());
+  if is_type_mismatch && is_or_matcher_defined(path, context) {
+    // With OR logic, another rule may allow a different type (i.e. an object or null)
+    debug!("compare: Values at path {} are different types, but an OR matcher is defined", path);
+    return compare_values(path, expected, actual, context);
+  }
   match (expected, actual) {
     (&Value::Object(ref emap), &Value::Object(ref amap)) => compare_maps(path, emap, amap, context),
     (&Value::Object(_), _) => {
@@ -432,6 +439,11 @@ pub fn compare_json(
     }
     (_, _) => compare_values(path, expected, actual, context)
   }
+}
+
+fn is_or_matcher_defined(path: &DocPath, context: &(dyn MatchingContext + Send + Sync)) -> bool {
+  context.matcher_is_defined(path) &&
+    context.select_best_matcher(path).rule_logic == RuleLogic::Or
 }
 
 fn compare_maps(
@@ -458,11 +470,17 @@ fn compare_maps(
     if context.matcher_is_defined(path) {
       debug!("compare_maps: Matcher is defined for path {}", path);
       let rule_list = context.select_best_matcher(path);
-      for matcher in rule_list.rules {
-        let result1 = compare_maps_with_matchingrule(&matcher, rule_list.cascaded, path, &expected, &actual, context, &mut |p, expected, actual, context| {
+      let results = rule_list.rules.iter().map(|matcher| {
+        compare_maps_with_matchingrule(matcher, rule_list.cascaded, path, &expected, &actual, context, &mut |p, expected, actual, context| {
           compare_json(p, expected, actual, context)
-        });
-        result = merge_result(result, result1);
+        })
+      }).collect::<Vec<_>>();
+      if rule_list.rule_logic == RuleLogic::Or && results.iter().any(|result| result.is_ok()) {
+        debug!("compare_maps: At least one matcher for path {} matched with OR logic", path);
+      } else {
+        for result1 in results {
+          result = merge_result(result, result1);
+        }
       }
     } else {
       let expected_keys = expected.keys().cloned().collect();
@@ -1496,7 +1514,7 @@ mod tests2 {
   use serde_json::{json, Value};
 
   use pact_models::matchingrules_list;
-  use pact_models::matchingrules::MatchingRule;
+  use pact_models::matchingrules::{MatchingRule, MatchingRuleCategory};
   use crate::{CoreMatchingContext, DiffConfig};
 
   use super::*;
@@ -1568,6 +1586,110 @@ mod tests2 {
     let expected = expected_json.as_array().unwrap();
     let actual = actual_json.as_array().unwrap();
     let result = compare_lists(&DocPath::root(), expected, actual, &context);
+    if is_ok {
+      expect!(result).to(be_ok());
+    } else {
+      expect!(result).to(be_err());
+    }
+  }
+
+  fn or_matching_rules(path: &'static str, rules: &[MatchingRule]) -> MatchingRuleCategory {
+    let mut category = MatchingRuleCategory::empty("body");
+    for rule in rules {
+      category.add_rule(DocPath::new_unwrap(path), rule.clone(), RuleLogic::Or);
+    }
+    category
+  }
+
+  // Issue #249
+  #[rstest]
+  //                                   actual_json,                    is_ok
+  #[case::matches_first_rule(          json!({"a": "other string"}),   true)]
+  #[case::matches_second_rule(         json!({"a": null}),             true)]
+  #[case::matches_no_rule(             json!({"a": 100}),              false)]
+  fn compare_json_with_or_matcher_on_value(#[case] actual_json: Value, #[case] is_ok: bool) {
+    let expected_json = json!({"a": "string"});
+    let matchingrules = or_matching_rules("$.a", &[MatchingRule::Type, MatchingRule::Null]);
+    let context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys, &matchingrules, &hashmap!{});
+    let result = compare_json(&DocPath::root(), &expected_json, &actual_json, &context);
+    if is_ok {
+      expect!(result).to(be_ok());
+    } else {
+      expect!(result).to(be_err());
+    }
+  }
+
+  // Issue #249
+  #[rstest]
+  //                                   actual_json,                    is_ok
+  #[case::object_of_same_type(         json!({"a": {"b": "other"}}),   true)]
+  #[case::null_value(                  json!({"a": null}),             true)]
+  #[case::string_value(                json!({"a": "string"}),         false)]
+  #[case::array_value(                 json!({"a": ["string"]}),       false)]
+  #[case::object_with_child_mismatch(  json!({"a": {"b": 100}}),       false)]
+  fn compare_json_with_or_matcher_on_object(#[case] actual_json: Value, #[case] is_ok: bool) {
+    let expected_json = json!({"a": {"b": "string"}});
+    let matchingrules = or_matching_rules("$.a", &[MatchingRule::Type, MatchingRule::Null]);
+    let context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys, &matchingrules, &hashmap!{});
+    let result = compare_json(&DocPath::root(), &expected_json, &actual_json, &context);
+    if is_ok {
+      expect!(result).to(be_ok());
+    } else {
+      expect!(result).to(be_err());
+    }
+  }
+
+  // Issue #249
+  #[rstest]
+  //                                   actual_json,                    is_ok
+  #[case::array_of_same_type(          json!({"a": ["x", "y"]}),       true)]
+  #[case::null_value(                  json!({"a": null}),             true)]
+  #[case::object_value(                json!({"a": {"b": "x"}}),       false)]
+  fn compare_json_with_or_matcher_on_array(#[case] actual_json: Value, #[case] is_ok: bool) {
+    let expected_json = json!({"a": ["string"]});
+    let matchingrules = or_matching_rules("$.a", &[MatchingRule::Type, MatchingRule::Null]);
+    let context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys, &matchingrules, &hashmap!{});
+    let result = compare_json(&DocPath::root(), &expected_json, &actual_json, &context);
+    if is_ok {
+      expect!(result).to(be_ok());
+    } else {
+      expect!(result).to(be_err());
+    }
+  }
+
+  #[test]
+  fn compare_json_with_and_matchers_on_object_still_requires_an_object() {
+    let expected_json = json!({"a": {"b": "string"}});
+    let actual_json = json!({"a": null});
+    let matchingrules = matchingrules_list! {
+      "body"; "$.a" => [ MatchingRule::Type, MatchingRule::Null ]
+    };
+    let context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys, &matchingrules, &hashmap!{});
+    let result = compare_json(&DocPath::root(), &expected_json, &actual_json, &context);
+    expect!(result).to(be_err());
+  }
+
+  // Issue #249
+  #[rstest]
+  #[case::integer_or_decimal_with_integer( MatchingRule::Integer, MatchingRule::Decimal, json!(10),     true)]
+  #[case::integer_or_decimal_with_decimal( MatchingRule::Integer, MatchingRule::Decimal, json!(10.5),   true)]
+  #[case::integer_or_decimal_with_string(  MatchingRule::Integer, MatchingRule::Decimal, json!("10"),   false)]
+  #[case::date_or_null_with_date(          MatchingRule::Date("yyyy-MM-dd".to_string()), MatchingRule::Null, json!("2026-11-02"), true)]
+  #[case::date_or_null_with_null(          MatchingRule::Date("yyyy-MM-dd".to_string()), MatchingRule::Null, Value::Null, true)]
+  #[case::date_or_null_with_other_date(    MatchingRule::Date("yyyy-MM-dd".to_string()), MatchingRule::Null, json!("02/11/2026"), false)]
+  #[case::boolean_or_number_with_boolean(  MatchingRule::Boolean, MatchingRule::Number, json!(false),  true)]
+  #[case::boolean_or_number_with_number(   MatchingRule::Boolean, MatchingRule::Number, json!(1.5),    true)]
+  #[case::boolean_or_number_with_object(   MatchingRule::Boolean, MatchingRule::Number, json!({}),     false)]
+  fn compare_json_with_or_matcher_on_scalar_values(
+    #[case] first: MatchingRule,
+    #[case] second: MatchingRule,
+    #[case] actual: Value,
+    #[case] is_ok: bool
+  ) {
+    let expected_json = json!({"a": 1});
+    let matchingrules = or_matching_rules("$.a", &[first, second]);
+    let context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys, &matchingrules, &hashmap!{});
+    let result = compare_json(&DocPath::root(), &expected_json, &json!({"a": actual}), &context);
     if is_ok {
       expect!(result).to(be_ok());
     } else {

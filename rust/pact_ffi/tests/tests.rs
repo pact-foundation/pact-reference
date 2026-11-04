@@ -1910,6 +1910,182 @@ fn combined_each_key_and_each_value_matcher() {
   };
 }
 
+// Issue #249
+#[rstest]
+#[case::values_match_the_type(json!({ "name": "Mary", "address": { "street": "Other St" } }), 200)]
+#[case::values_are_null(json!({ "name": null, "address": null }), 200)]
+#[case::values_match_neither_rule(json!({ "name": 100, "address": "Other St" }), 500)]
+fn matchers_combined_with_or(#[case] actual_body: Value, #[case] expected_status: u16) {
+  init_crypto();
+
+  let consumer_name = CString::new("combined_or_matcher-consumer").unwrap();
+  let provider_name = CString::new("combined_or_matcher-provider").unwrap();
+  let pact_handle = pactffi_new_pact(consumer_name.as_ptr(), provider_name.as_ptr());
+  let description = CString::new("combined_or_matcher").unwrap();
+  let interaction = pactffi_new_interaction(pact_handle.clone(), description.as_ptr());
+
+  let content_type = CString::new("application/json").unwrap();
+  let path = CString::new("/person").unwrap();
+  let json = json!({
+    "name": {
+      "pact:matcher:type": [
+        { "pact:matcher:type": "type" },
+        { "pact:matcher:type": "null" }
+      ],
+      "pact:matcher:combine": "OR",
+      "value": "Fred"
+    },
+    "address": {
+      "pact:matcher:type": [
+        { "pact:matcher:type": "type" },
+        { "pact:matcher:type": "null" }
+      ],
+      "pact:matcher:combine": "OR",
+      "value": {
+        "street": "Main St"
+      }
+    }
+  });
+  let body = CString::new(json.to_string()).unwrap();
+  let address = CString::new("127.0.0.1").unwrap();
+  let method = CString::new("PUT").unwrap();
+
+  pactffi_upon_receiving(interaction.clone(), description.as_ptr());
+  pactffi_with_request(interaction.clone(), method.as_ptr(), path.as_ptr());
+  pactffi_with_body(interaction.clone(), InteractionPart::Request, content_type.as_ptr(), body.as_ptr());
+  pactffi_response_status(interaction.clone(), 200);
+
+  let port = pactffi_create_mock_server_for_transport(pact_handle.clone(), address.as_ptr(), 0, null(), null());
+
+  expect!(port).to(be_greater_than(0));
+
+  let client = http_client();
+  let result = client.put(format!("http://127.0.0.1:{}/person", port).as_str())
+    .header("Content-Type", "application/json")
+    .body(actual_body.to_string())
+    .send();
+
+  let mismatches = pactffi_mock_server_mismatches(port);
+  println!("{}", unsafe { CStr::from_ptr(mismatches) }.to_string_lossy());
+
+  pactffi_cleanup_mock_server(port);
+  pactffi_free_pact_handle(pact_handle);
+
+  match result {
+    Ok(res) => {
+      expect!(res.status().as_u16()).to(be_eq(expected_status));
+    },
+    Err(err) => {
+      panic!("expected {} response but request failed: {}", expected_status, err);
+    }
+  };
+}
+
+// Issue #249
+#[rstest]
+#[case::digits("12345", 200)]
+#[case::all("all", 200)]
+#[case::other("some", 500)]
+fn or_matchers_for_query_parameters(#[case] status: &str, #[case] expected_status: u16) {
+  init_crypto();
+
+  let consumer_name = CString::new("or_matchers_query-consumer").unwrap();
+  let provider_name = CString::new("or_matchers_query-provider").unwrap();
+  let pact_handle = pactffi_new_pact(consumer_name.as_ptr(), provider_name.as_ptr());
+  let description = CString::new("or_matchers_query").unwrap();
+  let interaction = pactffi_new_interaction(pact_handle.clone(), description.as_ptr());
+
+  let path = CString::new("/items").unwrap();
+  let method = CString::new("GET").unwrap();
+  let name = CString::new("status").unwrap();
+  let value = CString::new(json!({
+    "pact:matcher:type": [
+      { "pact:matcher:type": "regex", "regex": "^\\d+$" },
+      { "pact:matcher:type": "regex", "regex": "^all$" }
+    ],
+    "pact:matcher:combine": "OR",
+    "value": "100"
+  }).to_string()).unwrap();
+  let address = CString::new("127.0.0.1").unwrap();
+
+  pactffi_upon_receiving(interaction.clone(), description.as_ptr());
+  pactffi_with_request(interaction.clone(), method.as_ptr(), path.as_ptr());
+  pactffi_with_query_parameter_v2(interaction.clone(), name.as_ptr(), 0, value.as_ptr());
+  pactffi_response_status(interaction.clone(), 200);
+
+  let port = pactffi_create_mock_server_for_transport(pact_handle.clone(), address.as_ptr(), 0, null(), null());
+  expect!(port).to(be_greater_than(0));
+
+  let client = http_client();
+  let result = client.get(format!("http://127.0.0.1:{}/items?status={}", port, status).as_str()).send();
+
+  let mismatches = pactffi_mock_server_mismatches(port);
+  println!("{}", unsafe { CStr::from_ptr(mismatches) }.to_string_lossy());
+
+  pactffi_cleanup_mock_server(port);
+  pactffi_free_pact_handle(pact_handle);
+
+  match result {
+    Ok(res) => expect!(res.status().as_u16()).to(be_eq(expected_status)),
+    Err(err) => panic!("expected {} response but request failed: {}", expected_status, err)
+  };
+}
+
+// Issue #249
+#[rstest]
+#[case::v4(PactSpecification::V4)]
+#[case::v3(PactSpecification::V3)]
+#[case::v2(PactSpecification::V2)]
+fn or_matchers_are_written_to_the_pact_file(#[case] spec: PactSpecification) {
+  let consumer_name = CString::new(format!("or_matchers_file-{:?}-consumer", spec)).unwrap();
+  let provider_name = CString::new("or_matchers_file-provider").unwrap();
+  let pact_handle = pactffi_new_pact(consumer_name.as_ptr(), provider_name.as_ptr());
+  pactffi_with_specification(pact_handle, spec);
+  let description = CString::new("or_matchers_file").unwrap();
+  let interaction = pactffi_new_interaction(pact_handle.clone(), description.as_ptr());
+
+  let content_type = CString::new("application/json").unwrap();
+  let path = CString::new("/contact").unwrap();
+  let method = CString::new("PUT").unwrap();
+  let body = CString::new(json!({
+    "contact": {
+      "pact:matcher:type": [
+        { "pact:matcher:type": "type" },
+        { "pact:matcher:type": "null" }
+      ],
+      "pact:matcher:combine": "OR",
+      "value": { "email": "fred@example.com" }
+    }
+  }).to_string()).unwrap();
+
+  pactffi_upon_receiving(interaction.clone(), description.as_ptr());
+  pactffi_with_request(interaction.clone(), method.as_ptr(), path.as_ptr());
+  pactffi_with_body(interaction.clone(), InteractionPart::Request, content_type.as_ptr(), body.as_ptr());
+  pactffi_response_status(interaction.clone(), 200);
+
+  let tmp = tempfile::tempdir().unwrap();
+  let tmp_dir = CString::new(tmp.path().to_string_lossy().as_bytes().to_vec()).unwrap();
+  let result = pactffi_pact_handle_write_file(pact_handle, tmp_dir.as_ptr(), false);
+  let pact_file = pact_default_file_name(&pact_handle);
+  pactffi_free_pact_handle(pact_handle);
+  expect!(result).to(be_equal_to(0));
+
+  let json: Value = serde_json::from_reader(File::open(tmp.path().join(pact_file.unwrap())).unwrap()).unwrap();
+  let request = &json["interactions"][0]["request"];
+  let body = if spec == PactSpecification::V4 { &request["body"]["content"] } else { &request["body"] };
+  expect!(body).to(be_equal_to(&json!({ "contact": { "email": "fred@example.com" } })));
+
+  if spec == PactSpecification::V2 {
+    // V2 has one rule per path, so only the first rule is written
+    expect!(&request["matchingRules"]).to(be_equal_to(&json!({ "$.body.contact": { "match": "type" } })));
+  } else {
+    expect!(&request["matchingRules"]["body"]["$.contact"]).to(be_equal_to(&json!({
+      "combine": "OR",
+      "matchers": [{ "match": "type" }, { "match": "null" }]
+    })));
+  }
+}
+
 // Issue #399
 #[test_log::test]
 fn matching_definition_expressions_matcher() {

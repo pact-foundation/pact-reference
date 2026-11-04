@@ -160,8 +160,9 @@ Here the `interests` attribute would be expanded to
 
 ## Supporting multiple matching rules
 
-Matching rules can be combined. These rules will be evaluated with an AND (i.e. all the rules must match successfully 
-for the result to be successful). The main reason to do this is to combine the `EachKey` and `EachValue` matching rules
+Matching rules can be combined. By default, these rules will be evaluated with an AND (i.e. all the rules must match
+successfully for the result to be successful). See [Combining matching rules with OR](#combining-matching-rules-with-or)
+to require only one of the rules to match. The main reason to do this is to combine the `EachKey` and `EachValue` matching rules
 on a map structure, but other rules make sense to combine (like the `include` matcher).
 
 To provide multiple matchers, you need to provide an array format. 
@@ -215,6 +216,51 @@ So the resulting intermediate JSON would be something like:
   }
 }
 ```
+
+### Combining matching rules with OR
+
+The `pact:matcher:combine` attribute sets how the matching rules are combined. It can be either `AND` (the default,
+all the rules must match) or `OR` (at least one of the rules must match). Any other value is an error, and the
+matching rules will be ignored.
+
+For example, a `name` that is either a string or null:
+
+```json
+{
+  "name": {
+    "pact:matcher:type": [
+      { "pact:matcher:type": "type" },
+      { "pact:matcher:type": "null" }
+    ],
+    "pact:matcher:combine": "OR",
+    "value": "Fred"
+  }
+}
+```
+
+The rules are written to the Pact file as a rule list combined with `OR`:
+
+```json
+"$.name": {
+  "combine": "OR",
+  "matchers": [{ "match": "type" }, { "match": "null" }]
+}
+```
+
+`OR` can be used for bodies (JSON and XML), headers and query parameters.
+
+#### Limitations
+
+* All the alternatives are applied to the top level `value`, so matchers that compare against the example (like
+  `type`) can only describe the shape of that example. For instance, `type OR null` on an object accepts an object of
+  the same shape or null, but not an array.
+* Each matcher in the list must be a single matcher. A nested list of matchers is an error.
+* The `regex` and `include` matchers convert non-string values to their JSON text before matching, so as an
+  alternative they can accept numbers, booleans, objects or arrays whose JSON text matches (for example, `^\w+$`
+  matches the number `5`).
+* Use `OR` with care. Only the top level example value is used for the consumer test, so the other alternatives are
+  never exercised against your consumer code.
+* The experimental V2 matching engine (`PACT_MATCHING_ENGINE=v2`) does not support `OR`.
 
 ## Supporting matching rule definitions
 

@@ -1032,3 +1032,46 @@ fn match_metadata_value_with_content_type_test() {
   let result = match_metadata_value("key", &expected, &actual, &context);
   expect!(result).to(be_err());
 }
+
+fn or_rules(category: &str, path: &'static str, rules: &[MatchingRule]) -> MatchingRuleCategory {
+  let mut category = MatchingRuleCategory::empty(category);
+  for rule in rules {
+    category.add_rule(DocPath::new_unwrap(path), rule.clone(), pact_models::matchingrules::RuleLogic::Or);
+  }
+  category
+}
+
+// Issue #249
+#[rstest::rstest]
+#[case::digits(     "12345",   true)]
+#[case::all(        "all",     true)]
+#[case::neither(    "some",    false)]
+fn match_query_with_or_matchers(#[case] actual: &str, #[case] is_ok: bool) {
+  let expected = hashmap! { "id".to_string() => vec![Some("100".to_string())] };
+  let actual = hashmap! { "id".to_string() => vec![Some(actual.to_string())] };
+  let rules = or_rules("query", "id", &[
+    MatchingRule::Regex("^\\d+$".to_string()),
+    MatchingRule::Regex("^all$".to_string())
+  ]);
+  let context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys, &rules, &hashmap!{});
+  let result = match_query(Some(expected), Some(actual), &context);
+  expect!(result.values().flatten().count() == 0).to(be_equal_to(is_ok));
+}
+
+// Issue #249
+#[rstest::rstest]
+#[case::bearer_token("Bearer abc.def.ghi", true)]
+#[case::api_key("ApiKey 1234", true)]
+#[case::basic("Basic dXNlcg==", false)]
+fn match_headers_with_or_matchers(#[case] actual: &str, #[case] is_ok: bool) {
+  let expected = hashmap! { "authorization".to_string() => vec!["Bearer token".to_string()] };
+  let actual = hashmap! { "authorization".to_string() => vec![actual.to_string()] };
+  let rules = or_rules("header", "authorization", &[
+    MatchingRule::Regex("^Bearer \\S+$".to_string()),
+    MatchingRule::Regex("^ApiKey \\d+$".to_string())
+  ]);
+  let context = crate::HeaderMatchingContext::new(
+    &CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys, &rules, &hashmap!{}));
+  let result = match_headers(Some(expected), Some(actual), &context);
+  expect!(result.values().flatten().count() == 0).to(be_equal_to(is_ok));
+}
