@@ -264,6 +264,9 @@
 //! | `pendingErrors` | Failed interactions that are marked as pending and do not fail the verification |
 //! | `interactionResults` | One entry per verified interaction, in the order they were verified |
 //!
+//! For response mismatches, the `mismatch` object includes `responseIdentifiers` when the provider returns known trace or
+//! correlation headers. It maps each header name to its unmodified response values.
+//!
 //! Each entry in `interactionResults` has the following attributes:
 //!
 //! | Attribute | Description |

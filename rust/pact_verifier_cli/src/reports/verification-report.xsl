@@ -661,6 +661,22 @@ footer a:hover { text-decoration: underline; }
           </xsl:when>
 
         </xsl:choose>
+        <xsl:if test="mismatch/response_identifiers/header">
+          <div class="response-identifiers">
+            <p><strong>Response identifiers</strong></p>
+            <ul>
+              <xsl:for-each select="mismatch/response_identifiers/header">
+                <li>
+                  <code><xsl:value-of select="@name"/></code>:
+                  <xsl:for-each select="value">
+                    <xsl:if test="position() &gt; 1">, </xsl:if>
+                    <code><xsl:value-of select="."/></code>
+                  </xsl:for-each>
+                </li>
+              </xsl:for-each>
+            </ul>
+          </div>
+        </xsl:if>
       </div>
     </div>
   </xsl:template>

@@ -1,6 +1,6 @@
 //! Structs for storing and returning the result of the verification execution
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::time::Duration;
 
 use itertools::Itertools;
@@ -141,6 +141,8 @@ pub enum VerificationMismatchResult {
   Mismatches {
     /// Mismatches that occurred
     mismatches: Vec<Mismatch>,
+    /// Trace and correlation response header values returned by the provider
+    response_identifiers: BTreeMap<String, Vec<String>>,
     /// Interaction ID if fetched from a pact broker
     interaction_id: Option<String>
   },
@@ -156,9 +158,10 @@ pub enum VerificationMismatchResult {
 impl From<&crate::MismatchResult> for VerificationMismatchResult {
   fn from(result: &crate::MismatchResult) -> Self {
     match result {
-      crate::MismatchResult::Mismatches { mismatches, interaction_id, .. } => {
+      crate::MismatchResult::Mismatches { mismatches, response_identifiers, interaction_id, .. } => {
         VerificationMismatchResult::Mismatches {
           mismatches: mismatches.clone(),
+          response_identifiers: response_identifiers.clone(),
           interaction_id: interaction_id.clone()
         }
       }
@@ -175,12 +178,16 @@ impl From<&crate::MismatchResult> for VerificationMismatchResult {
 impl Into<Value> for &VerificationMismatchResult {
   fn into(self) -> Value {
     match self {
-      VerificationMismatchResult::Mismatches { mismatches, interaction_id } => {
-        json!({
+      VerificationMismatchResult::Mismatches { mismatches, response_identifiers, interaction_id } => {
+        let mut result = json!({
           "type": "mismatches",
           "mismatches": mismatches.iter().map(|i| i.to_json()).collect_vec(),
           "interactionId": interaction_id.clone().unwrap_or_default()
-        })
+        });
+        if !response_identifiers.is_empty() {
+          result["responseIdentifiers"] = json!(response_identifiers);
+        }
+        result
       }
       VerificationMismatchResult::Error { error, interaction_id } => {
         json!({
@@ -201,6 +208,8 @@ impl Into<Value> for VerificationMismatchResult {
 
 #[cfg(test)]
 mod tests {
+  use std::collections::BTreeMap;
+
   use expectest::prelude::*;
   use maplit::hashmap;
   use pretty_assertions::assert_eq;
@@ -223,6 +232,10 @@ mod tests {
           mismatch: "Expected 100 but got 200".to_string()
         }
       ],
+      response_identifiers: BTreeMap::from([
+        ("server-timing".to_string(), vec!["trace;desc=00-0123456789abcdef0123456789abcdef-0123456789abcdef-01".to_string()]),
+        ("x-request-id".to_string(), vec!["req-123".to_string()]),
+      ]),
       interaction_id: None
     };
     let json: Value = mismatch.into();
@@ -237,6 +250,10 @@ mod tests {
           "type": "BodyMismatch"
         }
       ],
+      "responseIdentifiers": {
+        "server-timing": ["trace;desc=00-0123456789abcdef0123456789abcdef-0123456789abcdef-01"],
+        "x-request-id": ["req-123"]
+      },
       "type": "mismatches"
     })));
 
@@ -250,6 +267,30 @@ mod tests {
       "message": "It went bang, Mate!",
       "type": "error"
     })));
+  }
+
+  #[test]
+  fn mismatch_result_to_json_keeps_response_identifiers() {
+    let mismatch = MismatchResult::Mismatches {
+      mismatches: vec![Mismatch::StatusMismatch {
+        expected: 200,
+        actual: 404,
+        mismatch: "Expected status 200 but was 404".to_string(),
+      }],
+      response_identifiers: BTreeMap::from([
+        ("x-request-id".to_string(), vec!["req-123".to_string(), "req-456".to_string()]),
+      ]),
+      expected: Box::new(RequestResponseInteraction::default()),
+      actual: Box::new(RequestResponseInteraction::default()),
+      interaction_id: None,
+    };
+
+    let result = VerificationMismatchResult::from(&mismatch);
+    let json: Value = result.into();
+
+    assert_eq!(json["responseIdentifiers"], json!({
+      "x-request-id": ["req-123", "req-456"]
+    }));
   }
 
   #[test]
@@ -383,6 +424,7 @@ mod tests {
                 mismatch: "expected 200 but was 500".to_string()
               }
             ],
+            response_identifiers: BTreeMap::new(),
             expected: Box::new(RequestResponseInteraction::default()),
             actual: Box::new(RequestResponseInteraction::default()),
             interaction_id: None
