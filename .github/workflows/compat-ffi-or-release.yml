@@ -1,0 +1,50 @@
+---
+name: FFI compatibility suite (integration JSON, pact_ffi 0.5.13-or.1)
+
+# TEMPORARY (revert before merge): this branch does not contain
+# pact:matcher:combine support (pact-foundation/pact-reference#601), so the
+# integration_json features can't pass against the library built from this
+# tree. This runs them against the 0.5.13-or.1 prerelease from the
+# YOU54F/pact-reference fork instead, which has #601 and its follow-ups.
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  FORCE_COLOR: '1'
+  PACT_DO_NOT_TRACK: 'true'
+  FFI_RELEASE: https://github.com/YOU54F/pact-reference/releases/download/libpact_ffi-v0.5.13-or.1
+
+jobs:
+  integration-json:
+    name: FFI integration JSON (pact_ffi 0.5.13-or.1)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f  # v2.0.0
+        with:
+          build-warnings: warn
+          cache-workspaces: compatibility-suite-ffi -> target
+          cache-save-if: false
+
+      - name: Download pact_ffi 0.5.13-or.1
+        run: |
+          mkdir -p "$RUNNER_TEMP/ffi"
+          curl -fsSL "$FFI_RELEASE/pact.h" -o "$RUNNER_TEMP/ffi/pact.h"
+          curl -fsSL "$FFI_RELEASE/libpact_ffi-linux-x86_64.so.gz" | gunzip > "$RUNNER_TEMP/ffi/libpact_ffi.so"
+          echo "PACT_FFI_HEADER=$RUNNER_TEMP/ffi/pact.h" >> "$GITHUB_ENV"
+          echo "PACT_FFI_LIB=$RUNNER_TEMP/ffi/libpact_ffi.so" >> "$GITHUB_ENV"
+
+      - name: Run integration JSON features
+        working-directory: compatibility-suite-ffi
+        run: cargo test --test integration_json
