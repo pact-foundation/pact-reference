@@ -155,3 +155,33 @@ Feature: V4 era Matching Rules
     When the request is compared to the expected one
     Then the comparison should NOT be OK
     And the mismatches will contain a mismatch with error "$.actions" -> "Variant at index 1 ({\"href\":\"http://api.x.io/orders/42/items\",\"method\":\"DELETE\",\"name\":\"delete-item\",\"title\":\"Delete Item\"}) was not found in the actual list"
+
+  Scenario: Supports a not empty matcher combined with a null matcher with OR (positive case)
+    Given an expected request configured with the following:
+      | body             | matching rules              |
+      | file: basic.json | or-notempty-matcher-v4.json |
+    And a request is received with the following:
+      | body                              |
+      | JSON: { "one": "a", "two": "b" }  |
+    When the request is compared to the expected one
+    Then the comparison should be OK
+
+  Scenario: Supports a not empty matcher combined with a null matcher with OR (positive case, null value)
+    Given an expected request configured with the following:
+      | body             | matching rules              |
+      | file: basic.json | or-notempty-matcher-v4.json |
+    And a request is received with the following:
+      | body                               |
+      | JSON: { "one": null, "two": "b" }  |
+    When the request is compared to the expected one
+    Then the comparison should be OK
+
+  Scenario: Supports a not empty matcher combined with a null matcher with OR (negative case)
+    Given an expected request configured with the following:
+      | body             | matching rules              |
+      | file: basic.json | or-notempty-matcher-v4.json |
+    And a request is received with the following:
+      | body                             |
+      | JSON: { "one": "", "two": "b" }  |
+    When the request is compared to the expected one
+    Then the comparison should NOT be OK

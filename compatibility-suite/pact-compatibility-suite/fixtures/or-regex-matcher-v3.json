@@ -1,0 +1,17 @@
+{
+  "body": {
+    "$.one": {
+      "combine": "OR",
+      "matchers": [
+        {
+          "match": "regex",
+          "regex": "^\\d+$"
+        },
+        {
+          "match": "regex",
+          "regex": "^[a-z]+$"
+        }
+      ]
+    }
+  }
+}

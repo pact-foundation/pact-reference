@@ -1,0 +1,32 @@
+{
+  "header": {
+    "X-TEST": {
+      "combine": "OR",
+      "matchers": [
+        {
+          "match": "regex",
+          "regex": "^\\d+$"
+        },
+        {
+          "match": "regex",
+          "regex": "^[A-Z]+$"
+        }
+      ]
+    }
+  },
+  "query": {
+    "a": {
+      "combine": "OR",
+      "matchers": [
+        {
+          "match": "regex",
+          "regex": "^\\d+$"
+        },
+        {
+          "match": "regex",
+          "regex": "^[A-Z]+$"
+        }
+      ]
+    }
+  }
+}

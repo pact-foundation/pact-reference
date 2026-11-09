@@ -269,3 +269,89 @@ Feature: V3 era Matching Rules
     When the request is compared to the expected one
     Then the comparison should NOT be OK
     And the mismatches will contain a mismatch with error "$.four" -> "Expected 100 (Integer) to be the same type as 'a' (String)"
+
+  Scenario: Supports matching rules combined with OR (positive case)
+    Given an expected request configured with the following:
+      | body             | matching rules           |
+      | file: basic.json | or-regex-matcher-v3.json |
+    And the following requests are received:
+      | body                                | desc                          |
+      | JSON: { "one": "100", "two": "b" }  | matches the first rule        |
+      | JSON: { "one": "abc", "two": "b" }  | matches the second rule       |
+    When the requests are compared to the expected one
+    Then the comparison should be OK
+
+  Scenario: Supports matching rules combined with OR (negative case)
+    Given an expected request configured with the following:
+      | body             | matching rules           |
+      | file: basic.json | or-regex-matcher-v3.json |
+    And a request is received with the following:
+      | body                               |
+      | JSON: { "one": "A1", "two": "b" }  |
+    When the request is compared to the expected one
+    Then the comparison should NOT be OK
+    And the mismatches will contain a mismatch with error "$.one" -> "Expected 'A1' to match '^\d+$'"
+    And the mismatches will contain a mismatch with error "$.one" -> "Expected 'A1' to match '^[a-z]+$'"
+
+  Scenario: Supports an integer or decimal matcher combined with OR (positive case)
+    Given an expected request configured with the following:
+      | body             | matching rules            |
+      | file: basic.json | or-number-matcher-v3.json |
+    And the following requests are received:
+      | body                                | desc           |
+      | JSON: { "one": 100, "two": "b" }    | integer        |
+      | JSON: { "one": 100.25, "two": "b" } | decimal        |
+    When the requests are compared to the expected one
+    Then the comparison should be OK
+
+  Scenario: Supports an integer or decimal matcher combined with OR (negative case)
+    Given an expected request configured with the following:
+      | body             | matching rules            |
+      | file: basic.json | or-number-matcher-v3.json |
+    And a request is received with the following:
+      | body                                |
+      | JSON: { "one": true, "two": "b" }   |
+    When the request is compared to the expected one
+    Then the comparison should NOT be OK
+
+  Scenario: Supports a type matcher combined with a null matcher with OR (positive case)
+    Given an expected request configured with the following:
+      | body               | matching rules         |
+      | file: 3-level.json | or-null-matcher-v3.json |
+    And the following requests are received:
+      | body                                                                                           | desc          |
+      | JSON: { "one": { "a": { "ids": [1], "status": "OK" } }, "two": [ { "ids": [1], "status": "BAD" } ] } | an object     |
+      | JSON: { "one": null, "two": [ { "ids": [1], "status": "BAD" } ] }                              | null          |
+    When the requests are compared to the expected one
+    Then the comparison should be OK
+
+  Scenario: Supports a type matcher combined with a null matcher with OR (negative case)
+    Given an expected request configured with the following:
+      | body               | matching rules         |
+      | file: 3-level.json | or-null-matcher-v3.json |
+    And a request is received with the following:
+      | body                                                                   |
+      | JSON: { "one": "a string", "two": [ { "ids": [1], "status": "BAD" } ] } |
+    When the request is compared to the expected one
+    Then the comparison should NOT be OK
+
+  Scenario: Supports header and query matching rules combined with OR (positive case)
+    Given an expected request configured with the following:
+      | query  | headers        | matching rules                 |
+      | a=1234 | 'X-TEST: 1234' | or-matcher-header-query-v3.json |
+    And the following requests are received:
+      | query  | headers        | desc                    |
+      | a=100  | 'X-TEST: 100'  | matches the first rule  |
+      | a=ABC  | 'X-TEST: ABC'  | matches the second rule |
+    When the requests are compared to the expected one
+    Then the comparison should be OK
+
+  Scenario: Supports header and query matching rules combined with OR (negative case)
+    Given an expected request configured with the following:
+      | query  | headers        | matching rules                 |
+      | a=1234 | 'X-TEST: 1234' | or-matcher-header-query-v3.json |
+    And a request is received with the following:
+      | query  | headers        |
+      | a=abc  | 'X-TEST: abc'  |
+    When the request is compared to the expected one
+    Then the comparison should NOT be OK
