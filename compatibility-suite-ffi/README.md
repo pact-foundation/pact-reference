@@ -38,6 +38,7 @@ cargo test --no-fail-fast
 | `generators` | V3 `generators` and `http_generators`, V4 `generators`                            |
 | `message`    | V3 `message_consumer`, V4 `message_consumer`, `synchronous_message_consumer`, `v4` |
 | `plugins`    | V4 `plugins/*`: lifecycle, HTTP, message, synchronous message and transports (needs the matt, csv, avro and protobuf plugins installed) |
+| `integration_json` | FFI-only `features/ffi/*`: matching rules defined with integration JSON through `pactffi_with_body` (e.g. `pact:matcher:combine`), which the shared suite can't express as it defines rules in the Pact file format |
 
 Scenarios tagged `wip` are skipped. `tests/matching.rs` also skips one known failure: the mock server reads a
 0-byte body as no body, so the V4 "not empty matcher with binary data (negative case)" scenario can't get its

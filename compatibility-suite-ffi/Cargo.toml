@@ -46,3 +46,7 @@ harness = false
 [[test]]
 name = "plugins"
 harness = false
+
+[[test]]
+name = "integration_json"
+harness = false
