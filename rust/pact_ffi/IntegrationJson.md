@@ -220,8 +220,8 @@ So the resulting intermediate JSON would be something like:
 ### Combining matching rules with OR
 
 The `pact:matcher:combine` attribute sets how the matching rules are combined. It can be either `AND` (the default,
-all the rules must match) or `OR` (at least one of the rules must match). Any other value is an error, and the
-matching rules will be ignored.
+all the rules must match) or `OR` (at least one of the rules must match). The value is not case-sensitive. Any other
+value is logged as an error: the matching rules are ignored, and the value at that path is written as `null`.
 
 For example, a `name` that is either a string or null:
 
@@ -249,6 +249,54 @@ The rules are written to the Pact file as a rule list combined with `OR`:
 
 `OR` can be used for bodies (JSON and XML), headers and query parameters.
 
+#### Nullable objects
+
+If the example `value` is an object or array, any matching rules defined inside it are still applied to its
+children. This lets you describe an optional object (for example, an address that is either null or an object whose
+`number` is an integer):
+
+```json
+{
+  "address": {
+    "pact:matcher:type": [
+      { "pact:matcher:type": "type" },
+      { "pact:matcher:type": "null" }
+    ],
+    "pact:matcher:combine": "OR",
+    "value": {
+      "street": "Main St",
+      "number": { "pact:matcher:type": "integer", "value": 42 }
+    }
+  }
+}
+```
+
+This writes an `OR` rule list for `$.address` and an `integer` rule for `$.address.number`. A request with
+`"address": null` matches, and the rules for the children are only checked when the value is not null.
+
+#### Wrapping another matcher
+
+Each path in the Pact file has a single rule list, combined with either `AND` or `OR`. If the `value` of an `OR`
+matcher is itself a matcher for the same path, its rules are replaced by the `OR` rules and a warning is logged. This
+is the same as the `or` matcher in Pact-JVM. For example, this only writes `integer OR null` for `$.id`, not the
+`regex` rule:
+
+```json
+{
+  "id": {
+    "pact:matcher:type": [
+      { "pact:matcher:type": "integer" },
+      { "pact:matcher:type": "null" }
+    ],
+    "pact:matcher:combine": "OR",
+    "value": { "pact:matcher:type": "regex", "regex": "^\\d+$", "value": "100" }
+  }
+}
+```
+
+Put all the alternatives in the one `pact:matcher:type` array instead. Rules for the same path that use the same
+logic are added to the list.
+
 #### Limitations
 
 * All the alternatives are applied to the top level `value`, so matchers that compare against the example (like
@@ -260,7 +308,6 @@ The rules are written to the Pact file as a rule list combined with `OR`:
   matches the number `5`).
 * Use `OR` with care. Only the top level example value is used for the consumer test, so the other alternatives are
   never exercised against your consumer code.
-* The experimental V2 matching engine (`PACT_MATCHING_ENGINE=v2`) does not support `OR`.
 
 ## Supporting matching rule definitions
 
