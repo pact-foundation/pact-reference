@@ -312,6 +312,7 @@ impl ExecutionPlanInterpreter {
         "json:expect:not-empty" => self.execute_json_expect_empty(action, value_resolver, node, &action_path, false),
         "json:match:length" => self.execute_json_match_length(action, value_resolver, node, &action_path),
         "json:expect:entries" => self.execute_json_expect_entries(action, value_resolver, node, &action_path),
+        "json:not-null" => self.execute_json_not_null(action, value_resolver, node, &action_path),
         "check:exists" => self.execute_check_exists(action, value_resolver, node, &action_path),
         "expect:entries" => self.execute_check_entries(action, value_resolver, node, &action_path),
         "expect:only-entries" => self.execute_check_entries(action, value_resolver, node, &action_path),
@@ -1866,6 +1867,40 @@ impl ExecutionPlanInterpreter {
     }
   }
 
+  /// Returns a boolean value of true if the argument is a value that is not a JSON null. Unlike
+  /// the `json:expect:*` actions, it does not result in an error for a JSON null value.
+  fn execute_json_not_null(
+    &mut self,
+    action: &str,
+    value_resolver: &dyn ValueResolver,
+    node: ExecutionPlanNode,
+    action_path: &Vec<String>
+  ) -> ExecutionPlanNode {
+    let ExecutionPlanNode { node_type, children, .. } = node;
+    match self.validate_one_arg(children, action, value_resolver, &action_path) {
+      Ok(value) => {
+        let not_null = match value.value().unwrap_or_default() {
+          NodeResult::VALUE(NodeValue::NULL) => false,
+          NodeResult::VALUE(NodeValue::JSON(Value::Null)) => false,
+          NodeResult::VALUE(_) => true,
+          _ => false
+        };
+        ExecutionPlanNode {
+          node_type,
+          result: Some(NodeResult::VALUE(NodeValue::BOOL(not_null))),
+          children: vec![value]
+        }
+      }
+      Err(err) => {
+        ExecutionPlanNode {
+          node_type,
+          result: Some(NodeResult::ERROR(err.to_string())),
+          children: vec![]
+        }
+      }
+    }
+  }
+
   fn execute_check_exists(
     &mut self,
     action: &str,
@@ -2429,9 +2464,10 @@ impl ExecutionPlanInterpreter {
       Ok((result_children, values)) => {
         ExecutionPlanNode {
           node_type,
-          result: Some(values.iter().fold(NodeResult::OK, |result, value| {
-            result.or(value)
-          })),
+          // Fold from the first child result, as folding from OK would always result in OK
+          result: Some(values.split_first()
+            .map(|(first, rest)| rest.iter().fold(first.clone(), |result, value| result.or(value)))
+            .unwrap_or(NodeResult::OK)),
           children: result_children
         }
       }

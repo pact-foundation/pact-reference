@@ -1286,7 +1286,13 @@ impl ExecutionPlanNode {
     self.is_container() && !self.has_child_containers()
   }
 
-  /// If this node is a container
+  /// If this node is an OR action node that has been executed successfully
+  pub fn is_successful_or(&self) -> bool {
+    matches!(&self.node_type, PlanNodeType::ACTION(action) if action == "or")
+      && matches!(&self.result, Some(result) if !matches!(result, NodeResult::ERROR(_)))
+  }
+
+  /// If this node is a container node
   pub fn is_container(&self) -> bool {
     if let PlanNodeType::CONTAINER(_) = &self.node_type {
       true
@@ -1314,6 +1320,9 @@ impl ExecutionPlanNode {
       if child.is_container() && terminator == Terminator::ALL || !child.is_container() {
         if let Some(NodeResult::ERROR(error)) = &child.result {
           errors.push(error.clone());
+        } else if child.is_successful_or() {
+          // Only one branch of an OR needs to succeed, so errors from the other branches are not mismatches
+          continue;
         }
         errors.extend_from_slice(child.child_errors(terminator).as_slice());
       }

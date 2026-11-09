@@ -99,7 +99,41 @@ impl JsonPlanBuilder {
         let each_value_context = Self::each_value_context(context, path, &rules, false);
         root_node.add(Self::build_for_each_value_node(&each_value_context, path, template));
       }
-    } else if entries.is_empty() {
+    } else if Self::is_or_with_null(&rules) {
+      // The rules are combined with OR and allow a null value, so the actual value must match the
+      // rules, and the structure of the object is only checked if it is not null
+      root_node.add(ExecutionPlanNode::annotation(rules.generate_description(true)));
+      root_node.add(build_matching_rule_node(&ExecutionPlanNode::value_node(json.clone()),
+        &ExecutionPlanNode::resolve_current_value(path), &rules, true,
+        context.config.show_types_in_errors));
+      let mut structure_node = ExecutionPlanNode::container(path);
+      Self::process_object_entries(context, path, &mut structure_node, entries);
+      for child in structure_node.children {
+        root_node.add(
+          ExecutionPlanNode::action("if")
+            .add(ExecutionPlanNode::action("json:not-null")
+              .add(ExecutionPlanNode::resolve_current_value(path)))
+            .add(child)
+        );
+      }
+    } else {
+      Self::process_object_entries(context, path, root_node, entries);
+    }
+  }
+
+  /// If the rules are combined with OR and include a null matcher
+  fn is_or_with_null(rules: &RuleList) -> bool {
+    !rules.cascaded && rules.rule_logic == RuleLogic::Or && rules.rules.len() > 1 &&
+      rules.rules.iter().any(|rule| matches!(rule, MatchingRule::Null))
+  }
+
+  fn process_object_entries(
+    context: &PlanMatchingContext,
+    path: &DocPath,
+    root_node: &mut ExecutionPlanNode,
+    entries: &Map<String, Value>
+  ) {
+    if entries.is_empty() {
       root_node.add(
         ExecutionPlanNode::action("json:expect:empty")
           .add(ExecutionPlanNode::value_node("OBJECT"))
