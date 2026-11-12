@@ -14,11 +14,12 @@ exclude = [
 ]
 
 [features]
-default = ["datetime", "xml", "plugins", "multipart", "junit"]
+default = ["datetime", "xml", "plugins", "multipart", "form_urlencoded", "junit"]
 datetime = ["pact_models/datetime", "pact_verifier/datetime"] # Support for date/time matchers and expressions
 xml = ["pact_models/xml", "pact_verifier/xml"] # support for matching XML documents
 plugins = ["pact_verifier/plugins"]
 multipart = ["pact_verifier/multipart"] # support for MIME multipart bodies
+form_urlencoded = ["pact_models/form_urlencoded", "pact_verifier/form_urlencoded"] # support for form urlencoded bodies
 junit = ["dep:junit-report", "dep:strip-ansi-escapes"] # support for Junit format reports
 
 [dependencies]

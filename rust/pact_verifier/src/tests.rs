@@ -16,12 +16,14 @@ use rstest::rstest;
 use serde_json::{json, Value};
 use pact_consumer::prelude::*;
 use pact_models::Consumer;
+use pact_models::generators::GeneratorTestMode;
 use pact_models::interaction::Interaction;
 use pact_models::pact::Pact;
 use pact_models::prelude::v4::SynchronousHttp;
 use pact_models::provider_states::*;
 use pact_models::sync_interaction::RequestResponseInteraction;
 use pact_models::sync_pact::RequestResponsePact;
+use pact_models::v4::http_parts::HttpRequest;
 
 use crate::{
   FilterById,
@@ -1255,4 +1257,39 @@ fn process_comments_with_no_references_produces_no_references_section() {
   let mut output = vec![];
   super::process_comments(&interaction, &mut output);
   assert_snapshot!(output.join("\n"));
+}
+
+#[test_log::test(tokio::test)]
+async fn generate_request_applies_body_generators_to_a_form_urlencoded_request() {
+  let request = HttpRequest::from_json(&json!({
+    "method": "POST",
+    "path": "/orders",
+    "headers": { "Content-Type": "application/x-www-form-urlencoded" },
+    "body": {
+      "content": "customer=1&qty=2&note=gift+wrap",
+      "contentType": "application/x-www-form-urlencoded",
+      "encoded": false
+    },
+    "generators": {
+      "body": {
+        "$.customer": { "type": "ProviderState", "expression": "${customer}", "dataType": "STRING" },
+        "$.qty": { "type": "RandomInt", "min": 100, "max": 999 }
+      }
+    }
+  })).unwrap();
+  let context = hashmap!{ "customer" => json!(1234) };
+
+  let generated = pact_matching::generate_request(&request, &GeneratorTestMode::Provider, &context).await;
+
+  let body = String::from_utf8(generated.body.value().unwrap().to_vec()).unwrap();
+  let params: Vec<(&str, &str)> = body.split('&')
+    .map(|param| param.split_once('=').unwrap())
+    .collect();
+  expect!(params.len()).to(be_equal_to(3));
+  expect!(params[0]).to(be_equal_to(("customer", "1234")));
+  expect!(params[1].0).to(be_equal_to("qty"));
+  let qty: i32 = params[1].1.parse().unwrap();
+  expect!(qty).to(be_greater_or_equal_to(100));
+  expect!(qty).to(be_less_or_equal_to(999));
+  expect!(params[2]).to(be_equal_to(("note", "gift+wrap")));
 }
