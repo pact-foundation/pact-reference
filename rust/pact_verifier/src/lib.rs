@@ -3,7 +3,7 @@
 //! and V4 Pact specification (`https://github.com/pact-foundation/pact-specification/tree/version-4`).
 #![warn(missing_docs)]
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt::{Debug, Display, Formatter};
 use std::fmt;
 use std::fs;
@@ -243,6 +243,8 @@ pub enum MismatchResult {
     Mismatches {
       /// Mismatches that occurred
       mismatches: Vec<Mismatch>,
+      /// Trace and correlation response header values returned by the provider
+      response_identifiers: BTreeMap<String, Vec<String>>,
       /// Expected Response/Message
       expected: Box<dyn Interaction + RefUnwindSafe>,
       /// Actual Response/Message
@@ -273,10 +275,11 @@ impl From<ProviderStateError> for MismatchResult {
 impl Debug for MismatchResult {
   fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
     match self {
-      MismatchResult::Mismatches { mismatches, expected, actual, interaction_id } => {
+      MismatchResult::Mismatches { mismatches, response_identifiers, expected, actual, interaction_id } => {
         if let Some(ref expected_reqres) = expected.as_request_response() {
           f.debug_struct("MismatchResult::Mismatches")
             .field("mismatches", mismatches)
+            .field("response_identifiers", response_identifiers)
             .field("expected", expected_reqres)
             .field("actual", &actual.as_request_response().unwrap())
             .field("interaction_id", interaction_id)
@@ -284,6 +287,7 @@ impl Debug for MismatchResult {
         } else if let Some(ref expected_message) = expected.as_message() {
           f.debug_struct("MismatchResult::Mismatches")
             .field("mismatches", mismatches)
+            .field("response_identifiers", response_identifiers)
             .field("expected", expected_message)
             .field("actual", &actual.as_message().unwrap())
             .field("interaction_id", interaction_id)
@@ -291,6 +295,7 @@ impl Debug for MismatchResult {
         } else {
           f.debug_struct("MismatchResult::Mismatches")
             .field("mismatches", mismatches)
+            .field("response_identifiers", response_identifiers)
             .field("expected", &"<UKNOWN TYPE>".to_string())
             .field("actual", &"<UKNOWN TYPE>".to_string())
             .field("interaction_id", interaction_id)
@@ -307,10 +312,11 @@ impl Debug for MismatchResult {
 impl Clone for MismatchResult {
   fn clone(&self) -> Self {
     match self {
-      MismatchResult::Mismatches { mismatches, expected, actual, interaction_id } => {
+      MismatchResult::Mismatches { mismatches, response_identifiers, expected, actual, interaction_id } => {
         if expected.is_v4() {
           MismatchResult::Mismatches {
             mismatches: mismatches.clone(),
+            response_identifiers: response_identifiers.clone(),
             expected: as_safe_ref(expected.as_ref()),
             actual: as_safe_ref(actual.as_ref()),
             interaction_id: interaction_id.clone()
@@ -318,6 +324,7 @@ impl Clone for MismatchResult {
         } else if let Some(ref expected_reqres) = expected.as_request_response() {
           MismatchResult::Mismatches {
             mismatches: mismatches.clone(),
+            response_identifiers: response_identifiers.clone(),
             expected: Box::new(expected_reqres.clone()),
             actual: Box::new(actual.as_request_response().unwrap().clone()),
             interaction_id: interaction_id.clone()
@@ -325,6 +332,7 @@ impl Clone for MismatchResult {
         } else if let Some(ref expected_message) = expected.as_message() {
           MismatchResult::Mismatches {
             mismatches: mismatches.clone(),
+            response_identifiers: response_identifiers.clone(),
             expected: Box::new(expected_message.clone()),
             actual: Box::new(actual.as_message().unwrap().clone()),
             interaction_id: interaction_id.clone()
@@ -380,6 +388,7 @@ async fn verify_response_from_provider<F: RequestFilterExecutor>(
           } else {
             Err(MismatchResult::Mismatches {
               mismatches,
+              response_identifiers: collect_response_identifiers(actual_response.headers.as_ref()),
               expected: Box::new(interaction.clone()),
               actual: Box::new(SynchronousHttp { response: actual_response.clone(), .. SynchronousHttp::default() }),
               interaction_id: interaction.id.clone()
@@ -586,6 +595,7 @@ async fn verify_interaction_using_transport<'a, F: RequestFilterExecutor>(
                   })
                 }
               }).collect(),
+              response_identifiers: BTreeMap::new(),
               expected: as_safe_ref(interaction),
               actual: as_safe_ref(interaction),
               interaction_id: interaction.id()
@@ -1261,11 +1271,53 @@ fn process_errors(errors: &Vec<(String, MismatchResult)>, output: &mut Vec<Strin
   for (i, &(ref description, ref mismatch)) in errors.iter().enumerate() {
     match *mismatch {
         MismatchResult::Error(ref err, _) => output.push(format!("{}) {} - {}\n", i + 1, description, err)),
-        MismatchResult::Mismatches { ref mismatches, ref expected, ref actual, .. } => {
-          interaction_mismatch_output(output, coloured_output, i, description, mismatches, expected.as_ref(), actual.as_ref())
+        MismatchResult::Mismatches { ref mismatches, ref response_identifiers, ref expected, ref actual, .. } => {
+          interaction_mismatch_output_with_response_identifiers(output, coloured_output, i, description,
+            mismatches, expected.as_ref(), actual.as_ref(), response_identifiers)
         }
     }
   }
+}
+
+/// Trace propagation and request-correlation headers whose complete response values are retained.
+const RESPONSE_IDENTIFIER_HEADERS: &[&str] = &[
+  "server-timing",
+  "traceresponse",
+  "traceparent",
+  "tracestate",
+  "x-request-id",
+  "x-correlation-id",
+  "request-id",
+  "correlation-id",
+  "trace-id",
+  "x-trace-id",
+  "b3",
+  "x-b3-traceid",
+  "x-b3-spanid",
+  "x-b3-parentspanid",
+  "x-b3-sampled",
+  "x-b3-flags",
+  "uber-trace-id",
+  "x-ot-span-context",
+  "x-amzn-trace-id",
+  "x-cloud-trace-context",
+  "x-datadog-trace-id",
+  "x-datadog-parent-id",
+  "x-datadog-sampling-priority",
+  "x-datadog-tags",
+  "sw8",
+];
+
+fn collect_response_identifiers(headers: Option<&HashMap<String, Vec<String>>>) -> BTreeMap<String, Vec<String>> {
+  let mut response_identifiers = BTreeMap::new();
+  if let Some(headers) = headers {
+    for header_name in RESPONSE_IDENTIFIER_HEADERS {
+      for (name, values) in headers.iter().filter(|(name, _)| name.eq_ignore_ascii_case(header_name)) {
+        response_identifiers.entry(name.to_ascii_lowercase()).or_insert_with(Vec::new).extend(values.iter().cloned());
+      }
+    }
+  }
+  response_identifiers
 }
 
 /// Generate the output for an interaction verification
@@ -1277,6 +1329,23 @@ pub fn interaction_mismatch_output(
   mismatches: &Vec<Mismatch>,
   expected: &dyn Interaction,
   actual: &dyn Interaction
+) {
+  let response_identifiers = actual.as_v4_http()
+    .map(|http| collect_response_identifiers(http.response.headers.as_ref()))
+    .unwrap_or_default();
+  interaction_mismatch_output_with_response_identifiers(output, coloured_output, i, description,
+    mismatches, expected, actual, &response_identifiers);
+}
+
+fn interaction_mismatch_output_with_response_identifiers(
+  output: &mut Vec<String>,
+  coloured_output: bool,
+  i: usize,
+  description: &String,
+  mismatches: &Vec<Mismatch>,
+  expected: &dyn Interaction,
+  actual: &dyn Interaction,
+  response_identifiers: &BTreeMap<String, Vec<String>>
 ) {
   output.push(format!("{}) {}", i + 1, description));
 
@@ -1302,6 +1371,15 @@ pub fn interaction_mismatch_output(
     }
 
     j += 1;
+  }
+
+  if !response_identifiers.is_empty() {
+    output.push("    Response identifiers:".to_string());
+    for (header_name, values) in response_identifiers {
+      for value in values {
+        output.push(format!("      {}: {}", header_name, value));
+      }
+    }
   }
 }
 

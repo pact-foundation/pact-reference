@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::panic::RefUnwindSafe;
 
 use ansi_term::{ANSIGenericString, Style};
@@ -104,6 +104,7 @@ pub(crate) async fn verify_message_from_provider<'a, F: RequestFilterExecutor>(
       } else {
         Err(MismatchResult::Mismatches {
           mismatches,
+          response_identifiers: BTreeMap::new(),
           expected: as_safe_ref(interaction.as_ref()),
           actual: as_safe_ref(&actual),
           interaction_id: interaction.id().clone()
@@ -345,6 +346,7 @@ pub(crate) async fn verify_sync_message_from_provider<'a, F: RequestFilterExecut
         } else {
           Err(MismatchResult::Mismatches {
             mismatches,
+            response_identifiers: BTreeMap::new(),
             expected: as_safe_ref(&message),
             actual: as_safe_ref(&actual),
             interaction_id: message.id().clone()

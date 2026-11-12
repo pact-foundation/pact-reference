@@ -11,6 +11,7 @@ use anyhow::anyhow;
 use async_trait::async_trait;
 use expectest::prelude::*;
 use maplit::hashmap;
+use pact_matching::Mismatch;
 use reqwest::Client;
 use rstest::rstest;
 use serde_json::{json, Value};
@@ -22,9 +23,11 @@ use pact_models::prelude::v4::SynchronousHttp;
 use pact_models::provider_states::*;
 use pact_models::sync_interaction::RequestResponseInteraction;
 use pact_models::sync_pact::RequestResponsePact;
+use pact_models::v4::http_parts::HttpResponse;
 
 use crate::{
   FilterById,
+  MismatchResult,
   NullRequestFilterExecutor,
   PactSource,
   ProviderInfo,
@@ -1244,6 +1247,65 @@ fn process_comments_with_references_combined_with_text_and_testname() {
   assert_snapshot!(output.join("\n"));
 }
 
+#[test_log::test(tokio::test)]
+async fn response_mismatch_retains_provider_response_identifiers() {
+  let server = PactBuilderAsync::new("Consumer", "Provider")
+    .interaction("GET /resource", "", |mut i| async move {
+      i.request.get().path("/resource");
+      i.response.status(404);
+      i.response.header("Server-Timing", "trace;desc=opaque-trace, db;dur=8");
+      i.response.header("X-Request-Id", "req-123");
+      i
+    })
+    .await
+    .start_mock_server(None, None);
+
+  #[allow(deprecated)]
+  let provider = ProviderInfo {
+    host: server.url().host_str().unwrap().to_string(),
+    port: server.url().port(),
+    ..ProviderInfo::default()
+  };
+  let pact = RequestResponsePact::from_json("test", &json!({
+    "consumer": { "name": "Consumer" },
+    "provider": { "name": "Provider" },
+    "interactions": [{
+      "description": "GET /resource expects 200",
+      "request": { "method": "GET", "path": "/resource" },
+      "response": { "status": 200 }
+    }],
+    "metadata": {
+      "pactSpecification": { "version": "3.0.0" }
+    }
+  })).unwrap();
+  let interaction = pact.interactions.first().unwrap();
+  let options = VerificationOptions::<NullRequestFilterExecutor>::default();
+  let provider_states = Arc::new(DummyProviderStateExecutor {});
+
+  let error = super::verify_interaction(
+    &provider,
+    interaction,
+    &pact.boxed(),
+    &options,
+    &provider_states
+  ).await.err().expect("expected provider response to mismatch").0;
+
+  if let MismatchResult::Mismatches { response_identifiers, .. } = &error {
+    expect!(&response_identifiers["server-timing"][0])
+      .to(be_equal_to(&"trace;desc=opaque-trace, db;dur=8"));
+    expect!(&response_identifiers["x-request-id"][0]).to(be_equal_to(&"req-123"));
+  } else {
+    panic!("Expected a response mismatch, got {error:?}");
+  }
+
+  let errors = vec![("GET /resource expects 200".to_string(), error)];
+  let mut output = vec![];
+  super::process_errors(&errors, &mut output, false);
+  let output = output.join("\n");
+  assert!(output.contains("server-timing: trace;desc=opaque-trace, db;dur=8"));
+  assert!(output.contains("x-request-id: req-123"));
+}
+
 #[test]
 fn process_comments_with_no_references_produces_no_references_section() {
   let interaction = SynchronousHttp {
@@ -1255,4 +1317,57 @@ fn process_comments_with_no_references_produces_no_references_section() {
   let mut output = vec![];
   super::process_comments(&interaction, &mut output);
   assert_snapshot!(output.join("\n"));
+}
+
+#[test]
+fn process_errors_emits_response_identifiers_without_interpreting_them() {
+  let expected = SynchronousHttp::default().boxed();
+  let actual = SynchronousHttp {
+    response: HttpResponse {
+      headers: Some(hashmap! {
+        "Server-Timing".to_string() => vec!["trace;desc=opaque-trace, db;dur=8".to_string()],
+        "TraceResponse".to_string() => vec!["opaque-response-trace".to_string()],
+        "B3".to_string() => vec!["opaque-b3-context".to_string()],
+        "Uber-Trace-Id".to_string() => vec!["opaque-jaeger-context".to_string()],
+        "X-Amzn-Trace-Id".to_string() => vec!["Root=opaque-aws-trace;Parent=opaque-parent".to_string()],
+        "X-Cloud-Trace-Context".to_string() => vec!["opaque-cloud-context".to_string()],
+        "X-Datadog-Trace-Id".to_string() => vec!["opaque-datadog-trace".to_string()],
+        "X-Correlation-Id".to_string() => vec!["opaque-correlation-id".to_string()],
+        "X-Request-Id".to_string() => vec!["request-1".to_string(), "request-2".to_string()],
+        "Content-Type".to_string() => vec!["application/json".to_string()]
+      }),
+      ..HttpResponse::default()
+    },
+    ..SynchronousHttp::default()
+  };
+  let response_identifiers = super::collect_response_identifiers(actual.response.headers.as_ref());
+  let actual = actual.boxed();
+  let mismatch = MismatchResult::Mismatches {
+    mismatches: vec![Mismatch::StatusMismatch {
+      expected: 200,
+      actual: 404,
+      mismatch: "Expected status 200 but was 404".to_string(),
+    }],
+    response_identifiers,
+    expected,
+    actual,
+    interaction_id: None,
+  };
+  let errors = vec![("GET /foo returns 200".to_string(), mismatch)];
+  let mut output = vec![];
+  super::process_errors(&errors, &mut output, false);
+
+  let output = output.join("\n");
+  assert!(output.contains("    Response identifiers:"));
+  assert!(output.contains("server-timing: trace;desc=opaque-trace, db;dur=8"));
+  assert!(output.contains("traceresponse: opaque-response-trace"));
+  assert!(output.contains("b3: opaque-b3-context"));
+  assert!(output.contains("uber-trace-id: opaque-jaeger-context"));
+  assert!(output.contains("x-amzn-trace-id: Root=opaque-aws-trace;Parent=opaque-parent"));
+  assert!(output.contains("x-cloud-trace-context: opaque-cloud-context"));
+  assert!(output.contains("x-datadog-trace-id: opaque-datadog-trace"));
+  assert!(output.contains("x-correlation-id: opaque-correlation-id"));
+  assert!(output.contains("x-request-id: request-1"));
+  assert!(output.contains("x-request-id: request-2"));
+  assert!(!output.contains("content-type"));
 }

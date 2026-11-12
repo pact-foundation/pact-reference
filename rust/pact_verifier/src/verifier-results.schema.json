@@ -55,6 +55,9 @@
               "interactionId": {
                 "description": "Interaction ID from the Pact broker",
                 "type": "string"
+              },
+              "responseIdentifiers": {
+                "$ref": "#/$defs/responseIdentifiers"
               }
             }
           }
@@ -93,6 +96,9 @@
               "interactionId": {
                 "description": "Interaction ID from the Pact broker",
                 "type": "string"
+              },
+              "responseIdentifiers": {
+                "$ref": "#/$defs/responseIdentifiers"
               }
             }
           }
@@ -102,6 +108,16 @@
 },
   "required": [ "result" ],
   "$defs": {
+    "responseIdentifiers": {
+      "description": "Trace and correlation response header values returned by the provider",
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
     "mismatch": {
       "description": "Mismatch that occurred from verification",
       "type": "object",

@@ -2345,6 +2345,7 @@ mod tests {
             mismatch: "".to_string()
           }
         ],
+        response_identifiers: std::collections::BTreeMap::new(),
         expected: Box::new(RequestResponseInteraction::default()),
         actual: Box::new(RequestResponseInteraction::default()),
         interaction_id: Some("1234abc".to_string())
@@ -2410,6 +2411,7 @@ mod tests {
             mismatch: "".to_string()
           }
         ],
+        response_identifiers: std::collections::BTreeMap::new(),
         expected: Box::new(RequestResponseInteraction::default()),
         actual: Box::new(RequestResponseInteraction::default()),
         interaction_id: Some("1234abc".to_string())
@@ -2489,6 +2491,7 @@ mod tests {
             mismatch: "".to_string()
           }
         ],
+        response_identifiers: std::collections::BTreeMap::new(),
         expected: Box::new(RequestResponseInteraction::default()),
         actual: Box::new(RequestResponseInteraction::default()),
         interaction_id: Some("1234abc".to_string())

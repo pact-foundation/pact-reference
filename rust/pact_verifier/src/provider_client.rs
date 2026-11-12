@@ -315,6 +315,30 @@ mod tests {
   }
 
   #[test]
+  fn extract_headers_preserves_trace_response_values() {
+    let mut headers = HeaderMap::new();
+    headers.insert(
+      "Server-Timing",
+      "trace;desc=00-0123456789abcdef0123456789abcdef-0123456789abcdef-01".parse().unwrap()
+    );
+    headers.insert(
+      "TraceParent",
+      "00-0123456789abcdef0123456789abcdef-0123456789abcdef-01".parse().unwrap()
+    );
+    headers.append("x-request-id", "req-123".parse().unwrap());
+    headers.append("x-request-id", "req-456".parse().unwrap());
+
+    let response = extract_headers(&headers).unwrap();
+    expect!(&response["server-timing"][0]).to(be_equal_to(
+      &"trace;desc=00-0123456789abcdef0123456789abcdef-0123456789abcdef-01"
+    ));
+    expect!(&response["traceparent"][0]).to(be_equal_to(
+      &"00-0123456789abcdef0123456789abcdef-0123456789abcdef-01"
+    ));
+    expect!(&response["x-request-id"]).to(be_equal_to(&vec!["req-123", "req-456"]));
+  }
+
+  #[test]
   fn extract_headers_return_none_if_headers_are_empty() {
     expect!(extract_headers(&HeaderMap::new())).to(be_none());
   }

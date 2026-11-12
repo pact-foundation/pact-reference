@@ -69,6 +69,22 @@ struct XmlMismatchResult {
   interaction_id: Option<String>,
   #[serde(skip_serializing_if = "Option::is_none")]
   mismatches: Option<XmlMismatchList>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  response_identifiers: Option<XmlResponseIdentifiers>,
+}
+
+#[derive(Debug, Serialize)]
+struct XmlResponseIdentifiers {
+  #[serde(rename = "header")]
+  headers: Vec<XmlResponseIdentifier>,
+}
+
+#[derive(Debug, Serialize)]
+struct XmlResponseIdentifier {
+  #[serde(rename = "@name")]
+  name: String,
+  #[serde(rename = "value")]
+  values: Vec<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -154,19 +170,30 @@ impl From<(&str, &VerificationExecutionResult)> for XmlReport {
 impl From<&VerificationMismatchResult> for XmlMismatchResult {
   fn from(result: &VerificationMismatchResult) -> Self {
     match result {
-      VerificationMismatchResult::Mismatches { mismatches, interaction_id } => XmlMismatchResult {
+      VerificationMismatchResult::Mismatches { mismatches, response_identifiers, interaction_id } => XmlMismatchResult {
         kind: "mismatches".to_string(),
         error_message: None,
         interaction_id: interaction_id.clone(),
         mismatches: Some(XmlMismatchList {
           items: mismatches.iter().map(XmlMismatch::from).collect(),
         }),
+        response_identifiers: if response_identifiers.is_empty() {
+          None
+        } else {
+          Some(XmlResponseIdentifiers {
+            headers: response_identifiers.iter().map(|(name, values)| XmlResponseIdentifier {
+              name: name.clone(),
+              values: values.clone(),
+            }).collect(),
+          })
+        },
       },
       VerificationMismatchResult::Error { error, interaction_id } => XmlMismatchResult {
         kind: "error".to_string(),
         error_message: Some(error.clone()),
         interaction_id: interaction_id.clone(),
         mismatches: None,
+        response_identifiers: None,
       },
     }
   }
@@ -253,7 +280,7 @@ pub(crate) fn to_xml_string(
 
 #[cfg(test)]
 mod tests {
-  use std::collections::HashMap;
+  use std::collections::{BTreeMap, HashMap};
   use std::time::Duration;
 
   use insta::assert_snapshot;
@@ -365,6 +392,7 @@ mod tests {
                 mismatch: "Expected 100 but got 200".to_string(),
               },
             ],
+            response_identifiers: BTreeMap::new(),
             interaction_id: None,
           },
         ),
@@ -400,6 +428,32 @@ mod tests {
           pending: true,
           duration: Duration::from_millis(3),
         },
+      ],
+      ..VerificationExecutionResult::default()
+    };
+    assert_snapshot!(to_xml(&result, "My Provider"));
+  }
+
+  #[test]
+  fn failing_with_response_identifiers() {
+    let result = VerificationExecutionResult {
+      result: false,
+      errors: vec![
+        (
+          "GET /foo returns 200".to_string(),
+          VerificationMismatchResult::Mismatches {
+            mismatches: vec![Mismatch::StatusMismatch {
+              expected: 200,
+              actual: 404,
+              mismatch: "Expected status 200 but was 404".to_string(),
+            }],
+            response_identifiers: BTreeMap::from([
+              ("server-timing".to_string(), vec!["trace;desc=00-0123456789abcdef0123456789abcdef-0123456789abcdef-01, db;dur=8".to_string()]),
+              ("x-request-id".to_string(), vec!["req-123".to_string()]),
+            ]),
+            interaction_id: None,
+          },
+        ),
       ],
       ..VerificationExecutionResult::default()
     };
@@ -464,6 +518,7 @@ mod tests {
                 mismatch: "Expected metadata contentType=application/json but received text/xml".to_string(),
               },
             ],
+            response_identifiers: BTreeMap::new(),
             interaction_id: Some("complex-123".to_string()),
           },
         ),

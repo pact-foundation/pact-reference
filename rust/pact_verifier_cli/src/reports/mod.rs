@@ -148,3 +148,18 @@ pub(crate) fn write_html_report(
 
   Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+  use super::apply_xslt;
+
+  #[test]
+  fn html_report_renders_response_identifiers() {
+    let report = "<report><provider>Provider</provider><result>false</result><errors><error><interaction>GET /foo</interaction><mismatch type=\"mismatches\"><mismatches><mismatch type=\"StatusMismatch\"><description>Expected 200 but was 404</description></mismatch></mismatches><response_identifiers><header name=\"x-request-id\"><value>req-123</value></header></response_identifiers></mismatch></error></errors></report>";
+    let html = apply_xslt(report, None).expect("XSLT should render the verifier report");
+
+    assert!(html.contains("Response identifiers"));
+    assert!(html.contains("x-request-id"));
+    assert!(html.contains("req-123"));
+  }
+}
