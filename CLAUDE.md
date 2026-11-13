@@ -103,6 +103,13 @@ Follow [Conventional Changelog](https://github.com/bcoe/conventional-changelog-s
 
 BDD-style integration tests covering V1–V4 spec compliance live in `/compatibility-suite/`. These use the `cucumber` framework and run separately from the main workspace tests.
 
+The V4 plugin features (`tests/plugins.rs`) need the matt, csv, avro and protobuf plugins installed, and read the suite from `PACT_COMPAT_SUITE` (default `pact-compatibility-suite`); they are skipped when that suite has no `features/V4/plugins`:
+
+```bash
+cd compatibility-suite
+PACT_COMPAT_SUITE=/path/to/pact-compatibility-suite cargo test --test plugins
+```
+
 ## Releasing
 
 See RELEASING.md: per-crate draft release PRs (release-plz), tags `<crate>-v<version>`, dist builds, crates.io trusted publishing.
