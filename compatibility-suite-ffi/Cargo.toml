@@ -1,0 +1,41 @@
+[package]
+name = "pact-ffi-compat"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Pact compatibility suite driven only through the pact_ffi C ABI, logging each step's FFI calls"
+
+[dependencies]
+anyhow = "1"
+base64 = "0.22"
+cucumber = "0.23"
+libloading = "0.8"
+regex = "1"
+reqwest = { version = "0.12", default-features = false }
+roxmltree = "0.20"
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "io-util"] }
+url = "2"
+
+[build-dependencies]
+bindgen = "0.72"
+
+[[test]]
+name = "consumer"
+harness = false
+
+[[test]]
+name = "provider"
+harness = false
+
+[[test]]
+name = "matching"
+harness = false
+
+[[test]]
+name = "generators"
+harness = false
+
+[[test]]
+name = "message"
+harness = false

@@ -32,3 +32,4 @@ build/
 pkg/
 
 compatibility-suite/Cargo.lock
+compatibility-suite-ffi/Cargo.lock

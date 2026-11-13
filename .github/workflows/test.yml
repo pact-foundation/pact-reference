@@ -249,6 +249,11 @@ jobs:
         working-directory: ${{ env.WORKSPACE_ROOT }}/c/provider
         run: PACT_FFI_PREBUILT_DIR="$WORKSPACE_ROOT/rust/pact_ffi/build/install" just run
 
+      # Runs the compatibility suite through the C API, against the library and header installed above.
+      - name: Run FFI compatibility suite
+        working-directory: ${{ env.WORKSPACE_ROOT }}/compatibility-suite-ffi
+        run: cargo test --no-fail-fast
+
       - name: Save Conan packages
         if: github.ref == 'refs/heads/master' && steps.conan-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
