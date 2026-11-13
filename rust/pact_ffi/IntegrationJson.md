@@ -221,7 +221,10 @@ So the resulting intermediate JSON would be something like:
 
 The `pact:matcher:combine` attribute sets how the matching rules are combined. It can be either `AND` (the default,
 all the rules must match) or `OR` (at least one of the rules must match). The value is not case-sensitive. Any other
-value is logged as an error: the matching rules are ignored, and the value at that path is written as `null`.
+value is logged as an error, and the matching rules (and any generator from `pact:matcher:type`) for that value are
+ignored. The example `value` is still used, along with any matching rules nested in it, for bodies, headers, query
+parameters and paths alike. The FFI function still returns success, so check the logs if the rules are missing from
+the Pact file.
 
 For example, a `name` that is either a string or null:
 
@@ -248,6 +251,25 @@ The rules are written to the Pact file as a rule list combined with `OR`:
 ```
 
 `OR` can be used for bodies (JSON and XML), headers and query parameters.
+
+A `pact:generator:type` inside an entry of the `pact:matcher:type` array is ignored, as it is for any list of
+matchers. Put the generator on the outer object instead:
+
+```json
+{
+  "id": {
+    "pact:matcher:type": [
+      { "pact:matcher:type": "integer" },
+      { "pact:matcher:type": "null" }
+    ],
+    "pact:matcher:combine": "OR",
+    "pact:generator:type": "RandomInt",
+    "min": 1,
+    "max": 1000,
+    "value": 42
+  }
+}
+```
 
 #### Nullable objects
 

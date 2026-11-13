@@ -3469,6 +3469,54 @@ mod tests {
     expect!(check("not-an-id")).to(be_err());
   }
 
+  // Issue #249
+  #[test]
+  fn from_integration_json_v2_with_an_invalid_matcher_combine_value_keeps_the_example() {
+    let mut rules = MatchingRules::default();
+    let mut generators = Generators::default();
+    let mut path = DocPath::root();
+    path.push_field("x-id");
+    let value = r#"{
+      "pact:matcher:type": [
+        { "pact:matcher:type": "regex", "regex": "^\\d+$" },
+        { "pact:matcher:type": "null" }
+      ],
+      "pact:matcher:combine": "XOR",
+      "value": "100"
+    }"#;
+
+    let result = from_integration_json_v2(&mut rules, &mut generators, value, path.clone(), "header", 0);
+    expect!(result).to(be_equal_to(Either::Left("100".to_string())));
+    expect!(rules.rules_for_category("header").map(|category| category.is_empty()).unwrap_or(true)).to(be_true());
+  }
+
+  // Issue #249
+  #[test]
+  fn from_integration_json_v2_with_or_matchers_and_a_generator() {
+    let mut rules = MatchingRules::default();
+    let mut generators = Generators::default();
+    let mut path = DocPath::root();
+    path.push_field("x-id");
+    let value = r#"{
+      "pact:matcher:type": [
+        { "pact:matcher:type": "regex", "regex": "^\\d+$" },
+        { "pact:matcher:type": "regex", "regex": "^none$" }
+      ],
+      "pact:matcher:combine": "OR",
+      "pact:generator:type": "RandomInt",
+      "min": 1,
+      "max": 1000,
+      "value": "42"
+    }"#;
+
+    let result = from_integration_json_v2(&mut rules, &mut generators, value, path.clone(), "header", 0);
+    expect!(result).to(be_equal_to(Either::Left("42".to_string())));
+    let rule_list = rules.rules_for_category("header").unwrap().rules.get(&path).cloned().unwrap();
+    expect!(rule_list.rule_logic).to(be_equal_to(pact_models::matchingrules::RuleLogic::Or));
+    expect!(generators.categories.get(&generators::GeneratorCategory::HEADER).and_then(|category| category.get(&path)).cloned())
+      .to(be_some().value(generators::Generator::RandomInt(1, 1000)));
+  }
+
   #[test]
   fn pact_handles() {
     let pact_handle = PactHandle::new("TestHandlesC", "TestHandlesP");

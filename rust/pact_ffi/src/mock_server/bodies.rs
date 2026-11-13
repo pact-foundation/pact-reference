@@ -130,7 +130,13 @@ fn process_matcher(
       _ => Err(anyhow!("ArrayContains 'variants' attribute is missing or not an array"))
     }
   } else {
-    rule_list_from_integration_json(obj).map(|(rule_list, generator)| {
+    let rule_list_result = match rule_logic_from_integration_json(obj) {
+      // The rules can't be combined, so they are ignored, but the example value is kept (the same
+      // as for headers and query parameters)
+      Err(_) => Ok((RuleList::empty(RuleLogic::And), None)),
+      Ok(_) => rule_list_from_integration_json(obj)
+    };
+    rule_list_result.map(|(rule_list, generator)| {
       let has_values_matcher = rule_list.rules.iter().any(MatchingRule::is_values_matcher);
 
       let json_value = match obj.get("value") {
@@ -907,8 +913,35 @@ use pretty_assertions::assert_eq;
     let result = process_object(json.as_object().unwrap(), &mut matching_rules,
       &mut generators, DocPath::root(), false);
 
-    expect!(result).to(be_equal_to(json!({ "a": null })));
+    // The rules are ignored, but the example value is kept
+    expect!(result).to(be_equal_to(json!({ "a": "string" })));
     expect!(matching_rules.is_empty()).to(be_true());
+  }
+
+  // Issue #249
+  #[test_log::test]
+  fn process_object_with_invalid_matcher_combine_value_keeps_the_nested_matchers() {
+    let json = json!({
+      "a": {
+        "pact:matcher:type": [
+          { "pact:matcher:type": "type" },
+          { "pact:matcher:type": "null" }
+        ],
+        "pact:matcher:combine": "XOR",
+        "value": {
+          "id": { "pact:matcher:type": "integer", "value": 100 }
+        }
+      }
+    });
+    let mut matching_rules = MatchingRuleCategory::empty("body");
+    let mut generators = Generators::default();
+    let result = process_object(json.as_object().unwrap(), &mut matching_rules,
+      &mut generators, DocPath::root(), false);
+
+    expect!(result).to(be_equal_to(json!({ "a": { "id": 100 } })));
+    expect!(matching_rules.rules.get(&DocPath::new_unwrap("$.a"))).to(be_none());
+    expect!(matching_rules.rules.get(&DocPath::new_unwrap("$.a.id")).cloned()).to(be_some().value(
+      RuleList::new(MatchingRule::Integer)));
   }
 
   #[rstest]
