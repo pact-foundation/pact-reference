@@ -3,12 +3,12 @@ use std::collections::HashMap;
 use expectest::prelude::*;
 use pretty_assertions::{assert_eq, assert_ne};
 
-use pact_models::{matchingrules, matchingrules_list};
-use pact_models::matchingrules::expressions::{MatchingRuleDefinition, ValueType};
+use pact_models::HttpStatus;
 use pact_models::bodies::OptionalBody;
 use pact_models::content_types::{JSON, TEXT};
-use pact_models::HttpStatus;
+use pact_models::matchingrules::expressions::{MatchingRuleDefinition, ValueType};
 use pact_models::request::Request;
+use pact_models::{matchingrules, matchingrules_list};
 
 use super::*;
 
@@ -1031,4 +1031,70 @@ fn match_metadata_value_with_content_type_test() {
   let actual = json!("application/something");
   let result = match_metadata_value("key", &expected, &actual, &context);
   expect!(result).to(be_err());
+}
+
+fn or_variant(rule: MatchingRule, value: serde_json::Value) -> MatchingRule {
+  let mut rules = MatchingRuleCategory::empty("body");
+  rules.add_rule(DocPath::root(), rule.clone(), pact_models::matchingrules::RuleLogic::And);
+  MatchingRule::Variant(Box::new(rule),
+    Box::new(pact_models::matchingrules::MatchingRuleVariant { value, rules }))
+}
+
+fn or_rules(category: &str, path: &'static str, rules: &[MatchingRule]) -> MatchingRuleCategory {
+  let mut category = MatchingRuleCategory::empty(category);
+  for rule in rules {
+    category.add_rule(DocPath::new_unwrap(path), rule.clone(), pact_models::matchingrules::RuleLogic::Or);
+  }
+  category
+}
+
+// Issue #249
+#[rstest::rstest]
+#[case::digits(     "12345",   true)]
+#[case::equal_to_all("all",    true)]
+#[case::neither(    "some",    false)]
+fn match_query_with_or_matcher_variants(#[case] actual: &str, #[case] is_ok: bool) {
+  let expected = hashmap! { "id".to_string() => vec![Some("100".to_string())] };
+  let actual = hashmap! { "id".to_string() => vec![Some(actual.to_string())] };
+  let rules = or_rules("query", "id", &[
+    or_variant(MatchingRule::Regex("^\\d+$".to_string()), serde_json::json!("100")),
+    or_variant(MatchingRule::Equality, serde_json::json!("all"))
+  ]);
+  let context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys, &rules, &hashmap!{});
+  let result = match_query(Some(expected), Some(actual), &context);
+  expect!(result.values().flatten().count() == 0).to(be_equal_to(is_ok));
+}
+
+// Issue #249
+#[test]
+fn match_query_with_or_matcher_variants_applies_to_every_value() {
+  let expected = hashmap! { "id".to_string() => vec![Some("100".to_string())] };
+  let rules = or_rules("query", "id", &[
+    or_variant(MatchingRule::Regex("^\\d+$".to_string()), serde_json::json!("100")),
+    or_variant(MatchingRule::Equality, serde_json::json!("all"))
+  ]);
+  let context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys, &rules, &hashmap!{});
+
+  let actual = hashmap! { "id".to_string() => vec![Some("1".to_string()), Some("all".to_string())] };
+  expect!(match_query(Some(expected.clone()), Some(actual), &context).values().flatten().count()).to(be_equal_to(0));
+  let actual = hashmap! { "id".to_string() => vec![Some("1".to_string()), Some("some".to_string())] };
+  expect!(match_query(Some(expected), Some(actual), &context).values().flatten().count()).to(be_greater_than(0));
+}
+
+// Issue #249
+#[rstest::rstest]
+#[case::bearer_token("Bearer abc.def.ghi", true)]
+#[case::api_key("ApiKey 1234", true)]
+#[case::basic("Basic dXNlcg==", false)]
+fn match_headers_with_or_matcher_variants(#[case] actual: &str, #[case] is_ok: bool) {
+  let expected = hashmap! { "authorization".to_string() => vec!["Bearer token".to_string()] };
+  let actual = hashmap! { "authorization".to_string() => vec![actual.to_string()] };
+  let rules = or_rules("header", "authorization", &[
+    or_variant(MatchingRule::Regex("^Bearer \\S+$".to_string()), serde_json::json!("Bearer token")),
+    or_variant(MatchingRule::Regex("^ApiKey \\d+$".to_string()), serde_json::json!("ApiKey 1"))
+  ]);
+  let context = crate::HeaderMatchingContext::new(
+    &CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys, &rules, &hashmap!{}));
+  let result = match_headers(Some(expected), Some(actual), &context);
+  expect!(result.values().flatten().count() == 0).to(be_equal_to(is_ok));
 }

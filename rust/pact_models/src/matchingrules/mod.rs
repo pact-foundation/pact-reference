@@ -70,6 +70,53 @@ fn plugin_rule_values(attributes: &Map<String, Value>, strip_example: bool) -> V
     .collect())
 }
 
+/// Example value and matching rules for one alternative of a rule list combined with OR. This
+/// allows an alternative to be a completely different shape to the example value, like an array
+/// instead of an object.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MatchingRuleVariant {
+  /// Example value for this alternative
+  pub value: Value,
+  /// Matching rules for this alternative. The paths are relative to the example value, so `$` is
+  /// the value itself.
+  pub rules: MatchingRuleCategory
+}
+
+impl MatchingRuleVariant {
+  /// Builds the variant from its JSON form, i.e. `{ "value": ..., "rules": { ... } }`
+  pub fn from_json(json: &Value) -> anyhow::Result<MatchingRuleVariant> {
+    match json {
+      Value::Object(map) => {
+        let mut rules = MatchingRuleCategory::empty("body");
+        if let Some(rules_json) = map.get("rules") {
+          rules.add_rules_from_json(rules_json)
+            .with_context(|| format!("Unable to parse the variant matching rules: {:?}", rules_json))?;
+        }
+        Ok(MatchingRuleVariant {
+          value: map.get("value").cloned().unwrap_or_default(),
+          rules
+        })
+      }
+      _ => Err(anyhow!("Matching rule 'variant' attribute is not an Object"))
+    }
+  }
+
+  /// Converts this variant to its JSON form
+  pub fn to_json(&self) -> Value {
+    json!({
+      "value": self.value,
+      "rules": self.rules.to_v3_json()
+    })
+  }
+}
+
+impl Hash for MatchingRuleVariant {
+  fn hash<H: Hasher>(&self, state: &mut H) {
+    self.value.to_string().hash(state);
+    self.rules.hash(state);
+  }
+}
+
 /// Set of all matching rules
 #[derive(Debug, Clone, Eq)]
 pub enum MatchingRule {
@@ -127,13 +174,25 @@ pub enum MatchingRule {
     name: String,
     /// Configuration values for the rule, stored alongside the name in the Pact file
     values: Value
-  }
+  },
+  /// One alternative of a rule list combined with OR, which has its own example value and matching
+  /// rules. It is stored in the Pact file as the inner rule with an additional `variant` attribute,
+  /// so readers that don't support variants can still use the inner rule.
+  Variant(Box<MatchingRule>, Box<MatchingRuleVariant>)
 }
 
 impl MatchingRule {
 
   /// Builds a `MatchingRule` from a `Value` struct
   pub fn from_json(value: &Value) -> anyhow::Result<MatchingRule> {
+    if let Value::Object(m) = value && let Some(variant) = m.get("variant") {
+      let variant = MatchingRuleVariant::from_json(variant)?;
+      let mut inner = m.clone();
+      inner.remove("variant");
+      let rule = MatchingRule::from_json(&Value::Object(inner))?;
+      return Ok(MatchingRule::Variant(Box::new(rule), Box::new(variant)));
+    }
+
     match value {
       Value::Object(m) => match m.get("match").or_else(|| m.get("pact:matcher:type")) {
         Some(match_val) => {
@@ -266,6 +325,13 @@ impl MatchingRule {
         }
         map
       }
+      MatchingRule::Variant(rule, variant) => {
+        let mut json = rule.to_json();
+        if let Some(map) = json.as_object_mut() {
+          map.insert("variant".to_string(), variant.to_json());
+        }
+        json
+      }
     }
   }
 
@@ -274,6 +340,7 @@ impl MatchingRule {
     match self {
       MatchingRule::ArrayContains(variants) => variants.iter()
         .any(|(_, _, generators)| !generators.is_empty()),
+      MatchingRule::Variant(rule, _) => rule.has_generators(),
       _ => false
     }
   }
@@ -282,14 +349,17 @@ impl MatchingRule {
   pub fn generators(&self) -> Vec<Generator> {
     match self {
       MatchingRule::ArrayContains(variants) => vec![Generator::ArrayContains(variants.clone())],
+      MatchingRule::Variant(rule, _) => rule.generators(),
       _ => vec![]
     }
   }
 
   /// Returns the type name of this matching rule
   pub fn name(&self) -> String {
-    if let MatchingRule::Plugin { name, .. } = self {
-      return name.clone();
+    match self {
+      MatchingRule::Plugin { name, .. } => return name.clone(),
+      MatchingRule::Variant(rule, _) => return rule.name(),
+      _ => ()
     }
     match self {
       MatchingRule::Equality => "equality",
@@ -315,7 +385,7 @@ impl MatchingRule {
       MatchingRule::Semver => "semver",
       MatchingRule::EachKey(_) => "each-key",
       MatchingRule::EachValue(_) => "each-value",
-      MatchingRule::Plugin { .. } => unreachable!("handled above")
+      MatchingRule::Plugin { .. } | MatchingRule::Variant(..) => unreachable!("handled above")
     }.to_string()
   }
 
@@ -330,6 +400,11 @@ impl MatchingRule {
           .map(|(k, v)| (k.clone(), v.clone()))
           .collect(),
         _ => HashMap::default()
+      }
+      MatchingRule::Variant(rule, variant) => {
+        let mut map = rule.value_map();
+        map.insert("variant".to_string(), variant.to_json());
+        map
       }
       #[allow(deprecated)]
       _ => self.values().iter()
@@ -394,7 +469,12 @@ impl MatchingRule {
 
         map
       }
-      MatchingRule::Plugin { .. } => empty
+      MatchingRule::Plugin { .. } => empty,
+      MatchingRule::Variant(rule, variant) => {
+        let mut map = rule.values();
+        map.insert("variant", variant.to_json());
+        map
+      }
     }
   }
 
@@ -570,6 +650,7 @@ impl MatchingRule {
   /// collection as a whole rather than to individual elements.
   pub fn is_values_matcher(&self) -> bool {
     match self {
+      MatchingRule::Variant(rule, _) => rule.is_values_matcher(),
       MatchingRule::Values => true,
       MatchingRule::EachValue(_) => true,
       MatchingRule::ArrayContains(_) => true,
@@ -580,6 +661,7 @@ impl MatchingRule {
   /// If this matching rule is a type matcher
   pub fn is_type_matcher(&self) -> bool {
     match self {
+      MatchingRule::Variant(rule, _) => rule.is_type_matcher(),
       MatchingRule::Type => true,
       MatchingRule::MinType(_) => true,
       MatchingRule::MaxType(_) => true,
@@ -591,6 +673,7 @@ impl MatchingRule {
   /// If this matching rule is a type matcher that includes a length restriction
   pub fn is_length_type_matcher(&self) -> bool {
     match self {
+      MatchingRule::Variant(rule, _) => rule.is_length_type_matcher(),
       MatchingRule::MinType(_) => true,
       MatchingRule::MaxType(_) => true,
       MatchingRule::MinMaxType(_, _) => true,
@@ -606,6 +689,8 @@ impl MatchingRule {
       MatchingRule::EachKey(_) => false,
       // A plugin rule applies to the value at its path, not to that value's children
       MatchingRule::Plugin { .. } => false,
+      // A variant has its own rules for the children of its example value
+      MatchingRule::Variant(..) => false,
       _ => true
     }
   }
@@ -659,7 +744,8 @@ impl MatchingRule {
       MatchingRule::Semver => "must match a semver version".to_string(),
       MatchingRule::EachKey(m) => format!("each key must match '{}'", m.expression()),
       MatchingRule::EachValue(m) => format!("each value must match '{}'", m.expression()),
-      MatchingRule::Plugin { name, .. } => format!("must match the '{}' rule provided by a plugin", name)
+      MatchingRule::Plugin { name, .. } => format!("must match the '{}' rule provided by a plugin", name),
+      MatchingRule::Variant(_, variant) => format!("must match the variant {}", variant.value)
     }
   }
 
@@ -671,6 +757,8 @@ impl MatchingRule {
       MatchingRule::MinType(_) => MatchingRule::Type,
       MatchingRule::MaxType(_) => MatchingRule::Type,
       MatchingRule::MinMaxType(_, _) => MatchingRule::Type,
+      MatchingRule::Variant(rule, variant) =>
+        MatchingRule::Variant(Box::new(rule.for_single_item()), variant.clone()),
       _ => self.clone()
     }
   }
@@ -684,6 +772,7 @@ impl MatchingRule {
       MatchingRule::Equality => true,
       MatchingRule::Include(_) => true,
       MatchingRule::Regex(_) => content_type.is_text(),
+      MatchingRule::Variant(rule, _) => rule.can_match(content_type),
       _ => false
     }
   }
@@ -719,6 +808,10 @@ impl Hash for MatchingRule {
         name.hash(state);
         values.to_string().hash(state);
       }
+      MatchingRule::Variant(rule, variant) => {
+        rule.hash(state);
+        variant.hash(state);
+      }
       _ => ()
     }
   }
@@ -740,6 +833,7 @@ impl PartialEq for MatchingRule {
       (MatchingRule::EachKey(definition1), MatchingRule::EachKey(definition2)) => definition1 == definition2,
       (MatchingRule::EachValue(definition1), MatchingRule::EachValue(definition2)) => definition1 == definition2,
       (MatchingRule::Plugin { name: n1, values: v1 }, MatchingRule::Plugin { name: n2, values: v2 }) => n1 == n2 && v1 == v2,
+      (MatchingRule::Variant(rule1, variant1), MatchingRule::Variant(rule2, variant2)) => rule1 == rule2 && variant1 == variant2,
       _ => mem::discriminant(self) == mem::discriminant(other)
     }
   }
@@ -817,6 +911,8 @@ impl RuleList {
 
   fn to_v2_json(&self) -> Value {
     match self.rules.get(0) {
+      // V2 Pact files have no variants, so only the inner rule is written
+      Some(MatchingRule::Variant(rule, _)) => rule.to_json(),
       Some(rule) => rule.to_json(),
       None => json!({})
     }
@@ -3017,5 +3113,162 @@ mod tests {
       "brand".to_string() => json!("visa")
     }));
     expect!(rule.can_cascade()).to(be_false());
+  }
+
+  fn address_variant() -> MatchingRule {
+    let mut rules = MatchingRuleCategory::empty("body");
+    rules.add_rule(DocPath::root(), MatchingRule::Type, RuleLogic::And);
+    rules.add_rule(DocPath::new_unwrap("$.street"), MatchingRule::Regex("\\w+".to_string()), RuleLogic::And);
+    MatchingRule::Variant(Box::new(MatchingRule::Type), Box::new(MatchingRuleVariant {
+      value: json!({ "street": "Main" }),
+      rules
+    }))
+  }
+
+  // Issue #249
+  #[test]
+  fn variant_matching_rule_to_json() {
+    expect!(address_variant().to_json()).to(be_equal_to(json!({
+      "match": "type",
+      "variant": {
+        "value": { "street": "Main" },
+        "rules": {
+          "$": { "combine": "AND", "matchers": [{ "match": "type" }] },
+          "$.street": { "combine": "AND", "matchers": [{ "match": "regex", "regex": "\\w+" }] }
+        }
+      }
+    })));
+  }
+
+  // Issue #249
+  #[test]
+  fn variant_matching_rule_from_json() {
+    let rule = MatchingRule::from_json(&address_variant().to_json()).unwrap();
+    expect!(&rule).to(be_equal_to(&address_variant()));
+    expect!(rule.name()).to(be_equal_to("type".to_string()));
+    expect!(rule.is_type_matcher()).to(be_true());
+    expect!(rule.can_cascade()).to(be_false());
+  }
+
+  // Issue #249
+  #[test]
+  fn variant_matching_rules_in_a_rule_list_combined_with_or() {
+    let json = json!({
+      "body": {
+        "$.address": {
+          "combine": "OR",
+          "matchers": [
+            address_variant().to_json(),
+            { "match": "null", "variant": { "value": null, "rules": { "$": { "matchers": [{ "match": "null" }] } } } }
+          ]
+        }
+      }
+    });
+    let mut matching_rules = MatchingRules::default();
+    matching_rules.load_from_v3_map(json.as_object().unwrap()).unwrap();
+    let rule_list = matching_rules.rules_for_category("body").unwrap()
+      .rules.get(&DocPath::new_unwrap("$.address")).cloned().unwrap();
+
+    expect!(rule_list.rule_logic).to(be_equal_to(RuleLogic::Or));
+    expect!(rule_list.rules.len()).to(be_equal_to(2));
+    expect!(&rule_list.rules[0]).to(be_equal_to(&address_variant()));
+    expect!(matches!(&rule_list.rules[1], MatchingRule::Variant(rule, _) if **rule == MatchingRule::Null)).to(be_true());
+    expect!(rule_list.to_v3_json()).to(be_equal_to(json!({
+      "combine": "OR",
+      "matchers": [
+        address_variant().to_json(),
+        { "match": "null", "variant": { "value": null, "rules": { "$": { "combine": "AND", "matchers": [{ "match": "null" }] } } } }
+      ]
+    })));
+  }
+
+  // Issue #249
+  #[test]
+  fn variant_matching_rules_are_written_without_the_variant_for_v2() {
+    let mut rules = MatchingRuleCategory::empty("body");
+    rules.add_rule(DocPath::new_unwrap("$.address"), address_variant(), RuleLogic::Or);
+    rules.add_rule(DocPath::new_unwrap("$.address"), MatchingRule::Null, RuleLogic::Or);
+    let matching_rules = MatchingRules { rules: hashmap!{ Category::BODY => rules } };
+
+    expect!(matchers_to_json(&matching_rules, &PactSpecification::V2)).to(be_equal_to(json!({
+      "$.body.address": { "match": "type" }
+    })));
+  }
+
+  // Issue #249
+  #[rstest::rstest]
+  #[case::v3(PactSpecification::V3)]
+  #[case::v4(PactSpecification::V4)]
+  fn variant_matching_rules_round_trip_through_the_pact_file_format(#[case] spec: PactSpecification) {
+    let mut body = MatchingRuleCategory::empty("body");
+    body.add_rule(DocPath::new_unwrap("$.address"), address_variant(), RuleLogic::Or);
+    body.add_rule(DocPath::new_unwrap("$.address"), MatchingRule::Null, RuleLogic::Or);
+    let mut header = MatchingRuleCategory::empty("header");
+    let mut header_rules = MatchingRuleCategory::empty("body");
+    header_rules.add_rule(DocPath::root(), MatchingRule::Equality, RuleLogic::And);
+    header.add_rule(DocPath::root().join("x-id"), MatchingRule::Variant(Box::new(MatchingRule::Equality),
+      Box::new(MatchingRuleVariant { value: json!("none"), rules: header_rules })), RuleLogic::Or);
+    header.add_rule(DocPath::root().join("x-id"), MatchingRule::Integer, RuleLogic::Or);
+    let matching_rules = MatchingRules {
+      rules: hashmap!{ Category::BODY => body, Category::HEADER => header }
+    };
+
+    let json = json!({ "matchingRules": matchers_to_json(&matching_rules, &spec) });
+    let restored = matchers_from_json(&json, &None).unwrap();
+
+    expect!(restored).to(be_equal_to(matching_rules));
+  }
+
+  // Issue #249
+  #[test]
+  fn variant_matching_rule_keeps_the_configuration_of_the_inner_rule() {
+    let variant = json!({ "value": [1], "rules": { "$": { "matchers": [{ "match": "type", "min": 1 }] } } });
+    let rule = MatchingRule::from_json(&json!({ "match": "type", "min": 1, "variant": variant })).unwrap();
+    expect!(matches!(&rule, MatchingRule::Variant(inner, _) if **inner == MatchingRule::MinType(1))).to(be_true());
+    expect!(rule.is_length_type_matcher()).to(be_true());
+    expect!(rule.for_single_item().is_length_type_matcher()).to(be_false());
+  }
+
+  // Issue #249
+  #[test]
+  fn variant_attribute_is_not_stored_with_a_plugin_rule() {
+    let variant = json!({ "value": "x", "rules": {} });
+    let rule = MatchingRule::from_json(&json!({ "match": "my-plugin-rule", "size": 3, "variant": variant })).unwrap();
+    match rule {
+      MatchingRule::Variant(inner, _) => {
+        expect!(*inner).to(be_equal_to(MatchingRule::Plugin {
+          name: "my-plugin-rule".to_string(),
+          values: json!({ "size": 3 })
+        }));
+      }
+      _ => panic!("Expected a variant, got {:?}", rule)
+    }
+  }
+
+  // Issue #249
+  #[test]
+  fn variant_matching_rules_hash_and_compare_by_their_example_and_rules() {
+    let other_value = MatchingRule::Variant(Box::new(MatchingRule::Type), Box::new(MatchingRuleVariant {
+      value: json!({ "street": "Other" }),
+      rules: MatchingRuleCategory::empty("body")
+    }));
+    let mut hasher1 = DefaultHasher::new();
+    address_variant().hash(&mut hasher1);
+    let mut hasher2 = DefaultHasher::new();
+    address_variant().hash(&mut hasher2);
+    let mut hasher3 = DefaultHasher::new();
+    other_value.hash(&mut hasher3);
+
+    expect!(address_variant()).to(be_equal_to(address_variant()));
+    expect!(address_variant()).to_not(be_equal_to(other_value.clone()));
+    expect!(address_variant()).to_not(be_equal_to(MatchingRule::Type));
+    expect!(hasher1.finish()).to(be_equal_to(hasher2.finish()));
+    expect!(hasher1.finish()).to_not(be_equal_to(hasher3.finish()));
+  }
+
+  // Issue #249
+  #[test]
+  fn variant_attribute_must_be_an_object() {
+    expect!(MatchingRule::from_json(&json!({ "match": "type", "variant": "nope" }))).to(be_err());
   }
 }
