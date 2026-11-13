@@ -155,9 +155,10 @@ use crate::models::async_message::generate_async_message_contents;
 use crate::models::sync_message::generate_sync_message_contents;
 #[allow(deprecated)]
 use crate::mock_server::bodies::{
+  add_rule_list_to_category,
   empty_multipart_body,
   file_as_multipart_body,
-  matchers_from_integration_json,
+  rule_list_from_integration_json,
   MultipartBody,
   process_array,
   process_json,
@@ -1026,7 +1027,7 @@ fn from_integration_json_v2(
       Value::Object(map) => {
         let result = if map.contains_key("pact:matcher:type") {
           debug!("detected pact:matcher:type, will configure any matchers");
-          let rules = matchers_from_integration_json(map);
+          let rules = rule_list_from_integration_json(map);
           trace!("matching_rules = {rules:?}");
 
           let (path, result_value) = match map.get("value") {
@@ -1040,30 +1041,22 @@ fn from_integration_json_v2(
             None => (path.clone(), Value::Null)
           };
 
-          if let Ok((rules, generator)) = &rules {
+          if let Ok((rule_list, generator)) = &rules {
             let path = if path_or_status {
               path.parent().unwrap_or(DocPath::root())
             } else {
               path.clone()
             };
-            if query_or_header {
-              if index > 0 {
-                // If the index > 0, and there is an existing entry with the base name, we need
-                // to re-key that with an index of 0
-                let mut parent = path.parent().unwrap_or(DocPath::root());
-                if let Entry::Occupied(rule_entry) = matching_rules.rules.entry(parent.clone()) {
-                  let rules_list = rule_entry.remove();
-                  matching_rules.rules.insert(parent.push_index(0).clone(), rules_list);
-                }
-              }
-              for rule in rules {
-                matching_rules.add_rule(path.clone(), rule.clone(), RuleLogic::And);
-              }
-            } else {
-              for rule in rules {
-                matching_rules.add_rule(path.clone(), rule.clone(), RuleLogic::And);
+            if query_or_header && index > 0 {
+              // If the index > 0, and there is an existing entry with the base name, we need
+              // to re-key that with an index of 0
+              let mut parent = path.parent().unwrap_or(DocPath::root());
+              if let Entry::Occupied(rule_entry) = matching_rules.rules.entry(parent.clone()) {
+                let rules_list = rule_entry.remove();
+                matching_rules.rules.insert(parent.push_index(0).clone(), rules_list);
               }
             }
+            add_rule_list_to_category(matching_rules, &path, rule_list);
 
             if let Some(generator) = generator {
               let category = generator_category(matching_rules);
@@ -3446,6 +3439,83 @@ mod tests {
   use crate::mock_server::handles::*;
 
   use super::from_integration_json_v2;
+
+  // Issue #249
+  #[test]
+  fn from_integration_json_v2_with_or_matchers_for_a_header() {
+    let mut rules = MatchingRules::default();
+    let mut generators = Generators::default();
+    let mut path = DocPath::root();
+    path.push_field("x-id");
+    let value = r#"{
+      "pact:matcher:type": [
+        { "pact:matcher:type": "regex", "regex": "^\\d+$" },
+        { "pact:matcher:type": "regex", "regex": "^[a-f0-9-]{36}$" }
+      ],
+      "pact:matcher:combine": "OR",
+      "value": "100"
+    }"#;
+
+    let result = from_integration_json_v2(&mut rules, &mut generators, value, path.clone(), "header", 0);
+    expect!(result).to(be_equal_to(Either::Left("100".to_string())));
+
+    let rule_list = rules.rules_for_category("header").unwrap().rules.get(&path).cloned().unwrap();
+    expect!(rule_list.rule_logic).to(be_equal_to(pact_models::matchingrules::RuleLogic::Or));
+    expect!(rule_list.rules.len()).to(be_equal_to(2));
+
+    let check = |actual: &str| pact_matching::matchingrules::match_values(&path, &rule_list, "100", actual);
+    expect!(check("12345")).to(be_ok());
+    expect!(check("0f8b3c1e-9d2a-4b7c-8e6f-1a2b3c4d5e6f")).to(be_ok());
+    expect!(check("not-an-id")).to(be_err());
+  }
+
+  // Issue #249
+  #[test]
+  fn from_integration_json_v2_with_an_invalid_matcher_combine_value_keeps_the_example() {
+    let mut rules = MatchingRules::default();
+    let mut generators = Generators::default();
+    let mut path = DocPath::root();
+    path.push_field("x-id");
+    let value = r#"{
+      "pact:matcher:type": [
+        { "pact:matcher:type": "regex", "regex": "^\\d+$" },
+        { "pact:matcher:type": "null" }
+      ],
+      "pact:matcher:combine": "XOR",
+      "value": "100"
+    }"#;
+
+    let result = from_integration_json_v2(&mut rules, &mut generators, value, path.clone(), "header", 0);
+    expect!(result).to(be_equal_to(Either::Left("100".to_string())));
+    expect!(rules.rules_for_category("header").map(|category| category.is_empty()).unwrap_or(true)).to(be_true());
+  }
+
+  // Issue #249
+  #[test]
+  fn from_integration_json_v2_with_or_matchers_and_a_generator() {
+    let mut rules = MatchingRules::default();
+    let mut generators = Generators::default();
+    let mut path = DocPath::root();
+    path.push_field("x-id");
+    let value = r#"{
+      "pact:matcher:type": [
+        { "pact:matcher:type": "regex", "regex": "^\\d+$" },
+        { "pact:matcher:type": "regex", "regex": "^none$" }
+      ],
+      "pact:matcher:combine": "OR",
+      "pact:generator:type": "RandomInt",
+      "min": 1,
+      "max": 1000,
+      "value": "42"
+    }"#;
+
+    let result = from_integration_json_v2(&mut rules, &mut generators, value, path.clone(), "header", 0);
+    expect!(result).to(be_equal_to(Either::Left("42".to_string())));
+    let rule_list = rules.rules_for_category("header").unwrap().rules.get(&path).cloned().unwrap();
+    expect!(rule_list.rule_logic).to(be_equal_to(pact_models::matchingrules::RuleLogic::Or));
+    expect!(generators.categories.get(&generators::GeneratorCategory::HEADER).and_then(|category| category.get(&path)).cloned())
+      .to(be_some().value(generators::Generator::RandomInt(1, 1000)));
+  }
 
   #[test]
   fn pact_handles() {

@@ -15,10 +15,9 @@ use tracing::{debug, trace, warn};
 use pact_models::generators::{Generator, GeneratorCategory, Generators};
 use pact_models::json_utils::json_to_string;
 use pact_models::matchingrules::MatchingRuleCategory;
-use pact_models::matchingrules::RuleLogic;
 use pact_models::path_exp::DocPath;
 
-use crate::mock_server::bodies::matchers_from_integration_json;
+use crate::mock_server::bodies::{add_rule_list_to_category, rule_list_from_integration_json};
 
 pub fn generate_xml_body(
   attributes: &Map<String, Value>,
@@ -75,10 +74,8 @@ fn create_element_from_json<'a>(
         updated_path.push(&name);
         let doc_path = DocPath::new(updated_path.join(".").to_string()).unwrap_or(DocPath::root());
 
-        if let Ok((rules, generator)) = matchers_from_integration_json(object) {
-          for rule in rules {
-            matching_rules.add_rule(doc_path.clone(), rule, RuleLogic::And);
-          }
+        if let Ok((rule_list, generator)) = rule_list_from_integration_json(object) {
+          add_rule_list_to_category(matching_rules, &doc_path, &rule_list);
 
           if let Some(generator) = generator {
             generators.add_generator_with_subcategory(&GeneratorCategory::BODY, doc_path.clone(), generator);
@@ -135,10 +132,8 @@ fn create_element_from_json<'a>(
       let doc_path = DocPath::new(&text_path.join(".")).unwrap_or(DocPath::root());
 
       if let Value::Object(matcher) = matcher {
-        if let Ok((rules, generator)) = matchers_from_integration_json(matcher) {
-          for rule in rules {
-            matching_rules.add_rule(doc_path.clone(), rule, RuleLogic::And);
-          }
+        if let Ok((rule_list, generator)) = rule_list_from_integration_json(matcher) {
+          add_rule_list_to_category(matching_rules, &doc_path, &rule_list);
 
           if let Some(generator) = generator {
             generators.add_generator_with_subcategory(&GeneratorCategory::BODY, doc_path.clone(), generator);
@@ -229,10 +224,8 @@ fn add_attributes(
     let value = match v {
       Value::Object(matcher_definition) => if matcher_definition.contains_key("pact:matcher:type") {
         let doc_path = DocPath::new(path).unwrap_or(DocPath::root());
-        if let Ok((rules, generator)) = matchers_from_integration_json(matcher_definition) {
-          for rule in rules {
-            matching_rules.add_rule(doc_path.clone(), rule, RuleLogic::And);
-          }
+        if let Ok((rule_list, generator)) = rule_list_from_integration_json(matcher_definition) {
+          add_rule_list_to_category(matching_rules, &doc_path, &rule_list);
 
           if let Some(generator) = generator {
             generators.add_generator_with_subcategory(&GeneratorCategory::BODY, doc_path.clone(), generator);
