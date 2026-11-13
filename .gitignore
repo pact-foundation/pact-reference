@@ -13,8 +13,6 @@ target/
 # Generated Release Artifacts
 release_artifacts
 
-out/
-
 node_modules/
 *.log
 .idea/
