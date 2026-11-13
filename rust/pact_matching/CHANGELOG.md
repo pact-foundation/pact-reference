@@ -1,5 +1,47 @@
 # Changelog
 
+## [2.2.0](https://github.com/pact-foundation/pact-reference/compare/pact_matching-v2.1.0...pact_matching-v2.2.0) - _2026-11-12_
+
+### 🚀 Features
+
+-   _(matching)_ Respect Link and Via grammars when splitting headers
+
+### 🐛 Bug Fixes
+
+-   Apply the matchers nested under an eachValue matcher
+
+-   Apply an eachValue rule once when the values already have it
+
+-   _(pact_matching)_ Merge the eachValue rules into any existing rules for the values
+
+-   _(v2 engine)_ Apply the rules defined below an eachValue matcher to its values
+
+-   _(matching)_ Match combined headers against repeated expectations
+
+-   _(matching)_ Normalize repeated custom headers across engines
+
+-   _(matching)_ Classify headers once for both engines
+
+-   _(matching)_ Compare repeated custom headers by their joined value
+
+-   _(matching)_ Apply scalar header matchers to the joined value
+
+-   _(matching)_ Split repeated headers into list elements for list matchers
+
+-   _(matching)_ Normalise repeated headers using the header's own grammar
+
+-   _(matching)_ Use the header grammar when comparing single header values
+
+-   _(matching)_ Name the failing value when a repeated header fails a scalar rule
+
+### 📚 Documentation
+
+-   _(matching)_ Describe repeated header matching
+
+### 🧪 Testing
+
+-   _(matching)_ Keep separate-line header list cases beside combined ones
+
 ## [2.1.0](https://github.com/pact-foundation/pact-reference/compare/pact_matching-v2.0.11...pact_matching-v2.1.0) - _2026-10-21_
 
 ### 🚀 Features
