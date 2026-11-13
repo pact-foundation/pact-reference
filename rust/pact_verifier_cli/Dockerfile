@@ -4,6 +4,7 @@ FROM --platform=$BUILDPLATFORM alpine:3.22 AS fetch
 ARG VERSION
 ARG TARGETARCH
 RUN apk add --no-cache ca-certificates curl xz
+WORKDIR /dist
 RUN case "$TARGETARCH" in \
         amd64) target=x86_64-unknown-linux-musl ;; \
         arm64) target=aarch64-unknown-linux-musl ;; \
