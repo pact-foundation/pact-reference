@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.1](https://github.com/pact-foundation/pact-reference/compare/pact_verifier_cli-v1.5.0...pact_verifier_cli-v1.5.1) - _2026-11-13_
+
+### 🛠️ Miscellaneous Tasks
+
+-   _(pact_verifier_cli)_ Extract release tarball into a workdir in Docker fetch stage ([#608](https://github.com/pact-foundation/pact-reference/pull/608))
+
 ## [1.5.0](https://github.com/pact-foundation/pact-reference/compare/pact_verifier_cli-v1.4.0...pact_verifier_cli-v1.5.0) - _2026-11-13_
 
 ### 🚀 Features
