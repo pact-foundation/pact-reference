@@ -1,0 +1,94 @@
+---
+name: FFI compatibility suite (V4 plugins)
+
+# The V4 plugin features are not in the pinned suite submodule yet, so this
+# checks out the suite branch that adds them and runs `tests/plugins.rs` in
+# compatibility-suite-ffi against it. It runs on draft PRs and on PRs to any
+# base, unlike test.yml.
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      suite-repository:
+        description: pact-compatibility-suite repository with features/V4/plugins
+        default: YOU54F/pact-compatibility-suite
+      suite-ref:
+        description: Ref of that repository to run
+        default: feat/plugin-features
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  FORCE_COLOR: '1'
+  PACT_DO_NOT_TRACK: 'true'
+  SUITE_REPOSITORY: ${{ inputs.suite-repository || 'YOU54F/pact-compatibility-suite' }}
+  SUITE_REF: ${{ inputs.suite-ref || 'feat/plugin-features' }}
+
+jobs:
+  plugins:
+    name: FFI plugins (ubuntu-latest)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Checkout plugin suite
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          repository: ${{ env.SUITE_REPOSITORY }}
+          ref: ${{ env.SUITE_REF }}
+          path: pact-compatibility-suite-plugins
+
+      - name: Install Rust
+        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f  # v2.0.0
+        with:
+          build-warnings: warn
+          cache-workspaces: |
+            rust -> target
+            compatibility-suite-ffi -> target
+          cache-save-if: ${{ github.ref == 'refs/heads/master' }}
+
+      # cbindgen's macro expansion passes `-Zunpretty=expanded`, which only
+      # nightly accepts. The library itself builds with the pinned toolchain.
+      - name: Install nightly for cbindgen
+        run: rustup toolchain install nightly --profile minimal
+
+      - name: Install tools
+        uses: jdx/mise-action@08ae2a091c038e1e05ec6f5115dc5c69d5a2a6b8  # v5.1.2
+        timeout-minutes: 3
+        with:
+          cache_save: ${{ github.ref == 'refs/heads/master' }}
+
+      # The library and header steps of .github/scripts/ffi-examples.sh, without the examples.
+      - name: Build and install pact_ffi
+        working-directory: rust/pact_ffi
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release
+          cmake --build build --config Release --target generate_header
+          cmake --install build --config Release --prefix "$PWD/build/install"
+
+      - name: Install the Pact CLI
+        uses: pact-foundation/pact-cli@ce8e65692ad3ea9d11244749ae24c8c49225d95f  # main
+
+      - name: Install plugins
+        run: |
+          # matt is not in the plugin repository index, so it is installed from its release.
+          pact plugin install https://github.com/mefellows/pact-matt-plugin/releases/tag/v0.1.1 -y
+          pact plugin install csv --version 0.0.6 -y
+          pact plugin install avro --version 0.1.3 -y
+          pact plugin install protobuf --version 0.8.0 -y
+
+      - name: Run plugin features
+        working-directory: compatibility-suite-ffi
+        run: cargo test --test plugins
+        env:
+          PACT_COMPAT_SUITE: ${{ github.workspace }}/pact-compatibility-suite-plugins
