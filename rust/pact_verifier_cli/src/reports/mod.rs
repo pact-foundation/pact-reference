@@ -148,3 +148,59 @@ pub(crate) fn write_html_report(
 
   Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+  use std::collections::HashMap;
+  use std::time::Duration;
+
+  use insta::assert_snapshot;
+  use pact_matching::Mismatch;
+  use pact_verifier::verification_result::{
+    VerificationExecutionResult, VerificationInteractionResult, VerificationMismatchResult,
+  };
+
+  use super::*;
+
+  #[test]
+  fn html_report_with_default_xslt() {
+    let mut notice = HashMap::new();
+    notice.insert("text".to_string(), "This pact is being verified because it is the latest version".to_string());
+    let result = VerificationExecutionResult {
+      result: false,
+      notices: vec![notice],
+      errors: vec![
+        (
+          "GET /foo returns 200".to_string(),
+          VerificationMismatchResult::Mismatches {
+            mismatches: vec![
+              Mismatch::StatusMismatch {
+                expected: 200,
+                actual: 404,
+                mismatch: "expected 200 but was 404".to_string(),
+              },
+            ],
+            interaction_id: Some("interaction-123".to_string()),
+          },
+        ),
+      ],
+      interaction_results: vec![
+        VerificationInteractionResult {
+          interaction_id: None,
+          interaction_key: None,
+          consumer: "My Consumer".to_string(),
+          provider: "My Provider".to_string(),
+          provider_states: vec![],
+          description: "request 1".to_string(),
+          interaction_description: "POST /bar returns 201".to_string(),
+          result: Ok(()),
+          pending: false,
+          duration: Duration::from_millis(15),
+        },
+      ],
+      ..VerificationExecutionResult::default()
+    };
+    let xml = xml::to_xml_string(&result, "My Provider").unwrap();
+    assert_snapshot!(apply_xslt(&xml, None).unwrap());
+  }
+}
