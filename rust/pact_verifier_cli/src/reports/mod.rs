@@ -21,12 +21,20 @@ mod xml;
 
 const XSLT: &str = include_str!("verification-report.xsl");
 
+fn missing_namespace() -> ParseError {
+  ParseError::MissingNameSpace {
+    prefix: None,
+    nsuri: None,
+    message: Some("namespace prefixes must be declared in the document".to_string())
+  }
+}
+
 fn node_from_str(s: &str) -> Result<RNode, Error> {
-  parse(RNode::new_document(), s, Some(|_: &_| Err(ParseError::MissingNameSpace)))
+  parse(RNode::new_document(), s, Some(|_: &_| Err(missing_namespace())))
 }
 
 fn apply_xslt(xml_str: &str, xslt: Option<&String>) -> anyhow::Result<String> {
-  let doc = parse(RNode::new_document(), xml_str, Some(|_: &_| Err(ParseError::MissingNameSpace)))?;
+  let doc = parse(RNode::new_document(), xml_str, Some(|_: &_| Err(missing_namespace())))?;
 
   let mut s = String::new();
   let xslt_doc = if let Some(xslt) = xslt {
@@ -36,15 +44,15 @@ fn apply_xslt(xml_str: &str, xslt: Option<&String>) -> anyhow::Result<String> {
   } else {
     XSLT
   };
-  let xslt_doc = parse(RNode::new_document(), xslt_doc, Some(|_: &_| Err(ParseError::MissingNameSpace)))?;
+  let xslt_doc = parse(RNode::new_document(), xslt_doc, Some(|_: &_| Err(missing_namespace())))?;
 
   let mut static_context = StaticContextBuilder::new()
     .message(|_| Ok(()))
-    .fetcher(|_| Err(Error::new(ErrorKind::NotImplemented, "not implemented")))
+    .external(|_| Err(Error::new(ErrorKind::NotImplemented, "not implemented")))
     .parser(|_| Err::<RNode, Error>(Error::new(ErrorKind::NotImplemented, "not implemented")))
     .build();
 
-  let mut ctxt = from_document(xslt_doc, None, node_from_str, |_| Ok(String::new()))?;
+  let mut ctxt = from_document(xslt_doc, None, node_from_str, |_| Ok(Vec::new()))?;
   ctxt.context(vec![Item::Node(doc)], 0);
   ctxt.result_document(RNode::new_document());
   let seq = ctxt.evaluate(&mut static_context)?;
