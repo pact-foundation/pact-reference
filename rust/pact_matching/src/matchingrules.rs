@@ -224,6 +224,44 @@ pub trait Matches<A: Clone> {
 
   /// If the actual value matches self given the matching rule
   fn matches_with(&self, actual: A, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()>;
+
+  /// If the actual value matches the example value of a variant (one alternative of a rule list
+  /// combined with OR) given the matching rule. The default implementation uses self as the
+  /// example, for values that can not be created from the JSON form of the example.
+  fn matches_variant_with(
+    &self,
+    _example: &Value,
+    actual: A,
+    matcher: &MatchingRule,
+    cascaded: bool
+  ) -> anyhow::Result<()> {
+    self.matches_with(actual, matcher, cascaded)
+  }
+}
+
+/// Returns the example of a variant as a string, if it is a JSON string or number
+fn variant_example_as_string(example: &Value) -> Option<String> {
+  match example {
+    Value::String(s) => Some(s.clone()),
+    Value::Number(n) => Some(n.to_string()),
+    Value::Bool(b) => Some(b.to_string()),
+    _ => None
+  }
+}
+
+/// Matches the actual string against the example of a variant, falling back to the expected value
+/// if the example is not a scalar value
+fn match_string_variant(
+  expected: &str,
+  example: &Value,
+  actual: &str,
+  matcher: &MatchingRule,
+  cascaded: bool
+) -> anyhow::Result<()> {
+  match variant_example_as_string(example) {
+    Some(example) => matcher.match_value(example.as_str(), actual, cascaded, false),
+    None => matcher.match_value(expected, actual, cascaded, false)
+  }
 }
 
 #[allow(deprecated)]
@@ -231,6 +269,10 @@ impl Matches<String> for String {
   #[instrument(level = "trace")]
   fn matches_with(&self, actual: String, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
     self.as_str().matches_with(actual.as_str(), matcher, cascaded)
+  }
+
+  fn matches_variant_with(&self, example: &Value, actual: String, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
+    match_string_variant(self.as_str(), example, actual.as_str(), matcher, cascaded)
   }
 }
 
@@ -240,6 +282,10 @@ impl Matches<&String> for String {
   fn matches_with(&self, actual: &String, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
     self.as_str().matches_with(actual.as_str(), matcher, cascaded)
   }
+
+  fn matches_variant_with(&self, example: &Value, actual: &String, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
+    match_string_variant(self.as_str(), example, actual.as_str(), matcher, cascaded)
+  }
 }
 
 #[allow(deprecated)]
@@ -247,6 +293,10 @@ impl Matches<&String> for &String {
   #[instrument(level = "trace")]
   fn matches_with(&self, actual: &String, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
     self.as_str().matches_with(actual.as_str(), matcher, cascaded)
+  }
+
+  fn matches_variant_with(&self, example: &Value, actual: &String, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
+    match_string_variant(self.as_str(), example, actual.as_str(), matcher, cascaded)
   }
 }
 
@@ -256,6 +306,10 @@ impl Matches<&str> for String {
   fn matches_with(&self, actual: &str, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
     matcher.match_value(self.as_str(), actual, cascaded, false)
   }
+
+  fn matches_variant_with(&self, example: &Value, actual: &str, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
+    match_string_variant(self.as_str(), example, actual, matcher, cascaded)
+  }
 }
 
 #[allow(deprecated)]
@@ -263,6 +317,10 @@ impl Matches<&str> for &str {
   #[instrument(level = "trace")]
   fn matches_with(&self, actual: &str, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
     matcher.match_value(*self, actual, cascaded, false)
+  }
+
+  fn matches_variant_with(&self, example: &Value, actual: &str, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
+    match_string_variant(*self, example, actual, matcher, cascaded)
   }
 }
 
@@ -322,6 +380,13 @@ impl Matches<u64> for u64 {
   #[instrument(level = "trace")]
   fn matches_with(&self, actual: u64, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
     matcher.match_value(*self, actual, cascaded, false)
+  }
+
+  fn matches_variant_with(&self, example: &Value, actual: u64, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
+    match example.as_u64() {
+      Some(example) => example.matches_with(actual, matcher, cascaded),
+      None => self.matches_with(actual, matcher, cascaded)
+    }
   }
 }
 
@@ -482,6 +547,13 @@ impl Matches<u16> for u16 {
   fn matches_with(&self, actual: u16, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
     debug!("u16 -> u16: comparing {} to {} using {:?}", self, actual, matcher);
     (*self as u64).matches_with(actual as u64, matcher, cascaded)
+  }
+
+  fn matches_variant_with(&self, example: &Value, actual: u16, matcher: &MatchingRule, cascaded: bool) -> anyhow::Result<()> {
+    match example.as_u64().and_then(|example| u16::try_from(example).ok()) {
+      Some(example) => example.matches_with(actual, matcher, cascaded),
+      None => self.matches_with(actual, matcher, cascaded)
+    }
   }
 }
 
@@ -751,6 +823,12 @@ impl <T: Debug + Display + Clone + PartialEq> Matches<&BTreeMap<String, T>> for 
       MatchingRule::EachKey(_) => Ok(()),
       MatchingRule::EachValue(_) => Ok(()),
       MatchingRule::Values => Ok(()),
+      // A variant applies to each item, so only its length restrictions apply to the collection
+      MatchingRule::Variant(rule, _) => if rule.is_length_type_matcher() {
+        self.matches_with(actual, rule, cascaded)
+      } else {
+        Ok(())
+      },
       _ => Err(anyhow!("Unable to match {} using {:?}", self.for_mismatch(), matcher))
     };
     debug!("Comparing '{:?}' to '{:?}' using {:?} -> {:?}", self, actual, matcher, result);
@@ -1049,6 +1127,12 @@ impl <T: Debug + Display + PartialEq> DoMatch<&[T]> for MatchingRule {
       MatchingRule::ContentType(_) => Ok(()),
       MatchingRule::Boolean => Ok(()),
       MatchingRule::Semver => Ok(()),
+      // A variant applies to each item, so only its length restrictions apply to the collection
+      MatchingRule::Variant(rule, _) => if rule.is_length_type_matcher() {
+        rule.match_value(expected_value, actual_value, cascaded, show_types)
+      } else {
+        Ok(())
+      },
       _ => Err(anyhow!("Unable to match {} using {:?}", actual_value.for_mismatch(), self))
     };
     debug!("Comparing '{:?}' to '{:?}' using {:?} -> {:?}", self, actual_value, self, result);
@@ -1212,6 +1296,12 @@ impl <T: Debug + PartialEq> DoMatch<&BTreeMap<String, T>> for MatchingRule {
       MatchingRule::EachKey(_) => Ok(()),
       MatchingRule::EachValue(_) => Ok(()),
       MatchingRule::Values => Ok(()),
+      // A variant applies to each item, so only its length restrictions apply to the collection
+      MatchingRule::Variant(rule, _) => if rule.is_length_type_matcher() {
+        rule.match_value(expected_value, actual_value, cascaded, _show_types)
+      } else {
+        Ok(())
+      },
       _ => Err(anyhow!("Unable to match {:?} using {:?}", actual_value, self))
     };
     debug!("Comparing '{:?}' to '{:?}' using {:?} -> {:?}", expected_value, actual_value, self, result);
@@ -1277,6 +1367,12 @@ impl <T: Debug + PartialEq> DoMatch<&HashMap<String, T>> for MatchingRule {
       MatchingRule::EachKey(_) => Ok(()),
       MatchingRule::EachValue(_) => Ok(()),
       MatchingRule::Values => Ok(()),
+      // A variant applies to each item, so only its length restrictions apply to the collection
+      MatchingRule::Variant(rule, _) => if rule.is_length_type_matcher() {
+        rule.match_value(expected_value, actual_value, cascaded, _show_types)
+      } else {
+        Ok(())
+      },
       _ => Err(anyhow!("Unable to match {:?} using {:?}", actual_value, self))
     };
     debug!("Comparing '{:?}' to '{:?}' using {:?} -> {:?}", expected_value, actual_value, self, result);
@@ -1331,6 +1427,35 @@ impl <T: Display> DisplayForMismatch for BTreeSet<T> {
 }
 
 
+/// Matches a value against a variant (one alternative of a rule list combined with OR). Only the
+/// rules for the variant value itself apply, as the actual value is not JSON.
+#[allow(deprecated)]
+fn match_variant<E, A>(expected: &E, actual: A, rule: &MatchingRule, cascaded: bool) -> anyhow::Result<()>
+  where E: Matches<A>, A: Clone {
+  let MatchingRule::Variant(inner, variant) = rule else {
+    return expected.matches_with(actual, rule, cascaded);
+  };
+  let rule_list = variant.rules.rules.get(&DocPath::root())
+    .filter(|rules| !rules.is_empty())
+    .cloned()
+    .unwrap_or_else(|| RuleList::new(inner.as_ref().clone()));
+  let mut results = rule_list.rules.iter().map(|rule| match rule {
+    MatchingRule::Variant(..) => match_variant(expected, actual.clone(), rule, cascaded),
+    _ => expected.matches_variant_with(&variant.value, actual.clone(), rule, cascaded)
+  });
+  match rule_list.rule_logic {
+    RuleLogic::And => results.find(|result| result.is_err()).unwrap_or(Ok(())),
+    RuleLogic::Or => {
+      let results = results.collect::<Vec<_>>();
+      if results.iter().any(|result| result.is_ok()) {
+        Ok(())
+      } else {
+        results.into_iter().next().unwrap_or(Ok(()))
+      }
+    }
+  }
+}
+
 /// Match the provided values using the path and matching rules
 #[allow(deprecated)]
 pub fn match_values<E, A>(path: &DocPath, matching_rules: &RuleList, expected: E, actual: A) -> Result<(), Vec<String>>
@@ -1342,7 +1467,10 @@ where E: Matches<A>, A: Clone {
     // So that a plugin-provided rule knows where the value it is being applied to lives
     let _scope = FieldMatchScope::path(path);
     let results = matching_rules.rules.iter().map(|rule| {
-      expected.matches_with(actual.clone(), rule, matching_rules.cascaded)
+      match rule {
+        MatchingRule::Variant(..) => match_variant(&expected, actual.clone(), rule, matching_rules.cascaded),
+        _ => expected.matches_with(actual.clone(), rule, matching_rules.cascaded)
+      }
     }).collect::<Vec<anyhow::Result<()>>>();
     let result = match matching_rules.rule_logic {
       RuleLogic::And => {
@@ -2572,7 +2700,8 @@ mod tests {
         MatchingRule::ArrayContains(_) | MatchingRule::Values | MatchingRule::Boolean |
         MatchingRule::StatusCode(_) | MatchingRule::NotEmpty | MatchingRule::Semver |
         MatchingRule::EachKey(_) | MatchingRule::EachValue(_) => {},
-        MatchingRule::Plugin { .. } => panic!("a plugin rule is not a core catalogue entry")
+        MatchingRule::Plugin { .. } => panic!("a plugin rule is not a core catalogue entry"),
+        MatchingRule::Variant(..) => panic!("a variant wraps a core rule, it is not a catalogue entry")
       }
     }
 
@@ -2669,5 +2798,90 @@ mod tests {
       expect!(["V1", "V2", "V3", "V4"].contains(&version.as_str()))
         .to(be_true());
     }
+  }
+
+  fn status_variant(example: Value) -> RuleList {
+    let mut rules = MatchingRuleCategory::empty("status");
+    rules.add_rule(DocPath::root(), MatchingRule::Equality, RuleLogic::And);
+    RuleList {
+      rules: vec![
+        MatchingRule::Variant(Box::new(MatchingRule::Equality),
+          Box::new(pact_models::matchingrules::MatchingRuleVariant { value: example, rules }))
+      ],
+      rule_logic: RuleLogic::Or,
+      cascaded: false
+    }
+  }
+
+  // Issue #249
+  #[test]
+  fn match_values_with_a_variant_uses_its_example_for_status_codes() {
+    let path = DocPath::root();
+    expect!(match_values(&path, &status_variant(json!(404)), 200_u16, 404_u16)).to(be_ok());
+    expect!(match_values(&path, &status_variant(json!(404)), 200_u16, 200_u16)).to(be_err());
+  }
+
+  // Issue #249
+  #[test]
+  fn match_values_with_a_variant_ignores_an_example_that_is_not_a_status_code() {
+    // 70000 is not a valid u16, so the expected value is used instead of a truncated example
+    let path = DocPath::root();
+    expect!(match_values(&path, &status_variant(json!(70000)), 200_u16, 200_u16)).to(be_ok());
+    expect!(match_values(&path, &status_variant(json!(70000)), 200_u16, 4464_u16)).to(be_err());
+  }
+
+  fn string_variant(rule: MatchingRule, example: Value) -> MatchingRule {
+    let mut rules = MatchingRuleCategory::empty("header");
+    rules.add_rule(DocPath::root(), rule.clone(), RuleLogic::And);
+    MatchingRule::Variant(Box::new(rule),
+      Box::new(pact_models::matchingrules::MatchingRuleVariant { value: example, rules }))
+  }
+
+  fn or_list(rules: Vec<MatchingRule>) -> RuleList {
+    RuleList { rules, rule_logic: RuleLogic::Or, cascaded: false }
+  }
+
+  // Issue #249
+  #[rstest::rstest]
+  #[case::true_value("true", true)]
+  #[case::number_value("10", true)]
+  #[case::other_value("yes", false)]
+  fn match_values_with_variants_converts_scalar_examples_to_strings(#[case] actual: &str, #[case] is_ok: bool) {
+    let rule_list = or_list(vec![
+      string_variant(MatchingRule::Equality, json!(true)),
+      string_variant(MatchingRule::Equality, json!(10))
+    ]);
+    let result = match_values(&DocPath::root(), &rule_list, "expected", actual);
+    expect!(result.is_ok()).to(be_equal_to(is_ok));
+  }
+
+  // Issue #249
+  #[rstest::rstest]
+  #[case::first_nested_alternative("abc", true)]
+  #[case::second_nested_alternative("123", true)]
+  #[case::outer_alternative("none", true)]
+  #[case::no_alternative("ABC", false)]
+  fn match_values_with_nested_variants(#[case] actual: &str, #[case] is_ok: bool) {
+    let mut nested_rules = MatchingRuleCategory::empty("header");
+    nested_rules.add_rule(DocPath::root(), string_variant(MatchingRule::Regex("^[a-z]+$".to_string()), json!("abc")), RuleLogic::Or);
+    nested_rules.add_rule(DocPath::root(), string_variant(MatchingRule::Regex("^\\d+$".to_string()), json!("1")), RuleLogic::Or);
+    let nested = MatchingRule::Variant(Box::new(MatchingRule::Regex("^[a-z]+$".to_string())),
+      Box::new(pact_models::matchingrules::MatchingRuleVariant { value: json!("abc"), rules: nested_rules }));
+    let rule_list = or_list(vec![nested, string_variant(MatchingRule::Equality, json!("none"))]);
+    let result = match_values(&DocPath::root(), &rule_list, "abc", actual);
+    expect!(result.is_ok()).to(be_equal_to(is_ok));
+  }
+
+  // Issue #249
+  #[test]
+  fn match_values_with_a_variant_without_root_rules_uses_the_inner_rule() {
+    let variant = MatchingRule::Variant(Box::new(MatchingRule::Equality),
+      Box::new(pact_models::matchingrules::MatchingRuleVariant {
+        value: json!("none"),
+        rules: MatchingRuleCategory::empty("header")
+      }));
+    let rule_list = or_list(vec![variant]);
+    expect!(match_values(&DocPath::root(), &rule_list, "abc", "none")).to(be_ok());
+    expect!(match_values(&DocPath::root(), &rule_list, "abc", "abc")).to(be_err());
   }
 }

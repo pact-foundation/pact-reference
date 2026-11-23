@@ -13,7 +13,7 @@ use serde_json::{json, Value};
 
 use pact_models::http_parts::HttpPart;
 use pact_models::json_utils::json_to_string;
-use pact_models::matchingrules::MatchingRule;
+use pact_models::matchingrules::{MatchingRule, RuleList, RuleLogic};
 use pact_models::path_exp::DocPath;
 #[cfg(feature = "datetime")] use pact_models::time_utils::validate_datetime;
 use tracing::debug;
@@ -409,6 +409,21 @@ pub fn compare_json(
   context: &(dyn MatchingContext + Send + Sync)
 ) -> Result<(), Vec<CommonMismatch>> {
   debug!("compare: Comparing path {}", path);
+  if context.matcher_is_defined(path) {
+    let rule_list = context.select_best_matcher(path);
+    if rule_list.rule_logic == RuleLogic::Or && !rule_list.cascaded &&
+      rule_list.rules.iter().any(|rule| matches!(rule, MatchingRule::Variant(..))) {
+      return compare_json_with_variants(path, expected, actual, &rule_list, context);
+    }
+  }
+
+  let is_type_mismatch = (expected.is_object() && !actual.is_object()) ||
+    (expected.is_array() && !actual.is_array());
+  if is_type_mismatch && is_or_matcher_defined(path, context) {
+    // With OR logic, another rule may allow a different type (i.e. an object or null)
+    debug!("compare: Values at path {} are different types, but an OR matcher is defined", path);
+    return compare_values(path, expected, actual, context);
+  }
   match (expected, actual) {
     (&Value::Object(ref emap), &Value::Object(ref amap)) => compare_maps(path, emap, amap, context),
     (&Value::Object(_), _) => {
@@ -432,6 +447,64 @@ pub fn compare_json(
     }
     (_, _) => compare_values(path, expected, actual, context)
   }
+}
+
+/// Compares the actual value against each alternative of a rule list combined with OR, where some
+/// of the alternatives are variants with their own example value and matching rules. Matches if
+/// any of the alternatives match.
+fn compare_json_with_variants(
+  path: &DocPath,
+  expected: &Value,
+  actual: &Value,
+  rule_list: &RuleList,
+  context: &(dyn MatchingContext + Send + Sync)
+) -> Result<(), Vec<CommonMismatch>> {
+  debug!("compare_json_with_variants: Comparing path {} against {} alternatives", path, rule_list.rules.len());
+  let mut mismatches = vec![];
+  for rule in &rule_list.rules {
+    let result = match rule {
+      MatchingRule::Variant(_, variant) => {
+        let variant_context = context.clone_with(&variant.rules);
+        compare_json(&DocPath::root(), &variant.value, actual, variant_context.as_ref())
+          .map_err(|mismatches| mismatches.into_iter()
+            .map(|mismatch| CommonMismatch {
+              path: rebase_path(&mismatch.path, path),
+              .. mismatch
+            })
+            .collect())
+      }
+      _ => {
+        // Apply just this rule to the expected value at this path. The OR list is removed, so it
+        // can't be selected again for this path
+        let mut matchers = context.matchers().clone();
+        matchers.rules.retain(|_, rules| rules != rule_list);
+        matchers.rules.insert(path.clone(), RuleList::new(rule.clone()));
+        let rule_context = context.clone_with(&matchers);
+        compare_json(path, expected, actual, rule_context.as_ref())
+      }
+    };
+    match result {
+      Ok(()) => {
+        debug!("compare_json_with_variants: Alternative {} matched at path {}", rule.name(), path);
+        return Ok(());
+      }
+      Err(errors) => mismatches.extend(errors)
+    }
+  }
+  Err(mismatches)
+}
+
+/// Rebases a path relative to a variant example (starting with `$`) onto the path of the variant
+fn rebase_path(variant_path: &str, path: &DocPath) -> String {
+  match variant_path.strip_prefix('$') {
+    Some(rest) => format!("{}{}", path, rest),
+    None => variant_path.to_string()
+  }
+}
+
+fn is_or_matcher_defined(path: &DocPath, context: &(dyn MatchingContext + Send + Sync)) -> bool {
+  context.matcher_is_defined(path) &&
+    context.select_best_matcher(path).rule_logic == RuleLogic::Or
 }
 
 fn compare_maps(
@@ -458,11 +531,17 @@ fn compare_maps(
     if context.matcher_is_defined(path) {
       debug!("compare_maps: Matcher is defined for path {}", path);
       let rule_list = context.select_best_matcher(path);
-      for matcher in rule_list.rules {
-        let result1 = compare_maps_with_matchingrule(&matcher, rule_list.cascaded, path, &expected, &actual, context, &mut |p, expected, actual, context| {
+      let results = rule_list.rules.iter().map(|matcher| {
+        compare_maps_with_matchingrule(matcher, rule_list.cascaded, path, &expected, &actual, context, &mut |p, expected, actual, context| {
           compare_json(p, expected, actual, context)
-        });
-        result = merge_result(result, result1);
+        })
+      }).collect::<Vec<_>>();
+      if rule_list.rule_logic == RuleLogic::Or && results.iter().any(|result| result.is_ok()) {
+        debug!("compare_maps: At least one matcher for path {} matched with OR logic", path);
+      } else {
+        for result1 in results {
+          result = merge_result(result, result1);
+        }
       }
     } else {
       let expected_keys = expected.keys().cloned().collect();
@@ -1496,7 +1575,7 @@ mod tests2 {
   use serde_json::{json, Value};
 
   use pact_models::matchingrules_list;
-  use pact_models::matchingrules::MatchingRule;
+  use pact_models::matchingrules::{MatchingRule, MatchingRuleCategory};
   use crate::{CoreMatchingContext, DiffConfig};
 
   use super::*;
@@ -1568,6 +1647,336 @@ mod tests2 {
     let expected = expected_json.as_array().unwrap();
     let actual = actual_json.as_array().unwrap();
     let result = compare_lists(&DocPath::root(), expected, actual, &context);
+    if is_ok {
+      expect!(result).to(be_ok());
+    } else {
+      expect!(result).to(be_err());
+    }
+  }
+
+  fn or_matching_rules(path: &'static str, rules: &[MatchingRule]) -> MatchingRuleCategory {
+    let mut category = MatchingRuleCategory::empty("body");
+    for rule in rules {
+      category.add_rule(DocPath::new_unwrap(path), rule.clone(), RuleLogic::Or);
+    }
+    category
+  }
+
+  // Issue #249
+  #[rstest]
+  //                                   actual_json,                    is_ok
+  #[case::matches_first_rule(          json!({"a": "other string"}),   true)]
+  #[case::matches_second_rule(         json!({"a": null}),             true)]
+  #[case::matches_no_rule(             json!({"a": 100}),              false)]
+  fn compare_json_with_or_matcher_on_value(#[case] actual_json: Value, #[case] is_ok: bool) {
+    let expected_json = json!({"a": "string"});
+    let matchingrules = or_matching_rules("$.a", &[MatchingRule::Type, MatchingRule::Null]);
+    let context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys, &matchingrules, &hashmap!{});
+    let result = compare_json(&DocPath::root(), &expected_json, &actual_json, &context);
+    if is_ok {
+      expect!(result).to(be_ok());
+    } else {
+      expect!(result).to(be_err());
+    }
+  }
+
+  // Issue #249
+  #[rstest]
+  //                                   actual_json,                    is_ok
+  #[case::object_of_same_type(         json!({"a": {"b": "other"}}),   true)]
+  #[case::null_value(                  json!({"a": null}),             true)]
+  #[case::string_value(                json!({"a": "string"}),         false)]
+  #[case::array_value(                 json!({"a": ["string"]}),       false)]
+  #[case::object_with_child_mismatch(  json!({"a": {"b": 100}}),       false)]
+  fn compare_json_with_or_matcher_on_object(#[case] actual_json: Value, #[case] is_ok: bool) {
+    let expected_json = json!({"a": {"b": "string"}});
+    let matchingrules = or_matching_rules("$.a", &[MatchingRule::Type, MatchingRule::Null]);
+    let context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys, &matchingrules, &hashmap!{});
+    let result = compare_json(&DocPath::root(), &expected_json, &actual_json, &context);
+    if is_ok {
+      expect!(result).to(be_ok());
+    } else {
+      expect!(result).to(be_err());
+    }
+  }
+
+  // Issue #249
+  #[rstest]
+  //                                   actual_json,                    is_ok
+  #[case::array_of_same_type(          json!({"a": ["x", "y"]}),       true)]
+  #[case::null_value(                  json!({"a": null}),             true)]
+  #[case::object_value(                json!({"a": {"b": "x"}}),       false)]
+  fn compare_json_with_or_matcher_on_array(#[case] actual_json: Value, #[case] is_ok: bool) {
+    let expected_json = json!({"a": ["string"]});
+    let matchingrules = or_matching_rules("$.a", &[MatchingRule::Type, MatchingRule::Null]);
+    let context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys, &matchingrules, &hashmap!{});
+    let result = compare_json(&DocPath::root(), &expected_json, &actual_json, &context);
+    if is_ok {
+      expect!(result).to(be_ok());
+    } else {
+      expect!(result).to(be_err());
+    }
+  }
+
+  #[test]
+  fn compare_json_with_and_matchers_on_object_still_requires_an_object() {
+    let expected_json = json!({"a": {"b": "string"}});
+    let actual_json = json!({"a": null});
+    let matchingrules = matchingrules_list! {
+      "body"; "$.a" => [ MatchingRule::Type, MatchingRule::Null ]
+    };
+    let context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys, &matchingrules, &hashmap!{});
+    let result = compare_json(&DocPath::root(), &expected_json, &actual_json, &context);
+    expect!(result).to(be_err());
+  }
+
+  fn variant(rule: MatchingRule, value: Value, rules: &[(&'static str, MatchingRule)]) -> MatchingRule {
+    let mut category = MatchingRuleCategory::empty("body");
+    for (path, rule) in rules {
+      category.add_rule(DocPath::new_unwrap(path), rule.clone(), RuleLogic::And);
+    }
+    MatchingRule::Variant(Box::new(rule), Box::new(pact_models::matchingrules::MatchingRuleVariant {
+      value,
+      rules: category
+    }))
+  }
+
+  fn variant_rules() -> MatchingRuleCategory {
+    or_matching_rules("$.a", &[
+      // An object with an integer id
+      variant(MatchingRule::Type, json!({"id": 1}), &[
+        ("$", MatchingRule::Type), ("$.id", MatchingRule::Integer)
+      ]),
+      // A different object, with a name matching a regex
+      variant(MatchingRule::Type, json!({"name": "Fred"}), &[
+        ("$", MatchingRule::Type), ("$.name", MatchingRule::Regex("^[A-Z][a-z]+$".to_string()))
+      ]),
+      // An array of strings with at least one item
+      variant(MatchingRule::MinType(1), json!(["x"]), &[("$", MatchingRule::MinType(1))]),
+      // A string of digits
+      variant(MatchingRule::Regex("^\\d+$".to_string()), json!("100"), &[
+        ("$", MatchingRule::Regex("^\\d+$".to_string()))
+      ]),
+      // Or null
+      variant(MatchingRule::Null, Value::Null, &[("$", MatchingRule::Null)])
+    ])
+  }
+
+  // Issue #249
+  #[rstest]
+  //                                         actual_json,                            is_ok
+  #[case::first_object_shape(                json!({"a": {"id": 100}}),              true)]
+  #[case::second_object_shape(               json!({"a": {"name": "Mary"}}),         true)]
+  #[case::second_object_shape_bad_child(     json!({"a": {"name": "mary"}}),         false)]
+  #[case::first_object_shape_bad_child(      json!({"a": {"id": "x"}}),              false)]
+  #[case::array_of_strings(                  json!({"a": ["y", "z"]}),               true)]
+  #[case::array_of_numbers(                  json!({"a": [1, 2]}),                   false)]
+  #[case::empty_array(                       json!({"a": []}),                       false)]
+  #[case::string_of_digits(                  json!({"a": "12345"}),                  true)]
+  #[case::other_string(                      json!({"a": "abc"}),                    false)]
+  #[case::null_value(                        json!({"a": null}),                     true)]
+  #[case::boolean(                           json!({"a": true}),                     false)]
+  fn compare_json_with_or_matcher_variants(#[case] actual_json: Value, #[case] is_ok: bool) {
+    let expected_json = json!({"a": {"id": 1}});
+    let matchingrules = variant_rules();
+    let context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys, &matchingrules, &hashmap!{});
+    let result = compare_json(&DocPath::root(), &expected_json, &actual_json, &context);
+    if is_ok {
+      expect!(result).to(be_ok());
+    } else {
+      expect!(result).to(be_err());
+    }
+  }
+
+  // Issue #249
+  #[test]
+  fn compare_json_with_or_matcher_variants_reports_mismatches_at_the_full_path() {
+    let expected_json = json!({"a": {"id": 1}});
+    let matchingrules = or_matching_rules("$.a", &[
+      variant(MatchingRule::Type, json!({"id": 1}), &[
+        ("$", MatchingRule::Type), ("$.id", MatchingRule::Integer)
+      ]),
+      variant(MatchingRule::Null, Value::Null, &[("$", MatchingRule::Null)])
+    ]);
+    let context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys, &matchingrules, &hashmap!{});
+    let result = compare_json(&DocPath::root(), &expected_json, &json!({"a": {"id": "x"}}), &context);
+    let paths = result.unwrap_err().iter().map(|mismatch| mismatch.path.clone()).collect::<Vec<_>>();
+    expect!(paths).to(be_equal_to(vec!["$.a.id".to_string(), "$.a".to_string()]));
+  }
+
+  // Issue #249
+  #[rstest]
+  #[case::object_item(  json!({"items": [{"id": 1}, null, {"name": "Mary"}]}), true)]
+  #[case::bad_item(     json!({"items": [{"id": 1}, "x"]}),                      false)]
+  fn compare_json_with_or_matcher_variants_for_array_items(#[case] actual_json: Value, #[case] is_ok: bool) {
+    let expected_json = json!({"items": [{"id": 1}]});
+    let mut matchingrules = or_matching_rules("$.items[*]", &[
+      variant(MatchingRule::Type, json!({"id": 1}), &[("$", MatchingRule::Type)]),
+      variant(MatchingRule::Type, json!({"name": "Fred"}), &[("$", MatchingRule::Type)]),
+      variant(MatchingRule::Null, Value::Null, &[("$", MatchingRule::Null)])
+    ]);
+    matchingrules.add_rule(DocPath::new_unwrap("$.items"), MatchingRule::MinType(1), RuleLogic::And);
+    let context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys, &matchingrules, &hashmap!{});
+    let result = compare_json(&DocPath::root(), &expected_json, &actual_json, &context);
+    if is_ok {
+      expect!(result).to(be_ok());
+    } else {
+      expect!(result).to(be_err());
+    }
+  }
+
+  // Issue #249
+  #[rstest]
+  #[case::strings_and_arrays( json!({"items": ["Mary", [2, 3]]}),  true)]
+  #[case::object_item(        json!({"items": ["Mary", {"b": 1}]}), false)]
+  fn compare_json_with_or_matcher_mixing_variants_and_plain_rules_for_array_items(#[case] actual_json: Value, #[case] is_ok: bool) {
+    let expected_json = json!({"items": ["Fred"]});
+    let mut matchingrules = or_matching_rules("$.items[*]", &[
+      MatchingRule::Type,
+      variant(MatchingRule::Type, json!([1]), &[("$", MatchingRule::Type)])
+    ]);
+    matchingrules.add_rule(DocPath::new_unwrap("$.items"), MatchingRule::MinType(1), RuleLogic::And);
+    let context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys, &matchingrules, &hashmap!{});
+    let result = compare_json(&DocPath::root(), &expected_json, &actual_json, &context);
+    if is_ok {
+      expect!(result).to(be_ok());
+    } else {
+      expect!(result).to(be_err());
+    }
+  }
+
+  // Issue #249
+  #[test]
+  fn compare_json_with_or_matcher_mixing_variants_and_plain_rules() {
+    let expected_json = json!({"a": "Fred"});
+    let matchingrules = or_matching_rules("$.a", &[
+      MatchingRule::Type,
+      variant(MatchingRule::Type, json!([1]), &[("$", MatchingRule::Type)])
+    ]);
+    let context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys, &matchingrules, &hashmap!{});
+    expect!(compare_json(&DocPath::root(), &expected_json, &json!({"a": "Mary"}), &context)).to(be_ok());
+    expect!(compare_json(&DocPath::root(), &expected_json, &json!({"a": [2, 3]}), &context)).to(be_ok());
+    expect!(compare_json(&DocPath::root(), &expected_json, &json!({"a": {"b": 1}}), &context)).to(be_err());
+  }
+
+  // Issue #249
+  #[rstest]
+  #[case::digits_with_a_one(  json!({"a": "100"}),  true)]
+  #[case::digits_without_one( json!({"a": "200"}),  false)]
+  #[case::nested_boolean(     json!({"a": false}),  true)]
+  #[case::nested_integer(     json!({"a": 7}),      true)]
+  #[case::nested_decimal(     json!({"a": 7.5}),    false)]
+  fn compare_json_with_combined_matchers_as_or_alternatives(#[case] actual_json: Value, #[case] is_ok: bool) {
+    let expected_json = json!({"a": "100"});
+    // (regex AND include) OR (boolean OR integer)
+    let mut and_rules = MatchingRuleCategory::empty("body");
+    and_rules.add_rule(DocPath::root(), MatchingRule::Regex("^\\d+$".to_string()), RuleLogic::And);
+    and_rules.add_rule(DocPath::root(), MatchingRule::Include("1".to_string()), RuleLogic::And);
+    let and_variant = MatchingRule::Variant(Box::new(MatchingRule::Regex("^\\d+$".to_string())),
+      Box::new(pact_models::matchingrules::MatchingRuleVariant { value: json!("100"), rules: and_rules }));
+    let mut or_rules = MatchingRuleCategory::empty("body");
+    or_rules.add_rule(DocPath::root(), variant(MatchingRule::Boolean, json!(true), &[("$", MatchingRule::Boolean)]), RuleLogic::Or);
+    or_rules.add_rule(DocPath::root(), variant(MatchingRule::Integer, json!(1), &[("$", MatchingRule::Integer)]), RuleLogic::Or);
+    let or_variant = MatchingRule::Variant(Box::new(MatchingRule::Boolean),
+      Box::new(pact_models::matchingrules::MatchingRuleVariant { value: json!(true), rules: or_rules }));
+
+    let matchingrules = or_matching_rules("$.a", &[and_variant, or_variant]);
+    let context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys, &matchingrules, &hashmap!{});
+    let result = compare_json(&DocPath::root(), &expected_json, &actual_json, &context);
+    if is_ok {
+      expect!(result).to(be_ok());
+    } else {
+      expect!(result).to(be_err());
+    }
+  }
+
+  // Issue #249
+  #[rstest]
+  #[case::exact_keys(      json!({"a": {"id": 1}}),            true)]
+  #[case::unexpected_key(  json!({"a": {"id": 1, "x": 2}}),    false)]
+  #[case::other_variant(   json!({"a": {"name": "Mary"}}),     true)]
+  fn compare_json_with_or_matcher_variants_and_no_unexpected_keys(#[case] actual_json: Value, #[case] is_ok: bool) {
+    let expected_json = json!({"a": {"id": 1}});
+    let matchingrules = or_matching_rules("$.a", &[
+      variant(MatchingRule::Type, json!({"id": 1}), &[("$", MatchingRule::Type)]),
+      variant(MatchingRule::Type, json!({"name": "Fred"}), &[("$", MatchingRule::Type)])
+    ]);
+    let context = CoreMatchingContext::new(DiffConfig::NoUnexpectedKeys, &matchingrules, &hashmap!{});
+    let result = compare_json(&DocPath::root(), &expected_json, &actual_json, &context);
+    if is_ok {
+      expect!(result).to(be_ok());
+    } else {
+      expect!(result).to(be_err());
+    }
+  }
+
+  // Issue #249
+  #[rstest]
+  #[case::object(  json!({"id": 100}),   true)]
+  #[case::array(   json!([{"id": 1}]),   true)]
+  #[case::string(  json!("abc"),         false)]
+  fn compare_json_with_or_matcher_variants_at_the_root(#[case] actual_json: Value, #[case] is_ok: bool) {
+    let expected_json = json!({"id": 1});
+    let matchingrules = or_matching_rules("$", &[
+      variant(MatchingRule::Type, json!({"id": 1}), &[("$", MatchingRule::Type), ("$.id", MatchingRule::Integer)]),
+      variant(MatchingRule::MinType(1), json!([{"id": 1}]), &[("$", MatchingRule::MinType(1))])
+    ]);
+    let context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys, &matchingrules, &hashmap!{});
+    let result = compare_json(&DocPath::root(), &expected_json, &actual_json, &context);
+    if is_ok {
+      expect!(result).to(be_ok());
+    } else {
+      expect!(result).to(be_err());
+    }
+  }
+
+  // Issue #249
+  #[rstest]
+  #[case::integer_id(  json!({"a": {"id": 1}}),     true)]
+  #[case::null_id(     json!({"a": {"id": null}}),  true)]
+  #[case::string_id(   json!({"a": {"id": "x"}}),   false)]
+  fn compare_json_with_an_or_matcher_inside_a_variant(#[case] actual_json: Value, #[case] is_ok: bool) {
+    let expected_json = json!({"a": {"id": 1}});
+    let mut variant_rules = MatchingRuleCategory::empty("body");
+    variant_rules.add_rule(DocPath::root(), MatchingRule::Type, RuleLogic::And);
+    variant_rules.add_rule(DocPath::new_unwrap("$.id"), MatchingRule::Integer, RuleLogic::Or);
+    variant_rules.add_rule(DocPath::new_unwrap("$.id"), MatchingRule::Null, RuleLogic::Or);
+    let object_variant = MatchingRule::Variant(Box::new(MatchingRule::Type),
+      Box::new(pact_models::matchingrules::MatchingRuleVariant { value: json!({"id": 1}), rules: variant_rules }));
+    let matchingrules = or_matching_rules("$.a", &[
+      object_variant,
+      variant(MatchingRule::Null, Value::Null, &[("$", MatchingRule::Null)])
+    ]);
+    let context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys, &matchingrules, &hashmap!{});
+    let result = compare_json(&DocPath::root(), &expected_json, &actual_json, &context);
+    if is_ok {
+      expect!(result).to(be_ok());
+    } else {
+      expect!(result).to(be_err());
+    }
+  }
+
+  // Issue #249
+  #[rstest]
+  #[case::integer_or_decimal_with_integer( MatchingRule::Integer, MatchingRule::Decimal, json!(10),     true)]
+  #[case::integer_or_decimal_with_decimal( MatchingRule::Integer, MatchingRule::Decimal, json!(10.5),   true)]
+  #[case::integer_or_decimal_with_string(  MatchingRule::Integer, MatchingRule::Decimal, json!("10"),   false)]
+  #[case::date_or_null_with_date(          MatchingRule::Date("yyyy-MM-dd".to_string()), MatchingRule::Null, json!("2026-11-02"), true)]
+  #[case::date_or_null_with_null(          MatchingRule::Date("yyyy-MM-dd".to_string()), MatchingRule::Null, Value::Null, true)]
+  #[case::date_or_null_with_other_date(    MatchingRule::Date("yyyy-MM-dd".to_string()), MatchingRule::Null, json!("02/11/2026"), false)]
+  #[case::boolean_or_number_with_boolean(  MatchingRule::Boolean, MatchingRule::Number, json!(false),  true)]
+  #[case::boolean_or_number_with_number(   MatchingRule::Boolean, MatchingRule::Number, json!(1.5),    true)]
+  #[case::boolean_or_number_with_object(   MatchingRule::Boolean, MatchingRule::Number, json!({}),     false)]
+  fn compare_json_with_or_matcher_on_scalar_values(
+    #[case] first: MatchingRule,
+    #[case] second: MatchingRule,
+    #[case] actual: Value,
+    #[case] is_ok: bool
+  ) {
+    let expected_json = json!({"a": 1});
+    let matchingrules = or_matching_rules("$.a", &[first, second]);
+    let context = CoreMatchingContext::new(DiffConfig::AllowUnexpectedKeys, &matchingrules, &hashmap!{});
+    let result = compare_json(&DocPath::root(), &expected_json, &json!({"a": actual}), &context);
     if is_ok {
       expect!(result).to(be_ok());
     } else {
