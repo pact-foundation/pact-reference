@@ -31,6 +31,7 @@ mod each_value_tests;
 mod walk_tree_tests;
 mod query_tests;
 mod header_tests;
+mod or_matcher_tests;
 
 #[rstest(
   case("", "''"),

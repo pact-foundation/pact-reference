@@ -9,13 +9,13 @@ use lazy_static::lazy_static;
 use multipart_2021 as multipart;
 use regex::Regex;
 use serde_json::{Map, Value};
-use tracing::{debug, error, trace};
+use tracing::{debug, error, trace, warn};
 
 use pact_models::bodies::OptionalBody;
 use pact_models::content_types::ContentTypeHint;
 use pact_models::generators::{Generator, GeneratorCategory, Generators};
 use pact_models::json_utils::json_to_string;
-use pact_models::matchingrules::{MatchingRule, MatchingRuleCategory, RuleLogic};
+use pact_models::matchingrules::{MatchingRule, MatchingRuleCategory, RuleList, RuleLogic};
 use pact_models::matchingrules::expressions::{is_matcher_def, parse_matcher_def};
 use pact_models::path_exp::DocPath;
 use pact_models::v4::http_parts::{HttpRequest, HttpResponse};
@@ -125,13 +125,19 @@ fn process_matcher(
           (index, category, generators.categories.get(&GeneratorCategory::BODY).cloned().unwrap_or_default())
         }).collect();
 
-        Ok((vec!(MatchingRule::ArrayContains(values)), Value::Array(json_values)))
+        Ok((RuleList::new(MatchingRule::ArrayContains(values)), Value::Array(json_values)))
       }
       _ => Err(anyhow!("ArrayContains 'variants' attribute is missing or not an array"))
     }
   } else {
-    matchers_from_integration_json(obj).map(|(rules, generator)| {
-      let has_values_matcher = rules.iter().any(MatchingRule::is_values_matcher);
+    let rule_list_result = match rule_logic_from_integration_json(obj) {
+      // The rules can't be combined, so they are ignored, but the example value is kept (the same
+      // as for headers and query parameters)
+      Err(_) => Ok((RuleList::empty(RuleLogic::And), None)),
+      Ok(_) => rule_list_from_integration_json(obj)
+    };
+    rule_list_result.map(|(rule_list, generator)| {
+      let has_values_matcher = rule_list.rules.iter().any(MatchingRule::is_values_matcher);
 
       let json_value = match obj.get("value") {
         Some(inner) => match inner {
@@ -147,11 +153,11 @@ fn process_matcher(
         generators.add_generator_with_subcategory(category, path.clone(), generator);
       }
 
-      if rules.iter().any(|rule| matches!(rule, MatchingRule::EachValue(_))) {
+      if rule_list.rules.iter().any(|rule| matches!(rule, MatchingRule::EachValue(_))) {
         add_each_value_rule_matchers(obj, matching_rules, path);
       }
 
-      (rules, json_value)
+      (rule_list, json_value)
     })
   };
 
@@ -165,10 +171,8 @@ fn process_matcher(
 
   trace!("matching_rules = {matching_rule_result:?}");
   match &matching_rule_result {
-    Ok((rules, value)) => {
-      for rule in rules {
-        matching_rules.add_rule(path.clone(), rule.clone(), RuleLogic::And);
-      }
+    Ok((rule_list, value)) => {
+      add_rule_list_to_category(matching_rules, path, rule_list);
       value.clone()
     },
     Err(err) => {
@@ -281,6 +285,66 @@ pub fn matchers_from_integration_json(m: &Map<String, Value>) -> anyhow::Result<
       }
     },
     _ => Ok((vec![], None))
+  }
+}
+
+/// Builds a `RuleList` from a `Value` struct used by language integrations. The matching rules are
+/// combined with the logic from the `pact:matcher:combine` attribute, which can be either `AND`
+/// (the default, all the rules must match) or `OR` (at least one of the rules must match).
+pub fn rule_list_from_integration_json(m: &Map<String, Value>) -> anyhow::Result<(RuleList, Option<Generator>)> {
+  let rule_logic = rule_logic_from_integration_json(m)?;
+  let (rules, generator) = matchers_from_integration_json(m)?;
+  Ok((RuleList { rules, rule_logic, cascaded: false }, generator))
+}
+
+/// Returns the logic used to combine the matching rules, from the `pact:matcher:combine` attribute
+fn rule_logic_from_integration_json(m: &Map<String, Value>) -> anyhow::Result<RuleLogic> {
+  match m.get("pact:matcher:combine") {
+    None | Some(Value::Null) => Ok(RuleLogic::And),
+    Some(Value::String(logic)) if logic.eq_ignore_ascii_case("and") => Ok(RuleLogic::And),
+    Some(Value::String(logic)) if logic.eq_ignore_ascii_case("or") => Ok(RuleLogic::Or),
+    Some(logic) => {
+      error!("Failed to create matching rules from JSON '{:?}': 'pact:matcher:combine' must be either 'AND' or 'OR', got {}", m, logic);
+      bail!("'pact:matcher:combine' must be either 'AND' or 'OR', got {}", logic)
+    }
+  }
+}
+
+/// Adds the rules from the rule list to the category at the given path.
+///
+/// A path can only have one list of rules, combined with a single logic (AND or OR). If the path
+/// already has rules combined with the same logic, the new rules are appended to them. If it has
+/// rules combined with a different logic, the combination (i.e. `A AND (B OR C)`) can not be
+/// represented, so the new rules replace the existing ones (as setting an OR group does in
+/// Pact-JVM) and a warning is logged. Merging them would silently change the meaning of the
+/// existing rules.
+pub(crate) fn add_rule_list_to_category(
+  matching_rules: &mut MatchingRuleCategory,
+  path: &DocPath,
+  rule_list: &RuleList
+) {
+  if rule_list.rules.is_empty() {
+    return;
+  }
+  match matching_rules.rules.get_mut(path) {
+    Some(existing) if !existing.rules.is_empty() && existing.rule_logic != rule_list.rule_logic => {
+      warn!("Path '{}' already has matching rules combined with {:?} ({:?}), they will be replaced \
+        with the rules combined with {:?} ({:?})", path, existing.rule_logic, existing.rules,
+        rule_list.rule_logic, rule_list.rules);
+      existing.rules = rule_list.rules.clone();
+      existing.rule_logic = rule_list.rule_logic;
+    }
+    Some(existing) => {
+      existing.rules.extend(rule_list.rules.iter().cloned());
+      existing.rule_logic = rule_list.rule_logic;
+    }
+    None => {
+      matching_rules.rules.insert(path.clone(), RuleList {
+        rules: rule_list.rules.clone(),
+        rule_logic: rule_list.rule_logic,
+        cascaded: false
+      });
+    }
   }
 }
 
@@ -803,6 +867,241 @@ use pretty_assertions::assert_eq;
         ValueType::Unknown, MatchingRule::Regex("\\d+".to_string()), None, "".to_string())) ]
     }));
     expect!(generators).to(be_equal_to(Generators::default()));
+  }
+
+  // Issue #249
+  #[test_log::test]
+  fn process_object_with_matchers_combined_with_or() {
+    let json = json!({
+      "a": {
+        "pact:matcher:type": [
+          { "pact:matcher:type": "type" },
+          { "pact:matcher:type": "null" }
+        ],
+        "pact:matcher:combine": "OR",
+        "value": "string"
+      }
+    });
+    let mut matching_rules = MatchingRuleCategory::empty("body");
+    let mut generators = Generators::default();
+    let result = process_object(json.as_object().unwrap(), &mut matching_rules,
+      &mut generators, DocPath::root(), false);
+
+    expect!(result).to(be_equal_to(json!({ "a": "string" })));
+    expect!(matching_rules.rules.get(&DocPath::new_unwrap("$.a")).cloned()).to(be_some().value(RuleList {
+      rules: vec![ MatchingRule::Type, MatchingRule::Null ],
+      rule_logic: RuleLogic::Or,
+      cascaded: false
+    }));
+  }
+
+  // Issue #249
+  #[test_log::test]
+  fn process_object_with_invalid_matcher_combine_value() {
+    let json = json!({
+      "a": {
+        "pact:matcher:type": [
+          { "pact:matcher:type": "type" },
+          { "pact:matcher:type": "null" }
+        ],
+        "pact:matcher:combine": "XOR",
+        "value": "string"
+      }
+    });
+    let mut matching_rules = MatchingRuleCategory::empty("body");
+    let mut generators = Generators::default();
+    let result = process_object(json.as_object().unwrap(), &mut matching_rules,
+      &mut generators, DocPath::root(), false);
+
+    // The rules are ignored, but the example value is kept
+    expect!(result).to(be_equal_to(json!({ "a": "string" })));
+    expect!(matching_rules.is_empty()).to(be_true());
+  }
+
+  // Issue #249
+  #[test_log::test]
+  fn process_object_with_invalid_matcher_combine_value_keeps_the_nested_matchers() {
+    let json = json!({
+      "a": {
+        "pact:matcher:type": [
+          { "pact:matcher:type": "type" },
+          { "pact:matcher:type": "null" }
+        ],
+        "pact:matcher:combine": "XOR",
+        "value": {
+          "id": { "pact:matcher:type": "integer", "value": 100 }
+        }
+      }
+    });
+    let mut matching_rules = MatchingRuleCategory::empty("body");
+    let mut generators = Generators::default();
+    let result = process_object(json.as_object().unwrap(), &mut matching_rules,
+      &mut generators, DocPath::root(), false);
+
+    expect!(result).to(be_equal_to(json!({ "a": { "id": 100 } })));
+    expect!(matching_rules.rules.get(&DocPath::new_unwrap("$.a"))).to(be_none());
+    expect!(matching_rules.rules.get(&DocPath::new_unwrap("$.a.id")).cloned()).to(be_some().value(
+      RuleList::new(MatchingRule::Integer)));
+  }
+
+  #[rstest]
+  #[case(json!({}), Some(RuleLogic::And))]
+  #[case(json!({ "pact:matcher:combine": null }), Some(RuleLogic::And))]
+  #[case(json!({ "pact:matcher:combine": "AND" }), Some(RuleLogic::And))]
+  #[case(json!({ "pact:matcher:combine": "and" }), Some(RuleLogic::And))]
+  #[case(json!({ "pact:matcher:combine": "OR" }), Some(RuleLogic::Or))]
+  #[case(json!({ "pact:matcher:combine": "or" }), Some(RuleLogic::Or))]
+  #[case(json!({ "pact:matcher:combine": "XOR" }), None)]
+  #[case(json!({ "pact:matcher:combine": true }), None)]
+  fn rule_list_from_integration_json_combine_test(#[case] json: Value, #[case] expected: Option<RuleLogic>) {
+    let mut json = json;
+    json["pact:matcher:type"] = json!([{ "pact:matcher:type": "type" }, { "pact:matcher:type": "null" }]);
+    let result = rule_list_from_integration_json(json.as_object().unwrap());
+    expect!(result.ok().map(|(rule_list, _)| rule_list.rule_logic)).to(be_equal_to(expected));
+  }
+
+  // Issue #249
+  #[test]
+  fn rule_list_from_integration_json_combine_with_a_single_matcher() {
+    let json = json!({
+      "pact:matcher:type": "regex",
+      "regex": "\\d+",
+      "pact:matcher:combine": "OR"
+    });
+    let result = rule_list_from_integration_json(json.as_object().unwrap());
+    expect!(result.ok().map(|(rule_list, _)| rule_list)).to(be_some().value(RuleList {
+      rules: vec![ MatchingRule::Regex("\\d+".to_string()) ],
+      rule_logic: RuleLogic::Or,
+      cascaded: false
+    }));
+  }
+
+  fn rule_list(rules: Vec<MatchingRule>, rule_logic: RuleLogic) -> RuleList {
+    RuleList { rules, rule_logic, cascaded: false }
+  }
+
+  // Issue #249
+  #[rstest]
+  #[case::new_path(
+    None,
+    rule_list(vec![MatchingRule::Type, MatchingRule::Null], RuleLogic::Or),
+    rule_list(vec![MatchingRule::Type, MatchingRule::Null], RuleLogic::Or)
+  )]
+  #[case::existing_rules_with_the_same_logic_are_kept(
+    Some(rule_list(vec![MatchingRule::Integer], RuleLogic::Or)),
+    rule_list(vec![MatchingRule::Null], RuleLogic::Or),
+    rule_list(vec![MatchingRule::Integer, MatchingRule::Null], RuleLogic::Or)
+  )]
+  #[case::existing_and_rules_are_replaced_by_or_rules(
+    Some(rule_list(vec![MatchingRule::Regex("\\d+".to_string())], RuleLogic::And)),
+    rule_list(vec![MatchingRule::Type, MatchingRule::Null], RuleLogic::Or),
+    rule_list(vec![MatchingRule::Type, MatchingRule::Null], RuleLogic::Or)
+  )]
+  #[case::existing_or_rules_are_replaced_by_and_rules(
+    Some(rule_list(vec![MatchingRule::Type, MatchingRule::Null], RuleLogic::Or)),
+    rule_list(vec![MatchingRule::Integer], RuleLogic::And),
+    rule_list(vec![MatchingRule::Integer], RuleLogic::And)
+  )]
+  #[case::empty_rule_list_does_not_change_existing_rules(
+    Some(rule_list(vec![MatchingRule::Integer], RuleLogic::And)),
+    rule_list(vec![], RuleLogic::Or),
+    rule_list(vec![MatchingRule::Integer], RuleLogic::And)
+  )]
+  fn add_rule_list_to_category_test(
+    #[case] existing: Option<RuleList>,
+    #[case] rules: RuleList,
+    #[case] expected: RuleList
+  ) {
+    let path = DocPath::new_unwrap("$.a");
+    let mut category = MatchingRuleCategory::empty("body");
+    if let Some(existing) = existing {
+      category.rules.insert(path.clone(), existing);
+    }
+    add_rule_list_to_category(&mut category, &path, &rules);
+    expect!(category.rules.get(&path).cloned()).to(be_some().value(expected));
+  }
+
+  // Issue #249
+  #[test_log::test]
+  fn process_object_with_or_matchers_on_an_object_with_nested_matchers() {
+    let json = json!({
+      "a": {
+        "pact:matcher:type": [
+          { "pact:matcher:type": "type" },
+          { "pact:matcher:type": "null" }
+        ],
+        "pact:matcher:combine": "OR",
+        "value": {
+          "id": { "pact:matcher:type": "integer", "value": 100 },
+          "name": "Fred"
+        }
+      }
+    });
+    let mut matching_rules = MatchingRuleCategory::empty("body");
+    let mut generators = Generators::default();
+    let result = process_object(json.as_object().unwrap(), &mut matching_rules,
+      &mut generators, DocPath::root(), false);
+
+    expect!(result).to(be_equal_to(json!({ "a": { "id": 100, "name": "Fred" } })));
+    expect!(matching_rules.rules.get(&DocPath::new_unwrap("$.a")).cloned()).to(be_some().value(
+      rule_list(vec![ MatchingRule::Type, MatchingRule::Null ], RuleLogic::Or)));
+    expect!(matching_rules.rules.get(&DocPath::new_unwrap("$.a.id")).cloned()).to(be_some().value(
+      rule_list(vec![ MatchingRule::Integer ], RuleLogic::And)));
+  }
+
+  // Issue #249
+  #[test_log::test]
+  fn process_object_with_or_matchers_wrapping_another_matcher() {
+    // A path can only have one list of rules, so the outer OR rules replace the inner rule
+    let json = json!({
+      "a": {
+        "pact:matcher:type": [
+          { "pact:matcher:type": "integer" },
+          { "pact:matcher:type": "null" }
+        ],
+        "pact:matcher:combine": "OR",
+        "value": { "pact:matcher:type": "regex", "regex": "\\d+", "value": "100" }
+      }
+    });
+    let mut matching_rules = MatchingRuleCategory::empty("body");
+    let mut generators = Generators::default();
+    let result = process_object(json.as_object().unwrap(), &mut matching_rules,
+      &mut generators, DocPath::root(), false);
+
+    expect!(result).to(be_equal_to(json!({ "a": "100" })));
+    expect!(matching_rules.rules.get(&DocPath::new_unwrap("$.a")).cloned()).to(be_some().value(
+      rule_list(vec![ MatchingRule::Integer, MatchingRule::Null ], RuleLogic::Or)));
+  }
+
+  // Issue #249
+  #[test_log::test]
+  fn process_object_with_or_matchers_in_array_items() {
+    let json = json!({
+      "items": {
+        "pact:matcher:type": "type",
+        "min": 1,
+        "value": [
+          {
+            "pact:matcher:type": [
+              { "pact:matcher:type": "integer" },
+              { "pact:matcher:type": "null" }
+            ],
+            "pact:matcher:combine": "OR",
+            "value": 1
+          }
+        ]
+      }
+    });
+    let mut matching_rules = MatchingRuleCategory::empty("body");
+    let mut generators = Generators::default();
+    let result = process_object(json.as_object().unwrap(), &mut matching_rules,
+      &mut generators, DocPath::root(), false);
+
+    expect!(result).to(be_equal_to(json!({ "items": [ 1 ] })));
+    expect!(matching_rules.rules.get(&DocPath::new_unwrap("$.items")).cloned()).to(be_some().value(
+      rule_list(vec![ MatchingRule::MinType(1) ], RuleLogic::And)));
+    expect!(matching_rules.rules.get(&DocPath::new_unwrap("$.items[*]")).cloned()).to(be_some().value(
+      rule_list(vec![ MatchingRule::Integer, MatchingRule::Null ], RuleLogic::Or)));
   }
 
   #[test_log::test]
