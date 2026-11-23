@@ -30,6 +30,42 @@ we can use the JSON format with a regex matcher (which requires a "regex" attrib
 pactffi_with_request(handle, "PUT", "{\"value\": \"/path/to/100\", \"pact:matcher:type\": \"regex\", \"regex\": \"\\\\/path\\\\/to\\\\/\\\\d+\"}")
 ```
 
+## Using ProviderState generators
+
+The `ProviderState` generator allows values to be sourced from provider state parameters during provider verification.
+There are two formats for specifying a `ProviderState` generator:
+
+### Shorthand format (expression only, no matching rule)
+
+When you only need a `ProviderState` generator (without any matching rule), you can use the shorthand format with just
+the `expression` and `value` keys:
+
+```json
+{
+  "expression": "${accountNumber}",
+  "value": "100"
+}
+```
+
+This sets up a `ProviderStateGenerator` with the given expression and uses the `value` as the example value. **No
+matching rule is configured** — the example value is used as-is during consumer test execution, and the generator
+replaces it with the resolved provider state value during provider verification. This shorthand is supported for query
+parameters, headers, path, and request/response bodies.
+
+### Full format (with matcher)
+
+To combine a `ProviderState` generator with a matching rule, use the full format with `pact:generator:type` and
+`pact:matcher:type`:
+
+```json
+{
+  "value": "100",
+  "pact:matcher:type": "type",
+  "pact:generator:type": "ProviderState",
+  "expression": "${accountNumber}"
+}
+```
+
 ## Matching on Paths
 
 function: `pactffi_with_request`
