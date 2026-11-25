@@ -1131,6 +1131,8 @@ pub async fn verify_provider_async<F: RequestFilterExecutor, S: ProviderStateExe
               Some(context) => context.verification_properties.pending,
               None => false
             };
+            let consumer_name = pact.consumer().name.clone();
+            let interaction_count = pact.interactions().len();
             let verify_result = verify_pact_internal(
               &provider_info,
               &filter,
@@ -1177,6 +1179,22 @@ pub async fn verify_provider_async<F: RequestFilterExecutor, S: ProviderStateExe
               warn!("Executing verification on first failure (exit-on-first-error is set)");
               break;
             }
+
+            let publish_options = publish_options.filter(|_| {
+              if all_interactions_verified(interaction_count, results.as_slice()) {
+                true
+              } else {
+                let message = format!("WARNING: Cannot publish verification for {} as not all interactions have been verified ({} of {} were verified). Re-run the verification without the filter parameters or environment variables to publish the verification.",
+                  consumer_name, results.len(), interaction_count);
+                warn!("{}", message);
+                if verification_options.coloured_output {
+                  verification_result.output.push(Yellow.paint(message).to_string());
+                } else {
+                  verification_result.output.push(message);
+                }
+                false
+              }
+            });
 
             if let Some(publish) = publish_options {
               publish_result(results.as_slice(), &pact_source, &publish, metrics_data.as_ref(), verification_options.broker_request_retries).await;
@@ -1695,6 +1713,13 @@ pub(crate) fn process_comments(interaction: &dyn V4Interaction, output: &mut Vec
       }
     }
   }
+}
+
+/// Verification results can only be published for a pact if every interaction in it was
+/// verified. Results from a filtered run (or one that verified nothing) would be recorded by
+/// the broker as a verification of the whole pact, so they are not published.
+fn all_interactions_verified(interaction_count: usize, results: &[VerificationInteractionResult]) -> bool {
+  interaction_count > 0 && results.len() == interaction_count
 }
 
 async fn publish_result(

@@ -1293,3 +1293,36 @@ async fn generate_request_applies_body_generators_to_a_form_urlencoded_request()
   expect!(qty).to(be_less_or_equal_to(999));
   expect!(params[2]).to(be_equal_to(("note", "gift+wrap")));
 }
+
+fn interaction_result(id: &str) -> VerificationInteractionResult {
+  VerificationInteractionResult {
+    interaction_id: Some(id.to_string()),
+    interaction_key: None,
+    consumer: "".to_string(),
+    provider: "".to_string(),
+    provider_states: vec![],
+    description: "".to_string(),
+    interaction_description: "".to_string(),
+    result: Ok(()),
+    pending: false,
+    duration: Default::default(),
+  }
+}
+
+#[test]
+fn all_interactions_verified_is_true_when_every_interaction_has_a_result() {
+  let results = vec![interaction_result("1"), interaction_result("2")];
+  expect!(super::all_interactions_verified(2, &results)).to(be_true());
+}
+
+#[test]
+fn all_interactions_verified_is_false_when_only_some_interactions_were_verified() {
+  let results = vec![interaction_result("1")];
+  expect!(super::all_interactions_verified(3, &results)).to(be_false());
+}
+
+#[test]
+fn all_interactions_verified_is_false_when_no_interactions_were_verified() {
+  expect!(super::all_interactions_verified(1, &[])).to(be_false());
+  expect!(super::all_interactions_verified(0, &[])).to(be_false());
+}
