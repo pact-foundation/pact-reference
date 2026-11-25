@@ -1031,6 +1031,17 @@ const VERIFICATION_NOTICE_AFTER_SUCCESSFUL_RESULT_AND_NO_PUBLISH: &str = "after_
 const VERIFICATION_NOTICE_AFTER_ERROR_RESULT_AND_PUBLISH: &str = "after_verification:success_false_published_true";
 const VERIFICATION_NOTICE_AFTER_ERROR_RESULT_AND_NO_PUBLISH: &str = "after_verification:success_false_published_false";
 
+/// The broker notice stage to display after verifying a pact, based on whether the verification
+/// was successful and whether the results were published.
+fn after_verification_notice_stage(success: bool, published: bool) -> &'static str {
+  match (success, published) {
+    (true, true) => VERIFICATION_NOTICE_AFTER_SUCCESSFUL_RESULT_AND_PUBLISH,
+    (true, false) => VERIFICATION_NOTICE_AFTER_SUCCESSFUL_RESULT_AND_NO_PUBLISH,
+    (false, true) => VERIFICATION_NOTICE_AFTER_ERROR_RESULT_AND_PUBLISH,
+    (false, false) => VERIFICATION_NOTICE_AFTER_ERROR_RESULT_AND_NO_PUBLISH
+  }
+}
+
 fn process_notices(context: &Option<PactVerificationContext>, stage: &str, result: &mut VerificationExecutionResult) {
   if let Some(c) = context {
     result.notices = c.verification_properties.notices.clone();
@@ -1181,17 +1192,11 @@ pub async fn verify_provider_async<F: RequestFilterExecutor, S: ProviderStateExe
             if let Some(publish) = publish_options {
               publish_result(results.as_slice(), &pact_source, &publish, metrics_data.as_ref(), verification_options.broker_request_retries).await;
 
-              if !errors.is_empty() || !pending_errors.is_empty() {
-                process_notices(&context, VERIFICATION_NOTICE_AFTER_ERROR_RESULT_AND_PUBLISH, &mut verification_result);
-              } else {
-                process_notices(&context, VERIFICATION_NOTICE_AFTER_SUCCESSFUL_RESULT_AND_PUBLISH, &mut verification_result);
-              }
+              let stage = after_verification_notice_stage(errors.is_empty() && pending_errors.is_empty(), true);
+              process_notices(&context, stage, &mut verification_result);
             } else {
-              if !errors.is_empty() || pending_errors.is_empty() {
-                process_notices(&context, VERIFICATION_NOTICE_AFTER_ERROR_RESULT_AND_NO_PUBLISH, &mut verification_result);
-              } else {
-                process_notices(&context, VERIFICATION_NOTICE_AFTER_SUCCESSFUL_RESULT_AND_NO_PUBLISH, &mut verification_result);
-              }
+              let stage = after_verification_notice_stage(errors.is_empty() && pending_errors.is_empty(), false);
+              process_notices(&context, stage, &mut verification_result);
             }
           }
         },
