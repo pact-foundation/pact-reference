@@ -51,6 +51,14 @@ pub(crate) fn http_client() -> Client {
 }
 
 #[test]
+fn after_verification_notice_stage_selects_the_stage_from_the_result_and_whether_it_was_published() {
+  expect!(super::after_verification_notice_stage(true, true)).to(be_equal_to("after_verification:success_true_published_true"));
+  expect!(super::after_verification_notice_stage(true, false)).to(be_equal_to("after_verification:success_true_published_false"));
+  expect!(super::after_verification_notice_stage(false, true)).to(be_equal_to("after_verification:success_false_published_true"));
+  expect!(super::after_verification_notice_stage(false, false)).to(be_equal_to("after_verification:success_false_published_false"));
+}
+
+#[test]
 fn if_no_interaction_filter_is_defined_returns_true() {
   let interaction = RequestResponseInteraction::default();
   expect!(filter_interaction(&interaction, &FilterInfo::None)).to(be_true());
