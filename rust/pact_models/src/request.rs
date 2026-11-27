@@ -217,7 +217,7 @@ impl Request {
           &self.matching_rules.clone(), spec_version));
       }
 
-      if self.generators.is_not_empty() {
+      if self.generators.is_not_empty() && spec_version >= &PactSpecification::V3 {
         map.insert("generators".to_string(), generators_to_json(
           &self.generators.clone(), spec_version));
       }

@@ -12,6 +12,7 @@ use std::sync::{Arc, Mutex};
 
 use anyhow::anyhow;
 #[cfg(not(target_family = "wasm"))] use anyhow::Context;
+use itertools::Itertools;
 use lazy_static::lazy_static;
 use maplit::btreemap;
 use serde_json::{json, Value};
@@ -24,6 +25,7 @@ use crate::{Consumer, PactSpecification, Provider};
 use crate::interaction::Interaction;
 use crate::message_pact::MessagePact;
 use crate::plugins::PluginData;
+use crate::spec_version_check::{spec_violations, strict_spec_version, STRICT_SPEC_ENV_VAR};
 use crate::sync_pact::RequestResponsePact;
 use crate::v4;
 use crate::v4::pact::V4Pact;
@@ -240,9 +242,9 @@ pub fn write_pact(
       f.read_to_string(&mut existing)?;
     }
 
-    let pact_json = if existing.is_empty() {
+    let json = if existing.is_empty() {
       debug!("Writing new pact file to {:?}", path);
-      serde_json::to_string_pretty(&pact.to_json(pact_spec)?)?
+      pact.to_json(pact_spec)?
     } else {
       debug!("Merging pact with file {:?}", path);
       let existing_pact = parse_pact_file(&existing, path)?;
@@ -253,8 +255,10 @@ pub fn write_pact(
       }
 
       let merged_pact = pact.merge(existing_pact.deref())?;
-      serde_json::to_string_pretty(&merged_pact.to_json(pact_spec)?)?
+      merged_pact.to_json(pact_spec)?
     };
+    check_spec_version(&json, pact_spec, path)?;
+    let pact_json = serde_json::to_string_pretty(&json)?;
 
     f.set_len(0)?;
     f.seek(SeekFrom::Start(0))?;
@@ -263,6 +267,26 @@ pub fn write_pact(
   })
 }
 
+
+// Rules and generators the target spec doesn't define are a warning for now, and an error
+// with PACT_STRICT_SPEC_VERSION=true. The plan is to make the error the default in the next
+// major version.
+fn check_spec_version(json: &Value, pact_spec: PactSpecification, path: &Path) -> anyhow::Result<()> {
+  let violations = spec_violations(json, pact_spec);
+  if violations.is_empty() {
+    return Ok(());
+  }
+  let details = violations.iter().map(|v| format!("  {}", v)).join("\n");
+  if strict_spec_version() {
+    Err(anyhow!("Pact {:?} uses features the {} specification does not define:\n{}\n\
+      Write it as a newer specification version, or remove them", path, pact_spec, details))
+  } else {
+    warn!("Pact {:?} uses features the {} specification does not define, they will be written \
+      anyway but other pact implementations may reject or ignore them (set {}=true to make this \
+      an error):\n{}", path, pact_spec, STRICT_SPEC_ENV_VAR, details);
+    Ok(())
+  }
+}
 
 /// Construct Metadata from JSON value
 pub fn parse_meta_data(pact_json: &Value) -> BTreeMap<String, BTreeMap<String, String>> {

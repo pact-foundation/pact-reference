@@ -164,6 +164,17 @@ impl MatchingRule {
     }
   }
 
+  /// Converts this `MatchingRule` to the V2 rule that matches the same values, if there is one.
+  /// Only lossless rewrites are done: `include` becomes an escaped `regex`. Everything else
+  /// returns None.
+  pub fn to_v2_json(&self) -> Option<Value> {
+    match self {
+      MatchingRule::Include(s) => Some(json!({ "match": "regex",
+        "regex": format!("(?s).*{}.*", regex::escape(s)) })),
+      _ => None
+    }
+  }
+
   /// Converts this `MatchingRule` to a `Value` struct
   pub fn to_json(&self) -> Value {
     match self {
@@ -817,9 +828,15 @@ impl RuleList {
 
   fn to_v2_json(&self) -> Value {
     match self.rules.get(0) {
-      Some(rule) => rule.to_json(),
+      Some(rule) => rule.to_v2_json().unwrap_or_else(|| rule.to_json()),
       None => json!({})
     }
+  }
+
+  // V2 has no equality matcher, but equality is what V2 does when no rule applies. So the
+  // rule can be left out, as long as nothing cascades onto this path from a parent.
+  fn is_only_equality(&self) -> bool {
+    matches!(self.rules.as_slice(), [MatchingRule::Equality])
   }
 
   /// If there is a type matcher defined for the rule list
@@ -1138,26 +1155,44 @@ impl MatchingRuleCategory {
   /// Returns a JSON Value representation in V2 format
   pub fn to_v2_json(&self) -> HashMap<String, Value> {
     let mut map = hashmap!{};
+    let rules = self.v2_rules();
 
     match &self.name {
-      Category::PATH => for (_, v) in self.rules.clone() {
+      Category::PATH => for (_, v) in rules.clone() {
         map.insert("$.path".to_string(), v.to_v2_json());
       }
-      Category::BODY => for (k, v) in self.rules.clone() {
+      Category::BODY => for (k, v) in rules.clone() {
         map.insert(String::from(k).replace("$", "$.body"), v.to_v2_json());
       }
-      Category::HEADER | Category::QUERY => for (k, v) in &self.rules {
+      Category::HEADER | Category::QUERY => for (k, v) in &rules {
         let mut path = DocPath::root();
         path.push_field(self.name.v2_form());
         path.push_path(k);
         map.insert(path.to_string(), v.to_v2_json());
       }
-      _ => for (k, v) in &self.rules {
+      _ => for (k, v) in &rules {
         map.insert(format!("$.{}.{}", self.name.v2_form(), k), v.to_v2_json());
       }
     };
 
     map
+  }
+
+  // The rules to write to a V2 pact: equality-only rules are dropped where no other rule is
+  // defined on a parent path, as V2 falls back to equality there anyway.
+  fn v2_rules(&self) -> HashMap<DocPath, RuleList> {
+    self.rules.iter()
+      .filter(|(path, rules)| !(rules.is_only_equality() && !self.has_parent_rule(path)))
+      .map(|(k, v)| (k.clone(), v.clone()))
+      .collect()
+  }
+
+  fn has_parent_rule(&self, path: &DocPath) -> bool {
+    let path = path.to_string();
+    self.rules.keys()
+      .map(|other| other.to_string())
+      .any(|other| other != path && (path.starts_with(&format!("{}.", other))
+        || path.starts_with(&format!("{}[", other))))
   }
 
   /// If there is a type matcher defined for the category
